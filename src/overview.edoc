@@ -1,0 +1,4 @@
+@author Evan Miller
+@doc Chicago Boss is an MVC framework for Erlang.
+@see boss_record_compiler
+@see boss_db
