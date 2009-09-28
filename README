@@ -1,12 +1,26 @@
 = GETTING STARTED WITH CHICAGO BOSS =
 
-Build with "make"
+Erlang dependencies:
+* Erlang R13 -
+    http://www.erlang.org/download.html
+* ErlyDTL -
+    svn checkout http://erlydtl.googlecode.com/svn/trunk/ deps/erlydtl
+* MochiWeb -
+    svn checkout http://mochiweb.googlecode.com/svn/trunk/ deps/mochiweb
 
-You will need:
-* Tokyo Tyrant running a Table database.
-* Erlang R13. (Check your version with erlang:system_info(otp_release) ).
+Build with "make".
 
-Open up boss.config to set your database info and the port you want to run the server on. When you're ready to rock and roll, run ./start-dev.sh in this directory. There will be a lot of PROGRESS REPORTs which look scary but hopefully everything is running smoothly. With this console you can interact directly with the running server. Next, point your browser to:
+Other dependencies:
+* Tokyo Tyrant -
+    http://1978th.net/tokyotyrant/
+
+    You need Tyrant up and running with a Table database.
+
+Open up boss.config to set your database info and the port you want to run the
+server on. When you're ready to rock and roll, run ./start-dev.sh in this
+directory. There will be a lot of PROGRESS REPORTs which look scary but
+hopefully everything is running smoothly. With this console you can interact
+directly with the running server. Next, point your browser to:
 
 http://localhost:8001/hello/world
 
@@ -17,17 +31,23 @@ If all is well you will see "Hello, World!" Now you can get busy.
 
 == The Model Directory: BossRecords ==
 
-BossRecords are specially compiled parameterized modules. Important aspects of BossRecords:
+BossRecords are specially compiled parameterized modules. Important aspects of
+BossRecords:
 
-    * The first parameter of a BossRecord should always be called Id, and the other parameters should be CamelCased attributes of your data model. 
+    * The first parameter of a BossRecord should always be called Id, and the
+    other parameters should be CamelCased attributes of your data model. 
 
-    * All parameters will be available as lower-case, underscored functions, e.g. -module(foo, [Id, TheText]) will generate the getter functions id() and the_text(), and the setters id(NewId) and the_text(NewText). Note that setters do not save the BossRecord.
+    * All parameters will be available as lower-case, underscored functions,
+    e.g. -module(foo, [Id, TheText]) will generate the getter functions id()
+    and the_text(), and the setters id(NewId) and the_text(NewText). Note that
+    setters do not save the BossRecord.
 
     * To auto-generate an ID, pass the atom 'id' as the first parameter to "new".
 
     * Call "new" with strings for all other parameters
 
-    * Parameters that end in "Time" (e.g., CreationTime, UpdateTime) should be passed either erlang:now() or a datetime tuple.
+    * Parameters that end in "Time" (e.g., CreationTime, UpdateTime) should be
+    passed either erlang:now() or a datetime tuple.
 
 Generated instance functions of a BossRecord include:
 
