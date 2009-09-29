@@ -1,0 +1,60 @@
+body {
+    font-family: Arial;
+    text-align: center;
+}
+div.equation {
+    font-size: 26px; padding: 20px;
+}
+div.equation span {
+    padding: 6px 10px;
+    color: white;
+}
+span.chicago {
+    font-size: 72px;
+}
+span.boss {
+    font-size: 98px;
+    font-weight: bold;
+}
+div.quote {
+    font-style: italic;
+}
+div.code {
+padding: 10px; font-family: Courier New; background-color: black; color: white;
+}
+div.code span.attr {
+    color: #00FF1A;
+}
+div.code span.string {
+    color: #F017FF;
+}
+div.code span.function {
+    color: #00DBFF;
+}
+div.code span.bracket {
+    color: #00DBFF;
+}
+div.code span.bracket span.name {
+    color: #FFF200;
+}
+div.code span.var {
+    color: #00DBFF;
+}
+div.code span.braces {
+    color: #0833C9;
+font-weight: bold;
+}
+div.code span.typevar {
+    color: #1249DB;
+}
+div.nav {
+    font-size: 24px; padding-top: 40px; padding-bottom: 20px;
+}
+p.question {
+    font-style: italic;
+    font-weight: bold;
+}
+div.content {
+    text-align: left; position: absolute; margin-left: -370px; left: 50%; padding: 20px; 
+    width: 700px; border-width: 0px 1px; border-color: black; border-style: solid; font-size: 20px; padding-bottom: 300px;
+}

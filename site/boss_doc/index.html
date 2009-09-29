@@ -1,0 +1,66 @@
+<html>
+
+    <head>
+        <title>Chicago Boss - the no-nonsense MVC framework for Erlang</title>
+        <link rel="stylesheet" type="text/css" href="boss.css" />
+        <style type="text/css">
+        </style>
+    </head>
+    <body>
+        <div class="equation">
+            <span style="background-color: #B80009;">Rails Idioms</span> +
+            <span style="background-color: #004B00;">Django Templates</span> +
+            <span style="background-color: #0D0075;">Erlang Power</span> =
+        </div>
+        <div style="padding: 40px;">
+            <span class="chicago">Chicago</span><br />
+            <span class="boss">BOSS</span>
+        </div>
+
+        <div class="quote">
+            <a name="nav"></a>
+            &#8220;Don&#8217;t you worry about that. You just let Boss worry about that.&#8221;
+        </div>
+        <div class="nav">
+            
+            <strong>F.A.Q.</strong> &nbsp; | &nbsp; <a href="example.html">EXAMPLE</a> &nbsp; | &nbsp; <a href="api.html">API</a> &nbsp; | &nbsp; <a href="download.html">DOWNLOAD</a>
+            
+        </div>
+        <div style="position: relative;">
+            <div class="content">
+                
+                <p class="question">How is Chicago Boss different from Rails/Django/Mason/CakePHP/My Favorite MVC Framework?</p>
+                <p>Chicago Boss is <strong>fully asynchronous</strong>, using one single process to handle hundreds or thousands of simultaneous requests, and thus it solves the classic <a href="http://www.kegel.com/c10k.html">c10k</a> problem. <strong>All other web frameworks will break down and cry</strong> if you ask them to process more than a few dozen simultaneous requests on a single machine. Chicago Boss is built with <strong>Erlang</strong>, the same platform used by banks and telecoms to achieve unprecendented scalability and (no exaggeration) 99.9999999% reliability.</p>
+
+                <p class="question">Fully asynchronous!? Doesn't that mean I need to write a bunch of callbacks and stuff? Shoot me now and dump my body in a river!</p>
+
+                <p><strong>No callback chaos.</strong> You will write clean, synchronous, sequential code. Chicago Boss takes care of the rest.</p>
+
+                <p class="question">How mature is Chicago Boss?</p>
+
+                <p>Chicago Boss is in the <strong>early stages of development</strong>, and is best for people looking to try out cutting-edge technology with a promising future. APIs will change, features may be broken, your car may explode when you turn the ignition, etc.</p>
+
+                <p class="question">Hey! Those don't look like regular Erlang modules in the example.</p>
+
+                <p>Chicago Boss uses some <strong>under-the-hood compiler magic</strong> to emulate the best features of Rails' ActiveRecord. Check out the <a href="api.html#bossrecord">BossRecord API</a> for details.</p>
+
+                <p class="question">Hey! That view code looks a lot like Django. Do I need Python installed or something?</p>
+
+                <p>Chicago Boss uses <strong>ErlyDTL</strong>, a pure-Erlang implementation of the Django Template Language. Check out the <a href="">ErlyDTL Reference</a> for details.</p>
+
+                <p class="question">Hey! What's going on in the controller?</p>
+
+                <p>Chicago Boss's HTTP handling is built on top of <strong>MochiWeb</strong>. Check out the <a href="api.html#bosscontroller">BossController API</a> for details.</p>
+
+                <p class="question">Does Chicago Boss support MySQL/Postgres/Ingres/CouchDB/Microsoft Excel?</p>
+
+                <p>One day Chicago Boss will interface with every database known to man. Right now you need the high-performance beast from the east, <strong>Tokyo Tyrant</strong>. (<a href="http://1978th.net/tokyotyrant/">Download Tyrant.</a>)</p>
+
+                <p class="question">Where can I download Chicago Boss?</p>
+
+                <p>Stroll over to the <a href="download.html">Chicago Boss download page</a></p>
+                
+            </div>
+        </div>
+    </body>
+</html>

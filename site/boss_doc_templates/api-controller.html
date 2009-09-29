@@ -1,0 +1,123 @@
+{% extends "api.html" %}
+{% block api_content %}
+<p style="font-size: 14px;"><em>Jump to:</em> &nbsp; <a href="#before_filter">before_filters</a> &nbsp; <a href="#mochiweb">Mochiweb request object</a></p>
+<p>Chicago Boss associates each URL with a function of a controller. 
+The URL <nobr>/foo/bar</nobr> will call the function <code>foo_controller:bar/1</code>. 
+Each controller module should go into your project's Controller/ directory and the file name should end with "_controller.erl". 
+The one and only argument passed to the function is a Mochiweb request object. Each exported controller function should return with one of the following:</p>
+<div class="code">
+    ok
+</div>
+<p>The template will be rendered without any variables.</p>
+<div class="code">
+    {ok, Variables<span class="typevar">::proplist()</span>}
+</div>
+<p><code>Variables</code> will be passed into the associated <a href="api-view.html#nav">ErlyDTL</a> template.</p>
+
+<div class="code">
+    {ok, Variables<span class="typevar">::proplist()</span>, Headers<span class="typevar">::proplist()</span>}
+</div>
+    
+<p><code>Variables</code> will be passed into the associated ErlyDTL template. <code>Headers</code> are HTTP headers you want to set, but the only allowed one right now is <code>Content-Type</code> (defaults to <code>"text/html"</code>).</p>
+
+<div class="code">
+    {redirect, Location<span class="typevar">::string()</span>}
+</div>
+<p>Perform a 302 HTTP redirect to <code>Location</code>.</p>
+<div class="code">
+    {redirect, Location<span class="typevar">::string()</span>, Headers<span class="typevar">::proplist()</span>}
+</div>
+<p>Perform a 302 HTTP redirect to <code>Location</code> and set additional HTTP <code>Headers</code>.</p>
+
+<div class="code">
+    {action_other, OtherLocation}
+</div>
+
+<p><code>OtherLocation = {Controller<span class="typevar">::atom()</span>, Action<span class="typevar">::atom()</span>}</code></p>
+
+<p>Execute the specified controller action, but without performing an HTTP redirect.</p>
+
+<div class="code">
+{render_other, OtherLocation}
+</div>
+<p><code>OtherLocation = {Controller<span class="typevar">::atom()</span>, Action<span class="typevar">::atom()</span>}</code></p>
+
+<p>Render the view from <code>OtherLocation</code>, but don't actually execute the associated controller action.</p>
+
+<div class="code">
+    {render_other, OtherLocation, Variables}
+</div>
+
+<p><code>OtherLocation = {Controller<span class="typevar">::atom()</span>, Action<span class="typevar">::atom()</span>}</code></p>
+
+<p>Render the view from <code>OtherLocation</code> using <code>Variables</code>, but don't actually execute the associated controller action.</p>
+
+<br />
+<a name="before_filter"></a>
+
+<hr />
+
+<p>If a controller exports a function called <code>before_filter/1</code>, then before executing an action in the controller, Chicago Boss will pass the action name as an atom to <code>before_filter/1</code>. <code>before_filter/1</code> should return a <code>fun</code> that takes a Mochiweb request object as its only argument and (in turn) returns one of the following:</p>
+
+<div class="code">
+    ok
+</div>
+
+<p>Execute the original action as normal</p>
+
+<div class="code">
+    {ok, ExtraInfo}
+</div>
+
+<p>Execute the original action, but pass ExtraInfo as the second argument to the controller function (the first argument is still the Mochiweb request object).</p>
+
+<div class="code">
+    {redirect, Location}
+</div>
+
+<p>Perform a 302 redirect to Location (a string).</p>
+
+<p>Probably most common before_filter looks like:</p>
+
+<div class="code">
+before_filter(_) -&gt;<br />
+&nbsp;&nbsp;&nbsp;&nbsp;fun <span class="function">user_controller</span>:<span class="function">require_login</span>/<span class="string">1</span>.
+</div>
+
+<br />
+<a name="mochiweb"></a>
+
+<hr />
+
+<p>Currently controller functions are passed a Mochiweb request object. <em>This is subject to change!!!</em> But in the meantime, useful functions in the Mochiweb request object include:</p>
+
+<div class="code">
+    get(method) -&gt; atom()
+</div>
+
+<p>Get the request method, e.g. GET, POST, etc.</p>
+
+<div class="code">
+    get_qs_value( Key<span class="typevar">::string()</span> ) -&gt; string() | undefined
+</div>
+
+<p>Get the value of a given query string parameter (e.g. "?id=1234")
+
+<div class="code">
+    get_post_value( Key<span class="typevar">::string()</span> ) -&gt; string() | undefined
+</div>
+
+<p>Get the value of a given POST parameter</p>
+
+<div class="code">
+    get_header_value( Key<span class="typevar">::string()</span> ) -&gt; string() | undefined
+</div>
+
+<p>Get the value of a given HTTP request header</p>
+
+<div class="code">
+    get_cookie_value( Key<span class="typevar">::string()</span> ) -&gt; string() | undefined
+</div>
+
+<p>Get the value of a given cookie.</p>
+{% endblock %}

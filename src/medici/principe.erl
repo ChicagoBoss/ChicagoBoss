@@ -204,7 +204,7 @@ putkeep(Socket, Key, Value) ->
 
 %% @spec putkeep(Socket::port(), 
 %%               Key::key(), 
-%%               Value::value_or_num()
+%%               Value::value_or_num(),
 %%               endian()) -> ok | error()
 %%
 %% @doc 

@@ -1,0 +1,96 @@
+{% extends "api.html" %}
+{% block api_content %}
+<p style="font-size: 14px;"><em>Jump to: </em> <a href="#instance">Generated instance methods</a> 
+&nbsp; <a href="#associations">Assocations (belongs_to, has_many)</a></p>
+<p>
+BossRecords are <em>specially compiled parameterized modules</em> that follow the "active record" pattern. BossRecords go into your project's Model/ folder and will have functions generated for saving them into the database and for accessing related BossRecords. Important aspects of BossRecords:
+</p>
+
+<ul>
+    <li><p>The first parameter of a BossRecord should always be called <code>Id</code>, and the
+    other parameters should be CamelCased attributes of your data model.</p></li>
+
+    <li><p>All parameters will be available as lower-case, underscored functions,
+    e.g. <code>-module(foo, [Id, TheText])</code> will generate the getter functions 
+    <code>id()</code> and <code>the_text()</code>, and the setters <code>id(NewId)</code> 
+    and <code>the_text(NewText)</code>. Note that setters do not save the BossRecord.</p></li>
+
+    <li><p>To auto-generate an ID, pass the atom <code>'id'</code> as the first parameter to <code>my_module:new</code>.</p></li>
+
+    <li><p>Call <code>new</code> with strings for all other parameters</p></li>
+
+    <li><p>Parameters that end in "Time" (e.g., <code>CreationTime</code>, <code>UpdateTime</code>) should be
+    passed either <code>erlang:now()</code> or a DateTime tuple.</p></li>
+
+    <li><p>You can add your own functions to a BossRecord module, which will have access to the generated functions described below.</p></li>
+
+    <li><p>To see the full API for a BossRecord called <code>foo</code> at any time during development, point your browser to /doc/foo on your dev server.</p></li>
+</ul>
+<a name="instance"></a>
+<hr />
+<p>Generated instance functions of a BossRecord include:</p>
+
+{% if functions %}
+{% for function in functions %}
+{% ifnotequal function.function "trivial_counter" %}
+<div class="code">
+    {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
+</div>
+<p>
+{% if function.description_long %}
+{{ function.description_long }}
+{% endif %}
+</p>
+{% endifnotequal %}
+{% endfor %}
+{% endif %}
+
+<p>Other getters and setters are generated based on the parameters of you BossRecord.</p>
+
+<a name="associations"></a>
+<hr />
+
+<p>Special associations are generated from the following module attributes:</p>
+
+<div class="code">
+    <span class="attr">-belongs_to</span>(foo).
+</div>
+
+<p>Requires a matching <code>FooId</code> in the parameter list. Adds a function <code>foo()</code> which returns the <code>foo</code> BossRecord with ID equal to the current BossRecord's <code>FooId</code>.</p>
+
+<div class="code">
+    <span class="attr">-has_many</span>(bars).
+</div>
+
+<p>Generates a function <code>bars()</code> which returns a list all "bar" BossRecords with <code>FooId</code> equal to this BossRecord's ID.</p>
+
+<p>The two above attributes work similar to <code>belongs_to</code> and <code>has_many</code> in Rails.</p>
+
+<p>More special attributes:</p>
+
+<div class="code">
+    <span class="attr">-has_up_to</span>({Limit::integer(), bars}).<br />
+    <span class="attr">-has_up_to</span>({Limit::integer(), bars, Sort::atom()}).<br />
+    <span class="attr">-has_up_to</span>({Limit::integer(), bars, Sort::atom(), SortOrder}).<br />
+</div>
+
+<p><code>SortOrder = str_ascending | str_descending | num_ascending | num_descending</code></p>
+
+<p>Generates a function <code>bars()</code> which returns a list of up to <code>Limit</code> "bar" BossRecords with <code>FooId</code> equal to this BossRecord's ID. Optional args:</p>
+
+<ul>
+    <li><code>Sort</code>:       the record attribute to sort the association on</li>
+    <li><code>SortOrder</code>:  how to sort the association</li>
+</ul>
+
+<p>Note that Time attributes are stored internally as integers, so sort them with <code>num_ascending</code> or <code>num_descending</code>.</p>
+
+<div class="code">
+    <span class="attr">-counter</span>(foo_counter).
+</div>
+
+<p>Generates a function <code>foo_counter()</code> which returns the value of the counter, initialized to zero. Each BossRecord may have an unlimited number of counters. Manipulate the counters with <code>reset</code> and <code>incr</code> above.</p>
+
+<p>SPECIAL NOTE: Everything in the Model directory will be compiled as a BossRecord rather than as a regular Erlang module; you don't need to do or declare anything special.</p>
+
+{% endblock %}

@@ -1,0 +1,198 @@
+<html>
+
+    <head>
+        <title>Chicago Boss - the no-nonsense MVC framework for Erlang</title>
+        <link rel="stylesheet" type="text/css" href="boss.css" />
+        <style type="text/css">
+        </style>
+    </head>
+    <body>
+        <div class="equation">
+            <span style="background-color: #B80009;">Rails Idioms</span> +
+            <span style="background-color: #004B00;">Django Templates</span> +
+            <span style="background-color: #0D0075;">Erlang Power</span> =
+        </div>
+        <div style="padding: 40px;">
+            <span class="chicago">Chicago</span><br />
+            <span class="boss">BOSS</span>
+        </div>
+
+        <div class="quote">
+            <a name="nav"></a>
+            &#8220;Don&#8217;t you worry about that. You just let Boss worry about that.&#8221;
+        </div>
+        <div class="nav">
+            
+<a href="index.html">F.A.Q.</a> &nbsp; | &nbsp; <a href="example.html">EXAMPLE</a> &nbsp; | &nbsp; <strong>API</strong> &nbsp; | &nbsp; <a href="download.html">DOWNLOAD</a>
+
+        </div>
+        <div style="position: relative;">
+            <div class="content">
+                
+<div style="text-align: center; font-style: italic;">
+<p>The Chicago Boss API is still experimental and subject to change!</p>
+</div>
+
+<div style="text-align: center; font-size: 20px; padding: 16px;">
+    
+    <a href="api-db.html">BossDB</a>
+    
+    &nbsp; | &nbsp; 
+    
+    <a href="api-record.html">BossRecord</a> 
+    
+    &nbsp; | &nbsp;
+    
+    <a href="api-controller.html">Controllers</a> 
+    
+    &nbsp; | &nbsp;
+    
+    <strong>ErlyDTL</strong>
+    
+</div>
+
+<div style="padding-top: 20px;">
+
+<p>Chicago Boss liked <a href="http://docs.djangoproject.com/en/dev/topics/templates/">Django's templating language</a> so much, he decided to take it. Template files go in your project's View folder, and will have access to the variables you pass from your <a href="api-controller.html#nav">Controller</a>.</p>
+
+<p>Almost all of Django's <a href="http://docs.djangoproject.com/en/dev/ref/templates/builtins/#built-in-tag-reference">tags</a> are implemented, including the ones for template inheritance. In addition, the following filters are available to Chicago Boss:</p>
+<table style="margin-left: 120px; margin-top: 30px;">
+    
+    
+    <tr><td>
+            <a href="http://docs.djangoproject.com/en/dev/ref/templates/builtins/#add">add</a></td>
+        <td>Adds a number to the value.</td>
+    </tr>
+    
+    
+    
+    <tr><td>
+            <a href="http://docs.djangoproject.com/en/dev/ref/templates/builtins/#capfirst">capfirst</a></td>
+        <td>Capitalizes the first character of the value.</td>
+    </tr>
+    
+    
+    
+    <tr><td>
+            <a href="http://docs.djangoproject.com/en/dev/ref/templates/builtins/#center">center</a></td>
+        <td>Centers the value in a field of a given width.</td>
+    </tr>
+    
+    
+    
+    <tr><td>
+            <a href="http://docs.djangoproject.com/en/dev/ref/templates/builtins/#date">date</a></td>
+        <td>Formats a date according to the given format.</td>
+    </tr>
+    
+    
+    
+    <tr><td>
+            <a href="http://docs.djangoproject.com/en/dev/ref/templates/builtins/#escapejs">escapejs</a></td>
+        <td>Escapes characters for use in JavaScript strings.</td>
+    </tr>
+    
+    
+    
+    <tr><td>
+            <a href="http://docs.djangoproject.com/en/dev/ref/templates/builtins/#first">first</a></td>
+        <td>Returns the first item in a list.</td>
+    </tr>
+    
+    
+    
+    <tr><td>
+            <a href="http://docs.djangoproject.com/en/dev/ref/templates/builtins/#fix_ampersands">fix_ampersands</a></td>
+        <td>Replaces ampersands with & entities.</td>
+    </tr>
+    
+    
+    
+    <tr><td>
+            <a href="http://docs.djangoproject.com/en/dev/ref/templates/builtins/#force_escape">force_escape</a></td>
+        <td>Applies HTML escaping to a string.</td>
+    </tr>
+    
+    
+    
+    
+    
+    
+    
+    <tr><td>
+            <a href="http://docs.djangoproject.com/en/dev/ref/templates/builtins/#join">join</a></td>
+        <td>Joins a list with a given separator.</td>
+    </tr>
+    
+    
+    
+    <tr><td>
+            <a href="http://docs.djangoproject.com/en/dev/ref/templates/builtins/#last">last</a></td>
+        <td>Returns the last item in a list.</td>
+    </tr>
+    
+    
+    
+    <tr><td>
+            <a href="http://docs.djangoproject.com/en/dev/ref/templates/builtins/#length">length</a></td>
+        <td>Returns the length of the value.</td>
+    </tr>
+    
+    
+    
+    <tr><td>
+            <a href="http://docs.djangoproject.com/en/dev/ref/templates/builtins/#length_is">length_is</a></td>
+        <td>Returns True iff the value's length is the argument.</td>
+    </tr>
+    
+    
+    
+    <tr><td>
+            <a href="http://docs.djangoproject.com/en/dev/ref/templates/builtins/#linebreaksbr">linebreaksbr</a></td>
+        <td>Converts all newlines to HTML line breaks.</td>
+    </tr>
+    
+    
+    
+    <tr><td>
+            <a href="http://docs.djangoproject.com/en/dev/ref/templates/builtins/#ljust">ljust</a></td>
+        <td>Left-aligns the value in a field of a given width.</td>
+    </tr>
+    
+    
+    
+    <tr><td>
+            <a href="http://docs.djangoproject.com/en/dev/ref/templates/builtins/#lower">lower</a></td>
+        <td>Converts a string into all lowercase.</td>
+    </tr>
+    
+    
+    
+    <tr><td>
+            <a href="http://docs.djangoproject.com/en/dev/ref/templates/builtins/#rjust">rjust</a></td>
+        <td>Right-aligns the value in a field of a given width.</td>
+    </tr>
+    
+    
+    
+    <tr><td>
+            <a href="http://docs.djangoproject.com/en/dev/ref/templates/builtins/#upper">upper</a></td>
+        <td>Converts a string into all uppercase.</td>
+    </tr>
+    
+    
+    
+    <tr><td>
+            <a href="http://docs.djangoproject.com/en/dev/ref/templates/builtins/#urlencode">urlencode</a></td>
+        <td>Escapes a value for use in a URL.</td>
+    </tr>
+    
+    
+</table>
+
+</div>
+
+            </div>
+        </div>
+    </body>
+</html>

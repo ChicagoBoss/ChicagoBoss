@@ -1,5 +1,4 @@
 ERL=erl
-ERLC=erlc
 DRIVER_APP=medici.app
 DB_APP=boss_db.app
 APP=boss.app
@@ -21,7 +20,7 @@ ebin/$(DB_APP): src/$(DB_APP)
 	-mkdir -p ebin
 	cp $< $@
 
-ebin/$(DRIVER_APP): src/$(DRIVER_APP)
+ebin/$(DRIVER_APP): src/medici/$(DRIVER_APP)
 	-mkdir -p ebin
 	cp $< $@
 
@@ -33,5 +32,8 @@ clean:
 edoc:
 	-mkdir -p doc
 	cp src/overview.edoc doc/
-	$(ERL) -noshell -eval "edoc:application($(APPLICATION), \".\", [])" \
+	$(ERL) -noshell -eval "edoc:application($(APPLICATION), \".\", [{subpackages, false}])" \
 	    -s init stop
+
+site: site/boss_doc_templates
+	$(ERL) -pa ebin -pa deps/*/ebin -noshell -eval "boss_doc:run()" -s init stop

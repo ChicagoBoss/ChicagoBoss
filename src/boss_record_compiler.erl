@@ -88,13 +88,13 @@ trick_out_forms(Forms, ModuleName, Parameters) ->
 
     lists:reverse(OtherForms) ++ 
         association_forms(ModuleName, Attributes) ++
-        counter_getter_forms(Counters) ++
-        counter_reset_forms(Counters) ++
-        counter_incr_forms(Counters) ++
         save_forms(ModuleName, Parameters) ++
         set_attributes_forms(ModuleName, Parameters) ++
         get_attributes_forms(ModuleName, Parameters) ++
         attribute_names_forms(ModuleName, Parameters) ++
+        counter_getter_forms(Counters) ++
+        counter_reset_forms(Counters) ++
+        counter_incr_forms(Counters) ++
         parameter_getter_forms(Parameters) ++
         parameter_setter_forms(ModuleName, Parameters) ++
         [].
@@ -174,7 +174,7 @@ set_attributes_forms(ModuleName, Parameters) ->
                         "% @doc Set multiple record attributes at once. Does not save the record."])],
             erl_syntax:function(
                 erl_syntax:atom(attributes),
-                [erl_syntax:clause([erl_syntax:variable("NewAttributes")], none,
+                [erl_syntax:clause([erl_syntax:variable("Proplist")], none,
                         [erl_syntax:application(
                                 erl_syntax:atom(ModuleName),
                                 erl_syntax:atom(new),
@@ -183,7 +183,7 @@ set_attributes_forms(ModuleName, Parameters) ->
                                                 erl_syntax:atom(proplists),
                                                 erl_syntax:atom(get_value),
                                                 [erl_syntax:atom(parameter_to_colname(P)),
-                                                    erl_syntax:variable("NewAttributes"),
+                                                    erl_syntax:variable("Proplist"),
                                                     erl_syntax:variable(P)])
                                     end, Parameters))])]))].
 
@@ -300,7 +300,7 @@ counter_incr_forms([]) ->
     [];
 counter_incr_forms(Counters) ->
     [ erl_syntax:add_precomments([erl_syntax:comment(
-                    ["% @spec incr( CounterName::atom() ) -> integer()",
+                    ["% @spec incr( Counter::atom() ) -> integer()",
                         "@doc Atomically increment a counter by 1."])],
             erl_syntax:function(erl_syntax:atom(incr),
                 lists:map(
@@ -312,7 +312,7 @@ counter_incr_forms(Counters) ->
                                         [counter_name_forms(Counter)])]) 
                     end, Counters))),
         erl_syntax:add_precomments([erl_syntax:comment(
-                    ["% @spec incr( CounterName::atom(), Increment::integer() ) ->"++
+                    ["% @spec incr( Counter::atom(), Increment::integer() ) ->"++
                         " integer()",
                         "% @doc Atomically increment a counter by the specified increment"])],
             erl_syntax:function(erl_syntax:atom(incr),
