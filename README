@@ -1,18 +1,12 @@
 = GETTING STARTED WITH CHICAGO BOSS =
 
-Erlang dependencies:
-* Erlang R13 -
-    http://www.erlang.org/download.html
-* ErlyDTL -
-    svn checkout http://erlydtl.googlecode.com/svn/trunk/ deps/erlydtl
-* MochiWeb -
-    svn checkout http://mochiweb.googlecode.com/svn/trunk/ deps/mochiweb
+Dependencies:
 
-Build with "make".
+    * Erlang R13 -
+        http://www.erlang.org/download.html
 
-Other dependencies:
-* Tokyo Tyrant -
-    http://1978th.net/tokyotyrant/
+    * Tokyo Tyrant -
+        http://1978th.net/tokyotyrant/
 
     You need Tyrant up and running with a Table database.
 
@@ -25,4 +19,4 @@ directly with the running server. Next, point your browser to:
 http://localhost:8001/hello/world
 
 If all is well you will see "Hello, World!" Now you can get busy. See the FAQ
-and API files located in site/boss_doc/.
+and API files located in doc/.
