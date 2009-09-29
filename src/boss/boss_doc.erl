@@ -6,7 +6,7 @@
 -include("xmerl.hrl").
 
 run() ->
-    run(filename:join(["site", "boss_doc_templates"]), filename:join(["site", "boss_doc"])).
+    run("doc_templates", "doc").
 
 run(InDir, OutDir) ->
     {ok, Filenames} = file:list_dir(InDir),
@@ -51,7 +51,7 @@ module_name_from_template(File) ->
 
 %% @spec get_vars( Template::string() ) -> [{Key::atom(), Value}]
 get_vars("api-view.html", InDir) ->
-    {Module, EDoc} = edoc:get_doc("deps/erlydtl/src/erlydtl/erlydtl_filters.erl", []),
+    {Module, EDoc} = edoc:get_doc("src/erlydtl/erlydtl_filters.erl", []),
     Functions = extract_function_docs(EDoc),
     [{filters, Functions}];
 get_vars("api-record.html", InDir) ->
@@ -59,7 +59,7 @@ get_vars("api-record.html", InDir) ->
         [{private, true}, {hidden, true}]),
     [{functions, extract_function_docs(EDoc)}];
 get_vars("api-db.html", InDir) ->
-    {Module, EDoc} = edoc:get_doc("src/boss_db.erl", []),
+    {Module, EDoc} = edoc:get_doc("src/boss/boss_db.erl", []),
     [{functions, extract_function_docs(EDoc)}];
 get_vars(_, InDir) ->
     [].

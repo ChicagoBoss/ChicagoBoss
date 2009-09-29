@@ -22,13 +22,13 @@
             &#8220;Don&#8217;t you worry about that. You just let Boss worry about that.&#8221;
         </div>
         <div class="nav">
-            {% block nav %}
+            
             <strong>F.A.Q.</strong> &nbsp; | &nbsp; <a href="example.html">EXAMPLE</a> &nbsp; | &nbsp; <a href="api.html">API</a> &nbsp; | &nbsp; <a href="download.html">DOWNLOAD</a>
-            {% endblock %}
+            
         </div>
         <div style="position: relative;">
             <div class="content">
-                {% block content %}
+                
                 <p class="question">How is Chicago Boss different from Rails/Django/Mason/CakePHP/My Favorite MVC Framework?</p>
                 <p>Chicago Boss is <strong>fully asynchronous</strong>, using one single process to handle hundreds or thousands of simultaneous requests, and thus it solves the classic <a href="http://www.kegel.com/c10k.html">c10k</a> problem. <strong>All other web frameworks will break down and cry</strong> if you ask them to process more than a few dozen simultaneous requests on a single machine. Chicago Boss is built with <strong>Erlang</strong>, the same platform used by banks and telecoms to achieve unprecendented scalability and (no exaggeration) 99.9999999% reliability.</p>
 
@@ -42,15 +42,15 @@
 
                 <p class="question">Hey! Those don't look like regular Erlang modules in the example.</p>
 
-                <p>Chicago Boss uses some <strong>under-the-hood compiler magic</strong> to emulate the best features of Rails' ActiveRecord. Check out the <a href="api.html#bossrecord">BossRecord API</a> for details.</p>
+                <p>Chicago Boss uses some <strong>under-the-hood compiler magic</strong> to emulate the best features of Rails' ActiveRecord. Check out the <a href="api-record.html">BossRecord API</a> for details.</p>
 
                 <p class="question">Hey! That view code looks a lot like Django. Do I need Python installed or something?</p>
 
-                <p>Chicago Boss uses <strong>ErlyDTL</strong>, a pure-Erlang implementation of the Django Template Language. Check out the <a href="">ErlyDTL Reference</a> for details.</p>
+                <p>Chicago Boss uses <strong>ErlyDTL</strong>, a pure-Erlang implementation of the Django Template Language. Check out the <a href="api-view.html">ErlyDTL Reference</a> for details.</p>
 
                 <p class="question">Hey! What's going on in the controller?</p>
 
-                <p>Chicago Boss's HTTP handling is built on top of <strong>MochiWeb</strong>. Check out the <a href="api.html#bosscontroller">BossController API</a> for details.</p>
+                <p>Chicago Boss's HTTP handling is built on top of <strong>MochiWeb</strong>. Check out the <a href="api-controller.html">BossController API</a> for details.</p>
 
                 <p class="question">Does Chicago Boss support MySQL/Postgres/Ingres/CouchDB/Microsoft Excel?</p>
 
@@ -59,7 +59,7 @@
                 <p class="question">Where can I download Chicago Boss?</p>
 
                 <p>Stroll over to the <a href="download.html">Chicago Boss download page</a></p>
-                {% endblock %}
+                
             </div>
         </div>
     </body>

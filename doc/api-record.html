@@ -1,5 +1,58 @@
-{% extends "api.html" %}
-{% block api_content %}
+<html>
+
+    <head>
+        <title>Chicago Boss - the no-nonsense MVC framework for Erlang</title>
+        <link rel="stylesheet" type="text/css" href="boss.css" />
+        <style type="text/css">
+        </style>
+    </head>
+    <body>
+        <div class="equation">
+            <span style="background-color: #B80009;">Rails Idioms</span> +
+            <span style="background-color: #004B00;">Django Templates</span> +
+            <span style="background-color: #0D0075;">Erlang Power</span> =
+        </div>
+        <div style="padding: 40px;">
+            <span class="chicago">Chicago</span><br />
+            <span class="boss">BOSS</span>
+        </div>
+
+        <div class="quote">
+            <a name="nav"></a>
+            &#8220;Don&#8217;t you worry about that. You just let Boss worry about that.&#8221;
+        </div>
+        <div class="nav">
+            
+<a href="index.html">F.A.Q.</a> &nbsp; | &nbsp; <a href="example.html">EXAMPLE</a> &nbsp; | &nbsp; <strong>API</strong> &nbsp; | &nbsp; <a href="download.html">DOWNLOAD</a>
+
+        </div>
+        <div style="position: relative;">
+            <div class="content">
+                
+<div style="text-align: center; font-style: italic;">
+<p>The Chicago Boss API is still experimental and subject to change!</p>
+</div>
+
+<div style="text-align: center; font-size: 20px; padding: 16px;">
+    
+    <a href="api-db.html">BossDB</a>
+    
+    &nbsp; | &nbsp; 
+    
+    <strong>BossRecord</strong>
+    
+    &nbsp; | &nbsp;
+    
+    <a href="api-controller.html">Controllers</a> 
+    
+    &nbsp; | &nbsp;
+    
+    <a href="api-view.html">ErlyDTL</a>
+    
+</div>
+
+<div style="padding-top: 20px;">
+
 <p style="font-size: 14px;"><em>Jump to: </em> <a href="#instance">Generated instance methods</a> 
 &nbsp; <a href="#associations">Assocations (belongs_to, has_many)</a></p>
 <p>
@@ -30,22 +83,113 @@ BossRecords are <em>specially compiled parameterized modules</em> that follow th
 <hr />
 <p>Generated instance functions of a BossRecord include:</p>
 
-{% if functions %}
-{% for function in functions %}
-{% ifnotequal function.function "trivial_counter" %}
+
+
+
 <div class="code">
-    {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
+    save() -> SavedBossRecord
 </div>
 <p>
-{% if function.description_long %}
-{{ function.description_long }}
-{% endif %}
-</p>
-{% endifnotequal %}
-{% endfor %}
-{% endif %}
 
-<p>Other getters and setters are generated based on the parameters of you BossRecord.</p>
+Saves this <code>boss_record</code> record to the database. The returned record
+  will have an auto-generated ID if the record's ID was set to 'id'.
+
+</p>
+
+
+
+<div class="code">
+    attributes(Proplist) -> BossRecord
+</div>
+<p>
+
+Set multiple record attributes at once. Does not save the record.
+
+</p>
+
+
+
+<div class="code">
+    attributes() -> [{Key<span class="typevar">::atom()</span>, Value<span class="typevar">::string()</span> | undefined}]
+</div>
+<p>
+
+A proplist of the <code>boss_record</code> parameters and their values.
+
+</p>
+
+
+
+<div class="code">
+    attribute_names() -> [<span class="typevar">::atom()</span>]
+</div>
+<p>
+
+A list of the lower-case <code>boss_record</code> parameters.
+
+</p>
+
+
+
+
+
+<div class="code">
+    reset(Counter<span class="typevar">::atom()</span>) -> ok | {error, Reason}
+</div>
+<p>
+
+Reset a counter to zero
+
+</p>
+
+
+
+<div class="code">
+    incr(Counter<span class="typevar">::atom()</span>) -> <span class="typevar">::integer()</span>
+</div>
+<p>
+
+Atomically increment a counter by 1.
+
+</p>
+
+
+
+<div class="code">
+    incr(Counter<span class="typevar">::atom()</span>, Increment<span class="typevar">::integer()</span>) -> <span class="typevar">::integer()</span>
+</div>
+<p>
+
+Atomically increment a counter by the specified increment
+
+</p>
+
+
+
+<div class="code">
+    id() -> Id
+</div>
+<p>
+
+Returns the value of <code>Id</code>
+
+</p>
+
+
+
+<div class="code">
+    id(Id<span class="typevar">::string()</span>) -> BossRecord
+</div>
+<p>
+
+Set the value of <code>Id</code>.
+
+</p>
+
+
+
+
+<p>Other getters and setters are generated based on the parameters of your BossRecord.</p>
 
 <a name="associations"></a>
 <hr />
@@ -93,4 +237,10 @@ BossRecords are <em>specially compiled parameterized modules</em> that follow th
 
 <p>SPECIAL NOTE: Everything in the Model directory will be compiled as a BossRecord rather than as a regular Erlang module; you don't need to do or declare anything special.</p>
 
-{% endblock %}
+
+</div>
+
+            </div>
+        </div>
+    </body>
+</html>
