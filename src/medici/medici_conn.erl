@@ -30,12 +30,7 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
 	 terminate/2, code_change/3]).
 
--define(DEFAULT_CONTROLLER, medici).
--ifdef(DEBUG).
--define(DEBUG_LOG(Msg, Args), error_logger:error_msg(Msg, Args)).
--else.
--define(DEBUG_LOG(_Msg, _Args), void).
--endif.
+-include("medici.hrl").
 
 -record(state, {socket, mod, endian, controller}).
 
@@ -59,17 +54,17 @@ init(MediciOpts) ->
     {ok, Sock} = principe:connect(MediciOpts),
     case get_db_type(Sock) of
 	{ok, Endian, table} ->
-	    Controller = proplists:get_value(controller, MediciOpts, ?DEFAULT_CONTROLLER),
+	    Controller = proplists:get_value(controller, MediciOpts, ?CONTROLLER_NAME),
 	    Controller ! {client_start, self()},
 	    process_flag(trap_exit, true),
 	    {ok, #state{socket=Sock, mod=principe_table, endian=Endian, controller=Controller}};
 	{ok, Endian, _} ->
-	    Controller = proplists:get_value(controller, MediciOpts, ?DEFAULT_CONTROLLER),
+	    Controller = proplists:get_value(controller, MediciOpts, ?CONTROLLER_NAME),
 	    Controller ! {client_start, self()},
 	    process_flag(trap_exit, true),
 	    {ok, #state{socket=Sock, mod=principe, endian=Endian, controller=Controller}};
-	{error, _} ->
-	    {stop, connect_failure}
+	{error, Err} ->
+	    {stop, Err}
     end.
 
 %% @spec handle_call(Request, From, State) -> {stop, Reason, State}
@@ -85,6 +80,12 @@ handle_call(Request, _From, State) ->
 %% @private Handle cast messages to forward to the remote database
 handle_cast(stop, State) ->
     {stop, asked_to_stop, State};
+handle_cast({From, tune}, State) ->
+    %% DB tuning request will come in via this channel, but is not just passed
+    %% through to principe/tyrant.  Handle it here.
+    Result = tune_db(State),
+    gen_server:reply(From, Result),
+    {noreply, State};
 handle_cast({From, CallFunc}=Request, State) when is_atom(CallFunc) ->
     Module = State#state.mod,
     Result = Module:CallFunc(State#state.socket),
@@ -224,4 +225,28 @@ get_db_type(Socket) when is_port(Socket) ->
 		_ ->
 		    {ok, Endian, Type}
 	    end	    
+    end.
+
+tune_db(State) ->
+    StatInfo = principe:stat(State#state.socket),
+    case StatInfo of
+	{error, Reason} ->
+	    ?DEBUG_LOG("Error getting db type for tuning: ~p", [Reason]),
+	    {error, Reason};
+	StatList ->
+	    case proplists:get_value(type, StatList) of
+		"on-memory hash" -> 
+		    Records = list_to_integer(proplists:get_value(rnum, StatList)),
+		    BnumInt = Records * 4,
+		    TuningParam = "bnum=" ++ integer_to_list(BnumInt),
+		    principe:optimize(State#state.socket, TuningParam);
+		"hash" ->
+		    Records = list_to_integer(proplists:get_value(rnum, StatList)),
+		    BnumInt = Records * 4,
+		    TuningParam = "bnum=" ++ integer_to_list(BnumInt),
+		    principe:optimize(State#state.socket, TuningParam);
+		Other -> 
+		    ?DEBUG_LOG("Can't tune a db of type ~p yet", [Other]),
+		    {error, db_type_unsupported_for_tuning}
+	    end
     end.

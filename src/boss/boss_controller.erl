@@ -19,7 +19,10 @@ stop() ->
     mochiweb_http:stop().
 
 mochiweb_request(Req) ->
-    Req:respond(process_request(Req)).
+    case Req:get(path) of
+        "/static/"++File -> Req:serve_file(File, "static");
+        _ -> Req:respond(process_request(Req))
+    end.
 
 process_request(Req) ->
     Result = case parse_path(Req:get(path)) of
@@ -71,7 +74,7 @@ trap_load_and_execute(Arg1, Arg2) ->
     end.
 
 load_and_execute({doc, ModelName}, _Req) ->
-    case load_models() of
+    case load_dir(model_path(), fun compile_model/1) of
         ok -> 
             {ModelName, Edoc} = boss_record_compiler:edoc_module(
                 model_path(atom_to_list(ModelName)++".erl"), [{private, true}]),
@@ -80,9 +83,9 @@ load_and_execute({doc, ModelName}, _Req) ->
             Error
     end;
 load_and_execute({Controller, Action}, Req) ->
-    case load_controller(Controller) of
+    case load_dir(controller_path(), fun compile_controller/1) of
         ok ->
-            case load_models() of
+            case load_dir(model_path(), fun compile_model/1) of
                 ok ->
                     execute_action({Controller, Action}, Req);
                 Else ->
@@ -145,11 +148,11 @@ process_action_result({_, Req, LocationTrail}, {action_other, OtherLocation}) ->
 process_action_result(_, Else) ->
     Else.
 
-compile_controller(Module, ModulePath) ->
+compile_controller(ModulePath) ->
     CompileResult = compile:file(filename:rootname(ModulePath),
         [{outdir, filename:join([root_dir(), "ebin"])}, return_errors]),
     case CompileResult of
-        {ok, _} ->
+        {ok, Module} ->
             code:purge(Module),
             {module, Module} = code:load_file(Module),
             ok;
@@ -166,40 +169,28 @@ compile_view(Controller, Template) ->
 compile_model(ModulePath) ->
     boss_record_compiler:compile(ModulePath).
 
-load_controller(ModuleName) ->
-    Module = list_to_atom(lists:concat([ModuleName, "_controller"])),
-    case module_older_than(Module, [controller_path(Module)]) of
-        true ->
-            compile_controller(Module, controller_path(Module));
-        _ ->
-            ok
-    end.
-
-load_models() ->
-    {ok, Models} = file:list_dir(model_path()),
-    ErrorList = lists:foldl(
-        fun(Path, Errors) ->
-                case filename:basename(Path, ".erl") of
-                    "." ++ _ ->
-                        Errors;
-                    ModuleName ->
-                        Module = list_to_atom(ModuleName),
-                        AbsPath = model_path(Path),
-                        case module_older_than(Module, [AbsPath]) of
-                            true ->
-                                case compile_model(AbsPath) of
-                                    ok ->
-                                        Errors;
-                                    {error, Error} ->
-                                        [Error | Errors];
-                                    {error, NewErrors, _NewWarnings} when is_list(NewErrors) ->
-                                        NewErrors ++ Errors
-                                end;
-                            _ ->
-                                Errors
-                        end
+load_dir(Dir, Compiler) ->
+    {ok, Files} = file:list_dir(Dir),
+    ErrorList = lists:foldl(fun
+            ("."++_, Errors) ->
+                Errors;
+            (File, Errors) ->
+                Module = list_to_atom(filename:basename(File, ".erl")),
+                AbsPath = filename:join([Dir, File]),
+                case module_older_than(Module, [AbsPath]) of
+                    true ->
+                        case Compiler(AbsPath) of
+                            ok ->
+                                Errors;
+                            {error, Error} ->
+                                [Error | Errors];
+                            {error, NewErrors, _NewWarnings} when is_list(NewErrors) ->
+                                NewErrors ++ Errors
+                        end;
+                    _ ->
+                        Errors
                 end
-        end, [], Models),
+        end, [], Files),
     case length(ErrorList) of
         0 ->
             ok;
@@ -297,7 +288,6 @@ model_path() -> filename:join([root_dir(), "Model"]).
 model_path(Model) -> filename:join([model_path(), Model]).
 
 controller_path() -> filename:join([root_dir(), "Controller"]).
-controller_path(Module) -> filename:join([controller_path(), lists:concat([Module, ".erl"])]).
 
 format_now(Time) ->
     {{Year, Month, Day}, {Hour, Minute, Second}} = calendar:now_to_local_time(Time),

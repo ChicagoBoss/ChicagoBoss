@@ -73,52 +73,7 @@
 	 misc_no_update/4,
 	 ext/5]).
 
-%% Standard definitions
--define(TSERVER, "localhost").
--define(TPORT, 1978).
--define(TOPTS, [binary, {packet, 0}, {nodelay, true}, {active, true}, {keepalive, true}]).
--define(TIMEOUT, 5000).
-
-%% Tyrant protocol constants
--define(PUT, 16#C810).
--define(PUTKEEP, 16#C811).
--define(PUTCAT, 16#C812).
--define(PUTSHL, 16#C813).
--define(PUTNR, 16#C818).
--define(OUT, 16#C820).
--define(GET, 16#C830).
--define(MGET, 16#C831).
--define(VSIZ, 16#C838).
--define(ITERINIT, 16#C850).
--define(ITERNEXT, 16#C851).
--define(FWMKEYS, 16#C858).
--define(ADDINT, 16#C860).
--define(ADDDOUBLE, 16#C861).
--define(EXT, 16#C868).
--define(SYNC, 16#C870).
--define(OPTIMIZE, 16#C871).
--define(VANISH, 16#C872).
--define(COPY, 16#C873).
--define(RESTORE, 16#C874).
--define(SETMST, 16#C878).
--define(RNUM, 16#C880).
--define(SIZE, 16#C881).
--define(STAT, 16#C888).
--define(MISC, 16#C890).
--define(REPL, 16#C8A0).
-
--define(MONOULOG, 1 bsl 0).
--define(XOLCKREC, 1 bsl 0).
--define(XOLCKGLB, 1 bsl 1).
-
-%% Macros for function patterns that are used frequently.
--define(T0(Code), gen_tcp:send(Socket, [<<Code:16>>])).
--define(T1(Code), gen_tcp:send(Socket, [<<Code:16>>, <<(iolist_size(Key)):32>>, Key])).
--define(T2(Code), gen_tcp:send(Socket, [<<Code:16>>, <<(iolist_size(Key)):32>>, <<(iolist_size(Value)):32>>, Key, Value])).
--define(R_SUCCESS, tyrant_response(Socket, fun recv_success/2)).
--define(R_INT32, tyrant_response(Socket, fun recv_size/2)).
--define(R_SIZE_DATA, tyrant_response(Socket, fun recv_size_data/2)).
--define(R_INT64, tyrant_response(Socket, fun recv_size64/2)).
+-include("principe.hrl").
 
 %%====================================================================
 %% The Tokyo Tyrant access functions
@@ -204,7 +159,7 @@ putkeep(Socket, Key, Value) ->
 
 %% @spec putkeep(Socket::port(), 
 %%               Key::key(), 
-%%               Value::value_or_num(),
+%%               Value::value_or_num()
 %%               endian()) -> ok | error()
 %%
 %% @doc 
@@ -361,7 +316,7 @@ mget(Socket, KeyList) when is_list(KeyList) ->
 			  <<(length(KeyList)):32>>, 
 			  [[<<(iolist_size(Key)):32>>, Key] || Key <- KeyList]
 			 ]),
-    tyrant_response(Socket, fun recv_count_4tuple/2).
+    ?R_4TUPLE.
 
 %% @spec vsiz(Socket::port(),
 %%            Key::key()) -> integer()
@@ -397,7 +352,7 @@ fwmkeys(Socket, Prefix, MaxKeys) when is_integer(MaxKeys) ->
     gen_tcp:send(Socket, [<<?FWMKEYS:16>>, 
 			  <<(iolist_size(Prefix)):32>>, 
 			  <<MaxKeys:32>>, Prefix]),
-    tyrant_response(Socket, fun recv_count_2tuple/2).
+    ?R_2TUPLE.
 
 %% @spec addint(Socket::port(),
 %%              Key::key(),
@@ -421,7 +376,7 @@ adddouble(Socket, Key, Double) when is_float(Double) ->
 			  <<IntPart:64>>, 
 			  <<FracPart:64>>,
 			  Key]),
-    tyrant_response(Socket, fun recv_size64_size64/2).
+    ?R_SIZE64_SIZE64.
 
 %% @spec adddouble(Socket::port(),
 %%                 Key::key(),
@@ -442,7 +397,7 @@ adddouble(Socket, Key, Double, little) when is_float(Double) ->
 			  <<IntPart:64/little>>, 
 			  <<FracPart:64/little>>,
 			  Key]),
-    tyrant_response(Socket, fun recv_size64_size64/2);
+    ?R_SIZE64_SIZE64;
 %% Need to stuff this one in here because the arity is 4
 adddouble(Socket, Key, IntPart, FracPart) when is_integer(IntPart), is_integer(FracPart) ->
     gen_tcp:send(Socket, [<<?ADDDOUBLE:16>>, 
@@ -450,7 +405,7 @@ adddouble(Socket, Key, IntPart, FracPart) when is_integer(IntPart), is_integer(F
 			  <<IntPart:64>>, 
 			  <<FracPart:64>>,
 			  Key]),
-    tyrant_response(Socket, fun recv_size64_size64/2).
+    ?R_SIZE64_SIZE64.
 
 %% @spec adddouble(Socket::port(),
 %%                 Key::key(),
@@ -468,14 +423,14 @@ adddouble(Socket, Key, IntPart, FracPart, little) when is_integer(IntPart), is_i
 			  <<IntPart:64/little>>, 
 			  <<FracPart:64/little>>,
 			  Key]),
-    tyrant_response(Socket, fun recv_size64_size64/2);
+    ?R_SIZE64_SIZE64;
 adddouble(Socket, Key, IntPart, FracPart, big) when is_integer(IntPart), is_integer(FracPart) ->
     gen_tcp:send(Socket, [<<?ADDDOUBLE:16>>, 
 			  <<(iolist_size(Key)):32>>,
 			  <<IntPart:64>>, 
 			  <<FracPart:64>>,
 			  Key]),
-    tyrant_response(Socket, fun recv_size64_size64/2).
+    ?R_SIZE64_SIZE64.
 
 %% @spec sync(Socket::port()) -> ok | error()
 %%
@@ -497,6 +452,7 @@ vanish(Socket) ->
 %% @doc Change the remote database tuning parameters.  The second parameter
 %%      should be a list of the database tuning parameters that will be applied
 %%      at the remote end (e.g. "#bnum=1000000#opts=ld").
+%% @end
 optimize(Socket, Key) ->
     ?T1(?OPTIMIZE), % Using 'Key' so that the macro binds properly...
     ?R_SUCCESS.
@@ -619,13 +575,13 @@ misc(Socket, Func, Args) when length(Args) > 0 ->
 			  Func,
 			  misc_arg_encode(big, Args)
 			 ]),
-    tyrant_response(Socket, fun recv_count_2tuple/2);
+    ?R_2TUPLE;
 misc(Socket, Func, _Args) ->
     gen_tcp:send(Socket, [<<?MISC:16>>, 
 			  <<(iolist_size(Func)):32>>, <<0:32>>, 
 			  <<0:32>>, 
 			  Func]),
-    tyrant_response(Socket, fun recv_count_2tuple/2).
+    ?R_2TUPLE.
 
 %% @spec misc(Socket::port(),
 %%            Func::iolist(),
@@ -654,7 +610,7 @@ misc(Socket, Func, Args, little) when length(Args) > 0 ->
 			  Func,
 			  misc_arg_encode(little, Args)
 			 ]),
-    tyrant_response(Socket, fun recv_count_2tuple/2);
+    ?R_2TUPLE;
 misc(Socket, Func, Args, _Endian) ->
     misc(Socket, Func, Args).
 
@@ -671,13 +627,13 @@ misc_no_update(Socket, Func, Args) when length(Args) > 0 ->
 			  Func,
 			  misc_arg_encode(big, Args)
 			 ]),
-    tyrant_response(Socket, fun recv_count_2tuple/2);
+    ?R_2TUPLE;
 misc_no_update(Socket, Func, _Args) ->
     gen_tcp:send(Socket, [<<?MISC:16>>, 
 			  <<(iolist_size(Func)):32>>, <<1:32>>, 
 			  <<0:32>>, 
 			  Func]),
-    tyrant_response(Socket, fun recv_count_2tuple/2).
+    ?R_2TUPLE.
 
 %% @spec misc_no_update(Socket::port(),
 %%                      Func::iolist(),
@@ -695,7 +651,7 @@ misc_no_update(Socket, Func, Args, little) when length(Args) > 0 ->
 			  Func,
 			  misc_arg_encode(little, Args)
 			 ]),
-    tyrant_response(Socket, fun recv_count_2tuple/2);
+    ?R_2TUPLE;
 misc_no_update(Socket, Func, Args, little) ->
     misc_no_update(Socket, Func, Args).
 
@@ -729,117 +685,156 @@ ext(Socket, Func, Opts, Key, Value) ->
     gen_tcp:send(Socket, [<<?EXT:16>>, <<(iolist_size(Func)):32>>, <<Opts:32>>, 
 			  <<(iolist_size(Key)):32>>, <<(iolist_size(Value)):32>>, 
 			  Func, Key, Value]),
-    ?R_SUCCESS.
+    ?R_SIZE_DATA.
 
 %%====================================================================
 %% Handle response from the server
 %%====================================================================
 
-tyrant_response(Socket, ResponseHandler) ->
+%% @spec (ResponseHandler::function()) -> ok | error() | term()
+%%
+%% @private Get the response from a Tyrant request, parse it, and return the
+%% data or error code.
+%% @end
+tyrant_response(ResponseHandler) ->
     receive
-	{tcp, Socket, <<1:8, _Rest/binary>>} ->
+	{tcp, _, <<1:8, _Rest/binary>>} ->
 	    {error, invalid_operation};
-	{tcp, Socket, <<2:8, _Rest/binary>>} ->
+	{tcp, _, <<2:8, _Rest/binary>>} ->
 	    {error, no_host_found};
-	{tcp, Socket, <<3:8, _Rest/binary>>} ->
+	{tcp, _, <<3:8, _Rest/binary>>} ->
 	    {error, connection_refused};
-	{tcp, Socket, <<4:8, _Rest/binary>>} ->
+	{tcp, _, <<4:8, _Rest/binary>>} ->
 	    {error, send_error};
-	{tcp, Socket, <<5:8, _Rest/binary>>} ->
+	{tcp, _, <<5:8, _Rest/binary>>} ->
 	    {error, recv_error};
-	{tcp, Socket, <<6:8, _Rest/binary>>} ->
+	{tcp, _, <<6:8, _Rest/binary>>} ->
 	    {error, existing_record};
-	{tcp, Socket, <<7:8, _Rest/binary>>} ->
+	{tcp, _, <<7:8, _Rest/binary>>} ->
 	    {error, no_such_record};
-        {tcp, Socket, <<ErrorCode:8, _Rest/binary>>} when ErrorCode =/= 0 ->
+        {tcp, _, <<ErrorCode:8, _Rest/binary>>} when ErrorCode =/= 0 ->
 	    {error, ErrorCode};
-        {tcp_closed, Socket} -> 
+        {tcp_closed, _} -> 
 	    {error, conn_closed};
-        {tcp_error, Socket, _Reason} -> 
+        {tcp_error, _, _} -> 
 	    {error, conn_error};
         Data -> 
-	    ResponseHandler(Socket, Data)
+	    ResponseHandler(Data)
     after ?TIMEOUT -> 
 	    {error, timeout}
     end.
 
 %% receive 8-bit success flag
-recv_success(_Socket, {tcp, _, <<0:8>>}) -> 
-    ok.
+recv_success({tcp, _, <<0:8>>}) -> 
+    ok;
+
+%% TODO: find out why principe_table:search enters this clause
+%% as table becomes large. {Update from Jim to Jim: this was probably
+%% due to data chunks that was recently fixed due to the bug Bhasker
+%% spotted -- try yanking this and checking again...}
+recv_success({tcp, _, _})->
+   ok.
  
 %% receive 8-bit success flag + 32-bit int (endianness determined by remote database)
-recv_size(_Socket, {tcp, _, <<0:8, ValSize:32>>}) ->
+recv_size({tcp, _, <<0:8, ValSize:32>>}) ->
+    ValSize;
+recv_size({tcp, _, <<0:8, SmallBin/binary>>}) ->
+    {ValSize, _Rest} = recv_until(SmallBin, 4),
     ValSize.
  
 %% receive 8-bit success flag + 64-bit int
-recv_size64(_Socket, {tcp, _, <<0:8, ValSize:64>>}) -> 
+recv_size64({tcp, _, <<0:8, ValSize:64>>}) -> 
+    ValSize;
+recv_size64({tcp, _, <<0:8, SmallBin/binary>>}) ->
+    {ValSize, _Rest} = recv_until(SmallBin, 8),
     ValSize.
  
 %% receive 8-bit success flag + 64-bit int + 64-bit int
-recv_size64_size64(_Socket, {tcp, _, <<0:8, V1:64, V2:64>>}) -> 
+recv_size64_size64({tcp, _, <<0:8, V1:64, V2:64>>}) -> 
+    {V1, V2};
+recv_size64_size64({tcp, _, <<0:8, SmallBin/binary>>}) ->
+    %% Did not get a full chunk of data, so get more.
+    {V1, V2Bin} = recv_until(SmallBin, 8),
+    {V2, _Rest} = recv_until(V2Bin, 8),
     {V1, V2}.
  
 %% receive 8-bit success flag + length1 + data1
-recv_size_data(Socket, Data) ->
-    case Data of
-        {tcp, _, <<0:8, Length:32, Rest/binary>>} ->
-            {Value, <<>>} = recv_until(Socket, Rest, Length),
-            Value
-    end.
+recv_size_data({tcp, _, <<0:8, Size:32, Data/binary>>}) when byte_size(Data) >= Size ->
+    <<Value:Size/binary, _Rest/binary>> = Data,
+    Value;
+recv_size_data({tcp, _, <<0:8, Size:32, Data/binary>>}) ->
+    %% Have at least the size, need to pull more for the data payload.
+    {Value, _Rest} = recv_until(Data, Size),
+    Value;
+recv_size_data({tcp, _, <<0:8, SmallBin/binary>>}) ->
+    %% Did not even get the size, pull size, then pull data.
+    {<<Size:32>>, TailBin} = recv_until(SmallBin, 4),
+    {Value, _Rest} = recv_until(TailBin, Size),
+    Value.
 
 %% receive 8-bit success flag + count + (length1, length2, data1, data2)*count
-recv_count_4tuple(Socket, Data) ->
-    case Data of
-        {tcp, _, <<0:8, 0:32, _Rest/binary>>} ->
-            [];
-        {tcp, _, <<0:8, RecCnt:32, Rest/binary>>} ->
-            {KVS, _} = lists:mapfoldl(
-                            fun(_N, Acc) ->
-                                <<KeySize:32, ValSize:32, Bin/binary>> = Acc,
-                                {Key, Rest1} = recv_until(Socket, Bin, KeySize),
-                                {Value, Rest2} = recv_until(Socket, Rest1, ValSize),
-                                {{Key, Value}, Rest2}
-                            end, 
-                            Rest, lists:seq(1, RecCnt)
-                        ),
-            KVS
-    end.
+recv_count_4tuple({tcp, _, <<0:8, 0:32, _Rest/binary>>}) ->
+    [];
+recv_count_4tuple({tcp, _, <<0:8, Cnt:32, Rest/binary>>}) ->
+    {KeyVals, _} = lists:foldl(
+		     %% This fold should grab/process one value per iteration.
+		     fun(_IterCount, {Vals, <<KeySize:32, ValSize:32, Bin/binary>>}) ->
+			     %% We have at least the key and value sizes, so make recv_until's 
+			     %% job easier and just ask it to split/pull the data elements.
+			     {Key, ValBin} = recv_until(Bin, KeySize),
+			     {Value, RestBin} = recv_until(ValBin, ValSize),
+			     {[{Key, Value}] ++ Vals, RestBin};
+			(_IterCount, {Vals, <<SmallBin/binary>>}) ->
+			     %% Not enough in SmallBin to even get the sizes, read the key and
+			     %% value sizes then read enough to get the new data elements.
+			     {<<KeySize:32>>, ValSizeAndDataBin} = recv_until(SmallBin, 4),
+			     {<<ValSize:32>>, DataBin} = recv_until(ValSizeAndDataBin, 4),
+			     {Key, ValBin} = recv_until(DataBin, KeySize),
+			     {Value, RestBin} = recv_until(ValBin, ValSize),			     
+			     {[{Key, Value}] ++ Vals, RestBin}
+		     end,
+		     {[], Rest}, lists:seq(1, Cnt)
+		    ),
+    lists:reverse(KeyVals).
 
 %% receive 8-bit success flag + count + (length1, data1)*count
-recv_count_2tuple(Socket, Data) ->
-    case Data of
-        {tcp, _, <<0:8, 0:32, _Rest/binary>>} ->
-	    [];
-        {tcp, _, <<0:8, Cnt:32, Rest/binary>>} ->
-            {Keys, _} = lists:mapfoldl(
-                            fun(_N, Acc) ->
-                                <<KeySize:32, Bin/binary>> = Acc,
-                                recv_until(Socket, Bin, KeySize)
-                            end,
-                            Rest, lists:seq(1, Cnt)
-                        ),
-            Keys
-    end.
- 
+recv_count_2tuple({tcp, _, <<0:8, 0:32, _Rest/binary>>}) ->
+    [];
+recv_count_2tuple({tcp, _, <<0:8, Cnt:32, Rest/binary>>}) ->
+    {Data, _} = lists:foldl(
+		  %% This fold should grab/process one value per iteration.
+		  fun(_IterCount, {Vals, <<Size:32, Bin/binary>>}) ->
+			  %% We have at least the key sizes, so make recv_until's job
+			  %% easier and just ask it to split/pull the data element.
+			  {NewVal, RestBin} = recv_until(Bin, Size),
+			  {[NewVal] ++ Vals, RestBin};
+		     (_IterCount, {Vals, <<SmallBin/binary>>}) ->
+			  %% Not enough in SmallBin to even get the size, read the size then read
+			  %% enough to get the new data element.
+			  {<<Size:32>>, RestBin} = recv_until(SmallBin, 4),
+			  {NewVal, SecondRestBin} = recv_until(RestBin, Size),
+			  {[NewVal] ++ Vals, SecondRestBin}
+		  end,
+		  {[], Rest}, lists:seq(1, Cnt)
+		 ),
+    lists:reverse(Data).
+
 %% receive length-delimited data that may require multiple pulls from the socket
-recv_until(Socket, Bin, ReqLength) when byte_size(Bin) < ReqLength ->
+recv_until(Bin, ReqLength) when byte_size(Bin) < ReqLength ->
     receive
-        {tcp, Socket, Data} ->
+        {tcp, _, Data} ->
             Combined = <<Bin/binary, Data/binary>>,
-            recv_until(Socket, Combined, ReqLength);
-        {tcp_closed, Socket} -> 
+            recv_until(Combined, ReqLength);
+        {tcp_closed, _} -> 
 	    {error, conn_closed};
 	{error, closed} ->
 	    {error, conn_closed}
     after ?TIMEOUT -> 
 	    {error, timeout}
-    end;    
-recv_until(_Socket, Bin, ReqLength) when byte_size(Bin) =:= ReqLength ->
-    {Bin, <<>>};
-recv_until(_Socket, Bin, ReqLength) when byte_size(Bin) > ReqLength ->
+    end;
+recv_until(Bin, ReqLength) ->
     <<Required:ReqLength/binary, Rest/binary>> = Bin,
     {Required, Rest}.
-
 
 %% Some standard types for edoc
 %%
@@ -849,3 +844,211 @@ recv_until(_Socket, Bin, ReqLength) when byte_size(Bin) > ReqLength ->
 %% @type keylist() = [key()]
 %% @type error() = {error, term()}
 %% @type endian() = little | big
+
+%% EUnit tests
+%%
+-ifdef(EUNIT).
+test_setup() ->
+    {ok, Socket} = principe:connect(),
+    ok = principe:vanish(Socket),
+    Socket.
+
+get_random_count() ->
+    get_random_count(1000).
+
+get_random_count(Max) ->
+    crypto:start(),
+    {A1,A2,A3} = now(),
+    random:seed(A1, A2, A3),
+    round(Max * random:uniform()).
+
+put_get_test() ->
+    Socket = test_setup(),
+    ?assert(principe:put(Socket, "put_get1", "testval") =:= ok),
+    ?assert(principe:put(Socket, <<"put_get2">>, <<32,145,56,0,14>>) =:= ok),
+    ?assert(principe:get(Socket, <<"put_get1">>) =:= <<"testval">>),
+    ?assert(principe:get(Socket, "put_get2") =:= <<32, 145, 56, 0, 14>>),
+    case proplists:get_value(bigend, principe:stat(Socket)) of
+	"0" ->
+	    ?assert(principe:put(Socket, <<"put_get3">>, 42, little) =:= ok),
+	    ?assert(principe:get(Socket, <<"put_get3">>) =:= <<42:32/little>>);
+	"1" ->
+	    ?assert(principe:put(Socket, <<"put_get3">>, 42, big) =:= ok),
+	    ?assert(principe:get(Socket, <<"put_get3">>) =:= <<42:32>>)
+    end.
+
+put_get_random_test() ->
+    Socket = test_setup(),
+    ElementCount = get_random_count(),
+    PutVals = lists:foldl(fun(_Seq, Acc) ->
+				  KeySize = random:uniform(1024),
+				  Key = crypto:rand_bytes(KeySize),
+				  ValSize = random:uniform(65536),
+				  Val = crypto:rand_bytes(ValSize),
+				  ok = principe:put(Socket, Key, Val),
+				  [{Key, Val} | Acc]
+			  end, [], lists:seq(1, ElementCount)),
+    lists:foreach(fun({K, V}) ->
+			  ?assert(principe:get(Socket, K) =:= V)
+		  end, PutVals),
+    ok.
+
+putkeep_test() ->
+    Socket = test_setup(),
+    ok = principe:put(Socket, <<"test">>, <<"foo">>),
+    ?assert(principe:get(Socket, <<"test">>) =:= <<"foo">>),
+    ?assertMatch({error, _}, principe:putkeep(Socket, <<"test">>, <<"bar">>)),
+    ?assert(principe:get(Socket, <<"test">>) =:= <<"foo">>), % no effect if key already exists before putkeep
+    ok = principe:putkeep(Socket, <<"another">>, <<"baz">>),
+    ?assert(principe:get(Socket, <<"another">>) =:= <<"baz">>), % puts the key if key does not exist already
+    ok.
+
+putcat_test() ->
+    Socket = test_setup(),
+    ok = principe:put(Socket, <<"putcat1">>, <<"foo">>),
+    % append "bar" to the end
+    ok = principe:putcat(Socket, <<"putcat1">>, <<"bar">>),
+    ?assert(principe:get(Socket, <<"putcat1">>) =:= <<"foobar">>),
+    ok.
+
+putshl_test() ->
+    Socket = test_setup(),
+    ok = principe:put(Socket, <<"putshl">>, <<"foo">>),
+    % append "bar" to the end and shift to the left to retain the width of "4"
+    ok = principe:putshl(Socket, <<"putshl">>, <<"bar">>, 4),
+    ?assert(principe:get(Socket, <<"putshl">>) =:= <<"obar">>),
+    ok.
+
+putnr_test() ->
+    Socket = test_setup(),
+    principe:putnr(Socket, <<"putnr1">>, <<"no reply">>),
+    ?assert(principe:get(Socket, <<"putnr1">>) =:= <<"no reply">>),
+    ok.
+
+out_test() ->
+    Socket = test_setup(),
+    ok = principe:put(Socket, <<"out1">>, <<"to remove">>),
+    ?assert(principe:get(Socket, <<"out1">>) =:= <<"to remove">>),
+    ok = principe:out(Socket, <<"out1">>),
+    ?assertMatch({error, _}, principe:get(Socket, <<"out1">>)),
+    ok.
+
+mget_test() ->
+    Socket = test_setup(),
+    ok = principe:put(Socket, <<"mget1">>, <<"alice">>),
+    ok = principe:put(Socket, <<"mget2">>, <<"bob">>),
+    ok = principe:put(Socket, <<"mget3">>, <<"carol">>),
+    ok = principe:put(Socket, <<"mget4">>, <<"trent">>),
+    ?assert(principe:mget(Socket, [<<"mget1">>, <<"mget2">>, 
+				   <<"mget3">>, <<"mget4">>]) =:= 
+	    [{<<"mget1">>, <<"alice">>}, 
+	     {<<"mget2">>, <<"bob">>}, 
+	     {<<"mget3">>, <<"carol">>}, 
+	     {<<"mget4">>, <<"trent">>}]),
+    ok.
+
+vsiz_test() ->
+    Socket = test_setup(),
+    ok = principe:put(Socket, <<"vsiz1">>, <<"vsiz test">>),
+    ?assert(principe:vsiz(Socket, <<"vsiz1">>) =:= 9),
+    ok.
+
+vanish_test() ->
+    Socket = test_setup(),
+    ok = principe:put(Socket, <<"vanish1">>, <<"going away">>),
+    ok = principe:vanish(Socket),
+    ?assertMatch({error, _}, principe:get(Socket, <<"vanish1">>)),
+    ok.
+
+iter_test() ->
+    Socket = test_setup(),
+    ok = principe:put(Socket, <<"a">>, <<"first">>),
+    ok = principe:iterinit(Socket),
+    <<"a">> = principe:iternext(Socket), % "a" should be the first key
+    % Now to test a bit of real iteration
+    ok = principe:put(Socket, <<"b">>, <<"second">>),
+    ok = principe:put(Socket, <<"c">>, <<"third">>),
+    ok = principe:iterinit(Socket),
+    One = principe:iternext(Socket),
+    Two = principe:iternext(Socket),
+    Three = principe:iternext(Socket),
+    {error, _} = principe:iternext(Socket),
+    [<<"a">>, <<"b">>, <<"c">>] = lists:sort([One, Two, Three]),
+    ok.
+
+fwmkeys_test() ->
+    Socket = test_setup(),
+    ok = principe:put(Socket, <<"fwmkeys1">>, <<"1">>),
+    ok = principe:put(Socket, <<"fwmkeys2">>, <<"2">>),
+    ok = principe:put(Socket, <<"fwmkeys3">>, <<"3">>),
+    ok = principe:put(Socket, <<"fwmkeys4">>, <<"4">>),
+    Keys1 = principe:fwmkeys(Socket, <<"fwmkeys">>, 4),
+    ?assert(length(Keys1) =:= 4),
+    ?assert(lists:member(<<"fwmkeys1">>, Keys1)),
+    ?assert(lists:member(<<"fwmkeys2">>, Keys1)),
+    ?assert(lists:member(<<"fwmkeys3">>, Keys1)),
+    ?assert(lists:member(<<"fwmkeys4">>, Keys1)),
+    Keys2 = principe:fwmkeys(Socket, <<"fwmkeys">>, 2),
+    ?assert(length(Keys2) =:= 2),
+    ok.
+
+addint_test() ->
+    Socket = test_setup(),
+    case proplists:get_value(bigend, principe:stat(Socket)) of
+	"0" ->
+	    principe:put(Socket, <<"addint1">>, 100, little);
+	"1" ->
+	    principe:put(Socket, <<"addint1">>, 100)
+    end,
+    ?assert(principe:addint(Socket, <<"addint1">>, 20) =:= 120),
+    ok.
+
+sync_test() ->
+    Socket = test_setup(),
+    ok = principe:sync(Socket),
+    ok.
+
+rnum_test() ->
+    Socket = test_setup(),
+    ok = principe:put(Socket, <<"rnum1">>, <<"foo">>),
+    ok = principe:put(Socket, <<"rnum2">>, <<"foo">>),
+    ?assert(principe:rnum(Socket) =:= 2),
+    ok = principe:vanish(Socket),
+    ?assert(principe:rnum(Socket) =:= 0),
+    ok.
+
+size_test() ->
+    Socket = test_setup(),
+    OldSize = principe:size(Socket),
+    ok = principe:put(Socket, <<"size">>, <<"foo">>),
+    NewSize = principe:size(Socket),
+    ?assert(NewSize > OldSize),
+    ok.
+
+stat_test() ->
+    Socket = test_setup(),
+    principe:stat(Socket).
+
+optimize_test() ->
+    Socket = test_setup(),
+    ok = principe:optimize(Socket, "#bnum=1000000#opts=ld").
+
+misc_test() ->
+    Socket = test_setup(),
+    [] = principe:misc(Socket, "putlist",
+		       ["key1", "value1",
+			"key2", "value2",
+			"key3", "value3",
+			"key4", "value4"]),
+    ?assert(principe:rnum(Socket) =:= 4),
+    ?assert(principe:get(Socket, "key1") =:= <<"value1">>),
+    [] = principe:misc(Socket, "outlist",
+		       ["key1", "key2", "key3"]),
+    ?assert(principe:rnum(Socket) =:= 1),
+    principe:put(Socket, "key5", "value5"),
+    GetlistOut = principe:misc(Socket, "getlist", ["key4", "key5"]),
+    ?assert(lists:all(fun (K) -> lists:member(K, GetlistOut) end, 
+		      [<<"key4">>, <<"value4">>, 
+		       <<"key5">>, <<"value5">>])),
+    ok.
+-endif.

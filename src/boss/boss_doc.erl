@@ -50,18 +50,18 @@ module_name_from_template(File) ->
     list_to_atom("boss_doc_template_"++filename:basename(File, ".html")).
 
 %% @spec get_vars( Template::string() ) -> [{Key::atom(), Value}]
-get_vars("api-view.html", InDir) ->
-    {Module, EDoc} = edoc:get_doc("src/erlydtl/erlydtl_filters.erl", []),
+get_vars("api-view.html", _InDir) ->
+    {erlydtl_filters, EDoc} = edoc:get_doc("src/erlydtl/erlydtl_filters.erl", []),
     Functions = extract_function_docs(EDoc),
     [{filters, Functions}];
 get_vars("api-record.html", InDir) ->
-    {Module, EDoc} = boss_record_compiler:edoc_module(filename:join([InDir, "trivial_boss_record.erl"]), 
+    {boss_record, EDoc} = boss_record_compiler:edoc_module(filename:join([InDir, "trivial_boss_record.erl"]), 
         [{private, true}, {hidden, true}]),
     [{functions, extract_function_docs(EDoc)}];
-get_vars("api-db.html", InDir) ->
-    {Module, EDoc} = edoc:get_doc("src/boss/boss_db.erl", []),
+get_vars("api-db.html", _InDir) ->
+    {boss_db, EDoc} = edoc:get_doc("src/boss/boss_db.erl", []),
     [{functions, extract_function_docs(EDoc)}];
-get_vars(_, InDir) ->
+get_vars(_, _InDir) ->
     [].
 
 extract_function_docs(#xmlElement{name = module, content = Elements}) ->

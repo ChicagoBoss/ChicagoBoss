@@ -26,58 +26,7 @@
 	 adddouble/4, setmst/3, setindex/3, query_limit/3, query_limit/4, query_add_condition/5,
 	 query_order/4, search/2, genuid/1, searchcount/2, searchout/2]).
 
--define(NULL, <<0:8>>).
-
-%% Constants for tyrant tables
--define(ITLEXICAL, "0").
--define(ITDECIMAL, "1").
--define(ITOPT, "9998").
--define(ITVOID, "9999").
-
--define(QCSTREQ, 0).
--define(QCSTRINC, 1).
--define(QCSTRBW, 2).
--define(QCSTREW, 3).
--define(QCSTRAND, 4).
--define(QCSTROR, 5).
--define(QCSTROREQ, 6).
--define(QCSTRRX, 7).
--define(QCNUMEQ, 8).
--define(QCNUMGT, 9).
--define(QCNUMGE, 10).
--define(QCNUMLT, 11).
--define(QCNUMLE, 12).
--define(QCNUMBT, 13).
--define(QCNUMOREQ, 14).
--define(QCNEGATE, 1 bsl 24).
--define(QCNOIDX, 1 bsl 25).
-
--define(QOSTRASC, 0).
--define(QOSTRDESC, 1).
--define(QONUMASC, 2).
--define(QONUMDESC, 3).
-
-%% Some function patterns that are used frequently
--define(TSimple(Func, Args), case principe:misc(Socket, Func, Args) of 
-				 [] -> ok; 
-				 Error -> Error 
-			     end).
--define(TRaw(Func, Args), principe:misc(Socket, Func, Args)).
-
-%% Some standard types for edoc
-%%
-%% @type endian() = big | little
-%% @type key() = iolist()
-%% @type value() = iolist()
-%% @type value_or_num() = iolist() | integer() | float()
-%% @type keylist() = [key()]
-%% @type coldata() = [{key(), value_or_num()}]
-%% @type error() = {error, term()}
-%% @type index_col() = primary | iolist()
-%% @type index_type() = lexical | decimal | void
-%% @type query_opcode() = atom() | tuple()
-%% @type query_expr() = [binary() | string() | integer()]
-%% @type order_type() = str_ascending | str_descending | num_ascending | num_descending
+-include("principe.hrl").
 
 %%====================================================================
 %% The Tokyo Tyrant access functions
@@ -663,3 +612,210 @@ decode_table([], Acc) ->
 decode_table([K, V | Tail], Acc) ->
     decode_table(Tail, [{K, V} | Acc]).
 
+%% Some standard types for edoc
+%%
+%% @type endian() = big | little
+%% @type key() = iolist()
+%% @type value() = iolist()
+%% @type value_or_num() = iolist() | integer() | float()
+%% @type keylist() = [key()]
+%% @type coldata() = [{key(), value_or_num()}]
+%% @type error() = {error, term()}
+%% @type index_col() = primary | iolist()
+%% @type index_type() = lexical | decimal | void
+%% @type query_opcode() = atom() | tuple()
+%% @type query_expr() = [binary() | string() | integer()]
+%% @type order_type() = str_ascending | str_descending | num_ascending | num_descending
+
+%% EUnit tests
+%%
+-ifdef(EUNIT).
+test_setup() ->
+    {ok, Socket} = principe_table:connect(),
+    ok = principe_table:vanish(Socket),
+    Socket.
+
+test_setup_with_data() ->
+    Socket = test_setup(),
+    ColData = [{"rec1", [{"name", "alice"}, {"sport", "baseball"}]},
+	       {"rec2", [{"name", "bob"}, {"sport", "basketball"}]},
+	       {"rec3", [{"name", "carol"}, {"age", "24"}]},
+	       {"rec4", [{"name", "trent"}, {"age", "33"}, {"sport", "football"}]},
+	       {"rec5", [{"name", "mallet"}, {"sport", "tennis"}, {"fruit", "apple"}]}
+	       ],
+    lists:foreach(fun({Key, ValProplist}) ->
+			  ok = principe_table:put(Socket, Key, ValProplist)
+		  end, ColData),
+    Socket.
+
+put_get_test() ->
+    Socket = test_setup_with_data(),
+    ?assertMatch([{<<"age">>, <<"24">>}, {<<"name">>, <<"carol">>}], lists:sort(principe_table:get(Socket, "rec3"))),
+    ok = principe_table:put(Socket, <<"put_get1">>, [{"num", 32}]),
+    % Note that by default integers go over to Tyrant in network byte-order
+    ?assertMatch([{<<"num">>, <<32:32>>}], lists:sort(principe_table:get(Socket, <<"put_get1">>))),
+    ok.
+
+putkeep_test() ->
+    Socket = test_setup(),
+    ok = principe_table:put(Socket, "putkeep1", [{"col1", "testval1"}]),
+    ?assertMatch([{<<"col1">>, <<"testval1">>}], principe_table:get(Socket, "putkeep1")),
+    ?assertMatch({error, _}, principe_table:putkeep(Socket, <<"putkeep1">>, [{"col1", "testval2"}])),
+    ?assertMatch([{<<"col1">>, <<"testval1">>}], principe_table:get(Socket, "putkeep1")),
+    ok = principe_table:putkeep(Socket, <<"putkeep2">>, [{"col1", "testval2"}]),
+    ?assertMatch([{<<"col1">>, <<"testval2">>}], principe_table:get(Socket, "putkeep2")),
+    ok.
+
+putcat_test() ->
+    Socket = test_setup_with_data(),
+    ?assertMatch([{<<"age">>, <<"24">>}, {<<"name">>, <<"carol">>}], 
+		 lists:sort(principe_table:get(Socket, "rec3"))),
+    ok = principe_table:putcat(Socket, "rec3", [{"sport", "golf"}]),
+    ?assertMatch([{<<"age">>, <<"24">>}, {<<"name">>, <<"carol">>}, {<<"sport">>, <<"golf">>}], 
+		 lists:sort(principe_table:get(Socket, "rec3"))),
+    ok.
+
+update_test() ->
+    Socket = test_setup_with_data(),
+    ?assertMatch([{<<"name">>, <<"alice">>}, {<<"sport">>, <<"baseball">>}], principe_table:get(Socket, "rec1")),
+    ok = principe_table:update(Socket, "rec1", [{"sport", "swimming"}, {"pet", "dog"}]),
+    ?assertMatch([{<<"name">>, <<"alice">>}, {<<"pet">>, <<"dog">>}, {<<"sport">>, <<"swimming">>}],
+		 lists:sort(principe_table:get(Socket, "rec1"))),
+    ok.
+
+out_test() ->
+    Socket = test_setup_with_data(),
+    ok = principe_table:out(Socket, <<"rec1">>),
+    ?assertMatch({error, _}, principe_table:get(Socket, <<"rec1">>)),
+    ok.
+
+vsiz_test() ->
+    Socket = test_setup(),
+    ColName = "col1",
+    ColVal = "vsiz test",
+    ok = principe_table:put(Socket, "vsiz1", [{ColName, ColVal}]),
+    %% size = col + null sep + val + null column stop
+    ExpectedLength = length(ColName) + length(ColVal) + 2,
+    ?assert(principe_table:vsiz(Socket, "vsiz1") =:= ExpectedLength),
+    ColName2 = "another col",
+    ColVal2 = "more bytes",
+    ok = principe_table:put(Socket, "vsiz2", [{ColName, ColVal}, {ColName2, ColVal2}]),
+    ExpectedLength2 = ExpectedLength + length(ColName2) + length(ColVal2) + 2,
+    ?assert(principe_table:vsiz(Socket, "vsiz2") =:= ExpectedLength2),
+    ok.
+
+vanish_test() ->
+    Socket = test_setup(),
+    ok = principe_table:put(Socket, "vanish1", [{"col1", "going away"}]),
+    ok = principe_table:vanish(Socket),
+    ?assertMatch({error, _}, principe_table:get(Socket, "vanish1")),
+    ok.
+
+addint_test() ->
+    Socket = test_setup(),
+    ?assert(principe_table:addint(Socket, "addint1", 100) =:= 100),
+    ok = principe_table:put(Socket, "addint2", [{"_num", "10"}]), % see principe_table:addint edoc for why a string() is used
+    ?assert(principe_table:addint(Socket, "addint2", 10) =:= 20),
+    ?assertMatch([{<<"_num">>, <<"100">>}], principe_table:get(Socket, "addint1")),
+    ?assertMatch([{<<"_num">>, <<"20">>}], principe_table:get(Socket, "addint2")),
+    ok.
+
+sync_test() ->
+    Socket = test_setup(),
+    ok = principe_table:sync(Socket),
+    ok.
+
+rnum_test() ->
+    Socket = test_setup_with_data(),
+    ?assert(principe_table:rnum(Socket) =:= 5),
+    ok = principe_table:out(Socket, "rec1"),
+    ?assert(principe_table:rnum(Socket) =:= 4),
+    ok = principe_table:vanish(Socket),
+    ?assert(principe_table:rnum(Socket) =:= 0),
+    ok.
+
+size_test() ->
+    Socket = test_setup(),
+    principe_table:size(Socket),
+    ok.
+
+stat_test() ->
+    Socket = test_setup(),
+    principe_table:stat(Socket),
+    ok.
+
+mget_test() ->
+    Socket = test_setup_with_data(),
+    MGetData = principe_table:mget(Socket, ["rec1", "rec3", "rec5"]),
+    ?assertMatch([{<<"name">>, <<"alice">>},{<<"sport">>, <<"baseball">>}], 
+		 lists:sort(proplists:get_value(<<"rec1">>, MGetData))),
+    ?assert(proplists:get_value(<<"rec2">>, MGetData) =:= undefined),
+    ?assertMatch([<<"rec1">>, <<"rec3">>, <<"rec5">>], lists:sort(proplists:get_keys(MGetData))),
+    ok.
+
+iter_test() ->
+    Socket = test_setup_with_data(),
+    AllKeys = [<<"rec1">>, <<"rec2">>, <<"rec3">>, <<"rec4">>, <<"rec5">>],
+    ok = principe_table:iterinit(Socket),
+    First = principe_table:iternext(Socket),
+    ?assert(lists:member(First, AllKeys)),
+    IterAll = lists:foldl(fun(_Count, Acc) -> [principe_table:iternext(Socket) | Acc] end, 
+			  [First], 
+			  lists:seq(1, length(AllKeys)-1)),
+    ?assertMatch(AllKeys, lists:sort(IterAll)),
+    ?assertMatch({error, _}, principe_table:iternext(Socket)),
+    ok.
+
+fwmkeys_test() ->
+    Socket = test_setup_with_data(),
+    ok = principe_table:put(Socket, "fwmkeys1", [{"foo", "bar"}]),
+    ?assert(length(principe_table:fwmkeys(Socket, "rec", 4)) =:= 4),
+    ?assert(length(principe_table:fwmkeys(Socket, "rec", 8)) =:= 5),
+    ?assertMatch([<<"fwmkeys1">>], principe_table:fwmkeys(Socket, "fwm", 3)),
+    ?assertMatch([<<"rec1">>, <<"rec2">>, <<"rec3">>], principe_table:fwmkeys(Socket, "rec", 3)),
+    ok.
+
+query_generation_test() ->
+    ?assertMatch([{{set_order, primary, str_descending}, ["setorder", <<0:8>>, <<0:8>>, <<0:8>>, "1"]}],
+		 principe_table:query_order([], primary, str_descending)),
+    ?assertMatch([{{set_order, "foo", str_ascending}, ["setorder", <<0:8>>, "foo", <<0:8>>, "0"]}],
+		 principe_table:query_order([{{set_order, blah}, ["foo"]}], "foo", str_ascending)),
+    ?assertMatch([{{set_limit, 2, 0}, ["setlimit", <<0:8>>, "2", <<0:8>>, "0"]}],
+		 principe_table:query_limit([], 2)),
+    ?assertMatch([{{set_limit, 4, 1}, ["setlimit", <<0:8>>, "4", <<0:8>>, "1"]}],
+		principe_table:query_limit([{{set_limit, blah}, ["foo"]}], 4, 1)),
+    ?assertMatch([{{add_cond, "foo", str_eq, ["bar"]}, ["addcond", <<0:8>>, "foo", <<0:8>>, "0", <<0:8>>, ["bar"]]}],
+		 principe_table:query_condition([], "foo", str_eq, ["bar"])),
+    ?assertMatch([{{add_cond, "foo", {no, str_and}, ["bar","baz"]}, 
+		   ["addcond", <<0:8>>, "foo", <<0:8>>, "16777220", <<0:8>>, ["bar",",","baz"]]}],
+		 principe_table:query_condition([], "foo", {no, str_and}, ["bar", "baz"])),
+    ok.
+
+search_test() ->
+    Socket = test_setup_with_data(),
+    Query1 = principe_table:query_condition([], "name", str_eq, ["alice"]),
+    ?assertMatch([<<"rec1">>], principe_table:search(Socket, Query1)),
+    Query2 = principe_table:query_condition([], "name", {no, str_eq}, ["alice"]),
+    Query2A = principe_table:query_limit(Query2, 2),
+    ?assertMatch([<<"rec2">>, <<"rec3">>], principe_table:search(Socket, Query2A)),
+    Query3 = principe_table:query_condition([], "age", num_ge, [25]),
+    ?assertMatch([<<"rec4">>], principe_table:search(Socket, Query3)),
+    ok.
+
+searchcount_test() ->
+    Socket = test_setup_with_data(),
+    Query1 = principe_table:query_condition([], "name", str_or, ["alice", "bob"]),
+    ?assert(principe_table:searchcount(Socket, Query1) =:= 2), 
+    ok.
+
+searchout_test() ->
+    Socket = test_setup_with_data(),
+    ?assert(principe_table:rnum(Socket) =:= 5),
+    %% Also testing regex matches, should hit "baseball" and "basketball" but
+    %% skip "football"
+    Query1 = principe_table:query_condition([], "sport", str_regex, ["^ba"]),
+    ok = principe_table:searchout(Socket, Query1),
+    ?assert(principe_table:rnum(Socket) =:= 3),
+    ?assertMatch({error, _}, principe_table:get(Socket, "rec1")),
+    ok.
+-endif.

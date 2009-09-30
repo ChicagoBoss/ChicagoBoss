@@ -15,7 +15,7 @@
 %% Supervisor callbacks
 -export([init/1]).
 
--define(NUM_CLIENTS, 8).
+-include("medici.hrl").
 
 %%====================================================================
 %% API functions

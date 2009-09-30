@@ -28,19 +28,13 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
 	 terminate/2, code_change/3]).
 
+-include("medici.hrl").
+
 -record(state, {port=nil, 
 		options=[],
 		pid=0,
 	        log_match,
 	        pid_match}).
-
--define(PORT_OPTS, [binary, use_stdio, stream, {line, 256}, hide]).
--define(TYRANT_BIN, "/opt/local/bin/ttserver").
--define(TYRANT_OPTS, []).
--define(DATA_FILE, "\"*\""). % default to in-memory hash (quote the *...)
--define(TUNING_OPTS, []).
--define(LOG_REGEXP, "\\S+\\t(\\S+)").
--define(PID_REGEXP, "service started: (\\d+)").
 
 %%====================================================================
 %% API
@@ -49,7 +43,18 @@
 %%
 %% @private Start the Tyrant port server
 start_link() ->
-    gen_server:start_link(?MODULE, [], []).
+    case application:get_env(options) of
+	{ok, MediciOpts} ->
+	    ServerOpts = proplists:get_value(run_server, MediciOpts, []);
+	_ ->
+	    ServerOpts = []
+    end,
+    case proplists:get_value(server_name, ServerOpts) of
+	undefined ->
+	    gen_server:start_link({local, ?PORT_SRV_NAME}, ?MODULE, [], []);
+	ServerName ->
+	    gen_server:start_link({local, ServerName}, ?MODULE, [], [])
+    end.
 
 %%====================================================================
 %% gen_server callbacks
@@ -70,6 +75,21 @@ init(_Args) ->
 
 handle_call({get_info}, _From, State) ->
     {reply, {State#state.options, State#state.pid}, State};
+handle_call({optimize, TuningOpts}, _From, State) ->
+    % make optimize call
+    % update tuning options in application environment
+
+    % update tuning options in State
+    case lists:keyfind(tuning_opts, 1, State#state.options) of
+	false ->
+	    NewState = State#state{options=State#state.options ++ {tuning_opts, TuningOpts}};
+	_ ->
+	    NewState = State#state{options=lists:keyreplace(tuning_opts, 1, 
+							    State#state.options, 
+							    {tuning_opts, TuningOpts})
+				  }
+    end,
+    {reply, ok, NewState};
 handle_call({restart, ServerOpts}, _From, State) ->
     case restart_server(ServerOpts, State) of
 	{ok, NewState} ->
@@ -97,7 +117,7 @@ handle_info({Port, closed}, #state{port=Port} = State) ->
 handle_info({Port, {data, {eol, StdOutMsg}}}, #state{port=Port} = State) ->
     parse_log_message(binary_to_list(StdOutMsg), State);
 handle_info(Info, State) ->
-    io:format("unrecognized info message: ~p~n", [Info]),
+    ?DEBUG_LOG("Tyrant port server received unrecognized info message: ~p~n", [Info]),
     {noreply, State}.
 
 terminate({port_terminated, _Reason}, _State) ->
@@ -153,8 +173,8 @@ restart_server(StartOpts, State) when State#state.pid > 0, State#state.port =/= 
 kill_server(State) when State#state.pid > 0, State#state.port =/= nil ->
     %%port_command(State#state.port, <<3:8>>),  % send ^C
     port_close(State#state.port),
-    os:cmd("/bin/kill -9 " ++ integer_to_list(State#state.pid)),
-    ok;
+    os:cmd("/bin/kill -9 " ++ integer_to_list(State#state.pid));
+    %ok;
 kill_server(State) when State#state.port =/= nil ->
     port_close(State#state.port);
 kill_server(_State) ->
@@ -173,7 +193,7 @@ parse_log_message(Message, State) when State#state.pid =:= 0 ->
 			{noreply, State}
 	    end;
 	_ ->
-	    error_logger:error_message("Unexpected Tyrant output: ~p~n", [Message]),
+	    ?DEBUG_LOG("Unexpected Tyrant output: ~p~n", [Message]),
 	    {noreply, State}
     end;
 parse_log_message(Message, State) ->
@@ -183,6 +203,6 @@ parse_log_message(Message, State) ->
 	    error_logger:info_msg("Tyrant: ~p~n", [TyrantMessage]),
 	    {noreply, State};
 	_ ->
-	    error_logger:error_message("Unexpected Tyrant output: ~p~n", [Message]),
+	    ?DEBUG_LOG("Unexpected Tyrant output: ~p~n", [Message]),
 	    {noreply, State}
     end.

@@ -77,7 +77,7 @@ init(StartArgs) ->
 				    supervisor,
 				    [medici_port_sup]},
 	    {ok,{{one_for_all,1,10}, [MediciController, 
-				      MediciConnSupervisor, 
+				      MediciConnSupervisor,
 				      MediciPortSupervisor]}}
     end.
 
