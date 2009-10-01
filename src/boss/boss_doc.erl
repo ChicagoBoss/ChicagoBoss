@@ -115,7 +115,7 @@ analyze_typespec(
     [#xmlElement{ name = type, content = 
             [#xmlElement{ name = 'fun', content = 
                     [#xmlElement{ name = 'argtypes', content = ArgTypes },
-                        #xmlElement{ name = 'type', content = Returns }]}]} | Rest]) ->
+                        #xmlElement{ name = 'type', content = Returns }]}]} | _Rest]) ->
     "(" ++ string:join(analyze_argtypes(ArgTypes), ", ") ++ ") -> " ++ analyze_argtypes_content(Returns);
 analyze_typespec([_|Rest]) ->
     analyze_typespec(Rest);
