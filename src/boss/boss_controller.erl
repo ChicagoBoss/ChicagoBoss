@@ -54,10 +54,12 @@ process_result({error, Payload}) ->
     {500, [{"Content-Type", "text/html"}], "Error: <pre>" ++ io_lib:print(Payload) ++ "</pre>"};
 process_result({not_found, Payload}) ->
     {404, [{"Content-Type", "text/html"}], Payload};
+process_result({redirect, Where}) ->
+    process_result({redirect, Where, []});
+process_result({redirect, "http://"++Where, Headers}) ->
+    process_result({redirect, "/"++string:join(tl(string:tokens(Where, "/")), "/"), Headers});
 process_result({redirect, Where, Headers}) ->
     {302, Headers ++ [{"Location", Where}], ""};
-process_result({redirect, Where}) ->
-    {302, [{"Location", Where}], ""};
 process_result({ok, Payload, Headers}) ->
     {200, proplists:delete("Content-Type", Headers) ++ 
         [{"Content-Type", proplists:get_value("Content-Type", Headers, "text/html")}], 
