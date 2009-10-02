@@ -2,4 +2,4 @@
 -compile(export_all).
 
 world(Req) ->
-    {ok, [{greeting, greeting:new(id, "Hello, World!")}]}.
+    {ok, [{greeting, greeting:new(id, "Boss says Hello!")}]}.
