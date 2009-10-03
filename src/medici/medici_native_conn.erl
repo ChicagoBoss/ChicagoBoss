@@ -165,6 +165,10 @@ handle_cast({From, CallFunc, Arg1}=Request, State) when is_atom(CallFunc) ->
 	    gen_server:reply(From, Result),
 	    {noreply, State}
     end;
+handle_cast({_From, putnr, Key, Value}, State) ->
+    Module = State#state.mod,
+    Module:putnr(State#state.socket, Key, Value),
+    {noreply, State};
 handle_cast({From, CallFunc, Arg1, Arg2}=Request, State) when is_atom(CallFunc) ->
     Module = State#state.mod,
     Result = Module:CallFunc(State#state.socket, Arg1, Arg2),
@@ -269,8 +273,8 @@ tune_db(State) ->
 		    BnumInt = Records * 4,
 		    TuningParam = "bnum=" ++ integer_to_list(BnumInt),
 		    principe:optimize(State#state.socket, TuningParam);
-		Other -> 
-		    ?DEBUG_LOG("Can't tune a db of type ~p yet", [Other]),
+		_Other -> 
+		    ?DEBUG_LOG("Can't tune a db of type ~p yet", [_Other]),
 		    {error, db_type_unsupported_for_tuning}
 	    end
     end.

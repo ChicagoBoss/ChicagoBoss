@@ -56,11 +56,73 @@
 
 <div style="padding-top: 20px;">
 
-<p style="font-size: 14px;"><em>Jump to:</em> &nbsp; <a href="#before_filter">before_filters</a> &nbsp; <a href="#mochiweb">Mochiweb request object</a></p>
+<p style="font-size: 14px;"><em>Jump to:</em> &nbsp; <a href="#return_values">Return values</a> &nbsp; <a href="#mochiweb">Mochiweb request object</a></p>
 <p>Chicago Boss associates each URL with a function of a controller. 
-The URL <nobr>/foo/bar</nobr> will call the function <code>foo_controller:bar/1</code>. 
+The URL <nobr>/foo/bar</nobr> will call the function <code>foo_controller:bar</code>. 
 Each controller module should go into your project's Controller/ directory and the file name should end with "_controller.erl". 
-The one and only argument passed to the function is a Mochiweb request object. Each exported controller function should return with one of the following:</p>
+Helper functions should go in modules that end in "_lib.erl".
+Controllers should take one parameter, the Mochiweb request object. Declare it like:</p>
+<div class="code">
+    <span class="attr">-module</span>(my_controller, [Req]).
+</div>
+<p>Each exported controller function takes two or three arguments:</p>
+<ul>
+    <li>First argument: the HTTP request method as an atom, e.g. <code>'GET'</code> or <code>'POST'</code></li>
+    <li>Second argument: the list of slash-separated tokens after the action name in the URL.</li>
+    <li>Third argument (optional): the result of a function named <code>third_arg</code> in the controller</li>
+</ul>
+
+<p>Example function clauses:</p>
+
+<div class="code">
+<span class="comment">% GET /blog/view</span><br />
+view(<span class="atom">'GET'</span>, []) -&gt;<br />
+&nbsp;&nbsp;&nbsp;&nbsp;...<br />
+<span class="comment">% GET /blog/view/1234</span><br />
+view(<span class="atom">'GET'</span>, [Id]) -&gt;<br />
+&nbsp;&nbsp;&nbsp;&nbsp;...<br />
+<span class="comment">% GET /blog/view/tag/funny</span><br />
+view(<span class="atom">'GET'</span>, [<span class="string">"tag"</span>, Tag]) -&gt;<br />
+&nbsp;&nbsp;&nbsp;&nbsp;...<br />
+<span class="comment">% GET /blog/view/tag/funny/author/saint-paul</span><br />
+view(<span class="atom">'GET'</span>, [<span class="string">"tag"</span>, Tag, <span class="string">"author"</span>, AuthorName]) -&gt;<br />
+&nbsp;&nbsp;&nbsp;&nbsp;...<br />
+<span class="comment">% GET /blog/view/2009/08</span><br />
+view(<span class="atom">'GET'</span>, [Year, Month]) -&gt;<br />
+&nbsp;&nbsp;&nbsp;&nbsp;...<br />
+</div>
+
+<p>If an action takes three arguments, then the function <code>third_arg/1</code> in your controller will be passed the action name as an atom and should return one of:</P>
+
+<div class="code">
+    {ok, ExtraInfo}
+</div>
+
+<p><code>ExtraInfo</code> will be passed as the third argument to the action.</p>
+
+<div class="code">
+    {redirect, Location<span class="typevar">::string()</span>}
+</div>
+
+<p>Do not execute the action. Instead, perform a 302 redirect to <code>Location</code>.</p>
+
+<p>Probably most common third_arg looks like:</p>
+
+<div class="code">
+third_arg(_) -&gt;<br />
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="function">my_user_lib</span>:<span class="function">require_login</span>(Req).
+</div>
+
+<p>Which might return a tuple of user credential or else redirect to a login page. This way, if you want to require a login to a set of actions, just give those actions a <code>User</code> argument, and the actions will be login protected and have access to the <code>User</code> variable.</p>
+
+<br />
+<a name="return_values"></a>
+
+<hr />
+
+
+<p>Whether or not it takes a third argument, a controller action should return with one of the following:</p>
+
 <div class="code">
     ok
 </div>
@@ -107,38 +169,6 @@ The one and only argument passed to the function is a Mochiweb request object. E
 <p><code>OtherLocation = {Controller<span class="typevar">::atom()</span>, Action<span class="typevar">::atom()</span>}</code></p>
 
 <p>Render the view from <code>OtherLocation</code> using <code>Variables</code>, but don't actually execute the associated controller action.</p>
-
-<br />
-<a name="before_filter"></a>
-
-<hr />
-
-<p>If a controller exports a function called <code>before_filter/1</code>, then before executing an action in the controller, Chicago Boss will pass the action name as an atom to <code>before_filter/1</code>. <code>before_filter/1</code> should return a <code>fun</code> that takes a Mochiweb request object as its only argument and (in turn) returns one of the following:</p>
-
-<div class="code">
-    ok
-</div>
-
-<p>Execute the original action as normal</p>
-
-<div class="code">
-    {ok, ExtraInfo}
-</div>
-
-<p>Execute the original action, but pass ExtraInfo as the second argument to the controller function (the first argument is still the Mochiweb request object).</p>
-
-<div class="code">
-    {redirect, Location}
-</div>
-
-<p>Perform a 302 redirect to Location (a string).</p>
-
-<p>Probably most common before_filter looks like:</p>
-
-<div class="code">
-before_filter(_) -&gt;<br />
-&nbsp;&nbsp;&nbsp;&nbsp;fun <span class="function">user_controller</span>:<span class="function">require_login</span>/<span class="string">1</span>.
-</div>
 
 <br />
 <a name="mochiweb"></a>

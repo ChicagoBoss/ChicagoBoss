@@ -849,8 +849,8 @@ recv_until(Bin, ReqLength) ->
 %%
 -ifdef(EUNIT).
 test_setup() ->
-    {ok, Socket} = principe:connect(),
-    ok = principe:vanish(Socket),
+    {ok, Socket} = ?MODULE:connect(),
+    ok = ?MODULE:vanish(Socket),
     Socket.
 
 get_random_count() ->
@@ -864,17 +864,17 @@ get_random_count(Max) ->
 
 put_get_test() ->
     Socket = test_setup(),
-    ?assert(principe:put(Socket, "put_get1", "testval") =:= ok),
-    ?assert(principe:put(Socket, <<"put_get2">>, <<32,145,56,0,14>>) =:= ok),
-    ?assert(principe:get(Socket, <<"put_get1">>) =:= <<"testval">>),
-    ?assert(principe:get(Socket, "put_get2") =:= <<32, 145, 56, 0, 14>>),
-    case proplists:get_value(bigend, principe:stat(Socket)) of
+    ?assert(?MODULE:put(Socket, "put_get1", "testval") =:= ok),
+    ?assert(?MODULE:put(Socket, <<"put_get2">>, <<32,145,56,0,14>>) =:= ok),
+    ?assert(?MODULE:get(Socket, <<"put_get1">>) =:= <<"testval">>),
+    ?assert(?MODULE:get(Socket, "put_get2") =:= <<32, 145, 56, 0, 14>>),
+    case proplists:get_value(bigend, ?MODULE:stat(Socket)) of
 	"0" ->
-	    ?assert(principe:put(Socket, <<"put_get3">>, 42, little) =:= ok),
-	    ?assert(principe:get(Socket, <<"put_get3">>) =:= <<42:32/little>>);
+	    ?assert(?MODULE:put(Socket, <<"put_get3">>, 42, little) =:= ok),
+	    ?assert(?MODULE:get(Socket, <<"put_get3">>) =:= <<42:32/little>>);
 	"1" ->
-	    ?assert(principe:put(Socket, <<"put_get3">>, 42, big) =:= ok),
-	    ?assert(principe:get(Socket, <<"put_get3">>) =:= <<42:32>>)
+	    ?assert(?MODULE:put(Socket, <<"put_get3">>, 42, big) =:= ok),
+	    ?assert(?MODULE:get(Socket, <<"put_get3">>) =:= <<42:32>>)
     end.
 
 put_get_random_test() ->
@@ -885,61 +885,61 @@ put_get_random_test() ->
 				  Key = crypto:rand_bytes(KeySize),
 				  ValSize = random:uniform(65536),
 				  Val = crypto:rand_bytes(ValSize),
-				  ok = principe:put(Socket, Key, Val),
+				  ok = ?MODULE:put(Socket, Key, Val),
 				  [{Key, Val} | Acc]
 			  end, [], lists:seq(1, ElementCount)),
     lists:foreach(fun({K, V}) ->
-			  ?assert(principe:get(Socket, K) =:= V)
+			  ?assert(?MODULE:get(Socket, K) =:= V)
 		  end, PutVals),
     ok.
 
 putkeep_test() ->
     Socket = test_setup(),
-    ok = principe:put(Socket, <<"test">>, <<"foo">>),
-    ?assert(principe:get(Socket, <<"test">>) =:= <<"foo">>),
-    ?assertMatch({error, _}, principe:putkeep(Socket, <<"test">>, <<"bar">>)),
-    ?assert(principe:get(Socket, <<"test">>) =:= <<"foo">>), % no effect if key already exists before putkeep
-    ok = principe:putkeep(Socket, <<"another">>, <<"baz">>),
-    ?assert(principe:get(Socket, <<"another">>) =:= <<"baz">>), % puts the key if key does not exist already
+    ok = ?MODULE:put(Socket, <<"test">>, <<"foo">>),
+    ?assert(?MODULE:get(Socket, <<"test">>) =:= <<"foo">>),
+    ?assertMatch({error, _}, ?MODULE:putkeep(Socket, <<"test">>, <<"bar">>)),
+    ?assert(?MODULE:get(Socket, <<"test">>) =:= <<"foo">>), % no effect if key already exists before putkeep
+    ok = ?MODULE:putkeep(Socket, <<"another">>, <<"baz">>),
+    ?assert(?MODULE:get(Socket, <<"another">>) =:= <<"baz">>), % puts the key if key does not exist already
     ok.
 
 putcat_test() ->
     Socket = test_setup(),
-    ok = principe:put(Socket, <<"putcat1">>, <<"foo">>),
+    ok = ?MODULE:put(Socket, <<"putcat1">>, <<"foo">>),
     % append "bar" to the end
-    ok = principe:putcat(Socket, <<"putcat1">>, <<"bar">>),
-    ?assert(principe:get(Socket, <<"putcat1">>) =:= <<"foobar">>),
+    ok = ?MODULE:putcat(Socket, <<"putcat1">>, <<"bar">>),
+    ?assert(?MODULE:get(Socket, <<"putcat1">>) =:= <<"foobar">>),
     ok.
 
 putshl_test() ->
     Socket = test_setup(),
-    ok = principe:put(Socket, <<"putshl">>, <<"foo">>),
+    ok = ?MODULE:put(Socket, <<"putshl">>, <<"foo">>),
     % append "bar" to the end and shift to the left to retain the width of "4"
-    ok = principe:putshl(Socket, <<"putshl">>, <<"bar">>, 4),
-    ?assert(principe:get(Socket, <<"putshl">>) =:= <<"obar">>),
+    ok = ?MODULE:putshl(Socket, <<"putshl">>, <<"bar">>, 4),
+    ?assert(?MODULE:get(Socket, <<"putshl">>) =:= <<"obar">>),
     ok.
 
 putnr_test() ->
     Socket = test_setup(),
-    principe:putnr(Socket, <<"putnr1">>, <<"no reply">>),
-    ?assert(principe:get(Socket, <<"putnr1">>) =:= <<"no reply">>),
+    ?MODULE:putnr(Socket, <<"putnr1">>, <<"no reply">>),
+    ?assert(?MODULE:get(Socket, <<"putnr1">>) =:= <<"no reply">>),
     ok.
 
 out_test() ->
     Socket = test_setup(),
-    ok = principe:put(Socket, <<"out1">>, <<"to remove">>),
-    ?assert(principe:get(Socket, <<"out1">>) =:= <<"to remove">>),
-    ok = principe:out(Socket, <<"out1">>),
-    ?assertMatch({error, _}, principe:get(Socket, <<"out1">>)),
+    ok = ?MODULE:put(Socket, <<"out1">>, <<"to remove">>),
+    ?assert(?MODULE:get(Socket, <<"out1">>) =:= <<"to remove">>),
+    ok = ?MODULE:out(Socket, <<"out1">>),
+    ?assertMatch({error, _}, ?MODULE:get(Socket, <<"out1">>)),
     ok.
 
 mget_test() ->
     Socket = test_setup(),
-    ok = principe:put(Socket, <<"mget1">>, <<"alice">>),
-    ok = principe:put(Socket, <<"mget2">>, <<"bob">>),
-    ok = principe:put(Socket, <<"mget3">>, <<"carol">>),
-    ok = principe:put(Socket, <<"mget4">>, <<"trent">>),
-    ?assert(principe:mget(Socket, [<<"mget1">>, <<"mget2">>, 
+    ok = ?MODULE:put(Socket, <<"mget1">>, <<"alice">>),
+    ok = ?MODULE:put(Socket, <<"mget2">>, <<"bob">>),
+    ok = ?MODULE:put(Socket, <<"mget3">>, <<"carol">>),
+    ok = ?MODULE:put(Socket, <<"mget4">>, <<"trent">>),
+    ?assert(?MODULE:mget(Socket, [<<"mget1">>, <<"mget2">>, 
 				   <<"mget3">>, <<"mget4">>]) =:= 
 	    [{<<"mget1">>, <<"alice">>}, 
 	     {<<"mget2">>, <<"bob">>}, 
@@ -949,104 +949,104 @@ mget_test() ->
 
 vsiz_test() ->
     Socket = test_setup(),
-    ok = principe:put(Socket, <<"vsiz1">>, <<"vsiz test">>),
-    ?assert(principe:vsiz(Socket, <<"vsiz1">>) =:= 9),
+    ok = ?MODULE:put(Socket, <<"vsiz1">>, <<"vsiz test">>),
+    ?assert(?MODULE:vsiz(Socket, <<"vsiz1">>) =:= 9),
     ok.
 
 vanish_test() ->
     Socket = test_setup(),
-    ok = principe:put(Socket, <<"vanish1">>, <<"going away">>),
-    ok = principe:vanish(Socket),
-    ?assertMatch({error, _}, principe:get(Socket, <<"vanish1">>)),
+    ok = ?MODULE:put(Socket, <<"vanish1">>, <<"going away">>),
+    ok = ?MODULE:vanish(Socket),
+    ?assertMatch({error, _}, ?MODULE:get(Socket, <<"vanish1">>)),
     ok.
 
 iter_test() ->
     Socket = test_setup(),
-    ok = principe:put(Socket, <<"a">>, <<"first">>),
-    ok = principe:iterinit(Socket),
-    <<"a">> = principe:iternext(Socket), % "a" should be the first key
+    ok = ?MODULE:put(Socket, <<"a">>, <<"first">>),
+    ok = ?MODULE:iterinit(Socket),
+    <<"a">> = ?MODULE:iternext(Socket), % "a" should be the first key
     % Now to test a bit of real iteration
-    ok = principe:put(Socket, <<"b">>, <<"second">>),
-    ok = principe:put(Socket, <<"c">>, <<"third">>),
-    ok = principe:iterinit(Socket),
-    One = principe:iternext(Socket),
-    Two = principe:iternext(Socket),
-    Three = principe:iternext(Socket),
-    {error, _} = principe:iternext(Socket),
-    [<<"a">>, <<"b">>, <<"c">>] = lists:sort([One, Two, Three]),
+    ok = ?MODULE:put(Socket, <<"b">>, <<"second">>),
+    ok = ?MODULE:put(Socket, <<"c">>, <<"third">>),
+    ok = ?MODULE:iterinit(Socket),
+    One = ?MODULE:iternext(Socket),
+    Two = ?MODULE:iternext(Socket),
+    Three = ?MODULE:iternext(Socket),
+    ?assertMatch({error, _}, ?MODULE:iternext(Socket)),
+    ?assertMatch([<<"a">>, <<"b">>, <<"c">>], lists:sort([One, Two, Three])),
     ok.
 
 fwmkeys_test() ->
     Socket = test_setup(),
-    ok = principe:put(Socket, <<"fwmkeys1">>, <<"1">>),
-    ok = principe:put(Socket, <<"fwmkeys2">>, <<"2">>),
-    ok = principe:put(Socket, <<"fwmkeys3">>, <<"3">>),
-    ok = principe:put(Socket, <<"fwmkeys4">>, <<"4">>),
-    Keys1 = principe:fwmkeys(Socket, <<"fwmkeys">>, 4),
+    ok = ?MODULE:put(Socket, <<"fwmkeys1">>, <<"1">>),
+    ok = ?MODULE:put(Socket, <<"fwmkeys2">>, <<"2">>),
+    ok = ?MODULE:put(Socket, <<"fwmkeys3">>, <<"3">>),
+    ok = ?MODULE:put(Socket, <<"fwmkeys4">>, <<"4">>),
+    Keys1 = ?MODULE:fwmkeys(Socket, <<"fwmkeys">>, 4),
     ?assert(length(Keys1) =:= 4),
     ?assert(lists:member(<<"fwmkeys1">>, Keys1)),
     ?assert(lists:member(<<"fwmkeys2">>, Keys1)),
     ?assert(lists:member(<<"fwmkeys3">>, Keys1)),
     ?assert(lists:member(<<"fwmkeys4">>, Keys1)),
-    Keys2 = principe:fwmkeys(Socket, <<"fwmkeys">>, 2),
+    Keys2 = ?MODULE:fwmkeys(Socket, <<"fwmkeys">>, 2),
     ?assert(length(Keys2) =:= 2),
     ok.
 
 addint_test() ->
     Socket = test_setup(),
-    case proplists:get_value(bigend, principe:stat(Socket)) of
+    case proplists:get_value(bigend, ?MODULE:stat(Socket)) of
 	"0" ->
-	    principe:put(Socket, <<"addint1">>, 100, little);
+	    ?MODULE:put(Socket, <<"addint1">>, 100, little);
 	"1" ->
-	    principe:put(Socket, <<"addint1">>, 100)
+	    ?MODULE:put(Socket, <<"addint1">>, 100)
     end,
-    ?assert(principe:addint(Socket, <<"addint1">>, 20) =:= 120),
+    ?assert(?MODULE:addint(Socket, <<"addint1">>, 20) =:= 120),
     ok.
 
 sync_test() ->
     Socket = test_setup(),
-    ok = principe:sync(Socket),
+    ok = ?MODULE:sync(Socket),
     ok.
 
 rnum_test() ->
     Socket = test_setup(),
-    ok = principe:put(Socket, <<"rnum1">>, <<"foo">>),
-    ok = principe:put(Socket, <<"rnum2">>, <<"foo">>),
-    ?assert(principe:rnum(Socket) =:= 2),
-    ok = principe:vanish(Socket),
-    ?assert(principe:rnum(Socket) =:= 0),
+    ok = ?MODULE:put(Socket, <<"rnum1">>, <<"foo">>),
+    ok = ?MODULE:put(Socket, <<"rnum2">>, <<"foo">>),
+    ?assert(?MODULE:rnum(Socket) =:= 2),
+    ok = ?MODULE:vanish(Socket),
+    ?assert(?MODULE:rnum(Socket) =:= 0),
     ok.
 
 size_test() ->
     Socket = test_setup(),
-    OldSize = principe:size(Socket),
-    ok = principe:put(Socket, <<"size">>, <<"foo">>),
-    NewSize = principe:size(Socket),
+    OldSize = ?MODULE:size(Socket),
+    ok = ?MODULE:put(Socket, <<"size">>, <<"foo">>),
+    NewSize = ?MODULE:size(Socket),
     ?assert(NewSize > OldSize),
     ok.
 
 stat_test() ->
     Socket = test_setup(),
-    principe:stat(Socket).
+    ?MODULE:stat(Socket).
 
 optimize_test() ->
     Socket = test_setup(),
-    ok = principe:optimize(Socket, "#bnum=1000000#opts=ld").
+    ok = ?MODULE:optimize(Socket, "#bnum=1000000#opts=ld").
 
 misc_test() ->
     Socket = test_setup(),
-    [] = principe:misc(Socket, "putlist",
+    [] = ?MODULE:misc(Socket, "putlist",
 		       ["key1", "value1",
 			"key2", "value2",
 			"key3", "value3",
 			"key4", "value4"]),
-    ?assert(principe:rnum(Socket) =:= 4),
-    ?assert(principe:get(Socket, "key1") =:= <<"value1">>),
-    [] = principe:misc(Socket, "outlist",
+    ?assert(?MODULE:rnum(Socket) =:= 4),
+    ?assert(?MODULE:get(Socket, "key1") =:= <<"value1">>),
+    [] = ?MODULE:misc(Socket, "outlist",
 		       ["key1", "key2", "key3"]),
-    ?assert(principe:rnum(Socket) =:= 1),
-    principe:put(Socket, "key5", "value5"),
-    GetlistOut = principe:misc(Socket, "getlist", ["key4", "key5"]),
+    ?assert(?MODULE:rnum(Socket) =:= 1),
+    ?MODULE:put(Socket, "key5", "value5"),
+    GetlistOut = ?MODULE:misc(Socket, "getlist", ["key4", "key5"]),
     ?assert(lists:all(fun (K) -> lists:member(K, GetlistOut) end, 
 		      [<<"key4">>, <<"value4">>, 
 		       <<"key5">>, <<"value5">>])),

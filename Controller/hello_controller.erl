@@ -1,5 +1,5 @@
--module(hello_controller).
+-module(hello_controller, [Req]).
 -compile(export_all).
 
-world(Req) ->
+world('GET', []) ->
     {ok, [{greeting, greeting:new(id, "Boss says Hello!")}]}.

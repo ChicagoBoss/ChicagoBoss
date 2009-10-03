@@ -73,8 +73,8 @@ handle_call({CallFunc, Arg1, Arg2, Arg3}, From, State) ->
     dispatch_request({From, CallFunc, Arg1, Arg2, Arg3}, State);
 handle_call({CallFunc, Arg1, Arg2, Arg3, Arg4}, From, State) ->
     dispatch_request({From, CallFunc, Arg1, Arg2, Arg3, Arg4}, State);
-handle_call(Request, _From, State) ->
-    ?DEBUG_LOG("Unknown request received by medici controller: ~p", [Request]),
+handle_call(_Request, _From, State) ->
+    ?DEBUG_LOG("Unknown request received by medici controller: ~p", [_Request]),
     {reply, {error, invalid_request}, State}.
 
 %%--------------------------------------------------------------------
@@ -83,8 +83,11 @@ handle_call(Request, _From, State) ->
 %%                                      {stop, Reason, State}
 %% Description: Handling cast messages
 %%--------------------------------------------------------------------
-handle_cast(Msg, State) ->
-    ?DEBUG_LOG("Unknown cast received by medici controller: ~p", [Msg]),
+handle_cast({putnr, Key, Value}, State) ->
+    dispatch_request({putnr, Key, Value}, State),
+    {noreply, State};
+handle_cast(_Msg, State) ->
+    ?DEBUG_LOG("Unknown cast received by medici controller: ~p", [_Msg]),
     {noreply, State}.
 
 %%--------------------------------------------------------------------
@@ -104,8 +107,8 @@ handle_info({retry, Pid, _OldReply, OldRequest}, State) when length(State#state.
 handle_info({retry, Pid, OldReply, OldRequest}, State) ->
     gen_server:reply(element(1, OldRequest), OldReply),
     {noreply, State#state{clients=lists:delete(Pid, State#state.clients)}};
-handle_info(Msg, State) ->
-    ?DEBUG_LOG("Unknown info message received by medici controller: ~p", [Msg]),
+handle_info(_Msg, State) ->
+    ?DEBUG_LOG("Unknown info message received by medici controller: ~p", [_Msg]),
     {noreply, State}.
 
 

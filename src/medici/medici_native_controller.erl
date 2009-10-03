@@ -95,8 +95,8 @@ handle_call({restore, PathName, TimeStamp}, From, State) ->
     dispatch_request({From, restore, PathName, TimeStamp}, State);
 handle_call({setmst, HostName, Port}, From, State) ->
     dispatch_request({From, setmst, HostName, Port}, State);
-handle_call(Request, _From, State) ->
-    ?DEBUG_LOG("Unknown request received by controller:~n~p~n", [Request]),
+handle_call(_Request, _From, State) ->
+    ?DEBUG_LOG("Unknown request received by controller:~n~p~n", [_Request]),
     {reply, {error, invalid_request}, State}.
 
 %%--------------------------------------------------------------------
@@ -105,7 +105,11 @@ handle_call(Request, _From, State) ->
 %%                                      {stop, Reason, State}
 %% Description: Handling cast messages
 %%--------------------------------------------------------------------
+handle_cast({putnr, Key, Value}, State) ->
+    dispatch_request({putnr, Key, Value}, State),
+    {noreply, State};
 handle_cast(_Msg, State) ->
+    ?DEBUG_LOG("Unknown cast received by medici controller: ~p", [_Msg]),
     {noreply, State}.
 
 %%--------------------------------------------------------------------
@@ -123,8 +127,8 @@ handle_info({retry, Pid, _OldReply, OldRequest}, State) when length(State#state.
 handle_info({retry, Pid, OldReply, OldRequest}, State) ->
     gen_server:reply(element(1, OldRequest), OldReply),
     {noreply, State#state{clients=lists:delete(Pid, State#state.clients)}};
-handle_info(Msg, State) ->
-    ?DEBUG_LOG("Unknown info message to controller: ~p", [Msg]),
+handle_info(_Msg, State) ->
+    ?DEBUG_LOG("Unknown info message to controller: ~p", [_Msg]),
     {noreply, State}.
 
 

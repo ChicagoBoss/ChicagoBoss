@@ -59,6 +59,8 @@ start() ->
 start(StartupOptions) when is_list(StartupOptions) ->
     {ok, AppEnvOptions} = application:get_env(medici, options),
     CombinedOptions = [StartupOptions | AppEnvOptions],
+    %% Merge into a single set of options, favoring those passed in
+    %% to start/1 over the app env.
     MediciOptions = [{K, proplists:get_value(K, CombinedOptions)} || 
 			K <- proplists:get_keys(CombinedOptions)],
     application:put_env(medici, {options, MediciOptions}),
@@ -181,9 +183,198 @@ searchout(Query) ->
 
 %% EUnit tests
 %%
+
+%% TODO: for completeness, set up two internal suites within this
+%% test suite, one for hash and another for table.  Test hash (assuming
+%% the server is already running), then test hash again by running the 
+%% server internal to medici, then test table the same way.  Need to
+%% review eunit docs to get this one right...
+
 -ifdef(EUNIT).
+
+get_random_count() ->
+    get_random_count(1000).
+
+get_random_count(Max) ->
+    crypto:start(),
+    {A1,A2,A3} = now(),
+    random:seed(A1, A2, A3),
+    round(Max * random:uniform()).
+
+%% setup_table_data() ->
+%%     ColData = [{"rec1", [{"name", "alice"}, {"sport", "baseball"}]},
+%% 	       {"rec2", [{"name", "bob"}, {"sport", "basketball"}]},
+%% 	       {"rec3", [{"name", "carol"}, {"age", "24"}]},
+%% 	       {"rec4", [{"name", "trent"}, {"age", "33"}, {"sport", "football"}]},
+%% 	       {"rec5", [{"name", "mallet"}, {"sport", "tennis"}, {"fruit", "apple"}]}
+%% 	       ],
+%%     lists:foreach(fun({Key, ValProplist}) ->
+%% 			  ok = ?MODULE:put(Key, ValProplist)
+%% 		  end, ColData).
+
 init_test() ->
     ?MODULE:start(),
     ?MODULE:stop(),
     ok.
+
+%% init_with_args_test() ->
+%%     ?MODULE:start([{foobar, 32}]),
+%%     {ok, Options} = application:get_env(medici, options),
+%%     ?assert(lists:member({foobar, 32}, Options)),
+%%     ?MODULE:stop().
+
+medici_api_test_() ->
+    {setup, 
+     fun() -> ?MODULE:start() end,
+     fun(_Cleanup) -> ?MODULE:stop() end,
+     [?_test(put_get_unit()),
+      ?_test(put_get_random_unit()),
+      ?_test(putkeep_unit()),
+      ?_test(putcat_unit()),
+      ?_test(putshl_unit()),
+%%      ?_test(putnr_unit()),
+      ?_test(out_unit()),
+      ?_test(mget_unit()),
+      ?_test(vsiz_unit()),
+      ?_test(vanish_unit()),
+      ?_test(iter_unit()),
+      ?_test(fwmkeys_unit()),
+%%      ?_test(addint_unit()),
+      ?_test(sync_unit()),
+      ?_test(rnum_unit()),
+      ?_test(size_unit()),
+      ?_test(stat_unit()),
+      ?_test(optimize_unit())]
+    }.
+
+put_get_unit() ->
+    ?assert(?MODULE:put("put_get1", "testval") =:= ok),
+    ?assert(?MODULE:put(<<"put_get2">>, <<32,145,56,0,14>>) =:= ok),
+    ?assert(?MODULE:get(<<"put_get1">>) =:= <<"testval">>),
+    ?assert(?MODULE:get("put_get2") =:= <<32, 145, 56, 0, 14>>).
+
+put_get_random_unit() ->
+    ElementCount = get_random_count(),
+    PutVals = lists:foldl(fun(_Seq, Acc) ->
+				  KeySize = random:uniform(1024),
+				  Key = crypto:rand_bytes(KeySize),
+				  ValSize = random:uniform(65536),
+				  Val = crypto:rand_bytes(ValSize),
+				  ok = ?MODULE:put(Key, Val),
+				  [{Key, Val} | Acc]
+			  end, [], lists:seq(1, ElementCount)),
+    lists:foreach(fun({K, V}) ->
+			  ?assert(?MODULE:get(K) =:= V)
+		  end, PutVals).
+
+putkeep_unit() ->
+    ok = ?MODULE:put(<<"putkeep1">>, <<"foo">>),
+    ?assert(?MODULE:get(<<"putkeep1">>) =:= <<"foo">>),
+    ?assertMatch({error, _}, ?MODULE:putkeep(<<"putkeep1">>, <<"bar">>)),
+    ?assert(?MODULE:get(<<"putkeep1">>) =:= <<"foo">>), % no effect if key already exists before putkeep
+    ok = ?MODULE:putkeep(<<"putkeep2">>, <<"baz">>),
+    ?assert(?MODULE:get(<<"putkeep2">>) =:= <<"baz">>). % puts the key if key does not exist already
+
+putcat_unit() ->
+    ok = ?MODULE:put(<<"putcat1">>, <<"foo">>),
+    % append "bar" to the end
+    ok = ?MODULE:putcat(<<"putcat1">>, <<"bar">>),
+    ?assert(?MODULE:get(<<"putcat1">>) =:= <<"foobar">>).
+
+putshl_unit() ->
+    ok = ?MODULE:put(<<"putshl">>, <<"foo">>),
+    % append "bar" to the end and shift to the left to retain the width of "4"
+    ok = ?MODULE:putshl(<<"putshl">>, <<"bar">>, 4),
+    ?assert(?MODULE:get(<<"putshl">>) =:= <<"obar">>).
+
+%% putnr_unit() ->
+%%     ?MODULE:putnr(<<"putnr1">>, <<"no reply">>),
+%%     ?assert(?MODULE:get(<<"putnr1">>) =:= <<"no reply">>).
+
+out_unit() ->
+    ok = ?MODULE:put(<<"out1">>, <<"to remove">>),
+    ?assert(?MODULE:get(<<"out1">>) =:= <<"to remove">>),
+    ok = ?MODULE:out(<<"out1">>),
+    ?assertMatch({error, _}, ?MODULE:get(<<"out1">>)).
+
+mget_unit() ->
+    ok = ?MODULE:put(<<"mget1">>, <<"alice">>),
+    ok = ?MODULE:put(<<"mget2">>, <<"bob">>),
+    ok = ?MODULE:put(<<"mget3">>, <<"carol">>),
+    ok = ?MODULE:put(<<"mget4">>, <<"trent">>),
+    ?assert(?MODULE:mget([<<"mget1">>, <<"mget2">>, 
+			  <<"mget3">>, <<"mget4">>]) =:= 
+	    [{<<"mget1">>, <<"alice">>}, 
+	     {<<"mget2">>, <<"bob">>}, 
+	     {<<"mget3">>, <<"carol">>}, 
+	     {<<"mget4">>, <<"trent">>}]).
+
+vsiz_unit() ->
+    ok = ?MODULE:put(<<"vsiz1">>, <<"vsiz test">>),
+    ?assert(?MODULE:vsiz(<<"vsiz1">>) =:= 9).
+
+vanish_unit() ->
+    ok = ?MODULE:put(<<"vanish1">>, <<"going away">>),
+    ok = ?MODULE:vanish(),
+    ?assertMatch({error, _}, ?MODULE:get(<<"vanish1">>)).
+
+iter_unit() ->
+    ok = ?MODULE:vanish(),
+    ok = ?MODULE:put(<<"a">>, <<"first">>),
+    ok = ?MODULE:iterinit(),
+    <<"a">> = ?MODULE:iternext(), % "a" should be the first key
+    % Now to test a bit of real iteration
+    ok = ?MODULE:put(<<"b">>, <<"second">>),
+    ok = ?MODULE:put(<<"c">>, <<"third">>),
+    ok = ?MODULE:iterinit(),
+    One = ?MODULE:iternext(),
+    Two = ?MODULE:iternext(),
+    Three = ?MODULE:iternext(),
+    ?assertMatch({error, _}, ?MODULE:iternext()),
+    ?assertMatch([<<"a">>, <<"b">>, <<"c">>], lists:sort([One, Two, Three])).
+
+fwmkeys_unit() ->
+    ok = ?MODULE:vanish(),
+    ok = ?MODULE:put(<<"fwmkeys1">>, <<"1">>),
+    ok = ?MODULE:put(<<"fwmkeys2">>, <<"2">>),
+    ok = ?MODULE:put(<<"fwmkeys3">>, <<"3">>),
+    ok = ?MODULE:put(<<"fwmkeys4">>, <<"4">>),
+    Keys1 = ?MODULE:fwmkeys(<<"fwmkeys">>, 4),
+    ?assert(length(Keys1) =:= 4),
+    ?assert(lists:member(<<"fwmkeys1">>, Keys1)),
+    ?assert(lists:member(<<"fwmkeys2">>, Keys1)),
+    ?assert(lists:member(<<"fwmkeys3">>, Keys1)),
+    ?assert(lists:member(<<"fwmkeys4">>, Keys1)),
+    Keys2 = ?MODULE:fwmkeys(<<"fwmkeys">>, 2),
+    ?assert(length(Keys2) =:= 2).
+
+%% addint_unit() ->
+%%     ok = ?MODULE:put(<<"addint1">>, 100),
+%%     ?assert(?MODULE:addint(<<"addint1">>, 20) =:= 120).
+
+sync_unit() ->
+    ?assert(?MODULE:sync() =:= ok).
+
+rnum_unit() ->
+    ok = ?MODULE:vanish(),
+    ok = ?MODULE:put(<<"rnum1">>, <<"foo">>),
+    ok = ?MODULE:put(<<"rnum2">>, <<"foo">>),
+    ?assert(?MODULE:rnum() =:= 2),
+    ok = ?MODULE:vanish(),
+    ?assert(?MODULE:rnum() =:= 0).
+
+size_unit() ->
+    OldSize = ?MODULE:size(),
+    ok = ?MODULE:put(<<"size1">>, <<"foo">>),
+    NewSize = ?MODULE:size(),
+    ?assert(NewSize > OldSize).
+
+stat_unit() ->
+    StatInfo = ?MODULE:stat(),
+    Protocol = proplists:get_value(protver, StatInfo),
+    ?assert(list_to_float(Protocol) > 0.9).
+
+optimize_unit() ->
+    ?assert(?MODULE:optimize("#bnum=1000000#opts=ld") =:= ok).
+
 -endif.

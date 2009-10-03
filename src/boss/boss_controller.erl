@@ -26,8 +26,8 @@ mochiweb_request(Req) ->
 
 process_request(Req) ->
     Result = case parse_path(Req:get(path)) of
-        {ok, {Controller, Action}} ->
-            trap_load_and_execute({Controller, Action}, Req);
+        {ok, {Controller, Action, Tokens}} ->
+            trap_load_and_execute({Controller, Action, Tokens}, Req);
         Else ->
             Else
         end,
@@ -36,12 +36,14 @@ process_request(Req) ->
 parse_path("/") ->
     {ok, Controller} = application:get_env(default_controller),
     {ok, Action} = application:get_env(default_action),
-    {ok, {Controller, Action}};
+    {ok, {Controller, Action, []}};
 parse_path("/" ++ Url) ->
     Tokens = string:tokens(Url, "/"),
     case length(Tokens) of
-        2 ->
-            {ok, {list_to_atom(lists:nth(1, Tokens)), list_to_atom(lists:nth(2, Tokens))}};
+        N when N >= 2 ->
+            {ok, {list_to_atom(lists:nth(1, Tokens)), 
+                    list_to_atom(lists:nth(2, Tokens)),
+                    lists:nthtail(2, Tokens)}};
         _ ->
             {not_found, "File not found"}
     end;
@@ -59,7 +61,7 @@ process_result({redirect, Where}) ->
 process_result({redirect, "http://"++Where, Headers}) ->
     process_result({redirect, "/"++string:join(tl(string:tokens(Where, "/")), "/"), Headers});
 process_result({redirect, Where, Headers}) ->
-    {302, Headers ++ [{"Location", Where}], ""};
+    {302, [{"Location", Where}, {"Cache-Control", "no-cache"}|Headers], ""};
 process_result({ok, Payload, Headers}) ->
     {200, proplists:delete("Content-Type", Headers) ++ 
         [{"Content-Type", proplists:get_value("Content-Type", Headers, "text/html")}], 
@@ -75,7 +77,7 @@ trap_load_and_execute(Arg1, Arg2) ->
             Ok
     end.
 
-load_and_execute({doc, ModelName}, _Req) ->
+load_and_execute({doc, ModelName, _}, _Req) ->
     case load_dir(model_path(), fun compile_model/1) of
         ok -> 
             {ModelName, Edoc} = boss_record_compiler:edoc_module(
@@ -84,12 +86,12 @@ load_and_execute({doc, ModelName}, _Req) ->
         Error ->
             Error
     end;
-load_and_execute({Controller, Action}, Req) ->
+load_and_execute(Location, Req) ->
     case load_dir(controller_path(), fun compile_controller/1) of
         ok ->
             case load_dir(model_path(), fun compile_model/1) of
                 ok ->
-                    execute_action({Controller, Action}, Req);
+                    execute_action(Location, Req);
                 Else ->
                     Else
             end;
@@ -100,36 +102,27 @@ load_and_execute({Controller, Action}, Req) ->
 execute_action(Location, Req) ->
     execute_action(Location, Req, []).
 
-execute_action({Controller, Action} = Location, Req, LocationTrail) ->
+execute_action({Controller, Action, Tokens} = Location, Req, LocationTrail) ->
     Module = list_to_atom(lists:concat([Controller, "_controller"])),
     case lists:member(Location, LocationTrail) of
         true ->
             {error, "Circular redirect!"};
         _ ->
-            BeforeFilter = case lists:member({before_filter, 1}, Module:module_info(exports)) of
-                true ->
-                    case Module:before_filter(Action) of
-                        ok -> ok;
-                        Function when is_function(Function) -> Function(Req)
-                    end;
-                false ->
-                    ok
-            end,
-            case BeforeFilter of
-                ok ->
-                    case lists:member({Action, 1}, Module:module_info(exports)) of
-                        true -> process_action_result({Location, Req, LocationTrail}, 
-                                Module:Action(Req));
+            ControllerInstance = Module:new(Req),
+            case lists:member({Action, 3}, Module:module_info(exports)) of
+                true -> process_action_result({Location, Req, LocationTrail}, 
+                        ControllerInstance:Action(Req:get(method), Tokens));
+                false -> 
+                    case lists:member({Action, 4}, Module:module_info(exports)) of
+                        true -> 
+                            case ControllerInstance:third_arg(Action) of
+                                {ok, Info} ->
+                                    process_action_result({Location, Req, LocationTrail}, 
+                                        ControllerInstance:Action(Req:get(method), Tokens, Info));
+                                Other -> Other
+                            end;
                         _ -> render_view(Location)
-                    end;
-                {ok, Info} ->
-                    case lists:member({Action, 2}, Module:module_info(exports)) of
-                        true -> process_action_result({Location, Req, LocationTrail}, 
-                                Module:Action(Req, Info));
-                        _ -> render_view(Location)
-                    end;
-                Other ->
-                    Other
+                    end
             end
     end.
 
@@ -206,7 +199,7 @@ render_view(Location) ->
 render_view(Location, Variables) ->
     render_view(Location, Variables, []).
 
-render_view({Controller, Template}, Variables, Headers) -> 
+render_view({Controller, Template, _}, Variables, Headers) -> 
     Module = view_module(Controller, Template),
     Result = case module_is_loaded(Module) of
         true ->

@@ -2,7 +2,7 @@
 
 Dependencies:
 
-    * Erlang R13 -
+    * Erlang R12B or later -
         http://www.erlang.org/download.html
 
         Check with erlang:system_info(otp_release).

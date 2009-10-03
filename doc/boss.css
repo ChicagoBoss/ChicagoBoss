@@ -47,6 +47,12 @@ font-weight: bold;
 div.code span.typevar {
     color: #1249DB;
 }
+div.code span.comment {
+    color: #1249DB;
+}
+div.code span.atom {
+    color: #00FF1A;
+}
 div.nav {
     font-size: 24px; padding-top: 40px; padding-bottom: 20px;
 }
