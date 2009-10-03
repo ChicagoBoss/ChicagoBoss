@@ -25,18 +25,34 @@
 
 <p>Controller/blog_post_controller.erl:</p>
 <div class="code">
-    <span class="attr">-module</span>(blog_post_controller).<br />
+    <span class="attr">-module</span>(blog_post_controller, [Req]).<br />
     <span class="attr">-compile</span>(export_all).<br />
     <br />
-    generate_and_show(Req) -&gt;<br />
-    &nbsp;&nbsp;&nbsp;&nbsp;Author = <span class="function">author</span>:<span class="function">new</span>(id, <span class="string">"My Name"</span>),<br />
-    &nbsp;&nbsp;&nbsp;&nbsp;SavedAuthor = <span class="function">Author</span>:<span class="function">save</span>(),<br />
-    &nbsp;&nbsp;&nbsp;&nbsp;BlogPost = <span class="function">blog_post</span>:<span class="function">new</span>(id, <span class="string">"My Title"</span>, <br />
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="string">"My Text"</span>, <span class="function">SavedAuthor</span>:<span class="function">id</span>()),<br />
-    &nbsp;&nbsp;&nbsp;&nbsp;{ok, [{blog_post, <span class="function">BlogPost</span>:<span class="function">save</span>()}]}.<br />
+    create(<span class="atom">'GET'</span>, []) -&gt;<br />
+    &nbsp;&nbsp;&nbsp;&nbsp;ok;<br />
+    create(<span class="atom">'POST'</span>, []) -&gt;<br />
+    &nbsp;&nbsp;&nbsp;&nbsp;FakeAuthor = (<span class="function">author</span>:<span class="function">new</span>(id, <span class="string">"Mark Twain"</span>)):<span class="function">save</span>(),<br />
+    &nbsp;&nbsp;&nbsp;&nbsp;BlogPost = <span class="function">blog_post</span>:<span class="function">new</span>(id,<br />
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="function">Req</span>:<span class="function">get_post_value</span>(<span class="string">"title"</span>), <br />
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="function">Req</span>:<span class="function">get_post_value</span>(<span class="string">"text"</span>), <br />
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="function">FakeAuthor</span>:<span class="function">id</span>()),<br />
+    &nbsp;&nbsp;&nbsp;&nbsp;SavedBlogPost = <span class="function">BlogPost</span>:<span class="function">save</span>(),<br />
+    &nbsp;&nbsp;&nbsp;&nbsp;{redirect, <span class="string">"/blog_post/view/"</span>++<span class="function">SavedBlogPost</span>:<span class="function">id</span>()}.<br />
+    <br />
+    view(<span class="atom">'GET'</span>, [BlogPostId]) -&gt;<br />
+    &nbsp;&nbsp;&nbsp;&nbsp;{ok, [{blog_post, <span class="function">boss_db</span>:<span class="function">find</span>(BlogPostId)}]}.<br />
 </div>
 
-<p>View/blog_post/generate_and_show.html:</p>
+<p>View/blog_post/create.html:</p>
+<div class="code">
+    <span class="bracket">&lt;<span class="name">form</span> <span class="attr">method</span>=<span class="string">&quot;post&quot;</span>&gt;</span><br />
+    Title: <span class="bracket">&lt;<span class="name">input</span> <span class="attr">name</span>=<span class="string">&quot;title&quot;</span>&gt;</span><span class="bracket">&lt;<span class="name">br</span> /&gt;</span><br />
+    Text: <span class="bracket">&lt;<span class="name">textarea</span> <span class="attr">name</span>=<span class="string">&quot;text&quot;</span>&gt;</span><span class="bracket">&lt;/<span class="name">textarea</span>&gt;</span><span class="bracket">&lt;<span class="name">br</span> /&gt;</span><br />
+    <span class="bracket">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;submit&quot;</span>&gt;</span><br />
+    <span class="bracket">&lt;/<span class="name">form</span>&gt;</span>
+</div>
+
+<p>View/blog_post/view.html:</p>
 
 <div class="code">
     <span class="bracket">&lt;<span class="name">h1</span>&gt;</span><span class="braces">{{ "{{" }}</span> <span class="var">blog_post</span>.<span class="attr">title</span> <span class="braces">{{ "}}" }}</span><span class="bracket">&lt;/<span class="name">h1</span>&gt;</span><br />
@@ -46,6 +62,10 @@
 </div>
 
 <p>Database schema:</p>
+
+<div class="code" style="text-align: center;">NONE</div>
+
+<p>URL configuration file:</p>
 
 <div class="code" style="text-align: center;">NONE</div>
 {% endblock %}
