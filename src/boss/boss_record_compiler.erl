@@ -191,13 +191,13 @@ association_forms(ModuleName, Attributes) ->
     lists:foldl(
         fun
             ({has_many, HasMany}, Acc) ->
-                [has_many_forms(HasMany, ModuleName)|Acc];
+                has_many_forms(HasMany, ModuleName) ++ Acc;
             ({has_up_to, {Limit, HasMany}}, Acc) ->
-                [has_many_forms(HasMany, ModuleName, Limit)|Acc];
+                has_many_forms(HasMany, ModuleName, Limit) ++ Acc;
             ({has_up_to, {Limit, HasMany, Sort}}, Acc) ->
-                [has_many_forms(HasMany, ModuleName, Limit, Sort)|Acc];
+                has_many_forms(HasMany, ModuleName, Limit, Sort) ++ Acc;
             ({has_up_to, {Limit, HasMany, Sort, SortOrder}}, Acc) ->
-                [has_many_forms(HasMany, ModuleName, Limit, Sort, SortOrder)|Acc];
+                has_many_forms(HasMany, ModuleName, Limit, Sort, SortOrder) ++ Acc;
             ({belongs_to, BelongsTo}, Acc) ->
                 [belongs_to_forms(BelongsTo, ModuleName)|Acc];
             (_, Acc) ->
@@ -225,27 +225,59 @@ has_many_forms(HasMany, ModuleName, Limit, Sort) ->
 
 has_many_forms(HasMany, ModuleName, Limit, Sort, SortOrder) ->
     Type = inflector:singularize(atom_to_list(HasMany)),
-    erl_syntax:add_precomments([erl_syntax:comment(
-                ["% @spec "++atom_to_list(HasMany)++"() -> [ "++Type++" ]",
-                    lists:concat(["% @doc Retrieves ", HasMany, " with `", ModuleName, "_id' ",
-                            "set to the `Id' of this `", ModuleName, "'"])])],
-        erl_syntax:function(erl_syntax:atom(HasMany),
-            [erl_syntax:clause([], none, [ 
-                        erl_syntax:application(
-                            erl_syntax:atom(?DATABASE_MODULE), 
-                            erl_syntax:atom(find),
-                            [erl_syntax:atom(Type),
-                                erl_syntax:list([
-                                        erl_syntax:tuple([
-                                                erl_syntax:atom(
-                                                    atom_to_list(ModuleName) ++ "_id"),
-                                                erl_syntax:variable("Id")])
-                                    ]),
-                                erl_syntax:integer(Limit),
-                                erl_syntax:integer(0),
-                                erl_syntax:atom(Sort),
-                                erl_syntax:atom(SortOrder)
-                            ])])])).
+    [erl_syntax:add_precomments([erl_syntax:comment(
+                    ["% @spec "++atom_to_list(HasMany)++"() -> [ "++Type++" ]",
+                        lists:concat(["% @doc Retrieves ", HasMany, " with `", ModuleName, "_id' ",
+                                "set to the `Id' of this `", ModuleName, "'"])])],
+            erl_syntax:function(erl_syntax:atom(HasMany),
+                [erl_syntax:clause([], none, [
+                            has_many_application_forms(Type, ModuleName, Limit, Sort, SortOrder)
+                        ])])),
+        erl_syntax:add_precomments([erl_syntax:comment(
+                    ["% @spec first_"++Type++"() -> "++Type,
+                        lists:concat(["% @doc Retrieves the first `", Type, 
+                                "' that would be returned by `", HasMany, "()'"])])],
+            erl_syntax:function(erl_syntax:atom("first_"++Type),
+                [erl_syntax:clause([], none, [
+                            erl_syntax:application(
+                                erl_syntax:atom(erlang),
+                                erl_syntax:atom(hd), [ 
+                            has_many_application_forms(Type, ModuleName, 1, Sort, SortOrder)
+                        ])])])),
+        erl_syntax:add_precomments([erl_syntax:comment(
+                    ["% @spec last_"++Type++"() -> "++Type,
+                        lists:concat(["% @doc Retrieves the last `", Type,
+                                "' that would be returned by `", HasMany, "()'"])])],
+            erl_syntax:function(erl_syntax:atom("last_"++Type),
+                [erl_syntax:clause([], none, [
+                            erl_syntax:application(
+                                erl_syntax:atom(erlang),
+                                erl_syntax:atom(hd), [ 
+                                    has_many_application_forms(Type, ModuleName, 1, Sort, reverse_sort_order(SortOrder))
+                                ])])]))
+    ].
+
+reverse_sort_order(str_ascending) -> str_descending;
+reverse_sort_order(str_descending) -> str_ascending;
+reverse_sort_order(num_ascending) -> num_descending;
+reverse_sort_order(num_descending) -> num_ascending.
+
+has_many_application_forms(Type, ModuleName, Limit, Sort, SortOrder) ->
+    erl_syntax:application(
+        erl_syntax:atom(?DATABASE_MODULE), 
+        erl_syntax:atom(find),
+        [erl_syntax:atom(Type),
+            erl_syntax:list([
+                    erl_syntax:tuple([
+                            erl_syntax:atom(
+                                atom_to_list(ModuleName) ++ "_id"),
+                            erl_syntax:variable("Id")])
+                ]),
+            erl_syntax:integer(Limit),
+            erl_syntax:integer(0),
+            erl_syntax:atom(Sort),
+            erl_syntax:atom(SortOrder)
+        ]).
 
 belongs_to_forms(BelongsTo, ModuleName) ->
     erl_syntax:add_precomments([erl_syntax:comment(

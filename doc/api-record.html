@@ -209,7 +209,7 @@ Set the value of <code>Id</code>.
     <span class="attr">-has_many</span>(bars).
 </div>
 
-<p>Generates a function <code>bars()</code> which returns a list all "bar" BossRecords with <code>FooId</code> equal to this BossRecord's ID.</p>
+<p>Generates a function <code>bars()</code> which returns a list all "bar" BossRecords with <code>FooId</code> equal to this BossRecord's ID. Also creates <code>first_bar()</code> and <code>last_bar()</code> which return the first and last items in the association.</p>
 
 <p>The two above attributes work similar to <code>belongs_to</code> and <code>has_many</code> in Rails.</p>
 
@@ -223,7 +223,7 @@ Set the value of <code>Id</code>.
 
 <p><code>SortOrder = str_ascending | str_descending | num_ascending | num_descending</code></p>
 
-<p>Generates a function <code>bars()</code> which returns a list of up to <code>Limit</code> "bar" BossRecords with <code>FooId</code> equal to this BossRecord's ID. Optional args:</p>
+<p>Generates a function <code>bars()</code> which returns a list of up to <code>Limit</code> "bar" BossRecords with <code>FooId</code> equal to this BossRecord's ID. Also creates <code>first_bar()</code> and <code>last_bar()</code> which return just the first and last items in the association. Optional args:</p>
 
 <ul>
     <li><code>Sort</code>:       the record attribute to sort the association on</li>
