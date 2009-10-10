@@ -428,7 +428,7 @@ query_order(_Sock, Query, primary, Type) when is_atom(Type) ->
     OrderKey = {set_order, primary, Type},
     OrderValue = ["setorder", 
 		  ?NULL, 
-		  ?NULL, 
+		  "",
 		  ?NULL, 
 		  integer_to_list(order_request_val(Type))],
     case lists:keysearch(set_order, 1, proplists:get_keys(Query)) of
@@ -776,7 +776,7 @@ fwmkeys_test() ->
     ok.
 
 query_generation_test() ->
-    ?assertMatch([{{set_order, primary, str_descending}, ["setorder", <<0:8>>, <<0:8>>, <<0:8>>, "1"]}],
+    ?assertMatch([{{set_order, primary, str_descending}, ["setorder", <<0:8>>, "", <<0:8>>, "1"]}],
 		 ?MODULE:query_order([], primary, str_descending)),
     ?assertMatch([{{set_order, "foo", str_ascending}, ["setorder", <<0:8>>, "foo", <<0:8>>, "0"]}],
 		 ?MODULE:query_order([{{set_order, blah}, ["foo"]}], "foo", str_ascending)),
@@ -800,6 +800,11 @@ search_test() ->
     ?assertMatch([<<"rec2">>, <<"rec3">>], ?MODULE:search(Socket, Query2A)),
     Query3 = ?MODULE:query_condition([], "age", num_ge, [25]),
     ?assertMatch([<<"rec4">>], ?MODULE:search(Socket, Query3)),
+    Query4 = ?MODULE:query_condition([], "name", {no, str_eq}, ["alice"]),
+    Query4A = ?MODULE:query_order(Query4, "name", str_descending),
+    ?assertMatch([<<"rec4">>, <<"rec5">>, <<"rec3">>, <<"rec2">>], ?MODULE:search(Socket, Query4A)),
+    Query5 = ?MODULE:query_order([], primary, str_descending),
+    ?assertMatch([<<"rec5">>, <<"rec4">>, <<"rec3">>, <<"rec2">>, <<"rec1">>], ?MODULE:search(Socket, Query5)),
     ok.
 
 searchcount_test() ->
