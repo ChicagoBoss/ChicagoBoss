@@ -36,13 +36,13 @@ process_request(Req) ->
 parse_path("/") ->
     {ok, Controller} = application:get_env(default_controller),
     {ok, Action} = application:get_env(default_action),
-    {ok, {Controller, Action, []}};
+    {ok, {atom_to_list(Controller), atom_to_list(Action), []}};
 parse_path("/" ++ Url) ->
     Tokens = string:tokens(Url, "/"),
     case length(Tokens) of
         N when N >= 2 ->
-            {ok, {list_to_atom(lists:nth(1, Tokens)), 
-                    list_to_atom(lists:nth(2, Tokens)),
+            {ok, {lists:nth(1, Tokens), 
+                    lists:nth(2, Tokens),
                     lists:nthtail(2, Tokens)}};
         _ ->
             {not_found, "File not found"}
@@ -77,23 +77,29 @@ trap_load_and_execute(Arg1, Arg2) ->
             Ok
     end.
 
-load_and_execute({doc, ModelName, _}, _Req) ->
+load_and_execute({"doc", ModelName, _}, _Req) ->
     case load_dir(model_path(), fun compile_model/1) of
-        ok -> 
-            {ModelName, Edoc} = boss_record_compiler:edoc_module(
-                model_path(atom_to_list(ModelName)++".erl"), [{private, true}]),
+        {ok, _} ->
+            Model = list_to_atom(ModelName),
+            {Model, Edoc} = boss_record_compiler:edoc_module(
+                model_path(ModelName++".erl"), [{private, true}]),
             {ok, edoc:layout(Edoc)};
         Error ->
             Error
     end;
-load_and_execute(Location, Req) ->
+load_and_execute({Controller, _, _} = Location, Req) ->
     case load_dir(controller_path(), fun compile_controller/1) of
-        ok ->
-            case load_dir(model_path(), fun compile_model/1) of
-                ok ->
-                    execute_action(Location, Req);
-                Else ->
-                    Else
+        {ok, Controllers} ->
+            case lists:member(Controller ++ "_controller", Controllers) of
+                true ->
+                    case load_dir(model_path(), fun compile_model/1) of
+                        {ok, _} ->
+                            execute_action(Location, Req);
+                        Else ->
+                            Else
+                    end;
+                false ->
+                    render_view(Location)
             end;
         Else ->
             Else
@@ -102,23 +108,35 @@ load_and_execute(Location, Req) ->
 execute_action(Location, Req) ->
     execute_action(Location, Req, []).
 
+execute_action({Controller, Action}, Req, LocationTrail) ->
+    execute_action({Controller, Action, []}, Req, LocationTrail);
+execute_action({Controller, Action, Tokens}, Req, LocationTrail) when is_atom(Action) ->
+    execute_action({Controller, atom_to_list(Action), Tokens}, Req, LocationTrail);
 execute_action({Controller, Action, Tokens} = Location, Req, LocationTrail) ->
-    Module = list_to_atom(lists:concat([Controller, "_controller"])),
     case lists:member(Location, LocationTrail) of
         true ->
             {error, "Circular redirect!"};
         _ ->
+            % do not convert a list to an atom until we are sure the controller/action
+            % pair exists. this prevents a memory leak due to atom creation.
+            Module = list_to_atom(lists:concat([Controller, "_controller"])),
             ControllerInstance = Module:new(Req),
-            case lists:member({Action, 3}, Module:module_info(exports)) of
-                true -> process_action_result({Location, Req, LocationTrail}, 
-                        ControllerInstance:Action(Req:get(method), Tokens));
+            ExportStrings = lists:map(
+                fun({Function, Arity}) -> {atom_to_list(Function), Arity} end,
+                Module:module_info(exports)),
+            case lists:member({Action, 3}, ExportStrings) of
+                true ->
+                    ActionAtom = list_to_atom(Action),
+                    process_action_result({Location, Req, LocationTrail}, 
+                        ControllerInstance:ActionAtom(Req:get(method), Tokens));
                 false -> 
-                    case lists:member({Action, 4}, Module:module_info(exports)) of
+                    case lists:member({Action, 4}, ExportStrings) of
                         true -> 
                             case ControllerInstance:third_arg(Action) of
                                 {ok, Info} ->
+                                    ActionAtom = list_to_atom(Action),
                                     process_action_result({Location, Req, LocationTrail}, 
-                                        ControllerInstance:Action(Req:get(method), Tokens, Info));
+                                        ControllerInstance:ActionAtom(Req:get(method), Tokens, Info));
                                 Other -> Other
                             end;
                         _ -> render_view(Location)
@@ -166,29 +184,29 @@ compile_model(ModulePath) ->
 
 load_dir(Dir, Compiler) ->
     {ok, Files} = file:list_dir(Dir),
-    ErrorList = lists:foldl(fun
-            ("."++_, Errors) ->
-                Errors;
-            (File, Errors) ->
-                Module = list_to_atom(filename:basename(File, ".erl")),
+    {ModuleList, ErrorList} = lists:foldl(fun
+            ("."++_, Acc) ->
+                Acc;
+            (File, {Modules, Errors}) ->
+                Module = filename:basename(File, ".erl"),
                 AbsPath = filename:join([Dir, File]),
-                case module_older_than(Module, [AbsPath]) of
+                case module_older_than(list_to_atom(Module), [AbsPath]) of
                     true ->
                         case Compiler(AbsPath) of
                             ok ->
-                                Errors;
+                                {[Module|Modules], Errors};
                             {error, Error} ->
-                                [Error | Errors];
+                                {Modules, [Error | Errors]};
                             {error, NewErrors, _NewWarnings} when is_list(NewErrors) ->
-                                NewErrors ++ Errors
+                                {Modules, NewErrors ++ Errors}
                         end;
                     _ ->
-                        Errors
+                        {[Module|Modules], Errors}
                 end
-        end, [], Files),
+        end, {[], []}, Files),
     case length(ErrorList) of
         0 ->
-            ok;
+            {ok, ModuleList};
         _ ->
             {error, ErrorList}
     end.
