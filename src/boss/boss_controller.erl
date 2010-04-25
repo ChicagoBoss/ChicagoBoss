@@ -188,20 +188,25 @@ load_dir(Dir, Compiler) ->
             ("."++_, Acc) ->
                 Acc;
             (File, {Modules, Errors}) ->
-                Module = filename:basename(File, ".erl"),
-                AbsPath = filename:join([Dir, File]),
-                case module_older_than(list_to_atom(Module), [AbsPath]) of
+                case lists:suffix(".erl", File) of
                     true ->
-                        case Compiler(AbsPath) of
-                            ok ->
-                                {[Module|Modules], Errors};
-                            {error, Error} ->
-                                {Modules, [Error | Errors]};
-                            {error, NewErrors, _NewWarnings} when is_list(NewErrors) ->
-                                {Modules, NewErrors ++ Errors}
+                        Module = filename:basename(File, ".erl"),
+                        AbsPath = filename:join([Dir, File]),
+                        case module_older_than(list_to_atom(Module), [AbsPath]) of
+                            true ->
+                                case Compiler(AbsPath) of
+                                    ok ->
+                                        {[Module|Modules], Errors};
+                                    {error, Error} ->
+                                        {Modules, [Error | Errors]};
+                                    {error, NewErrors, _NewWarnings} when is_list(NewErrors) ->
+                                        {Modules, NewErrors ++ Errors}
+                                end;
+                            _ ->
+                                {[Module|Modules], Errors}
                         end;
                     _ ->
-                        {[Module|Modules], Errors}
+                        {Modules, Errors}
                 end
         end, {[], []}, Files),
     case length(ErrorList) of
