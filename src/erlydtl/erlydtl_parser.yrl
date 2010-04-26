@@ -199,7 +199,9 @@ ForGroup -> ForGroup comma identifier : '$1' ++ ['$3'].
 IfBlock -> IfBraced Elements ElseBraced Elements EndIfBraced : {ifelse, '$1', '$2', '$4'}.
 IfBlock -> IfBraced Elements EndIfBraced : {'if', '$1', '$2'}.
 IfBraced -> open_tag if_keyword IfExpression close_tag : '$3'.
-IfExpression -> not_keyword IfExpression : {'not', '$2'}.
+IfExpression -> not_keyword Value : {'not', '$2'}.
+IfExpression -> Value in_keyword Value : {'in', '$1', '$3'}.
+IfExpression -> Value not_keyword in_keyword Value : {'not', {'in', '$1', '$4'}}.
 IfExpression -> Value : '$1'.
 
 ElseBraced -> open_tag else_keyword close_tag.

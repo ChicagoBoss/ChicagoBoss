@@ -38,7 +38,7 @@
 -export([add/2, capfirst/1, center/2, date/2, escapejs/1, first/1]).
 -export([fix_ampersands/1, force_escape/1, format_integer/1, format_number/1]).
 -export([join/2, last/1, length/1, length_is/2, linebreaksbr/1, ljust/2]).
--export([lower/1, rjust/2, upper/1, urlencode/1]).
+-export([lower/1, rjust/2, truncatewords/2, upper/1, urlencode/1]).
 
 -define(NO_ENCODE(C), ((C >= $a andalso C =< $z) orelse
         (C >= $A andalso C =< $Z) orelse
@@ -194,6 +194,16 @@ rjust(Input, Number) when is_binary(Input) ->
 rjust(Input, Number) ->
     string:right(Input, Number).
 
+%% @doc Truncates a string after a certain number of words.
+truncatewords([Input], Max) when is_list(Input) or is_binary(Input) ->
+    truncatewords(Input, Max);
+truncatewords(Input, Max) when is_binary(Input) ->
+    list_to_binary(truncatewords(binary_to_list(Input), Max));
+truncatewords(_Input, Max) when Max =< 0 ->
+    "";
+truncatewords(Input, Max) ->
+    truncatewords(Input, Max, []).
+
 %% @doc Converts a string into all uppercase.
 upper([Input]) when is_list(Input) or is_binary(Input) ->
     upper(Input);
@@ -315,6 +325,15 @@ lower(Input, Index) ->
         _ ->
             Input
     end.
+
+truncatewords(Input, _WordsLeft, Acc) when length(Input) =:= 0 ->
+    lists:reverse(Acc);
+truncatewords(_Input, WordsLeft, Acc) when WordsLeft =:= 0 ->
+    lists:reverse("..." ++ Acc);
+truncatewords([C1, C2|Rest], WordsLeft, Acc) when C1 =/= $\  andalso C2 =:= $\  ->
+    truncatewords([C2|Rest], WordsLeft - 1, [C1|Acc]);
+truncatewords([C1|Rest], WordsLeft, Acc) ->
+    truncatewords(Rest, WordsLeft, [C1|Acc]).
 
 % Taken from quote_plus of mochiweb_util
 

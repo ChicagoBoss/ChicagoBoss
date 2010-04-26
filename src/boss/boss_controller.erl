@@ -34,12 +34,17 @@ process_request(Req) ->
     process_result(Result).
 
 parse_path("/") ->
-    {ok, Controller} = application:get_env(default_controller),
-    {ok, Action} = application:get_env(default_action),
-    {ok, {atom_to_list(Controller), atom_to_list(Action), []}};
+    {ok, {Controller, Action}} = application:get_env(front_page),
+    {ok, {Controller, Action, []}};
 parse_path("/" ++ Url) ->
     Tokens = string:tokens(Url, "/"),
     case length(Tokens) of
+        1 ->
+            Controller = hd(Tokens),
+            {ok, DefaultAction} = application:get_env(default_action),
+            {ok, AllDefaultActions} = application:get_env(default_actions),
+            ThisAction = proplists:get_value(Controller, AllDefaultActions, DefaultAction),
+            {ok, {Controller, ThisAction, []}};
         N when N >= 2 ->
             {ok, {lists:nth(1, Tokens), 
                     lists:nth(2, Tokens),

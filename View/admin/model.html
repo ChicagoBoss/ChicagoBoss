@@ -1,0 +1,57 @@
+<html>
+    <head>
+        <title>{% block title %}Chicago Boss Admin Interface{% endblock %}</title>
+    </head>
+    <body>
+        {% block body %}
+        <h1><em>&#8220;What&#8217;ll it be, Boss?&#8221;</em></h1>
+        <p>
+        {% for model in models %}
+        {% ifequal model this_model %}
+        <strong>{{ model }}</strong>
+        {% else %}
+        <a href="/admin/model/{{ model }}">{{ model }}</a>
+        {% endifequal %}
+        {% if not forloop.last %}
+        |
+        {% endif %}
+        {% endfor %}
+        </p>
+        {% if this_model %}
+        <p>
+        <form action="/admin/create/{{ this_model }}">
+            <input type="submit" value="+ New {{ this_model }}" />
+            &nbsp; &nbsp; See also: <a href="/doc/{{ this_model }}">Documentation for the <code>{{ this_model }}</code> model</a>
+        </form>
+        </p>
+        {% endif %}
+        <table border=1>
+        {% for record in records %}
+        {% if forloop.first %}
+        <tr>
+            {% for attr in record.attribute_names %}
+            <th>{{ attr }}</th>
+            {% endfor %}
+        </tr>
+        {% endif %}
+        <tr>
+            {% for key, val in record.attributes %}
+            {% ifequal key "id" %}
+            <td><strong><a href="/admin/record/{{ val }}">{{ val }}</a></strong></td>
+            {% else %}
+            {% if "_time" in key %}
+            <td>{{ val|date:"N j, Y, P" }}</td>
+            {% else %}
+            {% if "_id" in key %}
+            <td><a href="/admin/record/{{ val }}">{{ val }}</a></td>
+            {% else %}
+            <td>{{ val|truncatewords:8 }}</td>
+            {% endif %}
+            {% endif %}
+            {% endifequal %}
+            {% endfor %}
+        </tr>
+        {% endfor %}
+        {% endblock %}
+    </body>
+</html>

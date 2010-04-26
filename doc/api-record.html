@@ -6,20 +6,14 @@
         </style>
     </head>
     <body>
+        
         <div class="equation">
             <span style="background-color: #B80009;">Rails Idioms</span> +
             <span style="background-color: #004B00;">Django Templates</span> +
             <span style="background-color: #0D0075;">Erlang Power</span> =
-        </div>
-        <div style="padding: 40px;">
-            <span class="chicago">Chicago</span><br />
-            <span class="boss">BOSS</span>
+            <em>Chicago</em> <strong>BOSS</strong>
         </div>
 
-        <div class="quote">
-            <a name="nav"></a>
-            &#8220;Don&#8217;t you worry about that. You just let Boss worry about that.&#8221;
-        </div>
         <div class="nav">
             
 <a href="index.html">F.A.Q.</a> &nbsp; | &nbsp; 
@@ -86,6 +80,28 @@ BossRecords are <em>specially compiled parameterized modules</em> that follow th
 <hr />
 <p>Generated instance functions of a BossRecord include:</p>
 
+
+
+
+<div class="code">
+    belongs_to_names() -> [{<span class="typevar">::atom()</span>}]
+</div>
+<p>
+
+Retrieve a list of the names of <code>belongs_to</code> associations.
+
+</p>
+
+
+
+<div class="code">
+    belongs_to() -> [{<span class="typevar">::atom()</span>, BossRecord}]
+</div>
+<p>
+
+Retrieve all of the <code>belongs_to</code> associations at once.
+
+</p>
 
 
 

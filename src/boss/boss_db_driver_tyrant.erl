@@ -1,7 +1,7 @@
 -module(boss_db_driver_tyrant).
 -behaviour(boss_db_driver).
 -export([start/0, stop/0, find/1, find/3, find/4, find/5, find/6]).
--export([counter/1, incr/1, incr/2, delete/1, save_record/1]).
+-export([count/1, count/2, counter/1, incr/1, incr/2, delete/1, save_record/1]).
 
 start() ->
     medici:start().
@@ -46,6 +46,12 @@ find(Type, Conditions, Max, Skip, Sort, SortOrder) ->
         false ->
             []
     end.
+
+count(Type) ->
+    count(Type, []).
+
+count(Type, Conditions) ->
+    medici:searchcount(build_conditions(Type, Conditions)).
 
 counter(Id) when is_list(Id) ->
     counter(list_to_binary(Id));
@@ -124,10 +130,13 @@ attribute_to_colname(Attribute, _Type) ->
     list_to_binary(atom_to_list(Attribute)).
 
 build_query(Type, Conditions, Max, Skip, Sort, SortOrder) ->
-    Query = lists:foldl(fun({K, V}, Acc) ->
-                medici:query_add_condition(Acc, attribute_to_colname(K, Type), str_eq, [list_to_binary(V)])
-        end, [], [{'_type', atom_to_list(Type)} | Conditions]),
+    Query = build_conditions(Type, Conditions),
     medici:query_order(medici:query_limit(Query, Max, Skip), atom_to_list(Sort), SortOrder).
+
+build_conditions(Type, Conditions) ->
+    lists:foldl(fun({K, V}, Acc) ->
+                medici:query_add_condition(Acc, attribute_to_colname(K, Type), str_eq, [list_to_binary(V)])
+        end, [], [{'_type', atom_to_list(Type)} | Conditions]).
 
 pack_datetime({Date, Time}) ->
     list_to_binary(integer_to_list(calendar:datetime_to_gregorian_seconds({Date, Time}))).

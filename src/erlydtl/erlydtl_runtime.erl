@@ -30,8 +30,8 @@ find_value(Key, Tuple) when is_tuple(Tuple) ->
                     undefined
             end;
         Module ->
-            case proplists:get_value(Key, Module:module_info(exports)) of
-                1 ->
+            case lists:member({Key, 1}, Module:module_info(exports)) of
+                true ->
                     Tuple:Key();
                 _ ->
                     undefined
@@ -82,12 +82,33 @@ is_false(<<>>) ->
 is_false(_) ->
     false.
 
+is_in(Sublist, [Sublist|_]) ->
+    true;
+is_in(Sublist, List) when is_atom(List) ->
+    is_in(Sublist, atom_to_list(List));
+is_in(Sublist, List) when is_binary(Sublist) ->
+    is_in(binary_to_list(Sublist), List);
+is_in(Sublist, List) when is_binary(List) ->
+    is_in(Sublist, binary_to_list(List));
+is_in(Sublist, [C|Rest]) when is_list(Sublist) andalso is_binary(C) ->
+    is_in(Sublist, [binary_to_list(C)|Rest]);
+is_in(Sublist, [C|Rest]) when is_list(Sublist) andalso is_list(C) ->
+    is_in(Sublist, Rest);
+is_in(Sublist, List) when is_list(Sublist) andalso is_list(List) ->
+    string:str(List, Sublist) > 0;
+is_in(Element, List) when is_list(List) ->
+    lists:member(Element, List);
+is_in(_, _) ->
+    false.
+
 stringify_final(In) ->
    stringify_final(In, []).
 stringify_final([], Out) ->
    lists:reverse(Out);
 stringify_final([El | Rest], Out) when is_atom(El) ->
    stringify_final(Rest, [atom_to_list(El) | Out]);
+stringify_final([El | Rest], Out) when is_list(El) ->
+   stringify_final(Rest, [stringify_final(El) | Out]);
 stringify_final([El | Rest], Out) ->
    stringify_final(Rest, [El | Out]).
 

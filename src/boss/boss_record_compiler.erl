@@ -188,21 +188,43 @@ set_attributes_forms(ModuleName, Parameters) ->
                                     end, Parameters))])]))].
 
 association_forms(ModuleName, Attributes) ->
-    lists:foldl(
+    {Forms, BelongsToList} = lists:foldl(
         fun
-            ({has_many, HasMany}, Acc) ->
-                has_many_forms(HasMany, ModuleName) ++ Acc;
-            ({has_up_to, {Limit, HasMany}}, Acc) ->
-                has_many_forms(HasMany, ModuleName, Limit) ++ Acc;
-            ({has_up_to, {Limit, HasMany, Sort}}, Acc) ->
-                has_many_forms(HasMany, ModuleName, Limit, Sort) ++ Acc;
-            ({has_up_to, {Limit, HasMany, Sort, SortOrder}}, Acc) ->
-                has_many_forms(HasMany, ModuleName, Limit, Sort, SortOrder) ++ Acc;
-            ({belongs_to, BelongsTo}, Acc) ->
-                [belongs_to_forms(BelongsTo, ModuleName)|Acc];
+            ({has_many, HasMany}, {Acc, BT}) ->
+                {has_many_forms(HasMany, ModuleName) ++ Acc, BT};
+            ({has_up_to, {Limit, HasMany}}, {Acc, BT}) ->
+                {has_many_forms(HasMany, ModuleName, Limit) ++ Acc, BT};
+            ({has_up_to, {Limit, HasMany, Sort}}, {Acc, BT}) ->
+                {has_many_forms(HasMany, ModuleName, Limit, Sort) ++ Acc, BT};
+            ({has_up_to, {Limit, HasMany, Sort, SortOrder}}, {Acc, BT}) ->
+                {has_many_forms(HasMany, ModuleName, Limit, Sort, SortOrder) ++ Acc, BT};
+            ({belongs_to, BelongsTo}, {Acc, BT}) ->
+                {[belongs_to_forms(BelongsTo, ModuleName)|Acc], [BelongsTo|BT]};
             (_, Acc) ->
                 Acc
-        end, [], Attributes).
+        end, {[], []}, Attributes),
+    Forms ++ belongs_to_list_forms(BelongsToList).
+
+
+belongs_to_list_forms(BelongsToList) ->
+    [ erl_syntax:add_precomments([erl_syntax:comment(
+                    ["% @spec belongs_to_names() -> [{atom()}]",
+                        lists:concat(["% @doc Retrieve a list of the names of `belongs_to' associations."])])],
+            erl_syntax:function(
+                erl_syntax:atom(belongs_to_names),
+                [erl_syntax:clause([], none, [erl_syntax:list(lists:map(
+                                    fun(P) -> erl_syntax:atom(P) end, BelongsToList))])])),
+    
+    erl_syntax:add_precomments([erl_syntax:comment(
+                ["% @spec belongs_to() -> [{atom(), BossRecord}]",
+                    lists:concat(["% @doc Retrieve all of the `belongs_to' associations at once."])])],
+        erl_syntax:function(
+            erl_syntax:atom(belongs_to),
+            [erl_syntax:clause([], none, [erl_syntax:list(lists:map(
+                                fun(P) -> erl_syntax:tuple([
+                                                erl_syntax:atom(P),
+                                                erl_syntax:application(none, erl_syntax:atom(P), [])]) end, BelongsToList))])]))
+            ].
 
 attribute_names_forms(ModuleName, Parameters) ->
     [ erl_syntax:add_precomments([erl_syntax:comment(

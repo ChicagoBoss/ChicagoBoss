@@ -36,6 +36,14 @@ handle_call({find, Type, Conditions, Max, Skip, Sort, SortOrder}, _From, State) 
     Driver = State#state.driver,
     {reply, Driver:find(Type, Conditions, Max, Skip, Sort, SortOrder), State};
 
+handle_call({count, Type}, _From, State) ->
+    Driver = State#state.driver,
+    {reply, Driver:count(Type), State};
+
+handle_call({count, Type, Conditions}, _From, State) ->
+    Driver = State#state.driver,
+    {reply, Driver:count(Type, Conditions), State};
+
 handle_call({counter, Counter}, _From, State) ->
     Driver = State#state.driver,
     {reply, Driver:counter(Counter), State};

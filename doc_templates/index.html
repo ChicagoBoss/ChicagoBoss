@@ -6,6 +6,7 @@
         </style>
     </head>
     <body>
+        {% block header %}
         <div class="equation">
             <span style="background-color: #B80009;">Rails Idioms</span> +
             <span style="background-color: #004B00;">Django Templates</span> +
@@ -20,6 +21,7 @@
             <a name="nav"></a>
             &#8220;Don&#8217;t you worry about that. You just let Boss worry about that.&#8221;
         </div>
+        {% endblock %}
         <div class="nav">
             {% block nav %}
             <strong>F.A.Q.</strong> &nbsp; | &nbsp; 

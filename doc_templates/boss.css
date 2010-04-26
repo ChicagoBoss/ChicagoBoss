@@ -10,6 +10,7 @@ div.equation span {
     color: white;
 }
 span.chicago {
+    font-style: italic;
     font-size: 72px;
 }
 span.boss {
