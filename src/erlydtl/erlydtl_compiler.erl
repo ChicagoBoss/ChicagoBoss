@@ -85,7 +85,6 @@ compile(Binary, Module, Options) when is_binary(Binary) ->
     end;
     
 compile(File, Module, Options) ->  
-    crypto:start(),
     Context = init_dtl_context(File, Module, Options),
     case parse(File, Context) of  
         ok ->
@@ -165,7 +164,7 @@ is_up_to_date(CheckSum, Context) ->
                             ({XFile, XCheckSum}, Acc) ->
                                 case catch M:F(XFile) of
                                     {ok, Data} ->
-                                        case binary_to_list(crypto:sha(Data)) of
+                                        case binary_to_list(erlang:md5(Data)) of
                                             XCheckSum ->
                                                 Acc;
                                             _ ->
@@ -191,7 +190,7 @@ parse(File, Context) ->
     {M, F} = Context#dtl_context.reader,
     case catch M:F(File) of
         {ok, Data} ->
-            CheckSum = binary_to_list(crypto:sha(Data)),
+            CheckSum = binary_to_list(erlang:md5(Data)),
             case parse(CheckSum, Data, Context) of
                 {error, Msg} when is_list(Msg) ->
                     {error, File ++ ": " ++ Msg};
@@ -371,6 +370,8 @@ body_ast(DjangoParseTree, Context, TreeWalker) ->
             	call_ast(Name, TreeWalkerAcc);
             ({'call', {'identifier', _, Name}, With}, TreeWalkerAcc) ->
             	call_with_ast(Name, With, Context, TreeWalkerAcc);
+            ({'firstof', Vars}, TreeWalkerAcc) ->
+                firstof_ast(Vars, Context, TreeWalkerAcc);
             ({'cycle', Names}, TreeWalkerAcc) ->
                 cycle_ast(Names, Context, TreeWalkerAcc);
             ({'cycle_compat', Names}, TreeWalkerAcc) ->
@@ -502,7 +503,7 @@ search_for_escape_filter(_Variable, _Filter) ->
 
 
 resolve_variable_ast(VarTuple, Context) ->
-    resolve_variable_ast(VarTuple, Context, 'fetch_value').
+    resolve_variable_ast(VarTuple, Context, 'find_value').
  
 resolve_ifvariable_ast(VarTuple, Context) ->
     resolve_variable_ast(VarTuple, Context, 'find_value').
@@ -572,6 +573,17 @@ auto_escape(Value, Context) ->
             Value
     end.
 
+firstof_ast(Vars, Context, TreeWalker) ->
+	body_ast([lists:foldl(fun
+        ({L, _, _}=Var, []) when L=:=string_literal;L=:=number_literal ->
+            Var;
+        ({L, _, _}, _) when L=:=string_literal;L=:=number_literal ->
+            erlang:error(errbadliteral);
+        (Var, []) ->
+            {'ifelse', Var, [Var], []};
+        (Var, Acc) ->
+            {'ifelse', Var, [Var], [Acc]} end,
+    	[], Vars)], Context, TreeWalker).
 
 ifelse_ast({'not', Expression}, IfAstInfo, ElseAstInfo, Context, TreeWalker) ->
     ifelse_ast(Expression, ElseAstInfo, IfAstInfo, Context, TreeWalker);
@@ -712,8 +724,7 @@ tag_ast(Name, Args, Context, TreeWalker) ->
                     ({{identifier, _, Key}, {string_literal, _, Value}}) ->
                         {list_to_atom(Key), erl_syntax:string(unescape_string_literal(Value))};
                     ({{identifier, _, Key}, Value}) ->
-                        {AST, _} = resolve_variable_ast(Value, Context),
-                        {list_to_atom(Key), format(AST,Context)}
+                        {list_to_atom(Key), format(resolve_variable_ast(Value, Context), Context)}
                 end, Args),
             DefaultFilePath = filename:join([erlydtl_deps:get_base_dir(), "priv", "custom_tags", Name]),
             case Context#dtl_context.custom_tags_dir of

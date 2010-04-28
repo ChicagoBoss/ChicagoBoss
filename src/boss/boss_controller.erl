@@ -19,13 +19,22 @@ stop() ->
     mochiweb_http:stop().
 
 mochiweb_request(Req) ->
-    case Req:get(path) of
-        "/static/"++File -> Req:serve_file(File, "static");
-        _ -> Req:respond(process_request(Req))
+    DocRoot = "./static",
+    Request = simple_bridge:make_request(mochiweb_request_bridge, {Req, DocRoot}),
+    case Request:path() of
+        "/static/"++File -> 
+            Response = simple_bridge:make_response(mochiweb_response_bridge, {Req, DocRoot}),
+            (Response:file([$/|File])):build_response();
+        _ -> 
+            {StatusCode, Headers, Payload} = process_request(Request),
+            Response = simple_bridge:make_response(mochiweb_response_bridge, {Req, DocRoot}),
+            Response1 = (Response:status_code(StatusCode)):data(Payload),
+            Response2 = lists:foldl(fun({K, V}, Acc) -> Acc:header(K, V) end, Response1, Headers),
+            Response2:build_response()
     end.
 
 process_request(Req) ->
-    Result = case parse_path(Req:get(path)) of
+    Result = case parse_path(Req:path()) of
         {ok, {Controller, Action, Tokens}} ->
             trap_load_and_execute({Controller, Action, Tokens}, Req);
         Else ->
@@ -133,15 +142,15 @@ execute_action({Controller, Action, Tokens} = Location, Req, LocationTrail) ->
                 true ->
                     ActionAtom = list_to_atom(Action),
                     process_action_result({Location, Req, LocationTrail}, 
-                        ControllerInstance:ActionAtom(Req:get(method), Tokens));
+                        ControllerInstance:ActionAtom(Req:request_method(), Tokens));
                 false -> 
                     case lists:member({Action, 4}, ExportStrings) of
                         true -> 
-                            case ControllerInstance:third_arg(Action) of
+                            case ControllerInstance:'_auth'(Action) of
                                 {ok, Info} ->
                                     ActionAtom = list_to_atom(Action),
                                     process_action_result({Location, Req, LocationTrail}, 
-                                        ControllerInstance:ActionAtom(Req:get(method), Tokens, Info));
+                                        ControllerInstance:ActionAtom(Req:request_method(), Tokens, Info));
                                 Other -> Other
                             end;
                         _ -> render_view(Location)
@@ -178,11 +187,19 @@ compile_controller(ModulePath) ->
             {error, ["Failed to compile " ++ ModulePath ++ ". ", ErrorList, WarningList]}
     end.
 
-compile_view(Controller, Template) ->
+compile_view_erlydtl(Controller, Template) ->
     erlydtl_compiler:compile(
         view_path(Controller, Template), 
         view_module(Controller, Template), 
-        [{doc_root, view_path(Controller)}, {compiler_options, []}]).
+        [{doc_root, view_path()}, {compiler_options, []}]).
+
+compile_view_etcher(Controller, Template) ->
+    case file:read_file(view_path(Controller, Template)) of
+        {ok, Binary} ->
+            etcher:compile(Binary);
+        Err ->
+            Err
+    end.
 
 compile_model(ModulePath) ->
     boss_record_compiler:compile(ModulePath).
@@ -227,7 +244,7 @@ render_view(Location) ->
 render_view(Location, Variables) ->
     render_view(Location, Variables, []).
 
-render_view({Controller, Template, _}, Variables, Headers) -> 
+render_view({Controller, Template, _} = Location, Variables, Headers) ->
     Module = view_module(Controller, Template),
     Result = case module_is_loaded(Module) of
         true ->
@@ -238,12 +255,12 @@ render_view({Controller, Template, _}, Variables, Headers) ->
                                 File
                     end, [Module:source() | Module:dependencies()])) of
                 true ->
-                    compile_view(Controller, Template);
+                    compile_view_erlydtl(Controller, Template);
                 false ->
                     ok
             end;
         false ->
-            compile_view(Controller, Template)
+            compile_view_erlydtl(Controller, Template)
     end,
     case Result of
         ok ->
@@ -253,9 +270,25 @@ render_view({Controller, Template, _}, Variables, Headers) ->
                 Err ->
                     Err
             end;
+        _ -> 
+            case render_view_etcher(Location, Variables) of
+                {ok, Payload} ->
+                    {ok, Payload, Headers};
+                Err ->
+                    Err
+            end
+    end.
+
+
+render_view_etcher({Controller, Template, _}, Variables) ->
+    case compile_view_etcher(Controller, Template) of
+        {ok, CompiledTemplate} ->
+            RenderOpts = [{template_loaders, [{file, [view_path()]}]}],
+            {ok, etcher:render(CompiledTemplate, Variables, RenderOpts)};
         Err ->
             Err
     end.
+
 
 module_is_loaded(Module) ->
     case code:is_loaded(Module) of

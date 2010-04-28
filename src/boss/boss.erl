@@ -19,7 +19,12 @@ ensure_started(App) ->
 %% @doc Start the boss server.
 start() ->
     ensure_started(crypto),
-    application:start(boss).
+    Res = application:start(boss),
+    case application:get_env(template_compiler) of
+        {ok, erlydtl} -> ok;
+        _ -> ensure_started(etcher)
+    end,
+    Res.
 
 %% @spec stop() -> ok
 %% @doc Stop the boss server.

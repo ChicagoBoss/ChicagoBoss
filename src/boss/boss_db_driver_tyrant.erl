@@ -11,7 +11,8 @@ stop() ->
 
 find(Id) when is_list(Id) ->
     find(list_to_binary(Id));
-
+find(<<"">>) ->
+    undefined;
 find(Id) when is_binary(Id) ->
     Type = infer_type_from_id(Id),
     case medici:get(Id) of
@@ -22,6 +23,8 @@ find(Id) when is_binary(Id) ->
                 false ->
                     {error, {module_not_loaded, Type}}
             end;
+        {error, invalid_operation} ->
+            undefined;
         {error, Reason} ->
             {error, Reason}
     end;

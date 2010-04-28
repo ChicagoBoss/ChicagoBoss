@@ -1,14 +1,12 @@
 -module(admin_controller, [Req]).
--export([third_arg/1, model/3, record/3, delete/3, create/3]).
+-export(['_auth'/1, model/3, record/3, delete/3, create/3]).
 
-third_arg(_) ->
-    case Req:get(peer) of
-        "192.168."++_ ->
+'_auth'(_) ->
+    case Req:peer_ip() of
+        {192, 168, _, _} ->
             {ok, local};
-        "127.0.0.1" ->
+        {127, 0, 0, 1} ->
             {ok, local};
-        "64.81.136.220" ->
-            {ok, remote};
         _ ->
             {redirect, "/admin/access_denied"}
     end.
@@ -19,7 +17,7 @@ model('GET', [ModelName], Authorization) ->
     model('GET', [ModelName, 0], Authorization);
 model('GET', [ModelName, Offset], _) ->
     Records = boss_db:find(list_to_atom(ModelName), [], 100, Offset, primary, str_descending),
-    {ok, [{records, Records}, {models, model_list()}, {this_model, ModelName}]}.
+    {ok, [{records, Records}, {models, model_list()}, {this_model, ModelName}], [{"Cache-Control", "no-cache"}]}.
 
 record('GET', [RecordId], Authorization) ->
     {ok, [{'record', boss_db:find(RecordId)}, {'type', boss_db:type(RecordId)}]}.
@@ -46,10 +44,10 @@ create(Method, [RecordType], Authorization) ->
                         lists:map(fun('id') -> 'id'; 
                                 (A) ->
                                     AttrName = atom_to_list(A),
-                                    Val = Req:get_post_value(AttrName),
+                                    Val = Req:post_param(AttrName),
                                     case lists:suffix("_time", AttrName) of
                                         true ->
-                                            case Req:get_post_value(AttrName) of
+                                            case Req:post_param(AttrName) of
                                                 "now" -> erlang:now();
                                                 _ -> ""
                                             end;

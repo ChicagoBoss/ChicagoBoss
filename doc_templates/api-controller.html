@@ -1,11 +1,11 @@
 {% extends "api.html" %}
 {% block api_content %}
-<p style="font-size: 14px;"><em>Jump to:</em> &nbsp; <a href="#return_values">Return values</a> &nbsp; <a href="#mochiweb">Mochiweb request object</a></p>
+<p style="font-size: 14px;"><em>Jump to:</em> &nbsp; <a href="#return_values">Return values</a> &nbsp; <a href="#simplebridge">SimpleBridge request object</a></p>
 <p>Chicago Boss associates each URL with a function of a controller. 
 The URL <nobr>/foo/bar</nobr> will call the function <code>foo_controller:bar</code>. 
 Each controller module should go into your project's Controller/ directory and the file name should end with "_controller.erl". 
 Helper functions should go in modules that end in "_lib.erl".
-Controllers should take one parameter, the Mochiweb request object. Declare it like:</p>
+Controllers should take one parameter, the SimpleBridge request object. Declare it like:</p>
 <div class="code">
     <span class="attr">-module</span>(my_controller, [Req]).
 </div>
@@ -13,7 +13,7 @@ Controllers should take one parameter, the Mochiweb request object. Declare it l
 <ul>
     <li>First argument: the HTTP request method as an atom, e.g. <code>'GET'</code> or <code>'POST'</code></li>
     <li>Second argument: the list of slash-separated tokens after the action name in the URL.</li>
-    <li>Third argument (optional): the result of a function named <code>third_arg</code> in the controller</li>
+    <li>Third argument (optional): the result of a function named <code>'_auth'</code> in the controller</li>
 </ul>
 
 <p>Example function clauses:</p>
@@ -36,7 +36,7 @@ view(<span class="atom">'GET'</span>, [Year, Month]) -&gt;<br />
 &nbsp;&nbsp;&nbsp;&nbsp;...<br />
 </div>
 
-<p>If an action takes three arguments, then the function <code>third_arg/1</code> in your controller will be passed the action name as an atom and should return one of:</P>
+<p>If an action takes three arguments, then the function <code>'_auth'/1</code> in your controller will be passed the action name as an atom and should return one of:</P>
 
 <div class="code">
     {ok, ExtraInfo}
@@ -50,10 +50,10 @@ view(<span class="atom">'GET'</span>, [Year, Month]) -&gt;<br />
 
 <p>Do not execute the action. Instead, perform a 302 redirect to <code>Location</code>.</p>
 
-<p>Probably most common third_arg looks like:</p>
+<p>Probably most common _auth looks like:</p>
 
 <div class="code">
-third_arg(_) -&gt;<br />
+'_auth'(_) -&gt;<br />
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="function">my_user_lib</span>:<span class="function">require_login</span>(Req).
 </div>
 
@@ -74,13 +74,13 @@ third_arg(_) -&gt;<br />
 <div class="code">
     {ok, Variables<span class="typevar">::proplist()</span>}
 </div>
-<p><code>Variables</code> will be passed into the associated <a href="api-view.html#nav">ErlyDTL</a> template.</p>
+<p><code>Variables</code> will be passed into the associated <a href="api-view.html#nav">Django template</a>.</p>
 
 <div class="code">
     {ok, Variables<span class="typevar">::proplist()</span>, Headers<span class="typevar">::proplist()</span>}
 </div>
     
-<p><code>Variables</code> will be passed into the associated ErlyDTL template. <code>Headers</code> are HTTP headers you want to set, but the only allowed one right now is <code>Content-Type</code> (defaults to <code>"text/html"</code>).</p>
+<p><code>Variables</code> will be passed into the associated Django template. <code>Headers</code> are HTTP headers you want to set, but the only allowed one right now is <code>Content-Type</code> (defaults to <code>"text/html"</code>).</p>
 
 <div class="code">
     {redirect, Location<span class="typevar">::string()</span>}
@@ -115,38 +115,38 @@ third_arg(_) -&gt;<br />
 <p>Render the view from <code>OtherLocation</code> using <code>Variables</code>, but don't actually execute the associated controller action.</p>
 
 <br />
-<a name="mochiweb"></a>
+<a name="simplebridge"></a>
 
 <hr />
 
-<p>Currently controller functions are passed a Mochiweb request object. <em>This is subject to change!!!</em> But in the meantime, useful functions in the Mochiweb request object include:</p>
+<p>Controller functions are passed a SimpleBridge request object (slightly modified for Boss's purposes). Useful functions in the request object include:</p>
 
 <div class="code">
-    get(method) -&gt; atom()
+    request_method() -&gt; atom()
 </div>
 
 <p>Get the request method, e.g. GET, POST, etc.</p>
 
 <div class="code">
-    get_qs_value( Key<span class="typevar">::string()</span> ) -&gt; string() | undefined
+    query_param( Key<span class="typevar">::string()</span> ) -&gt; string() | undefined
 </div>
 
-<p>Get the value of a given query string parameter (e.g. "?id=1234")
+<p>Get the value of a given query string parameter (e.g. "?id=1234")</p>
 
 <div class="code">
-    get_post_value( Key<span class="typevar">::string()</span> ) -&gt; string() | undefined
+    post_param( Key<span class="typevar">::string()</span> ) -&gt; string() | undefined
 </div>
 
 <p>Get the value of a given POST parameter</p>
 
 <div class="code">
-    get_header_value( Key<span class="typevar">::string()</span> ) -&gt; string() | undefined
+    header( Key<span class="typevar">::string()</span> ) -&gt; string() | undefined
 </div>
 
 <p>Get the value of a given HTTP request header</p>
 
 <div class="code">
-    get_cookie_value( Key<span class="typevar">::string()</span> ) -&gt; string() | undefined
+    cookie( Key<span class="typevar">::string()</span> ) -&gt; string() | undefined
 </div>
 
 <p>Get the value of a given cookie.</p>

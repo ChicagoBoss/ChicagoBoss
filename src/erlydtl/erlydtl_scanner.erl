@@ -194,7 +194,7 @@ scan([H | T], Scanned, {Row, Column}, {in_code, Closer}) ->
         digit ->
             scan(T, [{number_literal, {Row, Column}, [H]} | Scanned], {Row, Column + 1}, {in_number, Closer});
         _ ->
-            {error, {illegal_character, {line, Row}, {column, Column}}}
+            {error, lists:concat(["Illegal character line ", Row, " column ", Column])}
     end;
 
 scan([H | T], Scanned, {Row, Column}, {in_number, Closer}) ->
@@ -202,7 +202,7 @@ scan([H | T], Scanned, {Row, Column}, {in_number, Closer}) ->
         digit ->
             scan(T, append_char(Scanned, H), {Row, Column + 1}, {in_number, Closer});
         _ ->
-            {error, {illegal_character, {line, Row}, {column, Column}}}
+            {error, lists:concat(["Illegal character line ", Row, " column ", Column])}
     end;
 
 scan([H | T], Scanned, {Row, Column}, {in_identifier, Closer}) ->
@@ -212,7 +212,7 @@ scan([H | T], Scanned, {Row, Column}, {in_identifier, Closer}) ->
         digit ->
             scan(T, append_char(Scanned, H), {Row, Column + 1}, {in_identifier, Closer});
         _ ->
-            {error, {illegal_character, {line, Row}, {column, Column}}}
+            {error, lists:concat(["Illegal character line ", Row, " column ", Column])}
     end.
 
 % internal functions

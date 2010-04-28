@@ -35,10 +35,28 @@
 -author('rsaccon@gmail.com').
 -author('emmiller@gmail.com').
 
--export([add/2, capfirst/1, center/2, date/2, escapejs/1, first/1]).
--export([fix_ampersands/1, force_escape/1, format_integer/1, format_number/1]).
--export([join/2, last/1, length/1, length_is/2, linebreaksbr/1, ljust/2]).
--export([lower/1, rjust/2, truncatewords/2, upper/1, urlencode/1]).
+-export([add/2, 
+        capfirst/1, 
+        center/2, 
+        date/2, 
+        default_if_none/2, 
+        escapejs/1,
+        first/1, 
+        fix_ampersands/1, 
+        force_escape/1, 
+        format_integer/1, 
+        format_number/1,
+        join/2, 
+        last/1, 
+        length/1, 
+        length_is/2, 
+        linebreaksbr/1, 
+        ljust/2,
+        lower/1, 
+        rjust/2, 
+        truncatewords/2, 
+        upper/1, 
+        urlencode/1]).
 
 -define(NO_ENCODE(C), ((C >= $a andalso C =< $z) orelse
         (C >= $A andalso C =< $Z) orelse
@@ -84,6 +102,13 @@ date([{_,_,_} = Date], FormatStr) ->
 date(Input, _FormatStr) when is_list(Input) ->
     io:format("Unexpected date parameter : ~p~n", [Input]),
     "".
+
+default_if_none([undefined], Default) ->
+    Default;
+default_if_none(undefined, Default) ->
+    Default;
+default_if_none(Input, _) ->
+    Input.
 
 %% @doc Escapes characters for use in JavaScript strings.
 escapejs([Input]) when is_list(Input) or is_binary(Input) ->
@@ -219,6 +244,7 @@ urlencode(Input) when is_binary(Input) ->
     urlencode(Input, 0);
 urlencode(Input) when is_list(Input) ->
     urlencode(Input, []).
+
 
 % internal
 

@@ -1,4 +1,4 @@
-{% extends "model.html" %}
+{% extends "admin/model.html" %}
 {% block title %}{{ record.id }} (Chicago Boss Admin Interface){% endblock %}
 {% block body %}
 <h1>Displaying {{ record.id }}</h1>
@@ -9,13 +9,14 @@
         {% if "_time" in key %}
             {{ val|date:"N j, Y, P" }}
         {% else %}
-            {{ val }}
+            {{ val|linebreaksbr }}
         {% endif %}
         <br /><br />
     {% endif %}
     {% endfor %}
 
     {% for key, val in record.belongs_to %}
+    {% if val %}
     <strong>{{ key }}</strong>
     <table border=1>
         <tr>
@@ -37,6 +38,7 @@
         {% endfor %}
     </tr>
     </table><br /><br />
+    {% endif %}
     {% endfor %} 
     <form action="/admin/delete/{{ record.id }}">
         <input type="submit" value="Delete {{ record.id }}?" />

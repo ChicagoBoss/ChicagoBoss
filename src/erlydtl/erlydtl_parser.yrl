@@ -54,6 +54,10 @@ Nonterminals
     CycleNames
     CycleNamesCompat
 
+    FirstofTag
+    FirstofList
+    FirstofValues
+
     ForBlock
     ForBraced
     EndForBraced
@@ -114,6 +118,7 @@ Terminals
     endifnotequal_keyword
     equal
     extends_keyword
+    firstof_keyword
     for_keyword
     identifier
     if_keyword
@@ -144,6 +149,7 @@ Elements -> Elements NowTag : '$1' ++ ['$2'].
 Elements -> Elements LoadTag : '$1' ++ ['$2'].
 Elements -> Elements CycleTag : '$1' ++ ['$2'].
 Elements -> Elements BlockBlock : '$1' ++ ['$2'].
+Elements -> Elements FirstofTag : '$1' ++ ['$2'].
 Elements -> Elements ForBlock : '$1' ++ ['$2'].
 Elements -> Elements IfBlock : '$1' ++ ['$2'].
 Elements -> Elements IfEqualBlock : '$1' ++ ['$2'].
@@ -188,6 +194,11 @@ CycleNames -> CycleNames Value : '$1' ++ ['$2'].
 CycleNamesCompat -> identifier comma : ['$1'].
 CycleNamesCompat -> CycleNamesCompat identifier comma : '$1' ++ ['$2'].
 CycleNamesCompat -> CycleNamesCompat identifier : '$1' ++ ['$2'].
+
+FirstofTag -> open_tag firstof_keyword FirstofList close_tag : '$3'.
+FirstofList -> FirstofValues : {firstof, '$1'}.
+FirstofValues -> FirstofValues Value : ['$2'|'$1'].
+FirstofValues -> Value : ['$1'].
 
 ForBlock -> ForBraced Elements EndForBraced : {for, '$1', '$2'}.
 ForBraced -> open_tag for_keyword ForExpression close_tag : '$3'.

@@ -87,7 +87,6 @@ trick_out_forms(Forms, ModuleName, Parameters) ->
         end, [], Attributes),
 
     lists:reverse(OtherForms) ++ 
-        association_forms(ModuleName, Attributes) ++
         save_forms(ModuleName, Parameters) ++
         set_attributes_forms(ModuleName, Parameters) ++
         get_attributes_forms(ModuleName, Parameters) ++
@@ -95,6 +94,7 @@ trick_out_forms(Forms, ModuleName, Parameters) ->
         counter_getter_forms(Counters) ++
         counter_reset_forms(Counters) ++
         counter_incr_forms(Counters) ++
+        association_forms(ModuleName, Attributes) ++
         parameter_getter_forms(Parameters) ++
         parameter_setter_forms(ModuleName, Parameters) ++
         [].
