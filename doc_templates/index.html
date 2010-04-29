@@ -25,7 +25,7 @@
         <div class="nav">
             {% block nav %}
             <strong>F.A.Q.</strong> &nbsp; | &nbsp; 
-            <a href="example.html">EXAMPLE</a> &nbsp; | &nbsp; 
+            <a href="guide.html">GUIDE</a> &nbsp; | &nbsp; 
             <a href="api.html">API</a> &nbsp; | &nbsp; 
             <a href="download.html">DOWNLOAD</a> &nbsp; | &nbsp;
             <a href="forum.html">COMMUNITY</a>
@@ -34,32 +34,26 @@
         <div style="position: relative;">
             <div class="content">
                 {% block content %}
+                <p class="question">So, what's the latest?</p>
+                <p>Chicago Boss 0.3 is out! Check the <a href="download.html"><strong>Download</strong></a> page. And we have a brand-new guide for beginners: <a href="http://www.evanmiller.org/chicago-boss-guide.html">&#8220;An Evening With Chicago Boss&#8221;</a>.</p>
+
+                <p class="question">Version 0.3? What happened to 0.1 and 0.2?</p>
+                <p>Japan only.</p>
+
                 <p class="question">How is Chicago Boss different from Rails/Django/Mason/CakePHP/My Favorite MVC Framework?</p>
-                <p>Chicago Boss is <strong>fully asynchronous</strong>, using one single process to handle hundreds or thousands of simultaneous requests, and thus it solves the classic <a href="http://www.kegel.com/c10k.html">c10k</a> problem. <strong>All other web frameworks will break down and cry</strong> if you ask them to process more than a few dozen simultaneous requests on a single machine. Chicago Boss is built with <strong>Erlang</strong>, the same platform used by banks and telecoms to achieve unprecendented scalability and (no exaggeration) 99.9999999% reliability.</p>
-
-                <p class="question">Fully asynchronous!? Doesn't that mean I need to write a bunch of callbacks and stuff? Shoot me now and dump my body in a river!</p>
-
-                <p><strong>No callback chaos.</strong> You will write clean, synchronous, sequential code. Chicago Boss takes care of the rest.</p>
+                <p>Chicago Boss is designed to handle <strong>lots of traffic</strong> on <strong>minimal hardware</strong>. Like Nginx or Memcached, Chicago Boss uses an <strong>event-driven I/O strategy</strong> to handle hundreds or thousands of simultaneous requests, and thus it solves the classic <a href="http://www.kegel.com/c10k.html">c10k</a> problem. Chicago Boss is built with <strong>Erlang</strong>, the same platform used by banks and telecoms to achieve unprecendented scalability and 99.9999999% reliability.</p>
 
                 <p class="question">How mature is Chicago Boss?</p>
 
-                <p>Chicago Boss is in the <strong>early stages of development</strong>, and is best for people looking to try out cutting-edge technology with a promising future. APIs will change, features may be broken, your car may explode when you turn the ignition, etc. Contributions are welcome!</p>
+                <p>Chicago Boss is <strong>still in beta</strong>. There might be minor changes to the API before the 1.0 release, but it's being used on (admittedly low-traffic) production sites.</p>
 
-                <p class="question">Hey! Those don't look like regular Erlang modules in the example.</p>
+                <p class="question">Wait, will I need to learn new things to use Chicago Boss? Please don't make me learn new things.</p>
 
-                <p>Chicago Boss uses some <strong>under-the-hood compiler magic</strong> to emulate the best features of Rails' ActiveRecord. Check out the <a href="api-record.html">BossRecord API</a> for details.</p>
-
-                <p class="question">Hey! That view code looks a lot like Django. Do I need Python installed or something?</p>
-
-                <p>Chicago Boss uses a combination of <strong>ErlyDTL</strong> and <strong>Etcher</strong>, two pure-Erlang implementations of the Django Template Language. Check out the <a href="api-view.html">View Reference</a> for details.</p>
-
-                <p class="question">Hey! What's going on in the controller?</p>
-
-                <p>Chicago Boss's HTTP handling is built on top of <strong>SimpleBridge</strong>. Check out the <a href="api-controller.html">BossController API</a> for details.</p>
+                <p><strong>Yes and no.</strong> Chicago Boss has ripped off several Rails programming conventions (like <a href="api-record.html">ActiveRecord</a>) as well as the complete <a href="api-view.html">Django Template Language</a> in order to make your life as easy as possible. But you need to know at least a little Erlang to do anything useful with Boss.</p>
 
                 <p class="question">Does Chicago Boss support MySQL/Postgres/Ingres/CouchDB/Microsoft Excel?</p>
 
-                <p>One day Chicago Boss will interface with every database known to man. Right now you need the high-performance beast from the east, <strong>Tokyo Tyrant</strong>. (<a href="http://1978th.net/tokyotyrant/">Download Tyrant.</a>)</p>
+                <p>No/No/No/No/No! Boss refuses to talk to anyone except <strong>Tokyo Tyrant</strong>. Check out the <a href="http://www.evanmiller.org/chicago-boss-guide.html#meet-tyrant">section on Tyrant</a> in the "Evening With Chicago Boss" for installation instructions.</p>
 
                 <p class="question">Where can I download Chicago Boss?</p>
 

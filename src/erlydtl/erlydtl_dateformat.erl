@@ -312,6 +312,8 @@ weeks_in_year(Y) ->
     D2 = calendar:day_of_the_week(Y, 12, 31),
     if (D1 =:= 4 orelse D2 =:= 4) -> 53; true -> 52 end.
 
+utc_diff({Y, M, D}, Time) when Y < 1970->
+    utc_diff({1970, M, D}, Time);
 utc_diff(Date, Time) ->
    LTime = {Date, Time},
    UTime = erlang:localtime_to_universaltime(LTime),

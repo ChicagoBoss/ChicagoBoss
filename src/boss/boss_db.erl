@@ -4,9 +4,20 @@
 
 -export([start/0, start/1, stop/0]).
 
--export([find/1, find/3, find/4, find/5, find/6]).
-
--export([counter/1, incr/1, incr/2, delete/1, save_record/1, type/1]).
+-export([
+        find/1, 
+        find/3, 
+        find/4, 
+        find/5, 
+        find/6,
+        count/1,
+        count/2,
+        counter/1, 
+        incr/1, 
+        incr/2, 
+        delete/1, 
+        save_record/1, 
+        type/1]).
 
 start() ->
     start([]).
@@ -61,6 +72,18 @@ find(Type, Conditions, Max, Skip, Sort) ->
 find(Type, Conditions, Max, Skip, Sort, SortOrder) ->
     gen_server:call(boss_db, {find, Type, Conditions, Max, Skip, Sort, SortOrder}).
 
+%% @spec count( Type::atom() ) -> integer()
+%% @doc Count the number of BossRecords of type `Type' in the database.
+count(Type) ->
+    gen_server:call(boss_db, {count, Type}).
+
+%% @spec count( Type::atom(), Conditions ) -> integer()
+%%       Conditions = [{Key::atom(), Value::string()}]
+%% @doc Count the number of BossRecords of type `Type' in the database matching
+%% all of the given `Conditions' (attribute = value).
+count(Type, Conditions) ->
+    gen_server:call(boss_db, {count, Type, Conditions}).
+
 %% @spec counter( Id::string() ) -> integer()
 %% @doc Treat the record associated with `Id' as a counter and return its value.
 %% Returns 0 if the record does not exist, so to reset a counter just use
@@ -92,6 +115,6 @@ save_record(Record) ->
 %% @doc Returns the type of the BossRecord with `Id', or `undefined' if the record does not exist.
 type(Key) ->
     case find(Key) of
-        {error, _} -> undefined;
+        undefined -> undefined;
         Record -> element(1, Record)
     end.
