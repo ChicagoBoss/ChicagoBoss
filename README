@@ -20,7 +20,15 @@ directory. There will be a lot of PROGRESS REPORTs which look scary but
 hopefully everything is running smoothly. With this console you can interact
 directly with the running server. Next, point your browser to:
 
-http://localhost:8001/hello/world
+http://localhost:8001/
 
 If all is well you will see "Hello, World!" Now you can get busy. See the FAQ
 and API files located in doc/.
+
+If you need help getting started, check out "An Evening With Chicago Boss":
+
+    http://www.evanmiller.org/chicago-boss-guide.html
+
+There's also the mailing list:
+
+    http://groups.google.com/group/chicagoboss
