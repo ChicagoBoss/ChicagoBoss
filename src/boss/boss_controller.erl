@@ -11,6 +11,8 @@ start(Config) ->
     {ok, LogFile} = application:get_env(log_file),
     boss_db:start([ {port, DBPort}, {driver, DBDriver}, {host, DBHost} ]),
     {ok, boss_error_log} = disk_log:open([{name, boss_error_log}, {file, LogFile}]),
+    load_dir(controller_path(), fun compile_controller/1),
+    load_dir(model_path(), fun compile_model/1),
     mochiweb_http:start([{loop, fun(Req) -> mochiweb_request(Req) end} | Config]).
 
 stop() ->
