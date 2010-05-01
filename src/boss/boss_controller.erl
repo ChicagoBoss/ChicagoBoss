@@ -10,7 +10,12 @@ start(Config) ->
     {ok, DBHost} = application:get_env(db_host),
     {ok, LogFile} = application:get_env(log_file),
     boss_db:start([ {port, DBPort}, {driver, DBDriver}, {host, DBHost} ]),
-    {ok, boss_error_log} = disk_log:open([{name, boss_error_log}, {file, LogFile}]),
+    case disk_log:open([{name, boss_error_log}, {file, LogFile}]) of
+        {ok, boss_error_log} -> ok;
+        {repaired,boss_error_log,_,_} -> repaired;
+        Error -> io:format("disk_log:open error ~p~n",[Error])
+    end,
+
     load_dir(controller_path(), fun compile_controller/1),
     load_dir(model_path(), fun compile_model/1),
     mochiweb_http:start([{loop, fun(Req) -> mochiweb_request(Req) end} | Config]).
