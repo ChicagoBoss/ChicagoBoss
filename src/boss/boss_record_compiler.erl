@@ -86,7 +86,8 @@ trick_out_forms(Forms, ModuleName, Parameters) ->
             (_, Acc) -> Acc
         end, [], Attributes),
 
-    lists:reverse(OtherForms) ++ 
+    override_functions(
+        lists:reverse(OtherForms) ++ 
         save_forms(ModuleName, Parameters) ++
         set_attributes_forms(ModuleName, Parameters) ++
         get_attributes_forms(ModuleName, Parameters) ++
@@ -97,7 +98,29 @@ trick_out_forms(Forms, ModuleName, Parameters) ->
         association_forms(ModuleName, Attributes) ++
         parameter_getter_forms(Parameters) ++
         parameter_setter_forms(ModuleName, Parameters) ++
-        [].
+        []).
+
+override_functions(Forms) ->
+    override_functions(Forms, [], []).
+
+override_functions([{'function', _, Name, Arity, _} = Function|Rest], Acc, DefinedFunctions) ->
+    case lists:member({Name, Arity}, DefinedFunctions) of
+        true -> override_functions(Rest, Acc, DefinedFunctions);
+        false -> override_functions(Rest, [Function|Acc], [{Name, Arity}|DefinedFunctions])
+    end;
+override_functions([{tree, 'function', _, {'function', {tree, 'atom', _, Name}, 
+                [{tree, 'clause', _, {'clause', Args, _, _}}|_]
+            }} = Function|Rest], 
+    Acc, DefinedFunctions) ->
+    Arity = length(Args),
+    case lists:member({Name, Arity}, DefinedFunctions) of
+        true -> override_functions(Rest, Acc, DefinedFunctions);
+        false -> override_functions(Rest, [Function|Acc], [{Name, Arity}|DefinedFunctions])
+    end;
+override_functions([H|T], Acc, DefinedFunctions) ->
+    override_functions(T, [H|Acc], DefinedFunctions);
+override_functions([], Acc, _) ->
+    lists:reverse(Acc).
 
 save_forms(ModuleName, Parameters) ->
     [erl_syntax:add_precomments([erl_syntax:comment(

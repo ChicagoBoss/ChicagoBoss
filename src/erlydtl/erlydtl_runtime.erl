@@ -60,14 +60,10 @@ are_equal(Arg1, Arg2) when is_integer(Arg1) ->
     are_equal(integer_to_list(Arg1), Arg2);
 are_equal(Arg1, Arg2) when is_integer(Arg2) ->
     are_equal(Arg1, integer_to_list(Arg2));
-are_equal([Arg1], Arg2) when is_list(Arg1) ->
-    are_equal(Arg1, Arg2);
-are_equal(Arg1, [Arg2]) when is_list(Arg1) ->
-    are_equal(Arg1, Arg2);
 are_equal(Arg1, Arg2) when is_atom(Arg1), is_list(Arg2) ->
-	 are_equal(atom_to_list(Arg1), Arg2);
+    are_equal(atom_to_list(Arg1), Arg2);
 are_equal(Arg1, Arg2) when is_list(Arg1), is_atom(Arg2) ->
-	 are_equal(Arg1, atom_to_list(Arg2));
+    are_equal(Arg1, atom_to_list(Arg2));
 are_equal(_, _) ->
     false.
 
@@ -86,24 +82,42 @@ is_false(<<>>) ->
 is_false(_) ->
     false.
 
-is_in(Sublist, [Sublist|_]) ->
+is_true(V) ->
+    not is_false(V).
+
+'in'(Sublist, [Sublist|_]) ->
     true;
-is_in(Sublist, List) when is_atom(List) ->
-    is_in(Sublist, atom_to_list(List));
-is_in(Sublist, List) when is_binary(Sublist) ->
-    is_in(binary_to_list(Sublist), List);
-is_in(Sublist, List) when is_binary(List) ->
-    is_in(Sublist, binary_to_list(List));
-is_in(Sublist, [C|Rest]) when is_list(Sublist) andalso is_binary(C) ->
-    is_in(Sublist, [binary_to_list(C)|Rest]);
-is_in(Sublist, [C|Rest]) when is_list(Sublist) andalso is_list(C) ->
-    is_in(Sublist, Rest);
-is_in(Sublist, List) when is_list(Sublist) andalso is_list(List) ->
+'in'(Sublist, List) when is_atom(List) ->
+    'in'(Sublist, atom_to_list(List));
+'in'(Sublist, List) when is_binary(Sublist) ->
+    'in'(binary_to_list(Sublist), List);
+'in'(Sublist, List) when is_binary(List) ->
+    'in'(Sublist, binary_to_list(List));
+'in'(Sublist, [C|Rest]) when is_list(Sublist) andalso is_binary(C) ->
+    'in'(Sublist, [binary_to_list(C)|Rest]);
+'in'(Sublist, [C|Rest]) when is_list(Sublist) andalso is_list(C) ->
+    'in'(Sublist, Rest);
+'in'(Sublist, List) when is_list(Sublist) andalso is_list(List) ->
     string:str(List, Sublist) > 0;
-is_in(Element, List) when is_list(List) ->
+'in'(Element, List) when is_list(List) ->
     lists:member(Element, List);
-is_in(_, _) ->
+'in'(_, _) ->
     false.
+
+'not'(Value) ->
+    not is_true(Value).
+
+'or'(Value1, Value2) ->
+    is_true(Value1) or is_true(Value2).
+
+'and'(Value1, Value2) ->
+    is_true(Value1) and is_true(Value2).
+
+'eq'(Value1, Value2) ->
+    are_equal(Value1, Value2).
+
+'ne'(Value1, Value2) ->
+    not are_equal(Value1, Value2).
 
 stringify_final(In) ->
    stringify_final(In, []).

@@ -62,7 +62,7 @@ scan([], Scanned, _, in_text) ->
                             "not", "or", "and", "comment", "endcomment", "cycle", "firstof",
                             "ifchanged", "ifequal", "endifequal", "ifnotequal", "endifnotequal",
                             "now", "regroup", "spaceless", "endspaceless", "ssi", "templatetag",
-                            "load", "call", "with"], 
+                            "load", "call", "with", "trans"], 
                         Type = case lists:member(RevString, Keywords) of
                             true ->
                                 list_to_atom(RevString ++ "_keyword");
@@ -154,6 +154,51 @@ scan([H | T], Scanned, {Row, Column}, {in_single_quote, Closer}) ->
     scan(T, append_char(Scanned, H), {Row, Column + 1}, {in_single_quote, Closer});
 
 
+scan("}}-->" ++ T, Scanned, {Row, Column}, {_, "}}-->"}) ->
+    scan(T, [{close_var, {Row, Column}, lists:reverse("}}-->")} | Scanned], 
+        {Row, Column + 2}, in_text);
+
+scan("}}" ++ T, Scanned, {Row, Column}, {_, "}}"}) ->
+    scan(T, [{close_var, {Row, Column}, "}}"} | Scanned], {Row, Column + 2}, in_text);
+
+scan("%}-->" ++ T, Scanned, {Row, Column}, {_, "%}-->"}) ->
+    scan(T, [{close_tag, {Row, Column}, lists:reverse("%}-->")} | Scanned], 
+        {Row, Column + 2}, in_text);
+
+scan("%}" ++ T, Scanned, {Row, Column}, {_, "%}"}) ->
+    scan(T, [{close_tag, {Row, Column}, lists:reverse("%}")} | Scanned], 
+        {Row, Column + 2}, in_text);
+
+scan("==" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
+    scan(T, [{'==', {Row, Column}, "=="} | Scanned], {Row, Column + 2}, {in_code, Closer});
+
+scan("/=" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
+    scan(T, [{'/=', {Row, Column}, "/="} | Scanned], {Row, Column + 2}, {in_code, Closer});
+
+scan("!=" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
+    scan(T, [{'/=', {Row, Column}, "!="} | Scanned], {Row, Column + 2}, {in_code, Closer});
+
+scan(">=" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
+    scan(T, [{'>=', {Row, Column}, ">="} | Scanned], {Row, Column + 2}, {in_code, Closer});
+
+scan("=<" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
+    scan(T, [{'=<', {Row, Column}, "=<"} | Scanned], {Row, Column + 2}, {in_code, Closer});
+
+scan("<=" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
+    scan(T, [{'=<', {Row, Column}, "<="} | Scanned], {Row, Column + 2}, {in_code, Closer});
+
+scan("<" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
+    scan(T, [{'<', {Row, Column}, "<"} | Scanned], {Row, Column + 1}, {in_code, Closer});
+
+scan(">" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
+    scan(T, [{'>', {Row, Column}, ">"} | Scanned], {Row, Column + 1}, {in_code, Closer});
+
+scan("("++ T, Scanned, {Row, Column}, {_, Closer}) ->
+    scan(T, [{'(', {Row, Column}, "("} | Scanned], {Row, Column + 1}, {in_code, Closer});
+
+scan(")" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
+    scan(T, [{')', {Row, Column}, ")"} | Scanned], {Row, Column + 1}, {in_code, Closer});
+
 scan("," ++ T, Scanned, {Row, Column}, {_, Closer}) ->
     scan(T, [{comma, {Row, Column}, ","} | Scanned], {Row, Column + 1}, {in_code, Closer});
 
@@ -172,20 +217,6 @@ scan("." ++ T, Scanned, {Row, Column}, {_, Closer}) ->
 scan(" " ++ T, Scanned, {Row, Column}, {_, Closer}) ->
     scan(T, Scanned, {Row, Column + 1}, {in_code, Closer});
 
-scan("}}-->" ++ T, Scanned, {Row, Column}, {_, "}}-->"}) ->
-    scan(T, [{close_var, {Row, Column}, lists:reverse("}}-->")} | Scanned], 
-        {Row, Column + 2}, in_text);
-
-scan("}}" ++ T, Scanned, {Row, Column}, {_, "}}"}) ->
-    scan(T, [{close_var, {Row, Column}, "}}"} | Scanned], {Row, Column + 2}, in_text);
-
-scan("%}-->" ++ T, Scanned, {Row, Column}, {_, "%}-->"}) ->
-    scan(T, [{close_tag, {Row, Column}, lists:reverse("%}-->")} | Scanned], 
-        {Row, Column + 2}, in_text);
-
-scan("%}" ++ T, Scanned, {Row, Column}, {_, "%}"}) ->
-    scan(T, [{close_tag, {Row, Column}, lists:reverse("%}")} | Scanned], 
-        {Row, Column + 2}, in_text);
 
 scan([H | T], Scanned, {Row, Column}, {in_code, Closer}) ->
     case char_type(H) of

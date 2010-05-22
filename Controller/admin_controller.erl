@@ -1,5 +1,6 @@
 -module(admin_controller, [Req]).
 -export(['_auth'/1, model/3, record/3, delete/3, create/3]).
+-define(RECORDS_PER_PAGE, 100).
 
 '_auth'(_) ->
     case Req:peer_ip() of
@@ -14,10 +15,17 @@
 model('GET', [], Authorization) ->
     {ok, [{records, []}, {models, model_list()}, {this_model, ""}]};
 model('GET', [ModelName], Authorization) ->
-    model('GET', [ModelName, 0], Authorization);
-model('GET', [ModelName, Offset], _) ->
-    Records = boss_db:find(list_to_atom(ModelName), [], 100, Offset, primary, str_descending),
-    {ok, [{records, Records}, {models, model_list()}, {this_model, ModelName}], [{"Cache-Control", "no-cache"}]}.
+    model('GET', [ModelName, "1"], Authorization);
+model('GET', [ModelName, PageName], _) ->
+    Page = list_to_integer(PageName),
+    Model = list_to_atom(ModelName),
+    RecordCount = boss_db:count(Model),
+    Records = boss_db:find(Model, [], ?RECORDS_PER_PAGE, (Page - 1) * ?RECORDS_PER_PAGE, primary, str_descending),
+    Pages = lists:seq(1, ((RecordCount-1) div ?RECORDS_PER_PAGE)+1),
+    {ok, 
+        [{records, Records}, {models, model_list()}, {this_model, ModelName}, 
+            {pages, Pages}, {this_page, Page}], 
+        [{"Cache-Control", "no-cache"}]}.
 
 record('GET', [RecordId], Authorization) ->
     {ok, [{'record', boss_db:find(RecordId)}, {'type', boss_db:type(RecordId)}]}.

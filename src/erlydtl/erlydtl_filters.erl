@@ -65,8 +65,6 @@
         orelse C =:= $~ orelse C =:= $_))).
 
 %% @doc Adds a number to the value.
-add([Input], Number) when is_list(Input) or is_binary(Input) ->
-    add(Input, Number);
 add(Input, Number) when is_binary(Input) ->
     list_to_binary(add(binary_to_list(Input), Number));
 add(Input, Number) when is_list(Input) ->
@@ -75,68 +73,52 @@ add(Input, Number) when is_integer(Input) ->
     Input + Number.
 
 %% @doc Capitalizes the first character of the value.
-capfirst([Input]) when is_list(Input) or is_binary (Input) ->
-    capfirst(Input);
 capfirst([H|T]) when H >= $a andalso H =< $z ->
     [H + $A - $a | T];
 capfirst(<<Byte:8/integer, Binary/binary>>) when Byte >= $a andalso Byte =< $z ->
-    [<<(Byte + $A - $a)>>, Binary].
+    [(Byte + $A - $a)|binary_to_list(Binary)].
 
 %% @doc Centers the value in a field of a given width.
-center([Input], Number) when is_list(Input) or is_binary(Input) ->
-    center(Input, Number);
 center(Input, Number) when is_binary(Input) ->
     list_to_binary(center(binary_to_list(Input), Number));
 center(Input, Number) when is_list(Input) ->
     string:centre(Input, Number).
 
 %% @doc Formats a date according to the given format.
-date([Input], FormatStr) when is_list(Input) or is_binary(Input) ->
-    date(Input, FormatStr);
 date(Input, FormatStr) when is_binary(Input) ->
     list_to_binary(date(binary_to_list(Input), FormatStr));
-date([{{_,_,_} = Date,{_,_,_} = Time}], FormatStr) ->
+date({{_,_,_} = Date,{_,_,_} = Time}, FormatStr) ->
     erlydtl_dateformat:format({Date, Time}, FormatStr);
-date([{_,_,_} = Date], FormatStr) ->
+date({_,_,_} = Date, FormatStr) ->
     erlydtl_dateformat:format(Date, FormatStr);
 date(Input, _FormatStr) when is_list(Input) ->
     io:format("Unexpected date parameter : ~p~n", [Input]),
     "".
 
-default_if_none([undefined], Default) ->
-    Default;
 default_if_none(undefined, Default) ->
     Default;
 default_if_none(Input, _) ->
     Input.
 
 %% @doc Escapes characters for use in JavaScript strings.
-escapejs([Input]) when is_list(Input) or is_binary(Input) ->
-    escapejs(Input);
 escapejs(Input) when is_binary(Input) ->
     escapejs(Input, 0);
 escapejs(Input) when is_list(Input) ->
     escapejs(Input, []).
 
 %% @doc Returns the first item in a list.
-first([Input]) when is_list(Input) or is_binary(Input) ->
-    first(Input);
 first([First|_Rest]) ->
     [First];
 first(<<First, _/binary>>) ->
     <<First>>.
 
 %% @doc Replaces ampersands with &amp; entities.
-fix_ampersands([Input]) when is_list(Input) or is_binary(Input) ->
-    fix_ampersands(Input);
 fix_ampersands(Input) when is_binary(Input) ->
     fix_ampersands(Input, 0);
 fix_ampersands(Input) when is_list(Input) ->
     fix_ampersands(Input, []).
 
 %% @doc Applies HTML escaping to a string.
-force_escape([Input]) when is_list(Input) or is_binary(Input) ->
-    force_escape(Input);
 force_escape(Input) when is_list(Input) ->
     escape(Input, []);
 force_escape(Input) when is_binary(Input) ->
@@ -157,12 +139,10 @@ format_number(Input) ->
     Input.
 
 %% @doc Joins a list with a given separator.
-join([Input], Separator) when is_list(Input) ->
+join(Input, Separator) when is_list(Input) ->
     join_io(Input, Separator).
 
 %% @doc Returns the last item in a list.
-last([Input]) when is_list(Input) or is_binary(Input) ->
-    last(Input);
 last(Input) when is_binary(Input) ->
     case size(Input) of
         0 -> Input;
@@ -175,10 +155,9 @@ last(Input) when is_list(Input) ->
     [lists:last(Input)].
 
 %% @doc Returns the length of the value.
-length([]) -> "0";
-length([Input]) when is_list(Input) ->
+length(Input) when is_list(Input) ->
     integer_to_list(erlang:length(Input));
-length([Input]) when is_binary(Input) ->
+length(Input) when is_binary(Input) ->
     integer_to_list(size(Input)).
 
 %% @doc Returns True iff the value's length is the argument.
@@ -188,40 +167,30 @@ length_is(Input, Number) when is_list(Input), is_list(Number) ->
     ?MODULE:length(Input) =:= Number.
 
 %% @doc Converts all newlines to HTML line breaks.
-linebreaksbr([Input]) when is_list(Input) or is_binary(Input) ->
-    linebreaksbr(Input);
 linebreaksbr(Input) when is_binary(Input) ->
     linebreaksbr(Input, 0);
 linebreaksbr(Input) ->
     linebreaksbr(Input, []).
 
 %% @doc Left-aligns the value in a field of a given width.
-ljust([Input], Number) when is_list(Input) or is_binary(Input) ->
-    ljust(Input, Number);
 ljust(Input, Number) when is_binary(Input) ->
     list_to_binary(ljust(binary_to_list(Input), Number));
 ljust(Input, Number) when is_list(Input) ->
     string:left(Input, Number).
 
 %% @doc Converts a string into all lowercase.
-lower([Input]) when is_list(Input) or is_binary(Input) ->
-    lower(Input);
 lower(Input) when is_binary(Input) ->
     lower(Input, 0);
 lower(Input) ->
     string:to_lower(Input).
 
 %% @doc Right-aligns the value in a field of a given width.
-rjust([Input], Number) when is_list(Input) or is_binary(Input) ->
-    rjust(Input, Number);
 rjust(Input, Number) when is_binary(Input) ->
     list_to_binary(rjust(binary_to_list(Input), Number));
 rjust(Input, Number) ->
     string:right(Input, Number).
 
 %% @doc Truncates a string after a certain number of words.
-truncatewords([Input], Max) when is_list(Input) or is_binary(Input) ->
-    truncatewords(Input, Max);
 truncatewords(Input, Max) when is_binary(Input) ->
     list_to_binary(truncatewords(binary_to_list(Input), Max));
 truncatewords(_Input, Max) when Max =< 0 ->
@@ -230,16 +199,12 @@ truncatewords(Input, Max) ->
     truncatewords(Input, Max, []).
 
 %% @doc Converts a string into all uppercase.
-upper([Input]) when is_list(Input) or is_binary(Input) ->
-    upper(Input);
 upper(Input) when is_binary(Input) ->
     list_to_binary(upper(binary_to_list(Input)));
 upper(Input) ->
     string:to_upper(Input).
 
 %% @doc Escapes a value for use in a URL.
-urlencode([Input]) when is_list(Input) or is_binary(Input) ->
-    urlencode(Input);
 urlencode(Input) when is_binary(Input) ->
     urlencode(Input, 0);
 urlencode(Input) when is_list(Input) ->

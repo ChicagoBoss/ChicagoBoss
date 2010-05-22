@@ -52,6 +52,21 @@
             {% endfor %}
         </tr>
         {% endfor %}
+        </table>
+        {% if pages %}
+        {% ifnotequal pages|length "1" %}
+        <p>
+        Pages: 
+        {% for page in pages %}
+        {% ifequal page this_page %}
+        <strong>{{ page }}</strong>
+        {% else %}
+        <a href="/admin/model/{{ this_model }}/{{ page }}">{{ page }}</a>
+        {% endifequal %}
+        {% endfor %}
+        </p>
+        {% endifnotequal %}
+        {% endif %}
         {% endblock %}
     </body>
 </html>

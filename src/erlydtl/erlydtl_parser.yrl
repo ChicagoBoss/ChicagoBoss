@@ -93,11 +93,16 @@ Nonterminals
     
     CustomTag
     Args
-    
+
+    TransTag    
+
     CallTag
-    CallWithTag.
+    CallWithTag
+    
+    Unot.
 
 Terminals
+    and_keyword
     autoescape_keyword
     block_keyword
     call_keyword
@@ -130,18 +135,29 @@ Terminals
     not_keyword
     now_keyword
     number_literal
+    or_keyword
     open_tag
     open_var
     pipe
     string_literal
     text
-    with_keyword.
+    trans_keyword
+    with_keyword
+    '==' '/='
+    '(' ')'.
 
 Rootsymbol
     Elements.
 
+%% Operator precedences for the E non terminal
+Left 100 or_keyword.
+Left 110 and_keyword.
+Nonassoc 300 '==' '/='.
+Unary 600 Unot.
+
 Elements -> '$empty' : [].
 Elements -> Elements text : '$1' ++ ['$2'].
+Elements -> Elements TransTag : '$1' ++ ['$2'].
 Elements -> Elements ValueBraced : '$1' ++ ['$2'].
 Elements -> Elements ExtendsTag : '$1' ++ ['$2'].
 Elements -> Elements IncludeTag : '$1' ++ ['$2'].
@@ -168,6 +184,8 @@ Value -> Literal : '$1'.
 
 Variable -> identifier : {variable, '$1'}.
 Variable -> Value dot identifier : {attribute, {'$3', '$1'}}.
+
+TransTag -> open_tag trans_keyword string_literal close_tag : {trans, '$3'}.
 
 ExtendsTag -> open_tag extends_keyword string_literal close_tag : {extends, '$3'}.
 IncludeTag -> open_tag include_keyword string_literal close_tag : {include, '$3'}.
@@ -210,10 +228,17 @@ ForGroup -> ForGroup comma identifier : '$1' ++ ['$3'].
 IfBlock -> IfBraced Elements ElseBraced Elements EndIfBraced : {ifelse, '$1', '$2', '$4'}.
 IfBlock -> IfBraced Elements EndIfBraced : {'if', '$1', '$2'}.
 IfBraced -> open_tag if_keyword IfExpression close_tag : '$3'.
-IfExpression -> not_keyword Value : {'not', '$2'}.
-IfExpression -> Value in_keyword Value : {'in', '$1', '$3'}.
-IfExpression -> Value not_keyword in_keyword Value : {'not', {'in', '$1', '$4'}}.
+IfExpression -> Value in_keyword Value : {'expr', "in", '$1', '$3'}.
+IfExpression -> Value not_keyword in_keyword Value : {'expr', "not", {'expr', "in", '$1', '$4'}}.
+IfExpression -> Value '==' Value : {'expr', "eq", '$1', '$3'}.
+IfExpression -> Value '/=' Value : {'expr', "ne", '$1', '$3'}.
+IfExpression -> '(' IfExpression ')' : '$2'.
+IfExpression -> Unot : '$1'.
+IfExpression -> IfExpression or_keyword IfExpression : {'expr', "or", '$1', '$3'}.
+IfExpression -> IfExpression and_keyword IfExpression : {'expr', "and", '$1', '$3'}.
 IfExpression -> Value : '$1'.
+
+Unot -> not_keyword IfExpression : {expr, "not", '$2'}.
 
 ElseBraced -> open_tag else_keyword close_tag.
 EndIfBraced -> open_tag endif_keyword close_tag.
