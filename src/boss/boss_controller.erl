@@ -98,7 +98,20 @@ trap_load_and_execute(Arg1, Arg2) ->
             Ok
     end.
 
-load_and_execute({"doc", ModelName, _}, _Req) ->
+load_and_execute(Location, Req) ->
+    case module_is_loaded(reloader) of
+        true -> load_and_execute_dev(Location, Req);
+        false -> load_and_execute_prod(Location, Req)
+    end.
+
+load_and_execute_prod({Controller, _, _} = Location, Req) ->
+    {ok, ControllerFiles} = file:list_dir(controller_path()),
+    case lists:member(Controller ++ "_controller.erl", ControllerFiles) of
+        true -> execute_action(Location, Req);
+        false -> render_view(Location)
+    end.
+
+load_and_execute_dev({"doc", ModelName, _}, _Req) ->
     case load_dir(model_path(), fun compile_model/1) of
         {ok, _} ->
             Model = list_to_atom(ModelName),
@@ -108,7 +121,7 @@ load_and_execute({"doc", ModelName, _}, _Req) ->
         Error ->
             Error
     end;
-load_and_execute({Controller, _, _} = Location, Req) ->
+load_and_execute_dev({Controller, _, _} = Location, Req) ->
     case load_dir(controller_path(), fun compile_controller/1) of
         {ok, Controllers} ->
             case lists:member(Controller ++ "_controller", Controllers) of

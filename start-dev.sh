@@ -1,3 +1,3 @@
 #!/bin/sh
 cd `dirname $0`
-exec erl -pa $PWD/ebin -boot start_sasl -s reloader -s boss -config boss
+exec erl -pa $PWD/ebin -boot start_sasl -config boss -s boss -s reloader
