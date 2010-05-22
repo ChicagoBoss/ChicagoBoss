@@ -172,20 +172,14 @@ scan("%}" ++ T, Scanned, {Row, Column}, {_, "%}"}) ->
 scan("==" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
     scan(T, [{'==', {Row, Column}, "=="} | Scanned], {Row, Column + 2}, {in_code, Closer});
 
-scan("/=" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
-    scan(T, [{'/=', {Row, Column}, "/="} | Scanned], {Row, Column + 2}, {in_code, Closer});
-
 scan("!=" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
-    scan(T, [{'/=', {Row, Column}, "!="} | Scanned], {Row, Column + 2}, {in_code, Closer});
+    scan(T, [{'!=', {Row, Column}, "!="} | Scanned], {Row, Column + 2}, {in_code, Closer});
 
 scan(">=" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
     scan(T, [{'>=', {Row, Column}, ">="} | Scanned], {Row, Column + 2}, {in_code, Closer});
 
-scan("=<" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
-    scan(T, [{'=<', {Row, Column}, "=<"} | Scanned], {Row, Column + 2}, {in_code, Closer});
-
 scan("<=" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
-    scan(T, [{'=<', {Row, Column}, "<="} | Scanned], {Row, Column + 2}, {in_code, Closer});
+    scan(T, [{'<=', {Row, Column}, "<="} | Scanned], {Row, Column + 2}, {in_code, Closer});
 
 scan("<" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
     scan(T, [{'<', {Row, Column}, "<"} | Scanned], {Row, Column + 1}, {in_code, Closer});

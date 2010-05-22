@@ -143,7 +143,9 @@ Terminals
     text
     trans_keyword
     with_keyword
-    '==' '/='
+    '==' '!='
+    '>=' '<='
+    '>' '<'
     '(' ')'.
 
 Rootsymbol
@@ -152,7 +154,7 @@ Rootsymbol
 %% Operator precedences for the E non terminal
 Left 100 or_keyword.
 Left 110 and_keyword.
-Nonassoc 300 '==' '/='.
+Nonassoc 300 '==' '!=' '>=' '<=' '>' '<'.
 Unary 600 Unot.
 
 Elements -> '$empty' : [].
@@ -231,7 +233,11 @@ IfBraced -> open_tag if_keyword IfExpression close_tag : '$3'.
 IfExpression -> Value in_keyword Value : {'expr', "in", '$1', '$3'}.
 IfExpression -> Value not_keyword in_keyword Value : {'expr', "not", {'expr', "in", '$1', '$4'}}.
 IfExpression -> Value '==' Value : {'expr', "eq", '$1', '$3'}.
-IfExpression -> Value '/=' Value : {'expr', "ne", '$1', '$3'}.
+IfExpression -> Value '!=' Value : {'expr', "ne", '$1', '$3'}.
+IfExpression -> Value '>=' Value : {'expr', "ge", '$1', '$3'}.
+IfExpression -> Value '<=' Value : {'expr', "le", '$1', '$3'}.
+IfExpression -> Value '>' Value : {'expr', "gt", '$1', '$3'}.
+IfExpression -> Value '<' Value : {'expr', "lt", '$1', '$3'}.
 IfExpression -> '(' IfExpression ')' : '$2'.
 IfExpression -> Unot : '$1'.
 IfExpression -> IfExpression or_keyword IfExpression : {'expr', "or", '$1', '$3'}.

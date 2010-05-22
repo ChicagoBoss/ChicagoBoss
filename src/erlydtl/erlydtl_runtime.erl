@@ -119,6 +119,30 @@ is_true(V) ->
 'ne'(Value1, Value2) ->
     not are_equal(Value1, Value2).
 
+'le'(Value1, Value2) ->
+    not 'gt'(Value1, Value2).
+
+'ge'(Value1, Value2) ->
+    not 'lt'(Value1, Value2).
+
+'gt'(Value1, Value2) when is_list(Value1) ->
+    'gt'(list_to_integer(Value1), Value2);
+'gt'(Value1, Value2) when is_list(Value2) ->
+    'gt'(Value1, list_to_integer(Value2));
+'gt'(Value1, Value2) when Value1 > Value2 ->
+    true;
+'gt'(_, _) ->
+    false.
+
+'lt'(Value1, Value2) when is_list(Value1) ->
+    'lt'(list_to_integer(Value1), Value2);
+'lt'(Value1, Value2) when is_list(Value2) ->
+    'lt'(Value1, list_to_integer(Value2));
+'lt'(Value1, Value2) when Value1 < Value2 ->
+    true;
+'lt'(_, _) ->
+    false.
+
 stringify_final(In) ->
    stringify_final(In, []).
 stringify_final([], Out) ->
