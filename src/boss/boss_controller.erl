@@ -129,15 +129,18 @@ load_and_execute_dev({Controller, _, _} = Location, Req) ->
                     case load_dir(model_path(), fun compile_model/1) of
                         {ok, _} ->
                             execute_action(Location, Req);
-                        Else ->
-                            Else
+                        {error, ErrorList} ->
+                            render_errors(ErrorList)
                     end;
                 false ->
                     render_view(Location)
             end;
-        Else ->
-            Else
+        {error, ErrorList} when is_list(ErrorList) ->
+            render_errors(ErrorList)
     end.
+
+render_errors(ErrorList) ->
+    render_view({"admin", "error", []}, [{errors, ErrorList}]).
 
 execute_action(Location, Req) ->
     execute_action(Location, Req, []).
@@ -203,8 +206,8 @@ compile_controller(ModulePath) ->
             code:purge(Module),
             {module, Module} = code:load_file(Module),
             ok;
-        {error, ErrorList, WarningList}  ->
-            {error, ["Failed to compile " ++ ModulePath ++ ". ", ErrorList, WarningList]}
+        Error ->
+            Error
     end.
 
 compile_view_erlydtl(Controller, Template) ->
@@ -264,7 +267,7 @@ render_view(Location) ->
 render_view(Location, Variables) ->
     render_view(Location, Variables, []).
 
-render_view({Controller, Template, _} = Location, Variables, Headers) ->
+render_view({Controller, Template, _}, Variables, Headers) ->
     Module = view_module(Controller, Template),
     Result = case module_is_loaded(Module) of
         true ->
@@ -290,13 +293,8 @@ render_view({Controller, Template, _} = Location, Variables, Headers) ->
                 Err ->
                     Err
             end;
-        _ -> 
-            case render_view_etcher(Location, Variables) of
-                {ok, Payload} ->
-                    {ok, Payload, Headers};
-                Err ->
-                    Err
-            end
+        {error, Error}-> 
+            render_errors([Error])
     end.
 
 

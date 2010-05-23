@@ -16,7 +16,7 @@ model('GET', [], Authorization) ->
     {ok, [{records, []}, {models, model_list()}, {this_model, ""}]};
 model('GET', [ModelName], Authorization) ->
     model('GET', [ModelName, "1"], Authorization);
-model('GET', [ModelName, PageName], _) ->
+model('GET', [ModelName, PageName], Authorization) ->
     Page = list_to_integer(PageName),
     Model = list_to_atom(ModelName),
     RecordCount = boss_db:count(Model),

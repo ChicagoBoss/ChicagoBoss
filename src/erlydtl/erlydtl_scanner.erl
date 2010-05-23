@@ -57,7 +57,7 @@ scan([], Scanned, _, in_text) ->
                 fun
                     ({identifier, Pos, String}) ->
                         RevString = lists:reverse(String),
-                        Keywords = ["for", "endfor", "in", "include", "block", "endblock",
+                        Keywords = ["for", "empty", "endfor", "in", "include", "block", "endblock",
                             "extends", "autoescape", "endautoescape", "if", "else", "endif",
                             "not", "or", "and", "comment", "endcomment", "cycle", "firstof",
                             "ifchanged", "ifequal", "endifequal", "ifnotequal", "endifnotequal",
@@ -69,9 +69,12 @@ scan([], Scanned, _, in_text) ->
                             _ ->
                                 identifier
                         end,
-                        {Type, Pos, RevString};
-                    ({Type, Pos, String}) ->
-                        {Type, Pos, lists:reverse(String)} 
+                        {Type, Pos, list_to_atom(RevString)};
+                    ({Category, Pos, String}) when  Category =:= string; 
+                                                    Category =:= string_literal; 
+                                                    Category =:= number_literal ->
+                        {Category, Pos, lists:reverse(String)};
+                    (Other) -> Other
                 end, Scanned))};
 
 scan([], _Scanned, _, {in_comment, _}) ->
@@ -81,10 +84,10 @@ scan([], _Scanned, _, _) ->
     {error, "Reached end of file inside a code block."};
 
 scan("<!--{{" ++ T, Scanned, {Row, Column}, in_text) ->
-    scan(T, [{open_var, {Row, Column}, "<!--{{"} | Scanned], {Row, Column + length("<!--{{")}, {in_code, "}}-->"});
+    scan(T, [{open_var, {Row, Column}, '<!--{{'} | Scanned], {Row, Column + length("<!--{{")}, {in_code, "}}-->"});
 
 scan("{{" ++ T, Scanned, {Row, Column}, in_text) ->
-    scan(T, [{open_var, {Row, Column}, "{{"} | Scanned], {Row, Column + 2}, {in_code, "}}"});
+    scan(T, [{open_var, {Row, Column}, '{{'} | Scanned], {Row, Column + 2}, {in_code, "}}"});
 
 scan("<!--{#" ++ T, Scanned, {Row, Column}, in_text) ->
     scan(T, Scanned, {Row, Column + length("<!--{#")}, {in_comment, "#}-->"});
@@ -99,11 +102,11 @@ scan("#}" ++ T, Scanned, {Row, Column}, {in_comment, "#}"}) ->
     scan(T, Scanned, {Row, Column + 2}, in_text);
 
 scan("<!--{%" ++ T, Scanned, {Row, Column}, in_text) ->
-    scan(T, [{open_tag, {Row, Column}, lists:reverse("<!--{%")} | Scanned], 
+    scan(T, [{open_tag, {Row, Column}, '<!--{%'} | Scanned], 
         {Row, Column + length("<!--{%")}, {in_code, "%}-->"});
 
 scan("{%" ++ T, Scanned, {Row, Column}, in_text) ->
-    scan(T, [{open_tag, {Row, Column}, lists:reverse("{%")} | Scanned], 
+    scan(T, [{open_tag, {Row, Column}, '{%'} | Scanned], 
         {Row, Column + 2}, {in_code, "%}"});
 
 scan([_ | T], Scanned, {Row, Column}, {in_comment, Closer}) ->
@@ -155,58 +158,58 @@ scan([H | T], Scanned, {Row, Column}, {in_single_quote, Closer}) ->
 
 
 scan("}}-->" ++ T, Scanned, {Row, Column}, {_, "}}-->"}) ->
-    scan(T, [{close_var, {Row, Column}, lists:reverse("}}-->")} | Scanned], 
+    scan(T, [{close_var, {Row, Column}, '}}-->'} | Scanned], 
         {Row, Column + 2}, in_text);
 
 scan("}}" ++ T, Scanned, {Row, Column}, {_, "}}"}) ->
-    scan(T, [{close_var, {Row, Column}, "}}"} | Scanned], {Row, Column + 2}, in_text);
+    scan(T, [{close_var, {Row, Column}, '}}'} | Scanned], {Row, Column + 2}, in_text);
 
 scan("%}-->" ++ T, Scanned, {Row, Column}, {_, "%}-->"}) ->
-    scan(T, [{close_tag, {Row, Column}, lists:reverse("%}-->")} | Scanned], 
+    scan(T, [{close_tag, {Row, Column}, '%}-->'} | Scanned], 
         {Row, Column + 2}, in_text);
 
 scan("%}" ++ T, Scanned, {Row, Column}, {_, "%}"}) ->
-    scan(T, [{close_tag, {Row, Column}, lists:reverse("%}")} | Scanned], 
+    scan(T, [{close_tag, {Row, Column}, '%}'} | Scanned], 
         {Row, Column + 2}, in_text);
 
 scan("==" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
-    scan(T, [{'==', {Row, Column}, "=="} | Scanned], {Row, Column + 2}, {in_code, Closer});
+    scan(T, [{'==', {Row, Column}} | Scanned], {Row, Column + 2}, {in_code, Closer});
 
 scan("!=" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
-    scan(T, [{'!=', {Row, Column}, "!="} | Scanned], {Row, Column + 2}, {in_code, Closer});
+    scan(T, [{'!=', {Row, Column}} | Scanned], {Row, Column + 2}, {in_code, Closer});
 
 scan(">=" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
-    scan(T, [{'>=', {Row, Column}, ">="} | Scanned], {Row, Column + 2}, {in_code, Closer});
+    scan(T, [{'>=', {Row, Column}} | Scanned], {Row, Column + 2}, {in_code, Closer});
 
 scan("<=" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
-    scan(T, [{'<=', {Row, Column}, "<="} | Scanned], {Row, Column + 2}, {in_code, Closer});
+    scan(T, [{'<=', {Row, Column}} | Scanned], {Row, Column + 2}, {in_code, Closer});
 
 scan("<" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
-    scan(T, [{'<', {Row, Column}, "<"} | Scanned], {Row, Column + 1}, {in_code, Closer});
+    scan(T, [{'<', {Row, Column}} | Scanned], {Row, Column + 1}, {in_code, Closer});
 
 scan(">" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
-    scan(T, [{'>', {Row, Column}, ">"} | Scanned], {Row, Column + 1}, {in_code, Closer});
+    scan(T, [{'>', {Row, Column}} | Scanned], {Row, Column + 1}, {in_code, Closer});
 
 scan("("++ T, Scanned, {Row, Column}, {_, Closer}) ->
-    scan(T, [{'(', {Row, Column}, "("} | Scanned], {Row, Column + 1}, {in_code, Closer});
+    scan(T, [{'(', {Row, Column}} | Scanned], {Row, Column + 1}, {in_code, Closer});
 
 scan(")" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
-    scan(T, [{')', {Row, Column}, ")"} | Scanned], {Row, Column + 1}, {in_code, Closer});
+    scan(T, [{')', {Row, Column}} | Scanned], {Row, Column + 1}, {in_code, Closer});
 
 scan("," ++ T, Scanned, {Row, Column}, {_, Closer}) ->
-    scan(T, [{comma, {Row, Column}, ","} | Scanned], {Row, Column + 1}, {in_code, Closer});
+    scan(T, [{',', {Row, Column}} | Scanned], {Row, Column + 1}, {in_code, Closer});
 
 scan("|" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
-    scan(T, [{pipe, {Row, Column}, "|"} | Scanned], {Row, Column + 1}, {in_code, Closer});
+    scan(T, [{'|', {Row, Column}} | Scanned], {Row, Column + 1}, {in_code, Closer});
 
 scan("=" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
-    scan(T, [{equal, {Row, Column}, "="} | Scanned], {Row, Column + 1}, {in_code, Closer});
+    scan(T, [{'=', {Row, Column}} | Scanned], {Row, Column + 1}, {in_code, Closer});
 
 scan(":" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
-    scan(T, [{colon, {Row, Column}, ":"} | Scanned], {Row, Column + 1}, {in_code, Closer});
+    scan(T, [{':', {Row, Column}} | Scanned], {Row, Column + 1}, {in_code, Closer});
 
 scan("." ++ T, Scanned, {Row, Column}, {_, Closer}) ->
-    scan(T, [{dot, {Row, Column}, "."} | Scanned], {Row, Column + 1}, {in_code, Closer});
+    scan(T, [{'.', {Row, Column}} | Scanned], {Row, Column + 1}, {in_code, Closer});
 
 scan(" " ++ T, Scanned, {Row, Column}, {_, Closer}) ->
     scan(T, Scanned, {Row, Column + 1}, {in_code, Closer});
@@ -219,7 +222,7 @@ scan([H | T], Scanned, {Row, Column}, {in_code, Closer}) ->
         digit ->
             scan(T, [{number_literal, {Row, Column}, [H]} | Scanned], {Row, Column + 1}, {in_number, Closer});
         _ ->
-            {error, lists:concat(["Illegal character line ", Row, " column ", Column])}
+            {error, {Row, ?MODULE, lists:concat(["Illegal character in column ", Column])}}
     end;
 
 scan([H | T], Scanned, {Row, Column}, {in_number, Closer}) ->
@@ -227,7 +230,7 @@ scan([H | T], Scanned, {Row, Column}, {in_number, Closer}) ->
         digit ->
             scan(T, append_char(Scanned, H), {Row, Column + 1}, {in_number, Closer});
         _ ->
-            {error, lists:concat(["Illegal character line ", Row, " column ", Column])}
+            {error, {Row, ?MODULE, lists:concat(["Illegal character in column ", Column])}}
     end;
 
 scan([H | T], Scanned, {Row, Column}, {in_identifier, Closer}) ->
@@ -237,7 +240,7 @@ scan([H | T], Scanned, {Row, Column}, {in_identifier, Closer}) ->
         digit ->
             scan(T, append_char(Scanned, H), {Row, Column + 1}, {in_identifier, Closer});
         _ ->
-            {error, lists:concat(["Illegal character line ", Row, " column ", Column])}
+            {error, {Row, ?MODULE, lists:concat(["Illegal character in column ", Column])}}
     end.
 
 % internal functions
@@ -249,14 +252,14 @@ append_char(Scanned, Char) ->
 append_text_char(Scanned, {Row, Column}, Char) ->
     case length(Scanned) of
         0 ->
-            [{text, {Row, Column}, [Char]}];
+            [{string, {Row, Column}, [Char]}];
         _ ->
             [Token | Scanned1] = Scanned,
             case element(1, Token) of
-                text ->
-                    [{text, element(2, Token), [Char | element(3, Token)]} | Scanned1];
+                string ->
+                    [{string, element(2, Token), [Char | element(3, Token)]} | Scanned1];
                 _ ->
-                    [{text, element(2, Token), [Char]} | Scanned]
+                    [{string, element(2, Token), [Char]} | Scanned]
             end
     end.
 

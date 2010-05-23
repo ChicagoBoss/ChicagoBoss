@@ -1,14 +1,14 @@
 {% extends "api.html" %}
 {% block api_content %}
-<p>Chicago Boss liked <a href="http://docs.djangoproject.com/en/dev/topics/templates/">Django's templating language</a> so much, he decided to steal it. Template files go in your project's View folder, and will have access to the variables you pass from your <a href="api-controller.html#nav">Controller</a>.</p>
+<p>Chicago Boss liked <a href="http://docs.djangoproject.com/en/dev/topics/templates/">Django's templating language</a> so much, he decided to steal it. Template files go in your project's View folder, and will have access to the variables you pass from your <a href="api-controller.html#nav">Controller</a>. The template file associated with the function <code>foo_controller:bar</code> will be View/foo/bar.html.</p>
 
-<p>Note: if you use the the "extends" tag, the file path should be relative to your project's "View" directory.</p>
+<p>Note: if you use the the <code>extends</code> tag, the file path should be relative to your project's "View" directory.</p>
 
-<p>Chicago Boss has support for 99% of the Django Template Language (everything except the "load" tag), so existing Django templates should work out of the box. If your template can be compiled using <a href="http://code.google.com/p/erlydtl/">ErlyDTL</a>, Boss compiles the template down to Erlang BEAM code to give you the fastest templates on the planet. If your templates need features not supported by ErlyDTL, they'll be rendered with <a href="http://github.com/jinsky/etcher">Etcher</a> instead.</p>
+<p>Chicago Boss has support for the most common features of the Django Template Language, so many existing Django templates should work out of the box. Your templates will be compiled down to Erlang BEAM code using <a href="http://code.google.com/p/erlydtl/">ErlyDTL</a> to give you the fastest Erlang templates on the planet.</p>
 
-<p>To make sure your templates are compiled to BEAM code, you need to restrict yourself to the following filters. Hopefully this list will grow over time.</p>
+<p>The following Django filters are supported in Chicago Boss. Hopefully this list will grow over time.</p>
 
-<table style="margin-left: 120px; margin-top: 30px;">
+<table style="margin-left: 80px; margin-top: 30px;">
     {% for filter in filters %}
     {% if filter.description %}
     <tr><td>

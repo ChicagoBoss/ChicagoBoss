@@ -46,11 +46,11 @@ edoc_module(File, Options) ->
 parse(File) ->
     case epp:parse_file(File, [filename:dirname(File)], []) of
         {ok, Forms} ->
-            case proplists:get_value(error, Forms) of
-                undefined ->
+            case proplists:get_all_values(error, Forms) of
+                [] ->
                     {ok, Forms};
-                {Line, _Module, ErrorDescription} ->
-                    {error, {File, Line, ErrorDescription}}
+                Errors ->
+                    {error, {File, Errors}}
             end;
         Error ->
             Error

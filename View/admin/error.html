@@ -1,0 +1,19 @@
+<html>
+    <head>
+        <title>Oops!</title>
+    </head>
+    <body>
+        <h1><em>We got a problem!</em></h1>
+        {% for filename, error in errors %}
+        <p><em>In file</em> {{ filename }}:</p>
+        <ul>
+        {% for lineno, module, msg in error %}
+        <li>Line {{ lineno }}: {{ msg }}</li>
+        {% endfor %}
+        </ul>
+        {% endfor %}
+        <br />
+        <br />
+        <p><em>{% now "D, j F Y g:i a" %}</em></p>
+    </body>
+</html>

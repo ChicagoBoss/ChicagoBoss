@@ -60,6 +60,7 @@ Nonterminals
 
     ForBlock
     ForBraced
+    EmptyBraced
     EndForBraced
     ForExpression
     ForGroup
@@ -109,11 +110,9 @@ Terminals
     close_tag
     close_var
     comment_keyword
-    colon
-    comma
     cycle_keyword
-    dot
     else_keyword
+    empty_keyword
     endautoescape_keyword
     endblock_keyword
     endcomment_keyword
@@ -121,7 +120,6 @@ Terminals
     endif_keyword
     endifequal_keyword
     endifnotequal_keyword
-    equal
     extends_keyword
     firstof_keyword
     for_keyword
@@ -138,11 +136,11 @@ Terminals
     or_keyword
     open_tag
     open_var
-    pipe
     string_literal
-    text
+    string
     trans_keyword
     with_keyword
+    ',' '|' '=' ':' '.'
     '==' '!='
     '>=' '<='
     '>' '<'
@@ -158,7 +156,7 @@ Nonassoc 300 '==' '!=' '>=' '<=' '>' '<'.
 Unary 600 Unot.
 
 Elements -> '$empty' : [].
-Elements -> Elements text : '$1' ++ ['$2'].
+Elements -> Elements string : '$1' ++ ['$2'].
 Elements -> Elements TransTag : '$1' ++ ['$2'].
 Elements -> Elements ValueBraced : '$1' ++ ['$2'].
 Elements -> Elements ExtendsTag : '$1' ++ ['$2'].
@@ -180,12 +178,12 @@ Elements -> Elements CallWithTag : '$1' ++ ['$2'].
 
 ValueBraced -> open_var Value close_var : '$2'.
 
-Value -> Value pipe Filter : {apply_filter, '$1', '$3'}.
+Value -> Value '|' Filter : {apply_filter, '$1', '$3'}.
 Value -> Variable : '$1'.
 Value -> Literal : '$1'.
 
 Variable -> identifier : {variable, '$1'}.
-Variable -> Value dot identifier : {attribute, {'$3', '$1'}}.
+Variable -> Value '.' identifier : {attribute, {'$3', '$1'}}.
 
 TransTag -> open_tag trans_keyword string_literal close_tag : {trans, '$3'}.
 
@@ -211,8 +209,8 @@ CycleTag -> open_tag cycle_keyword CycleNames close_tag : {cycle, '$3'}.
 CycleNames -> Value : ['$1'].
 CycleNames -> CycleNames Value : '$1' ++ ['$2'].
 
-CycleNamesCompat -> identifier comma : ['$1'].
-CycleNamesCompat -> CycleNamesCompat identifier comma : '$1' ++ ['$2'].
+CycleNamesCompat -> identifier ',' : ['$1'].
+CycleNamesCompat -> CycleNamesCompat identifier ',' : '$1' ++ ['$2'].
 CycleNamesCompat -> CycleNamesCompat identifier : '$1' ++ ['$2'].
 
 FirstofTag -> open_tag firstof_keyword FirstofList close_tag : '$3'.
@@ -221,11 +219,13 @@ FirstofValues -> FirstofValues Value : ['$2'|'$1'].
 FirstofValues -> Value : ['$1'].
 
 ForBlock -> ForBraced Elements EndForBraced : {for, '$1', '$2'}.
+ForBlock -> ForBraced Elements EmptyBraced Elements EndForBraced : {for, '$1', '$2', '$4'}.
+EmptyBraced -> open_tag empty_keyword close_tag.
 ForBraced -> open_tag for_keyword ForExpression close_tag : '$3'.
 EndForBraced -> open_tag endfor_keyword close_tag.
 ForExpression -> ForGroup in_keyword Variable : {'in', '$1', '$3'}.
 ForGroup -> identifier : ['$1'].
-ForGroup -> ForGroup comma identifier : '$1' ++ ['$3'].
+ForGroup -> ForGroup ',' identifier : '$1' ++ ['$3'].
 
 IfBlock -> IfBraced Elements ElseBraced Elements EndIfBraced : {ifelse, '$1', '$2', '$4'}.
 IfBlock -> IfBraced Elements EndIfBraced : {'if', '$1', '$2'}.
@@ -266,7 +266,7 @@ AutoEscapeBraced -> open_tag autoescape_keyword identifier close_tag : '$3'.
 EndAutoEscapeBraced -> open_tag endautoescape_keyword close_tag.
 
 Filter -> identifier : ['$1'].
-Filter -> identifier colon Literal : ['$1', '$3'].
+Filter -> identifier ':' Literal : ['$1', '$3'].
 
 Literal -> string_literal : '$1'.
 Literal -> number_literal : '$1'.
@@ -274,7 +274,7 @@ Literal -> number_literal : '$1'.
 CustomTag -> open_tag identifier Args close_tag : {tag, '$2', '$3'}.
 
 Args -> '$empty' : [].
-Args -> Args identifier equal Value : '$1' ++ [{'$2', '$4'}].
+Args -> Args identifier '=' Value : '$1' ++ [{'$2', '$4'}].
 
 CallTag -> open_tag call_keyword identifier close_tag : {call, '$3'}.
 CallWithTag -> open_tag call_keyword identifier with_keyword Value close_tag : {call, '$3', '$5'}.

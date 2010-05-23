@@ -151,6 +151,8 @@ stringify_final([El | Rest], Out) when is_atom(El) ->
    stringify_final(Rest, [atom_to_list(El) | Out]);
 stringify_final([El | Rest], Out) when is_list(El) ->
    stringify_final(Rest, [stringify_final(El) | Out]);
+stringify_final([El | Rest], Out) when is_tuple(El) ->
+   stringify_final(Rest, [io_lib:print(El) | Out]);
 stringify_final([El | Rest], Out) ->
    stringify_final(Rest, [El | Out]).
 
