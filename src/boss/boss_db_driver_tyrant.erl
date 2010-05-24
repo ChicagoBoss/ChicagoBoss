@@ -98,9 +98,12 @@ save_record(Record) when is_tuple(Record) ->
                     end}
         end, 
         RecordWithId:attribute_names()),
-    ok = medici:put(list_to_binary(Id), 
+    Result = medici:put(list_to_binary(Id), 
         [{attribute_to_colname('_type', Type), list_to_binary(atom_to_list(Type))}|Columns]),
-    RecordWithId.
+    case Result of
+        ok -> {ok, RecordWithId};
+        {error, Error} -> {error, [Error]}
+    end.
 
 infer_type_from_id(Id) when is_binary(Id) ->
     infer_type_from_id(binary_to_list(Id));

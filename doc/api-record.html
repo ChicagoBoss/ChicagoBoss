@@ -1,9 +1,11 @@
 <html>
     <head>
-        <title>Chicago Boss - the MVC that packs a punch</title>
+        <title>Chicago Boss - the MVC that packs a punch (chicagoboss.org)</title>
         <link rel="stylesheet" type="text/css" href="boss.css" />
+            
         <style type="text/css">
         </style>
+            
     </head>
     <body>
         
@@ -17,6 +19,7 @@
         <div class="nav">
             
 <a href="index.html">F.A.Q.</a> &nbsp; | &nbsp; 
+<a href="compare.html">COMPARE</a> &nbsp; | &nbsp; 
 <a href="guide.html">GUIDE</a> &nbsp; | &nbsp; 
 <strong>API</strong> &nbsp; | &nbsp; 
 <a href="download.html">DOWNLOAD</a> &nbsp; | &nbsp;
@@ -84,12 +87,30 @@ BossRecords are <em>specially compiled parameterized modules</em> that follow th
 
 
 <div class="code">
-    save() -> SavedBossRecord
+    save() -> {ok, SavedBossRecord} | {error, [ErrorMessages]}
 </div>
 <p>
 
 Saves this <code>boss_record</code> record to the database. The returned record
   will have an auto-generated ID if the record's ID was set to 'id'.
+  Performs validation first, returning <code>ErrorMessages</code> if validation fails.  See <code>validate/0</code>.
+
+</p>
+
+
+
+<div class="code">
+    validate() -> ok | {error, [ErrorMessages]}
+</div>
+<p>
+
+Validates this <code>boss_record</code> without saving to the database.
+  Errors are generated from this model's <code>validation_tests/0</code> function (if defined), 
+  which should return a list of <code>{TestFunction, ErrorMessage}</code> tuples. For each test, 
+  <code>TestFunction</code> should be a fun of arity 0 that returns <code>true</code> if the record is valid 
+  or <code>false</code> if it is invalid. <code>ErrorMessage</code> should be a (constant) string that will be 
+  included in <code>ErrorMessages</code> if the associated <code>TestFunction</code> returns <code>false</code> on this 
+  particular <code>boss_record</code>.
 
 </p>
 

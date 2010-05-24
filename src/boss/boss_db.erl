@@ -17,6 +17,7 @@
         incr/2, 
         delete/1, 
         save_record/1, 
+        validate_record/1,
         type/1]).
 
 start() ->
@@ -106,10 +107,33 @@ incr(Key, Count) ->
 delete(Key) ->
     gen_server:call(boss_db, {delete, Key}).
 
-%% @spec save_record( BossRecord ) -> SavedBossRecord
+%% @spec save_record( BossRecord ) -> {ok, SavedBossRecord} | {error, [ErrorMessages]}
 %% @doc Save (that is, create or update) the given BossRecord in the database.
+%% Performs validation first; see `validate_record/0'.
 save_record(Record) ->
-    gen_server:call(boss_db, {save_record, Record}).
+    case validate_record(Record) of
+        ok -> gen_server:call(boss_db, {save_record, Record});
+        Err -> Err
+    end.
+
+%% @spec validate_record( BossRecord ) -> ok | {error, [ErrorMessages]}
+%% @doc Validate the given BossRecord without saving it in the database.
+%% `ErrorMessages' are generated from the list of tests returned by the BossRecord's 
+%% `validation_tests/0' function (if defined). The returned list should consist of
+%% `{TestFunction, ErrorMessage}' tuples, where `TestFunction' is a fun of arity 0 
+%% that returns `true' if the record is valid or `false' if it is invalid. 
+%% `ErrorMessage' should be a (constant) string which will be included in `ErrorMessages'
+%% if the `TestFunction' returns `false' on this particular BossRecord.
+validate_record(Record) ->
+    Type = element(1, Record),
+    Errors = case lists:member({validation_tests, 1}, Type:module_info(exports)) of
+        true -> [String || {TestFun, String} <- Record:validation_tests(), not TestFun()];
+        false -> []
+    end,
+    case length(Errors) of
+        0 -> ok;
+        _ -> {error, Errors}
+    end.
 
 %% @spec type( Id::string() ) -> Type::atom()
 %% @doc Returns the type of the BossRecord with `Id', or `undefined' if the record does not exist.

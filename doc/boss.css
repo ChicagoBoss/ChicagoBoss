@@ -55,13 +55,20 @@ div.code span.atom {
     color: #00FF1A;
 }
 div.nav {
-    font-size: 24px; padding-top: 40px; padding-bottom: 20px;
+    font-size: 20px; padding-top: 40px; padding-bottom: 20px;
 }
 p.question {
     font-style: italic;
     font-weight: bold;
 }
 div.content {
-    text-align: left; position: absolute; margin-left: -370px; left: 50%; padding: 20px; 
-    width: 700px; border-width: 0px 1px; border-color: black; border-style: solid; font-size: 20px; padding-bottom: 300px;
+    text-align: left; 
+    position: absolute; 
+    margin-left: -385px; 
+    left: 50%; 
+    padding: 20px; 
+    width: 730px; 
+    border-width: 0px 1px; 
+    border-color: black; 
+    border-style: solid; font-size: 20px; padding-bottom: 300px;
 }

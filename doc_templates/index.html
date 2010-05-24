@@ -1,9 +1,11 @@
 <html>
     <head>
-        <title>Chicago Boss - the MVC that packs a punch</title>
+        <title>{% block title %}Chicago Boss - the MVC that packs a punch{% endblock %} (chicagoboss.org)</title>
         <link rel="stylesheet" type="text/css" href="boss.css" />
+            {% block style %}
         <style type="text/css">
         </style>
+            {% endblock %}
     </head>
     <body>
         {% block header %}
@@ -25,6 +27,7 @@
         <div class="nav">
             {% block nav %}
             <strong>F.A.Q.</strong> &nbsp; | &nbsp; 
+            <a href="compare.html">COMPARE</a> &nbsp; | &nbsp; 
             <a href="guide.html">GUIDE</a> &nbsp; | &nbsp; 
             <a href="api.html">API</a> &nbsp; | &nbsp; 
             <a href="download.html">DOWNLOAD</a> &nbsp; | &nbsp;
@@ -35,7 +38,7 @@
             <div class="content">
                 {% block content %}
                 <p class="question">What's news?</p>
-                <p><em>May 20, 2010</em> &ndash; Chicago Boss 0.3.2 is out (<a href="download.html">download</a>) and has <strong>major, major</strong> performance improvements, as well prettier error messages, pagination on the /admin interface, and boolean operator support in the template language. By the way, if you haven't seen it already, be sure to check out the beginner's guide, <a href="http://www.evanmiller.org/chicago-boss-guide.html">&#8220;An Evening With Chicago Boss&#8221;</a>.</p>
+                <p><em>May 22, 2010</em> &ndash; Chicago Boss 0.3.2 is out (<a href="download.html">download</a>) and has <strong>major, major</strong> performance improvements, as well prettier error messages, pagination on the /admin interface, and boolean operator support in the template language. By the way, if you haven't seen it already, be sure to check out the beginner's guide, <a href="http://www.evanmiller.org/chicago-boss-guide.html">&#8220;An Evening With Chicago Boss&#8221;</a>.</p>
 
                 <p class="question">How is Chicago Boss different from other Erlang MVC frameworks?</p>
 

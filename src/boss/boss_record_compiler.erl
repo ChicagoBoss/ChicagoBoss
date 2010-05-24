@@ -88,7 +88,8 @@ trick_out_forms(Forms, ModuleName, Parameters) ->
 
     override_functions(
         lists:reverse(OtherForms) ++ 
-        save_forms(ModuleName, Parameters) ++
+        save_forms(ModuleName) ++
+        validate_forms(ModuleName) ++
         set_attributes_forms(ModuleName, Parameters) ++
         get_attributes_forms(ModuleName, Parameters) ++
         attribute_names_forms(ModuleName, Parameters) ++
@@ -122,24 +123,40 @@ override_functions([H|T], Acc, DefinedFunctions) ->
 override_functions([], Acc, _) ->
     lists:reverse(Acc).
 
-save_forms(ModuleName, Parameters) ->
+validate_forms(ModuleName) ->
     [erl_syntax:add_precomments([erl_syntax:comment(
-                    [lists:concat(["% @spec save() -> Saved", inflector:camelize(atom_to_list(ModuleName))]),
+                    ["% @spec validate() -> ok | {error, [ErrorMessages]}",
+                        lists:concat(["% @doc Validates this `", ModuleName, "' without saving to the database."]),
+                        "% Errors are generated from this model's `validation_tests/0' function (if defined), ",
+                        "% which should return a list of `{TestFunction, ErrorMessage}' tuples. For each test, ",
+                        "% `TestFunction' should be a fun of arity 0 that returns `true' if the record is valid ",
+                        "% or `false' if it is invalid. `ErrorMessage' should be a (constant) string that will be ",
+                        "% included in `ErrorMessages' if the associated `TestFunction' returns `false' on this ",
+                        lists:concat(["% particular `", ModuleName, "'."])
+                    ])], 
+            erl_syntax:function(
+                erl_syntax:atom(validate),
+                [erl_syntax:clause([], none,
+                        [erl_syntax:application(
+                                erl_syntax:atom(?DATABASE_MODULE),
+                                erl_syntax:atom(validate_record),
+                                [erl_syntax:variable("THIS")]
+                            )])]))].
+
+save_forms(ModuleName) ->
+    [erl_syntax:add_precomments([erl_syntax:comment(
+                    [lists:concat(["% @spec save() -> {ok, Saved", inflector:camelize(atom_to_list(ModuleName)), "} | {error, [ErrorMessages]}"]),
                         lists:concat(["% @doc Saves this `", ModuleName, "' record to the database. The returned record"]),
-                        "% will have an auto-generated ID if the record's ID was set to 'id'."])],
+                        "% will have an auto-generated ID if the record's ID was set to 'id'.",
+                        "% Performs validation first, returning `ErrorMessages' if validation fails.  See `validate/0'."])],
             erl_syntax:function(
                 erl_syntax:atom(save),
                 [erl_syntax:clause([], none,
                         [erl_syntax:application(
                                 erl_syntax:atom(?DATABASE_MODULE),
                                 erl_syntax:atom(save_record),
-                                [erl_syntax:tuple([erl_syntax:atom(ModuleName)|
-                                            lists:map(fun(P) ->
-                                                        erl_syntax:variable(P)
-                                                end, Parameters)
-                                        ])
-                                ])])]))].
-
+                                [erl_syntax:variable("THIS")]
+                            )])]))].  
 parameter_getter_forms(Parameters) ->
     lists:map(fun(P) -> 
                 erl_syntax:add_precomments([erl_syntax:comment(
