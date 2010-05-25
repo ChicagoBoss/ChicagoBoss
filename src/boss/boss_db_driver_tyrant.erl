@@ -3,6 +3,8 @@
 -export([start/0, stop/0, find/1, find/3, find/4, find/5, find/6]).
 -export([count/1, count/2, counter/1, incr/1, incr/2, delete/1, save_record/1]).
 
+-define(TRILLION, (1000 * 1000 * 1000 * 1000)).
+
 start() ->
     medici:start().
 
@@ -86,40 +88,76 @@ save_record(Record) when is_tuple(Record) ->
             Defined
     end,
     RecordWithId = Record:id(Id),
-    Columns = lists:map(fun
-            (A) -> {attribute_to_colname(A, Type), 
-                    case RecordWithId:A() of
-                        Val when is_list(Val) ->
-                            list_to_binary(Val);
-                        {MegaSec, Sec, MicroSec} when is_integer(MegaSec) andalso is_integer(Sec) andalso is_integer(MicroSec) ->
-                            pack_now({MegaSec, Sec, MicroSec});
-                        {{_, _, _} = Date, {_, _, _} = Time} ->
-                            pack_datetime({Date, Time})
-                    end}
-        end, 
-        RecordWithId:attribute_names()),
-    Result = medici:put(list_to_binary(Id), 
-        [{attribute_to_colname('_type', Type), list_to_binary(atom_to_list(Type))}|Columns]),
+    Result = medici:put(list_to_binary(Id), pack_record(RecordWithId, Type)),
     case Result of
         ok -> {ok, RecordWithId};
         {error, Error} -> {error, [Error]}
     end.
+
+pack_record(RecordWithId, Type) ->
+    % metadata string stores the data types, <Data Type><attribute name>
+    % L = list, T = time, B = binary, A = atom, I = integer, F = float
+    {Columns, MetadataString} = lists:mapfoldl(fun
+            (Attr, Acc) -> 
+                {PackedValue, Acc1} = case RecordWithId:Attr() of
+                    Val when is_list(Val) ->
+                        {list_to_binary(Val), lists:concat([Attr, "L", Acc])};
+                    {MegaSec, Sec, MicroSec} when is_integer(MegaSec) andalso is_integer(Sec) andalso is_integer(MicroSec) ->
+                        {pack_now({MegaSec, Sec, MicroSec}), lists:concat([Attr, "T", Acc])};
+                    {{_, _, _} = Date, {_, _, _} = Time} ->
+                        {pack_datetime({Date, Time}), lists:concat([Attr, "T", Acc])};
+                    Val when is_binary(Val) ->
+                        {Val, lists:concat([Attr, "B", Acc])};
+                    Val when is_integer(Val) ->
+                        {list_to_binary(integer_to_list(Val)), lists:concat([Attr, "I", Acc])};
+                    Val when is_float(Val) ->
+                        {list_to_binary(integer_to_list(trunc(Val * ?TRILLION))), lists:concat([Attr, "F", Acc])}
+                end,
+                {{attribute_to_colname(Attr, Type), PackedValue}, Acc1}
+        end, [], RecordWithId:attribute_names()),
+    [{attribute_to_colname('_type', Type), list_to_binary(atom_to_list(Type))},
+        {attribute_to_colname('_metadata', Type), list_to_binary(MetadataString)}|Columns].
 
 infer_type_from_id(Id) when is_binary(Id) ->
     infer_type_from_id(binary_to_list(Id));
 infer_type_from_id(Id) when is_list(Id) ->
     list_to_atom(hd(string:tokens(Id, "-"))).
 
+extract_metadata(Record, Type) ->
+    MetadataString = proplists:get_value(attribute_to_colname('_metadata', Type), Record),
+    case MetadataString of
+        undefined -> [];
+        Val when is_binary(Val) -> 
+            parse_metadata_string(binary_to_list(Val))
+    end.
+
+parse_metadata_string(Val) ->
+    parse_metadata_string(Val, [], []).
+parse_metadata_string([], [], MetadataAcc) ->
+    MetadataAcc;
+parse_metadata_string([H|T], NameAcc, MetadataAcc) when H >= $A, H =< $Z ->
+    parse_metadata_string(T, [], [{list_to_atom(lists:reverse(NameAcc)), H}|MetadataAcc]);
+parse_metadata_string([H|T], NameAcc, MetadataAcc) when H >= $a, H =< $z; H =:= $_ ->
+    parse_metadata_string(T, [H|NameAcc], MetadataAcc).
+
 activate_record(Record, Type) ->
     DummyRecord = apply(Type, new, lists:seq(1, proplists:get_value(new, Type:module_info(exports)))),
+    Metadata = extract_metadata(Record, Type),
     apply(Type, new, lists:map(fun
                 (Key) ->
                     Val = proplists:get_value(attribute_to_colname(Key, Type), Record, <<"">>),
-                    case lists:suffix("_time", atom_to_list(Key)) of
-                        true -> unpack_datetime(Val);
-                        false -> binary_to_list(Val)
+                    case proplists:get_value(Key, Metadata) of
+                        $B -> Val;
+                        $I -> list_to_integer(binary_to_list(Val));
+                        $F -> list_to_integer(binary_to_list(Val)) / ?TRILLION;
+                        $T -> unpack_datetime(Val);
+                        _ ->
+                            case lists:suffix("_time", atom_to_list(Key)) of
+                                true -> unpack_datetime(Val);
+                                false -> binary_to_list(Val)
+                            end
                     end
-                end, DummyRecord:attribute_names())).
+            end, DummyRecord:attribute_names())).
 
 model_is_loaded(Type) ->
     case code:is_loaded(Type) of

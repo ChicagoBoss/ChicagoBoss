@@ -118,8 +118,8 @@ load_and_execute_dev({"doc", ModelName, _}, _Req) ->
             {Model, Edoc} = boss_record_compiler:edoc_module(
                 model_path(ModelName++".erl"), [{private, true}]),
             {ok, edoc:layout(Edoc)};
-        Error ->
-            Error
+        {error, ErrorList} ->
+            render_errors(ErrorList)
     end;
 load_and_execute_dev({Controller, _, _} = Location, Req) ->
     case load_dir(controller_path(), fun compile_controller/1) of
