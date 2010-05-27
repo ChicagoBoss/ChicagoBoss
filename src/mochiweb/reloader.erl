@@ -13,7 +13,9 @@
 -export([start/0, start_link/0]).
 -export([stop/0]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
-
+-export([all_changed/0]).
+-export([is_changed/1]).
+-export([reload_modules/1]).
 -record(state, {last, tref}).
 
 %% External API
@@ -74,12 +76,40 @@ terminate(_Reason, State) ->
 code_change(_Vsn, State, _Extra) ->
     {ok, State}.
 
+%% @spec reload_modules([atom()]) -> [{module, atom()} | {error, term()}]
+%% @doc code:purge/1 and code:load_file/1 the given list of modules in order,
+%%      return the results of code:load_file/1.
+reload_modules(Modules) ->
+    [begin code:purge(M), code:load_file(M) end || M <- Modules].
+
+%% @spec all_changed() -> [atom()]
+%% @doc Return a list of beam modules that have changed.
+all_changed() ->
+    [M || {M, Fn} <- code:all_loaded(), is_list(Fn), is_changed(M)].
+
+%% @spec is_changed(atom()) -> boolean()
+%% @doc true if the loaded module is a beam with a vsn attribute
+%%      and does not match the on-disk beam file, returns false otherwise.
+is_changed(M) ->
+    try
+        module_vsn(M:module_info()) =/= module_vsn(code:get_object_code(M))
+    catch _:_ ->
+            false
+    end.
+
 %% Internal API
+
+module_vsn({M, Beam, _Fn}) ->
+    {ok, {M, Vsn}} = beam_lib:version(Beam),
+    Vsn;
+module_vsn(L) when is_list(L) ->
+    {_, Attrs} = lists:keyfind(attributes, 1, L),
+    {_, Vsn} = lists:keyfind(vsn, 1, Attrs),
+    Vsn.
 
 doit(From, To) ->
     [case file:read_file_info(Filename) of
-         {ok, FileInfo} when FileInfo#file_info.mtime >= From,
-                             FileInfo#file_info.mtime < To ->
+         {ok, #file_info{mtime = Mtime}} when Mtime >= From, Mtime < To ->
              reload(Module);
          {ok, _} ->
              unmodified;
@@ -122,3 +152,10 @@ reload(Module) ->
 
 stamp() ->
     erlang:localtime().
+
+%%
+%% Tests
+%%
+-include_lib("eunit/include/eunit.hrl").
+-ifdef(TEST).
+-endif.

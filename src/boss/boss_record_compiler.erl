@@ -15,7 +15,7 @@ compile(File) ->
 compile(File, Options) ->
     case parse(File) of
         {ok, Forms} ->
-            case compile_to_binary(trick_out_forms(Forms), Options) of
+            case compile_to_binary(trick_out_forms(Forms), File, Options) of
                 {ok, Module, Bin} ->
                     case proplists:get_value(out_dir, Options) of
                         undefined -> ok;
@@ -56,12 +56,12 @@ parse(File) ->
             Error
     end.
 
-compile_to_binary(Forms, Options) ->
+compile_to_binary(Forms, File, Options) ->
     case compile:forms(erl_syntax:revert_forms(Forms), 
             proplists:get_value(compiler_options, Options, [verbose, return_errors])) of
         {ok, Module1, Bin} ->
             code:purge(Module1),
-            case code:load_binary(Module1, atom_to_list(Module1) ++ ".erl", Bin) of
+            case code:load_binary(Module1, File, Bin) of
                 {module, _} -> {ok, Module1, Bin};
                 _ -> {error, lists:concat(["code reload failed: ", Module1])}
             end;

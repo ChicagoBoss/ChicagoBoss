@@ -10,14 +10,15 @@ start(Config) ->
     {ok, DBHost} = application:get_env(db_host),
     {ok, LogFile} = application:get_env(log_file),
     boss_db:start([ {port, DBPort}, {driver, DBDriver}, {host, DBHost} ]),
+    boss_translator:start(),
     case disk_log:open([{name, boss_error_log}, {file, LogFile}]) of
         {ok, boss_error_log} -> ok;
         {repaired,boss_error_log,_,_} -> repaired;
         Error -> io:format("disk_log:open error ~p~n",[Error])
     end,
 
-    load_dir(controller_path(), fun compile_controller/1),
-    load_dir(model_path(), fun compile_model/1),
+    load_dir(boss_files:controller_path(), fun compile_controller/1),
+    load_dir(boss_files:model_path(), fun compile_model/1),
     mochiweb_http:start([{loop, fun(Req) -> mochiweb_request(Req) end} | Config]).
 
 stop() ->
@@ -84,9 +85,8 @@ process_result({redirect, "http://"++Where, Headers}) ->
 process_result({redirect, Where, Headers}) ->
     {302, [{"Location", Where}, {"Cache-Control", "no-cache"}|Headers], ""};
 process_result({ok, Payload, Headers}) ->
-    {200, proplists:delete("Content-Type", Headers) ++ 
-        [{"Content-Type", proplists:get_value("Content-Type", Headers, "text/html")}], 
-        Payload};
+    {200, [{"Content-Type", proplists:get_value("Content-Type", Headers, "text/html")}
+            |proplists:delete("Content-Type", Headers)], Payload};
 process_result({ok, Payload}) ->
     {200, [{"Content-Type", "text/html"}], Payload}.
 
@@ -105,42 +105,42 @@ load_and_execute(Location, Req) ->
     end.
 
 load_and_execute_prod({Controller, _, _} = Location, Req) ->
-    {ok, ControllerFiles} = file:list_dir(controller_path()),
+    {ok, ControllerFiles} = file:list_dir(boss_files:controller_path()),
     case lists:member(Controller ++ "_controller.erl", ControllerFiles) of
         true -> execute_action(Location, Req);
-        false -> render_view(Location)
+        false -> render_view(Location, Req)
     end.
 
-load_and_execute_dev({"doc", ModelName, _}, _Req) ->
-    case load_dir(model_path(), fun compile_model/1) of
+load_and_execute_dev({"doc", ModelName, _}, Req) ->
+    case load_dir(boss_files:model_path(), fun compile_model/1) of
         {ok, _} ->
             Model = list_to_atom(ModelName),
             {Model, Edoc} = boss_record_compiler:edoc_module(
-                model_path(ModelName++".erl"), [{private, true}]),
+                boss_files:model_path(ModelName++".erl"), [{private, true}]),
             {ok, edoc:layout(Edoc)};
         {error, ErrorList} ->
-            render_errors(ErrorList)
+            render_errors(ErrorList, Req)
     end;
 load_and_execute_dev({Controller, _, _} = Location, Req) ->
-    case load_dir(controller_path(), fun compile_controller/1) of
+    case load_dir(boss_files:controller_path(), fun compile_controller/1) of
         {ok, Controllers} ->
             case lists:member(Controller ++ "_controller", Controllers) of
                 true ->
-                    case load_dir(model_path(), fun compile_model/1) of
+                    case load_dir(boss_files:model_path(), fun compile_model/1) of
                         {ok, _} ->
                             execute_action(Location, Req);
                         {error, ErrorList} ->
-                            render_errors(ErrorList)
+                            render_errors(ErrorList, Req)
                     end;
                 false ->
-                    render_view(Location)
+                    render_view(Location, Req)
             end;
         {error, ErrorList} when is_list(ErrorList) ->
-            render_errors(ErrorList)
+            render_errors(ErrorList, Req)
     end.
 
-render_errors(ErrorList) ->
-    render_view({"admin", "error", []}, [{errors, ErrorList}]).
+render_errors(ErrorList, Req) ->
+    render_view({"admin", "error", []}, Req, [{errors, ErrorList}]).
 
 execute_action(Location, Req) ->
     execute_action(Location, Req, []).
@@ -176,7 +176,7 @@ execute_action({Controller, Action, Tokens} = Location, Req, LocationTrail) ->
                                         ControllerInstance:ActionAtom(Req:request_method(), Tokens, Info));
                                 Other -> Other
                             end;
-                        _ -> render_view(Location)
+                        _ -> render_view(Location, Req)
                     end
             end
     end.
@@ -185,22 +185,24 @@ process_action_result(Info, ok) ->
     process_action_result(Info, {ok, []});
 process_action_result(Info, {ok, Data}) ->
     process_action_result(Info, {ok, Data, []});
-process_action_result({Location, _, _}, {ok, Data, Headers}) ->
-    render_view(Location, Data, Headers);
-
+process_action_result({Location, Req, _}, {ok, Data, Headers}) ->
+    render_view(Location, Req, Data, Headers);
 process_action_result(Info, {render_other, OtherLocation}) ->
     process_action_result(Info, {render_other, OtherLocation, []});
-process_action_result(_, {render_other, OtherLocation, Data}) ->
-    render_view(OtherLocation, Data);
-
+process_action_result({_, Req, _}, {render_other, OtherLocation, Data}) ->
+    render_view(OtherLocation, Req, Data);
 process_action_result({_, Req, LocationTrail}, {action_other, OtherLocation}) ->
     execute_action(OtherLocation, Req, [OtherLocation | LocationTrail]);
+process_action_result(_, {output, Payload}) ->
+    {ok, Payload};
+process_action_result(_, {output, Payload, Headers}) ->
+    {ok, Payload, Headers};
 process_action_result(_, Else) ->
     Else.
 
 compile_controller(ModulePath) ->
     CompileResult = compile:file(filename:rootname(ModulePath),
-        [{outdir, filename:join([root_dir(), "ebin"])}, return_errors]),
+        [{outdir, boss_files:ebin_dir() }, return_errors]),
     case CompileResult of
         {ok, Module} ->
             code:purge(Module),
@@ -212,17 +214,9 @@ compile_controller(ModulePath) ->
 
 compile_view_erlydtl(Controller, Template) ->
     erlydtl_compiler:compile(
-        view_path(Controller, Template), 
+        boss_files:view_path(Controller, Template), 
         view_module(Controller, Template), 
-        [{doc_root, view_path()}, {compiler_options, []}]).
-
-compile_view_etcher(Controller, Template) ->
-    case file:read_file(view_path(Controller, Template)) of
-        {ok, Binary} ->
-            etcher:compile(Binary);
-        Err ->
-            Err
-    end.
+        [{doc_root, boss_files:view_path()}, {compiler_options, []}]).
 
 compile_model(ModulePath) ->
     boss_record_compiler:compile(ModulePath).
@@ -261,15 +255,15 @@ load_dir(Dir, Compiler) ->
             {error, ErrorList}
     end.
 
-render_view(Location) ->
-    render_view(Location, []).
+render_view(Location, Req) ->
+    render_view(Location, Req, []).
 
-render_view(Location, Variables) ->
-    render_view(Location, Variables, []).
+render_view(Location, Req, Variables) ->
+    render_view(Location, Req, Variables, []).
 
-render_view({Controller, Template, _}, Variables, Headers) ->
+render_view({Controller, Template, _}, Req, Variables, Headers) ->
     Module = view_module(Controller, Template),
-    Result = case module_is_loaded(Module) of
+    LoadResult = case module_is_loaded(Module) of
         true ->
             case module_older_than(Module, lists:map(fun
                             ({File, _CheckSum}) -> 
@@ -285,28 +279,81 @@ render_view({Controller, Template, _}, Variables, Headers) ->
         false ->
             compile_view_erlydtl(Controller, Template)
     end,
-    case Result of
+    TranslationFun = choose_translation_fun(Module:translatable_strings(), 
+        Req:header(accept_language), proplists:get_value("Content-Language", Headers)),
+    case LoadResult of
         ok ->
-            case Module:render(Variables) of
+            case Module:render(Variables, TranslationFun) of
                 {ok, Payload} ->
                     {ok, Payload, Headers};
                 Err ->
                     Err
             end;
         {error, Error}-> 
-            render_errors([Error])
+            render_errors([Error], Req)
     end.
 
-
-render_view_etcher({Controller, Template, _}, Variables) ->
-    case compile_view_etcher(Controller, Template) of
-        {ok, CompiledTemplate} ->
-            RenderOpts = [{template_loaders, [{file, [view_path()]}]}],
-            {ok, etcher:render(CompiledTemplate, Variables, RenderOpts)};
-        Err ->
-            Err
+choose_translation_fun(_, undefined, undefined) ->
+    none;
+choose_translation_fun(Strings, AcceptLanguages, undefined) ->
+    case mochiweb_util:parse_qvalues(AcceptLanguages) of
+        invalid_qvalue_string ->
+            none;
+        [{Lang, _}] ->
+            translation_fun_for(Lang);
+        QValues when length(QValues) > 1 ->
+            {BestLang, BestNetQValue} = choose_language_from_qvalues(Strings, QValues),
+            case BestNetQValue of
+                0.0 -> none;
+                _ -> translation_fun_for(BestLang)
+            end
+    end;
+choose_translation_fun(_, _, ContentLanguage) ->
+    case boss_translator:is_loaded(ContentLanguage) of
+        true -> translation_fun_for(ContentLanguage);
+        false -> none
     end.
 
+choose_language_from_qvalues(Strings, QValues) ->
+    % calculating translation coverage is costly so we start with the most preferred
+    % languages and work our way down
+    SortedQValues = lists:reverse(lists:keysort(2, QValues)),
+    AssumeLocale = case application:get_env(assume_locale) of
+        {ok, Val} -> Val;
+        _ -> "en"
+    end,
+    lists:foldl(
+        fun
+            ({_, ThisQValue}, {BestLang, BestNetQValue}) when BestNetQValue >= ThisQValue ->
+                {BestLang, BestNetQValue};
+            ({ThisLang, ThisQValue}, {BestLang, BestNetQValue}) ->
+                case ThisQValue * translation_coverage(Strings, ThisLang, AssumeLocale) of
+                    NetQValue when NetQValue > BestNetQValue ->
+                        {ThisLang, NetQValue};
+                    _ ->
+                        {BestLang, BestNetQValue}
+                end
+        end, {"xx-bork", 0.0}, SortedQValues).
+
+translation_fun_for(Locale) ->
+    fun(String) -> boss_translator:lookup(String, Locale) end.
+
+translation_coverage(_, Lang, Lang) ->
+    1.0;
+translation_coverage([], _, _) ->
+    0.0;
+translation_coverage(Strings, Locale, _) ->
+    case boss_translator:is_loaded(Locale) of
+        true ->
+            lists:foldl(fun(String, Acc) ->
+                        case boss_translator:lookup(String, Locale) of
+                            undefined -> Acc;
+                            _ -> Acc + 1
+                        end
+                end, 0, Strings) / length(Strings);
+        false ->
+            0.0
+    end.
 
 module_is_loaded(Module) ->
     case code:is_loaded(Module) of
@@ -351,17 +398,6 @@ module_older_than(CompileDate, [File|Rest]) ->
 
 view_module(Controller, Template) ->
     list_to_atom(lists:concat([Controller, "_view_", Template])).
-
-root_dir() -> filename:join([filename:dirname(code:which(?MODULE)), ".."]).
-
-view_path() -> filename:join([root_dir(), "View"]).
-view_path(Controller) -> filename:join([view_path(), Controller]).
-view_path(Controller, Template) -> filename:join([view_path(Controller), lists:concat([Template, ".html"])]).
-
-model_path() -> filename:join([root_dir(), "Model"]).
-model_path(Model) -> filename:join([model_path(), Model]).
-
-controller_path() -> filename:join([root_dir(), "Controller"]).
 
 format_now(Time) ->
     {{Year, Month, Day}, {Hour, Minute, Second}} = calendar:now_to_local_time(Time),

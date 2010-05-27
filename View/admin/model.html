@@ -1,6 +1,9 @@
 <html>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
     <head>
         <title>{% block title %}Chicago Boss Admin Interface{% endblock %}</title>
+        {% block scripts %}
+        {% endblock %}
     </head>
     <body>
         {% block body %}
@@ -21,7 +24,7 @@
         <p>
         <form action="/admin/create/{{ this_model }}">
             <input type="submit" value="+ New {{ this_model }}" />
-            &nbsp; &nbsp; See also: <a href="/doc/{{ this_model }}">Documentation for the <code>{{ this_model }}</code> model</a>
+            &nbsp; &nbsp; {% trans "See also" %}: <a href="/doc/{{ this_model }}">Documentation for the <code>{{ this_model }}</code> model</a>
         </form>
         </p>
         {% endif %}

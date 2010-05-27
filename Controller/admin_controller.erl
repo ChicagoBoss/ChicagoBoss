@@ -1,5 +1,5 @@
 -module(admin_controller, [Req]).
--export(['_auth'/1, model/3, record/3, delete/3, create/3]).
+-compile(export_all).
 -define(RECORDS_PER_PAGE, 100).
 
 '_auth'(_) ->
@@ -13,7 +13,7 @@
     end.
 
 model('GET', [], Authorization) ->
-    {ok, [{records, []}, {models, model_list()}, {this_model, ""}]};
+    {ok, [{records, []}, {models, boss_files:model_list()}, {this_model, ""}]};
 model('GET', [ModelName], Authorization) ->
     model('GET', [ModelName, "1"], Authorization);
 model('GET', [ModelName, PageName], Authorization) ->
@@ -23,7 +23,7 @@ model('GET', [ModelName, PageName], Authorization) ->
     Records = boss_db:find(Model, [], ?RECORDS_PER_PAGE, (Page - 1) * ?RECORDS_PER_PAGE, primary, str_descending),
     Pages = lists:seq(1, ((RecordCount-1) div ?RECORDS_PER_PAGE)+1),
     {ok, 
-        [{records, Records}, {models, model_list()}, {this_model, ModelName}, 
+        [{records, Records}, {models, boss_files:model_list()}, {this_model, ModelName}, 
             {pages, Pages}, {this_page, Page}], 
         [{"Cache-Control", "no-cache"}]}.
 
@@ -38,7 +38,7 @@ delete('POST', [RecordId], Authorization) ->
     {redirect, "/admin/model/" ++ atom_to_list(Type)}.
 
 create(Method, [RecordType], Authorization) ->
-    case lists:member(RecordType, model_list()) of
+    case lists:member(RecordType, boss_files:model_list()) of
         true ->
             Module = list_to_atom(RecordType),
             NumArgs = proplists:get_value('new', Module:module_info(exports)),
@@ -68,14 +68,50 @@ create(Method, [RecordType], Authorization) ->
             {error, "Nonesuch model."}
     end.
 
-% internal
+lang('GET', [], Auth) ->
+    Languages = boss_files:language_list(),
+    {ok, [{languages, Languages}]};
+lang('GET', [Lang], Auth) ->
+    Languages = boss_files:language_list(),
+    {Untranslated, Translated} = boss_lang:extract_strings(Lang),
+    LastModified = filelib:last_modified(boss_files:lang_path(Lang)),
+    {ok, [{this_lang, Lang}, {languages, Languages},
+            {untranslated_messages, Untranslated},
+            {translated_messages, Translated},
+            {last_modified, LastModified}],
+        [{"Cache-Control", "no-cache"}]};
+lang('POST', [Lang], Auth) ->
+    LangFile = boss_files:lang_path(Lang),
+    {ok, IODevice} = file:open(LangFile, [write, append]),
+    MessageCount = list_to_integer(Req:post_param("message_count")),
+    lists:map(fun(Index) ->
+                Original = Req:post_param(lists:concat(["orig", Index])),
+                Translation = Req:post_param(lists:concat(["trans", Index])),
+                case Translation of
+                    "" -> ok;
+                    _ -> 
+                        file:write(IODevice, 
+                            "\nmsgid \""++boss_lang:escape_quotes(Original)++"\"\n"),
+                        file:write(IODevice, 
+                            "msgstr \""++boss_lang:escape_quotes(Translation)++"\"\n")
+                end
+        end, lists:seq(1, MessageCount)),
+    file:close(IODevice),
+    boss_translator:reload(Lang),
+    {redirect, "/admin/lang/"++Lang}.
 
-model_list() ->
-    ModelPath = filename:join([filename:dirname(code:which(?MODULE)), "..", "Model"]),
-    {ok, Files} = file:list_dir(ModelPath),
-    lists:sort(lists:map(fun(X) -> filename:basename(X, ".erl") end, 
-        lists:filter(fun
-            ("."++_) -> 
-                false; 
-            (File) -> lists:suffix(".erl", File) 
-        end, Files))).
+create_lang('GET', [], Auth) ->
+    {ok, [{languages, boss_files:language_list()}]};
+create_lang('POST', [], Auth) ->
+    % TODO sanitize
+    NewLang = Req:post_param("language"),
+    LangFile = boss_files:lang_path(NewLang),
+    {ok, IODevice} = file:open(LangFile, [write]),
+    file:close(IODevice),
+    {redirect, "/admin/lang/"++NewLang}.
+
+delete_lang('GET', [Lang], Auth) ->
+    {ok, [{this_lang, Lang}]};
+delete_lang('POST', [Lang], Auth) ->
+    ok = file:delete(boss_files:lang_path(Lang)),
+    {redirect, "/admin/lang"}.

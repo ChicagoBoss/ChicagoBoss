@@ -51,6 +51,7 @@ headers({Req, _DocRoot}) ->
         {range, F("range")},
         {referer, F("referer")},
         {user_agent, F("user-agent")},
+        {accept_language, F("accept-language")},
         {accept_ranges, F("accept-ranges")},
         {cookie, F("cookie")},
         {keep_alive, F("keep-alive")},

@@ -1,0 +1,339 @@
+{% extends "index.html" %}
+{% block header %}
+        <div class="equation">
+            <span style="background-color: #B80009;">Rails Idioms</span> +
+            <span style="background-color: #004B00;">Django Templates</span> +
+            <span style="background-color: #0D0075;">Erlang Power</span> =
+            <em>Chicago</em> <strong>BOSS</strong>
+        </div>
+{% endblock %}
+{% block title %}Comparison of Erlang Web Frameworks{% endblock %}
+{% block nav %}
+<a href="index.html">F.A.Q.</a> &nbsp; | &nbsp; 
+<strong>COMPARE</strong> &nbsp; | &nbsp; 
+<a href="guide.html">GUIDE</a> &nbsp; | &nbsp; 
+<a href="api.html">API</a> &nbsp; | &nbsp; 
+<a href="download.html">DOWNLOAD</a> &nbsp; | &nbsp;
+<a href="forum.html">COMMUNITY</a>
+{% endblock %}
+{% block style %}
+<style type="text/css">
+    td {
+        text-align: center;
+        width: 90px;
+    }
+    tr td:first-child {
+        text-align: left;
+        color: black;
+        width: 150px;
+    }
+    tr.grouping td {
+        font-style: italic;
+        height: 40px;
+        padding-top: 10px;
+    }
+    td.check {
+        color: #59BD5C;
+    }
+</style>
+{% endblock %}
+{% block content %}
+<center>
+<h2>Comparison of Erlang Web Frameworks</h2>
+</center>
+<table>
+<thead>
+<tr><th></th>
+    <th><a href="http://github.com/davebryson/beepbeep">BeepBeep</a></th>
+<th>Chicago<br />Boss</th>
+<th><a href="http://www.erlang-web.org/">Erlang<br />Web</a></th>
+<th><a href="http://www.erlyweb.org/">ErlyWeb</a></th>
+<th><a href="http://nitrogenproject.com/">Nitrogen</a></th>
+<th><a href="http://zotonic.com/">Zotonic</a></th>
+</tr>
+</thead>
+<tbody>
+<tr class="grouping">
+<td>DEVELOPMENT</td>
+</tr>
+<tr>
+<td>Admin interface</td>
+<td>-</td>
+<td class="check">&#x2713;</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td class="check">&#x2713;</td>
+</tr>
+<tr>
+<td>Automatic recompile</td>
+<td>-</td>
+<td class="check">&#x2713;</td>
+<td>-</td>
+<td class="check">&#x2713;</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Pretty in-browser parse errors</td>
+<td>-</td>
+<td class="check">&#x2713;</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr class="grouping">
+<td>TEMPLATES</td>
+</tr>
+<tr>
+    <td><a href="http://code.google.com/p/erlydtl/">ErlyDTL</a></td>
+<td class="check">&#x2713;</td>
+<td class="check">&#x2713;</td>
+<td class="check">&#x2713;</td>
+<td>-</td>
+<td>-</td>
+<td class="check">&#x2713;</td>
+</tr>
+<tr>
+    <td><a href="http://erlyweb.org/doc/erltl.html">ErlTL</a></td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td class="check">&#x2713;</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+    <td><a href="http://wiki.erlang-web.org/WPartTemplates">WPart</a></td>
+<td>-</td>
+<td>-</td>
+<td class="check">&#x2713;</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+    <td><a href="http://nitrogenproject.com/doc/elements.html">Record syntax</a></td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td class="check">&#x2713;</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Internationalization</td>
+<td>-</td>
+<td class="check">&#x2713;</td>
+<td class="check">&#x2713;</td>
+<td>-</td>
+<td>-</td>
+<td class="check">&#x2713;</td>
+</tr>
+<tr class="grouping">
+<td>JAVASCRIPT</td>
+</tr>
+<tr>
+    <td>Built-in AJAX</td>
+    <td>-</td>
+    <td>-</td>
+    <td>-</td>
+    <td>-</td>
+    <td class="check">&#x2713;</td>
+    <td class="check">&#x2713;</td>
+</tr>
+<tr>
+    <td>Built-in Comet</td>
+    <td>-</td>
+    <td>-</td>
+    <td>-</td>
+    <td>-</td>
+    <td class="check">&#x2713;</td>
+    <td class="check">&#x2713;</td>
+</tr>
+<tr>
+    <td>JS form validation</td>
+    <td>-</td>
+    <td>-</td>
+    <td>-</td>
+    <td>-</td>
+    <td class="check">&#x2713;</td>
+    <td class="check">&#x2713;</td>
+</tr>
+</table>
+<br />
+<table>
+    <thead>
+<tr><th></th>
+    <th><a href="http://github.com/davebryson/beepbeep">BeepBeep</a></th>
+<th>Chicago<br />Boss</th>
+<th><a href="http://www.erlang-web.org/">Erlang<br />Web</a></th>
+<th><a href="http://www.erlyweb.org/">ErlyWeb</a></th>
+<th><a href="http://nitrogenproject.com/">Nitrogen</a></th>
+<th><a href="http://zotonic.com/">Zotonic</a></th>
+</tr>
+</thead>
+<tbody>
+<tr class="grouping">
+    <td>DATA MODEL</td>
+    <td>n/a</td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td>n/a</td>
+    <td></td>
+</tr>
+<tr>
+    <td>Code generation</td>
+    <td></td>
+    <td class="check">&#x2713;</td>
+    <td>-</td>
+    <td class="check">&#x2713;</td>
+    <td></td>
+    <td>-</td>
+</tr>
+<tr>
+    <td>Data validation</td>
+    <td></td>
+    <td class="check">&#x2713;</td>
+    <td class="check">&#x2713;</td>
+    <td class="check">&#x2713;</td>
+    <td></td>
+    <td class="check">&#x2713;</td>
+</tr>
+<tr>
+    <td><a href="http://www.erlang.org/doc/apps/edoc/users_guide.html">EDoc</a> generation</td>
+    <td></td>
+    <td class="check">&#x2713;</td>
+    <td>-</td>
+    <td>-</td>
+    <td></td>
+    <td>-</td>
+</tr>
+<tr class="grouping">
+<td>DATABASES</td>
+<td>n/a</td>
+<td></td>
+<td></td>
+<td></td>
+<td>n/a</td>
+<td></td>
+</tr>
+<tr>
+    <td><a href="http://couchdb.apache.org/">CouchDB</a></td>
+<td></td>
+<td>-</td>
+<td class="check">&#x2713;</td>
+<td>-</td>
+<td></td>
+<td>-</td>
+</tr>
+<tr>
+    <td><a href="http://www.erlang.org/doc/apps/mnesia/users_guide.html">Mnesia</a></td>
+<td></td>
+<td>-</td>
+<td class="check">&#x2713;</td>
+<td class="check">&#x2713;</td>
+<td></td>
+<td>-</td>
+</tr>
+<tr>
+    <td><a href="http://en.wikipedia.org/wiki/MySQL">MySQL</a></td>
+<td></td>
+<td>-</td>
+<td>-</td>
+<td class="check">&#x2713;</td>
+<td></td>
+<td>-</td>
+</tr>
+<tr>
+    <td><a href="http://en.wikipedia.org/wiki/PostgreSQL">PostgreSQL</a></td>
+<td></td>
+<td>-</td>
+<td>-</td>
+<td class="check">&#x2713;</td>
+<td></td>
+<td class="check">&#x2713;</td>
+</tr>
+<tr>
+    <td><a href="http://1978th.net/tokyotyrant/">Tokyo Tyrant</a></td>
+<td></td>
+<td class="check">&#x2713;</td>
+<td>-</td>
+<td>-</td>
+<td></td>
+<td>-</td>
+</tr>
+<tr class="grouping">
+    <td>CONTROLLERS</td>
+</tr>
+<tr>
+    <td><a href="http://github.com/skarab/ewgi">EWGI</a></td>
+    <td>-</td>
+    <td>-</td>
+    <td class="check">&#x2713;</td>
+    <td>-</td>
+    <td>-</td>
+    <td>-</td>
+</tr>
+<tr>
+    <td><a href="http://github.com/rklophaus/SimpleBridge">SimpleBridge</a></td>
+    <td>-</td>
+    <td class="check">&#x2713;</td>
+    <td>-</td>
+    <td>-</td>
+    <td class="check">&#x2713;</td>
+    <td>-</td>
+</tr>
+<tr>
+    <td><a href="http://bitbucket.org/justin/webmachine/wiki/Home">Webmachine</a></td>
+    <td>-</td>
+    <td>-</td>
+    <td>-</td>
+    <td>-</td>
+    <td>-</td>
+    <td class="check">&#x2713;</td>
+</tr>
+<tr>
+    <td>URL pattern-matching</td>
+    <td class="check">&#x2713;</td>
+    <td class="check">&#x2713;</td>
+    <td class="check">&#x2713;</td>
+    <td class="check">&#x2713;</td>
+    <td>-</td>
+    <td class="check">&#x2713;</td>
+</tr>
+<tr class="grouping">
+    <td>SERVERS</td>
+</tr>
+<tr>
+    <td><a href="http://www.erlang.org/doc/apps/inets/users_guide.html">Inets</a></td>
+    <td>-</td>
+    <td>-</td>
+    <td class="check">&#x2713;</td>
+    <td>-</td>
+    <td class="check">&#x2713;</td>
+    <td>-</td>
+</tr>
+<tr>
+    <td><a href="http://code.google.com/p/mochiweb/">Mochiweb</a></td>
+    <td class="check">&#x2713;</td>
+    <td class="check">&#x2713;</td>
+    <td>-</td>
+    <td>-</td>
+    <td class="check">&#x2713;</td>
+    <td class="check">&#x2713;</td>
+</tr>
+<tr>
+    <td><a href="http://yaws.hyber.org/">Yaws</a></td>
+    <td>-</td>
+    <td>-</td>
+    <td class="check">&#x2713;</td>
+    <td class="check">&#x2713;</td>
+    <td class="check">&#x2713;</td>
+    <td>-</td>
+</tr>
+</tbody>
+</table>
+{% endblock %}

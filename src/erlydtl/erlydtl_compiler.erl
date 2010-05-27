@@ -52,10 +52,11 @@
     module = [],
     compiler_options = [verbose, report_errors],
     force_recompile = false,
-    locale}).
+    locale = none}).
 
 -record(ast_info, {
     dependencies = [],
+    translatable_strings = [],
     var_names = [],
     pre_render_asts = []}).
     
@@ -230,14 +231,20 @@ forms(File, Module, BodyAst, BodyInfo, CheckSum) ->
     Render0FunctionAst = erl_syntax:function(erl_syntax:atom(render),
         [erl_syntax:clause([], none, [erl_syntax:application(none, 
                         erl_syntax:atom(render), [erl_syntax:list([])])])]),
-    Function2 = erl_syntax:application(none, erl_syntax:atom(render2), 
-        [erl_syntax:variable("Variables")]),
+    Render1FunctionAst = erl_syntax:function(erl_syntax:atom(render),
+        [erl_syntax:clause([erl_syntax:variable("Variables")], none, 
+                [erl_syntax:application(none,
+                        erl_syntax:atom(render),
+                        [erl_syntax:variable("Variables"), erl_syntax:atom(none)])])]),
+    Function2 = erl_syntax:application(none, erl_syntax:atom(render_internal), 
+        [erl_syntax:variable("Variables"), erl_syntax:variable("TranslationFun")]),
     ClauseOk = erl_syntax:clause([erl_syntax:variable("Val")], none,
         [erl_syntax:tuple([erl_syntax:atom(ok), erl_syntax:variable("Val")])]),     
     ClauseCatch = erl_syntax:clause([erl_syntax:variable("Err")], none,
         [erl_syntax:tuple([erl_syntax:atom(error), erl_syntax:variable("Err")])]),            
-    Render1FunctionAst = erl_syntax:function(erl_syntax:atom(render),
-        [erl_syntax:clause([erl_syntax:variable("Variables")], none, 
+    Render2FunctionAst = erl_syntax:function(erl_syntax:atom(render),
+        [erl_syntax:clause([erl_syntax:variable("Variables"), 
+                    erl_syntax:variable("TranslationFun")], none, 
             [erl_syntax:try_expr([Function2], [ClauseOk], [ClauseCatch])])]),  
      
     SourceFunctionTuple = erl_syntax:tuple(
@@ -253,15 +260,19 @@ forms(File, Module, BodyAst, BodyInfo, CheckSum) ->
                         erl_syntax:tuple([erl_syntax:string(XFile), erl_syntax:string(XCheckSum)])
                 end, BodyInfo#ast_info.dependencies))])]),     
 
-   BodyAstTmp = erl_syntax:application(
+    TranslatableStringsAst = erl_syntax:function(
+        erl_syntax:atom(translatable_strings), [erl_syntax:clause([], none,
+                [erl_syntax:list(lists:map(fun(String) -> erl_syntax:string(String) end,
+                            BodyInfo#ast_info.translatable_strings))])]),
+
+    BodyAstTmp = erl_syntax:application(
                     erl_syntax:atom(erlydtl_runtime),
                     erl_syntax:atom(stringify_final),
-                    [BodyAst]
-                ),
+                    [BodyAst]),
 
     RenderInternalFunctionAst = erl_syntax:function(
-        erl_syntax:atom(render2), 
-            [erl_syntax:clause([erl_syntax:variable("Variables")], none, 
+        erl_syntax:atom(render_internal), 
+        [erl_syntax:clause([erl_syntax:variable("Variables"), erl_syntax:variable("TranslationFun")], none, 
                 [BodyAstTmp])]),   
     
     ModuleAst  = erl_syntax:attribute(erl_syntax:atom(module), [erl_syntax:atom(Module)]),
@@ -269,11 +280,13 @@ forms(File, Module, BodyAst, BodyInfo, CheckSum) ->
     ExportAst = erl_syntax:attribute(erl_syntax:atom(export),
         [erl_syntax:list([erl_syntax:arity_qualifier(erl_syntax:atom(render), erl_syntax:integer(0)),
                     erl_syntax:arity_qualifier(erl_syntax:atom(render), erl_syntax:integer(1)),
+                    erl_syntax:arity_qualifier(erl_syntax:atom(render), erl_syntax:integer(2)),
                     erl_syntax:arity_qualifier(erl_syntax:atom(source), erl_syntax:integer(0)),
-                    erl_syntax:arity_qualifier(erl_syntax:atom(dependencies), erl_syntax:integer(0))])]),
+                    erl_syntax:arity_qualifier(erl_syntax:atom(dependencies), erl_syntax:integer(0)),
+                    erl_syntax:arity_qualifier(erl_syntax:atom(translatable_strings), erl_syntax:integer(0))])]),
     
-    [erl_syntax:revert(X) || X <- [ModuleAst, ExportAst, Render0FunctionAst,
-            Render1FunctionAst, SourceFunctionAst, DependenciesFunctionAst, RenderInternalFunctionAst
+    [erl_syntax:revert(X) || X <- [ModuleAst, ExportAst, Render0FunctionAst, Render1FunctionAst, Render2FunctionAst,
+            SourceFunctionAst, DependenciesFunctionAst, TranslatableStringsAst, RenderInternalFunctionAst
             | BodyInfo#ast_info.pre_render_asts]].    
 
         
@@ -323,8 +336,8 @@ body_ast(DjangoParseTree, Context, TreeWalker) ->
                     TreeWalkerAcc);
             ({'string', _Pos, String}, TreeWalkerAcc) -> 
                 string_ast(String, TreeWalkerAcc);
-	    ({'trans', {string_literal, _Pos, FormatString}}, TreeWalkerAcc) ->
-                translated_ast(FormatString, Context, TreeWalkerAcc);
+	    ({'trans', Value}, TreeWalkerAcc) ->
+                translated_ast(Value, Context, TreeWalkerAcc);
             ({'include', {string_literal, _, File}}, TreeWalkerAcc) ->
                 include_ast(unescape_string_literal(File), Context, TreeWalkerAcc);
             ({'if', Expression, Contents}, TreeWalkerAcc) ->
@@ -446,6 +459,10 @@ merge_info(Info1, Info2) ->
             lists:merge(
                 lists:sort(Info1#ast_info.var_names), 
                 lists:sort(Info2#ast_info.var_names)),
+        translatable_strings =
+            lists:merge(
+                lists:sort(Info1#ast_info.translatable_strings),
+                lists:sort(Info2#ast_info.translatable_strings)),
         pre_render_asts = 
             lists:merge(
                 Info1#ast_info.pre_render_asts,
@@ -465,11 +482,24 @@ empty_ast(TreeWalker) ->
     {{erl_syntax:list([]), #ast_info{}}, TreeWalker}.
 
 
-translated_ast(String,Context, TreeWalker) ->
-        NewStr = string:sub_string(String, 2, string:len(String) -1),
-	Locale = Context#dtl_context.locale,
-        LocalizedString = erlydtl_i18n:translate(NewStr,Locale),
-        {{erl_syntax:string(LocalizedString), #ast_info{}}, TreeWalker}.
+translated_ast({string_literal, _, String}, Context, TreeWalker) ->
+    NewStr = unescape_string_literal(String),
+    DefaultString = case Context#dtl_context.locale of
+        none -> NewStr;
+        Locale -> erlydtl_i18n:translate(NewStr,Locale)
+    end,
+    translated_ast2(erl_syntax:string(NewStr), erl_syntax:string(DefaultString),
+        #ast_info{translatable_strings = [NewStr]}, TreeWalker);
+translated_ast(ValueToken, Context, TreeWalker) ->
+    {{Ast, Info}, TreeWalker1} = value_ast(ValueToken, true, Context, TreeWalker),
+    translated_ast2(Ast, Ast, Info, TreeWalker1).
+
+translated_ast2(NewStrAst, DefaultStringAst, AstInfo, TreeWalker) ->
+    StringLookupAst = erl_syntax:application(
+        erl_syntax:atom(erlydtl_runtime),
+        erl_syntax:atom(translate),
+        [NewStrAst, erl_syntax:variable("TranslationFun"), DefaultStringAst]),
+    {{StringLookupAst, AstInfo}, TreeWalker}.
 
 string_ast(String, TreeWalker) ->
     {{erl_syntax:string(String), #ast_info{}}, TreeWalker}. %% less verbose AST, better for development and debugging
@@ -512,16 +542,16 @@ filter_ast_noescape(Variable, Filter, Context, TreeWalker) ->
     VarValue = filter_ast1(Filter, VariableAst),
     {{VarValue, Info}, TreeWalker2}.
 
-filter_ast1([{identifier, _, Name} | Arg], VariableAst) ->
+filter_ast1([{identifier, _, Name}, {string_literal, _, ArgName}], VariableAst) ->
+    filter_ast2(Name, VariableAst, [erl_syntax:string(unescape_string_literal(ArgName))]);
+filter_ast1([{identifier, _, Name}, {number_literal, _, ArgName}], VariableAst) ->
+    filter_ast2(Name, VariableAst, [erl_syntax:integer(list_to_integer(ArgName))]);
+filter_ast1([{identifier, _, Name}|_], VariableAst) ->
+    filter_ast2(Name, VariableAst, []).
+
+filter_ast2(Name, VariableAst, AdditionalArgs) ->
     erl_syntax:application(erl_syntax:atom(erlydtl_filters), erl_syntax:atom(Name), 
-        [VariableAst | case Arg of 
-                [{string_literal, _, ArgName}] ->
-                    [erl_syntax:string(unescape_string_literal(ArgName))];
-                [{number_literal, _, ArgName}] ->
-                    [erl_syntax:integer(list_to_integer(ArgName))];
-                _ ->
-                    []
-            end]).
+        [VariableAst | AdditionalArgs]).
  
 search_for_escape_filter(_, _, #dtl_context{auto_escape = on}) ->
     on;

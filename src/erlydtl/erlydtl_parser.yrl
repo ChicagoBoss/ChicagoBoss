@@ -130,6 +130,7 @@ Terminals
     in_keyword
     include_keyword
     load_keyword
+    noop_keyword
     not_keyword
     now_keyword
     number_literal
@@ -183,9 +184,12 @@ Value -> Variable : '$1'.
 Value -> Literal : '$1'.
 
 Variable -> identifier : {variable, '$1'}.
-Variable -> Value '.' identifier : {attribute, {'$3', '$1'}}.
+Variable -> Variable '.' identifier : {attribute, {'$3', '$1'}}.
 
 TransTag -> open_tag trans_keyword string_literal close_tag : {trans, '$3'}.
+TransTag -> open_tag trans_keyword Variable close_tag : {trans, '$3'}.
+TransTag -> open_tag trans_keyword string_literal noop_keyword close_tag : '$3'.
+TransTag -> open_tag trans_keyword Variable noop_keyword close_tag : '$3'.
 
 ExtendsTag -> open_tag extends_keyword string_literal close_tag : {extends, '$3'}.
 IncludeTag -> open_tag include_keyword string_literal close_tag : {include, '$3'}.

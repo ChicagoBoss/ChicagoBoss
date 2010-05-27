@@ -80,7 +80,7 @@ view(<span class="atom">'GET'</span>, [Year, Month]) -&gt;<br />
     {ok, Variables<span class="typevar">::proplist()</span>, Headers<span class="typevar">::proplist()</span>}
 </div>
     
-<p><code>Variables</code> will be passed into the associated Django template. <code>Headers</code> are HTTP headers you want to set, but the only allowed one right now is <code>Content-Type</code> (defaults to <code>"text/html"</code>).</p>
+<p><code>Variables</code> will be passed into the associated Django template, and <code>Headers</code> are HTTP headers you want to set (e.g., <code>Content-Type</code>).</p>
 
 <div class="code">
     {redirect, Location<span class="typevar">::string()</span>}
@@ -100,7 +100,7 @@ view(<span class="atom">'GET'</span>, [Year, Month]) -&gt;<br />
 <p>Execute the specified controller action, but without performing an HTTP redirect.</p>
 
 <div class="code">
-{render_other, OtherLocation}
+    {render_other, OtherLocation}
 </div>
 <p><code>OtherLocation = {Controller<span class="typevar">::atom()</span>, Action<span class="typevar">::atom()</span>}</code></p>
 
@@ -113,6 +113,18 @@ view(<span class="atom">'GET'</span>, [Year, Month]) -&gt;<br />
 <p><code>OtherLocation = {Controller<span class="typevar">::atom()</span>, Action<span class="typevar">::atom()</span>}</code></p>
 
 <p>Render the view from <code>OtherLocation</code> using <code>Variables</code>, but don't actually execute the associated controller action.</p>
+
+<div class="code">
+    {output, Output<span class="typevar">::iolist()</span>}
+</div>
+
+<p>Skip views altogether and return <code>Output</code> to the client.</p>
+
+<div class="code">
+    {output, Output<span class="typevar">::iolist()</span>, Headers<span class="typevar">::proplist()</span>}
+</div>
+
+<p>Skip views altogether and return <code>Output</code> to the client while setting additional HTTP <code>Headers</code>.</p>
 
 <br />
 <a name="simplebridge"></a>

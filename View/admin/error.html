@@ -3,7 +3,7 @@
         <title>Oops!</title>
     </head>
     <body>
-        <h1><em>We got a problem!</em></h1>
+        <h1><em>{% trans "We got a problem!" %}</em></h1>
         {% for filename, error in errors %}
         <p><em>In file</em> {{ filename }}:</p>
         <ul>

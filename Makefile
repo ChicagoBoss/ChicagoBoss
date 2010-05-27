@@ -3,15 +3,16 @@ SERVER_APP=mochiweb.app
 DRIVER_APP=medici.app
 DB_APP=boss_db.app
 TEMPLATE_APP=etcher.app
+TRANSLATE_APP=boss_translator.app
 APP=boss.app
 APPLICATION=boss
 DEPS 	= erlydtl mochiweb etcher
 
-all: ebin/$(APP) ebin/$(DB_APP) ebin/$(DRIVER_APP) ebin/$(SERVER_APP) ebin/$(TEMPLATE_APP) log
+all: ebin/$(APP) ebin/$(DB_APP) ebin/$(DRIVER_APP) ebin/$(SERVER_APP) ebin/$(TEMPLATE_APP) ebin/$(TRANSLATE_APP) dirs
 	$(ERL) -make
 
-log:
-	-mkdir -p log
+dirs:
+	-mkdir -p log Lang
 
 ebin/$(APP): src/boss/$(APP)
 	-mkdir -p ebin
@@ -22,6 +23,10 @@ ebin/$(DB_APP): src/boss/$(DB_APP)
 	cp $< $@
 
 ebin/$(DRIVER_APP): src/medici/$(DRIVER_APP)
+	-mkdir -p ebin
+	cp $< $@
+
+ebin/$(TRANSLATE_APP): src/boss/$(TRANSLATE_APP)
 	-mkdir -p ebin
 	cp $< $@
 
