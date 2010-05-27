@@ -1,0 +1,36 @@
+{% extends "guide.html" %}
+{% block guide_content %}
+<p>This page describes how to completely internationalize and localize a Chicago Boss app in just a few minutes.</p>
+<p><em>Introduction.</em> I18n is something most people avoid, and for good reason: to get even basic i18n, you've traditionally needed to to hire translators, rewrite large amounts of the code base, and muck around with PO- and MO-files. But Chicago Boss makes I18n nice and simple. If you don't mind quick-and-dirty translations from Google Translate for a first pass, you won't even need translators.</p>
+<p><em>Step 1</em>: The first and hardest step is to <em>internationalize</em> your templates by putting strings you want to translate into a special <code>trans</code> tag, e.g.:</p>
+<div class="code">
+    <span class="braces">{{ "{%" }}</span> <span class="keyword">trans</span> <span class="string">"Welcome!"</span> <span class="braces">{{ "%}" }}</span>
+</div>
+<p>If you have code that displays validation errors returned from <a href="api-record.html#save">BossRecord:save()</a>, you should put those in <code>trans</code> tags, too, e.g.:</p>
+<div class="code">
+    <span class="bracket">&lt;<span class="name">ol</span>&gt;</span><br />
+    <span class="braces">{{ "{%" }}</span> <span class="keyword">for</span> error <span class="keyword">in</span> validation_errors <span class="braces">{{ "%}" }}</span><br />
+    <span class="bracket">&lt;<span class="name">li</span>&gt;</span><span class="braces">{{ "{%" }}</span> <span class="keyword">trans</span> error <span class="braces">{{ "%}" }}</span><br />
+    <span class="braces">{{ "{%" }}</span> <span class="keyword">endfor</span> <span class="braces">{{ "%}" }}</span><br />
+    <span class="bracket">&lt;/<span class="name">ol</span>&gt;</span>
+</div>
+<p><em>Step 2</em>: Now we need to create a language file. Visit /admin/lang on your development server. You should see a page like this:</p>
+<img src="http://www.chicagoboss.org/images/translator-new.jpg" />
+<p><em>Step 3</em>: Click "New language file"</p>
+<img src="http://www.chicagoboss.org/images/translator-create.jpg" />
+<p><em>Step 4</em>: Choose a language for which you want to have a translation, and click "Create language file".</p>
+<p><em>Step 5</em>: You should a page with a lot of messages pulled from your app's templates, as well as all the error messages returned by the <code>validation_errors()</code> function of your data models. (You'll see messages taken from the /admin interface itself, too.)</p>
+<img src="http://www.chicagoboss.org/images/translator-untrans.jpg" />
+<p><em>Step 6</em>: Fill out the form yourself, or cheat and click "Fill in the blanks with Google!"</p>
+<img src="http://www.chicagoboss.org/images/translator-untrans-filled.jpg" />
+<p><em>Step 7</em>: Click "Submit translations"</p>
+<p><em>Step 8</em>: You should see all of your translations for the language you chose.</p>
+<img src="http://www.chicagoboss.org/images/translator-trans.jpg" />
+<p>...and that's it! Visitors to your site who specify this language in their browsers will automatically see these messages instead of the original ones.</p>
+<p>You can find the files used for translations in the <code>Lang/</code> directory in your project directory. They're just PO-files, so if your PO-foo is strong you can edit them directly.</p>
+<p>What if you want to override the language specified in a user's browser settings? Not a problem. You just need to return a "Content-Language" HTTP header from your controller, like so:</p>
+<div class="code">
+    {ok, [], [{<span class="string">"Content-Language"</span>, <span class="string">"fr"</span>}]}.
+</div>
+<p>That code would ensure that the French language strings are used (assuming you created a language file for <code>fr</code>).</p>
+{% endblock %}

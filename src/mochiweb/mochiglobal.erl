@@ -33,7 +33,7 @@ put(_K, V, Mod) ->
     code:load_binary(Mod, atom_to_list(Mod) ++ ".erl", Bin),
     ok.
 
--spec delete(atom()) -> boolean().
+-spec delete(atom()) -> true | false.
 %% @doc Delete term stored at K, no-op if non-existent.
 delete(K) ->
     delete(K, key_to_module(K)).

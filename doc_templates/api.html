@@ -10,7 +10,7 @@
 {% block nav %}
 <a href="index.html">F.A.Q.</a> &nbsp; | &nbsp; 
 <a href="compare.html">COMPARE</a> &nbsp; | &nbsp; 
-<a href="guide.html">GUIDE</a> &nbsp; | &nbsp; 
+<a href="guide.html">GUIDES</a> &nbsp; | &nbsp; 
 <strong>API</strong> &nbsp; | &nbsp; 
 <a href="download.html">DOWNLOAD</a> &nbsp; | &nbsp;
 <a href="forum.html">COMMUNITY</a>
@@ -20,8 +20,7 @@
 <div style="text-align: center; font-style: italic;">
 <p>The Chicago Boss API is mostly stable, but still might change before 1.0.</p>
 </div>
-{% block api_nav %}
-<div style="text-align: center; font-size: 20px; padding: 16px;">
+<div class="subnav">
     {% ifequal this_page "api-db.html" %}
     <strong>BossDB</strong>
     {% else %}
@@ -46,7 +45,6 @@
     <a href="api-view.html">Django Templates</a>
     {% endifequal %}
 </div>
-{% endblock %}
 <div style="padding-top: 20px;">
 {% block api_content %}
 {% endblock %}

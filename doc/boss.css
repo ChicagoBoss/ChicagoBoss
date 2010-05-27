@@ -35,6 +35,9 @@ div.code span.function {
 div.code span.bracket {
     color: #00DBFF;
 }
+div.code span.keyword {
+    color: #FFF200;
+}
 div.code span.bracket span.name {
     color: #FFF200;
 }
@@ -56,6 +59,8 @@ div.code span.atom {
 }
 div.nav {
     font-size: 20px; padding-top: 40px; padding-bottom: 20px;
+}
+div.subnav {text-align: center; font-size: 20px; padding: 16px;
 }
 p.question {
     font-style: italic;

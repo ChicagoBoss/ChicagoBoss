@@ -1,0 +1,113 @@
+<html>
+    <head>
+        <title>Chicago Boss - the MVC that packs a punch (chicagoboss.org)</title>
+        <link rel="stylesheet" type="text/css" href="boss.css" />
+            
+        <style type="text/css">
+        </style>
+            
+    </head>
+    <body>
+        
+        <div class="equation">
+            <span style="background-color: #B80009;">Rails Idioms</span> +
+            <span style="background-color: #004B00;">Django Templates</span> +
+            <span style="background-color: #0D0075;">Erlang Power</span> =
+            <em>Chicago</em> <strong>BOSS</strong>
+        </div>
+
+        <div class="nav">
+            
+<a href="index.html">F.A.Q.</a> &nbsp; | &nbsp; 
+<a href="compare.html">COMPARE</a> &nbsp; | &nbsp; 
+<strong>GUIDES</strong> &nbsp; | &nbsp; 
+<a href="api.html">API</a> &nbsp; | &nbsp; 
+<a href="download.html">DOWNLOAD</a> &nbsp; | &nbsp;
+<a href="forum.html">COMMUNITY</a>
+
+        </div>
+        <div style="position: relative;">
+            <div class="content">
+                
+<p><em>We have a few guides to get you started. Choose the one that's right for you:</em></p>
+<div class="subnav">
+    
+    <strong>Example App</strong>
+    
+    &nbsp; | &nbsp; 
+    
+    <a href="guide-evening.html">An Evening With Chicago Boss</a> 
+    
+    &nbsp; | &nbsp;
+    
+    <a href="guide-i18n.html">I18n In 8 Minutes</a> 
+    
+</div>
+
+<p>Here's the code you'd write with Boss to define, create, save, and display relational records in the obligatory blog application:</p>
+<p>Model/blog_post.erl:</p>
+<div class="code">
+    <span class="attr">-module</span>(blog_post, [Id, Title, Text, AuthorId]).<br />
+    <span class="attr">-compile</span>(export_all).<br />
+    <span class="attr">-belongs_to</span>(author).
+</div>
+
+<p>Model/author.erl:</p>
+<div class="code">
+    <span class="attr">-module</span>(author, [Id, Name]).<br />
+    <span class="attr">-compile</span>(export_all).<br />
+    <span class="attr">-has_many</span>(blog_posts).
+</div>
+
+<p>Controller/blog_post_controller.erl:</p>
+<div class="code">
+    <span class="attr">-module</span>(blog_post_controller, [Req]).<br />
+    <span class="attr">-compile</span>(export_all).<br />
+    <br />
+    create(<span class="atom">'GET'</span>, []) -&gt;<br />
+    &nbsp;&nbsp;&nbsp;&nbsp;ok;<br />
+    create(<span class="atom">'POST'</span>, []) -&gt;<br />
+    &nbsp;&nbsp;&nbsp;&nbsp;FakeAuthor = (<span class="function">author</span>:<span class="function">new</span>(id, <span class="string">"Mark Twain"</span>)):<span class="function">save</span>(),<br />
+    &nbsp;&nbsp;&nbsp;&nbsp;BlogPost = <span class="function">blog_post</span>:<span class="function">new</span>(id,<br />
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="function">Req</span>:<span class="function">post_value</span>(<span class="string">"title"</span>), <br />
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="function">Req</span>:<span class="function">post_value</span>(<span class="string">"text"</span>), <br />
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="function">FakeAuthor</span>:<span class="function">id</span>()),<br />
+    &nbsp;&nbsp;&nbsp;&nbsp;SavedBlogPost = <span class="function">BlogPost</span>:<span class="function">save</span>(),<br />
+    &nbsp;&nbsp;&nbsp;&nbsp;{redirect, <span class="string">"/blog_post/view/"</span>++<span class="function">SavedBlogPost</span>:<span class="function">id</span>()}.<br />
+    <br />
+    view(<span class="atom">'GET'</span>, [BlogPostId]) -&gt;<br />
+    &nbsp;&nbsp;&nbsp;&nbsp;{ok, [{blog_post, <span class="function">boss_db</span>:<span class="function">find</span>(BlogPostId)}]}.<br />
+</div>
+
+<p>View/blog_post/create.html:</p>
+<div class="code">
+    <span class="bracket">&lt;<span class="name">form</span> <span class="attr">method</span>=<span class="string">&quot;post&quot;</span>&gt;</span><br />
+    Title: <span class="bracket">&lt;<span class="name">input</span> <span class="attr">name</span>=<span class="string">&quot;title&quot;</span>&gt;</span><span class="bracket">&lt;<span class="name">br</span> /&gt;</span><br />
+    Text: <span class="bracket">&lt;<span class="name">textarea</span> <span class="attr">name</span>=<span class="string">&quot;text&quot;</span>&gt;</span><span class="bracket">&lt;/<span class="name">textarea</span>&gt;</span><span class="bracket">&lt;<span class="name">br</span> /&gt;</span><br />
+    <span class="bracket">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;submit&quot;</span>&gt;</span><br />
+    <span class="bracket">&lt;/<span class="name">form</span>&gt;</span>
+</div>
+
+<p>View/blog_post/view.html:</p>
+
+<div class="code">
+    <span class="bracket">&lt;<span class="name">h1</span>&gt;</span><span class="braces">{{</span> <span class="var">blog_post</span>.<span class="attr">title</span> <span class="braces">}}</span><span class="bracket">&lt;/<span class="name">h1</span>&gt;</span><br />
+    By <span class="braces">{{</span> <span class="var">blog_post</span>.<span class="attr">author</span>.<span class="attr">name</span> <span class="braces">}}</span><br />
+    (Post #<span class="braces">{{</span> <span class="var">blog_post</span>.<span class="attr">author</span>.<span class="attr">blog_posts</span>|length <span class="braces">}}</span>)<br />
+    <span class="bracket">&lt;<span class="name">p</span>&gt;</span><span class="braces">{{</span> <span class="var">blog_post</span>.<span class="attr">text</span> <span class="braces">}}</span><span class="bracket">&lt;/<span class="name">p</span>&gt;</span>
+</div>
+
+<p>Database schema:</p>
+
+<div class="code" style="text-align: center;">NONE</div>
+
+<p>URL configuration file:</p>
+
+<div class="code" style="text-align: center;">NONE</div>
+
+
+
+            </div>
+        </div>
+    </body>
+</html>

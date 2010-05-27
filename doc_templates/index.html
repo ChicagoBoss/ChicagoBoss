@@ -28,7 +28,7 @@
             {% block nav %}
             <strong>F.A.Q.</strong> &nbsp; | &nbsp; 
             <a href="compare.html">COMPARE</a> &nbsp; | &nbsp; 
-            <a href="guide.html">GUIDE</a> &nbsp; | &nbsp; 
+            <a href="guide.html">GUIDES</a> &nbsp; | &nbsp; 
             <a href="api.html">API</a> &nbsp; | &nbsp; 
             <a href="download.html">DOWNLOAD</a> &nbsp; | &nbsp;
             <a href="forum.html">COMMUNITY</a>
@@ -38,19 +38,24 @@
             <div class="content">
                 {% block content %}
                 <p class="question">What's news?</p>
-                <p><em>May 22, 2010</em> &ndash; Chicago Boss 0.3.2 is out (<a href="download.html">download</a>) and has <strong>major, major</strong> performance improvements, as well prettier error messages, pagination on the /admin interface, and boolean operator support in the template language. By the way, if you haven't seen it already, be sure to check out the beginner's guide, <a href="http://www.evanmiller.org/chicago-boss-guide.html">&#8220;An Evening With Chicago Boss&#8221;</a>.</p>
+                <p><em>May 27, 2010</em> &ndash; Chicago Boss 0.3.3 (<a href="download.html">download</a>) now supports <strong>data validation</strong> and by far the <strong>world's easiet I18n</strong>. We have a new guide called <a href="guide-i18n.html">&#8220;I18n In 8 Minutes&#8221;</a> in addition to the beginner's guide, <a href="http://www.evanmiller.org/chicago-boss-guide.html">&#8220;An Evening With Chicago Boss&#8221;</a>.</p>
 
                 <p class="question">How is Chicago Boss different from other Erlang MVC frameworks?</p>
 
-                <p>Chicago Boss features:</p>
+                <p>Check out the new <a href="compare.html">comparison chart</a>, but the features that set Chicago Boss apart are:</p>
                 <ul>
-                    <li><p><strong>Erlang's most advanced ORM.</strong> Boss's Object-Relational Mapping, called <em>BossRecord</em>, uses some compiler magic to add getters, setters, savers, and a host of other useful methods to your parameterized modules, which persist in a Tokyo Tyrant database. Check out the <a href="api-record.html">BossRecord API</a> if you are in a state of disbelief.</p></li>
+                    <li><p><strong>A scalable database.</strong> Chicago Boss refuses to work with anything but the non-relational <a href="http://1978th.net/tokyotyrant/">Tokyo Tyrant</a> database.</p></li>
 
-                    <li><p><strong>Erlang's best templating engine.</strong> Django Template Language gets compiled right down to BEAM (Erlang byte code) with <a href="api-view.html">ErlyDTL</a>. In development mode, templates are automatically recompiled every time you reload a page.</p></li>
+                    <li><p><strong>Automatic code recompiling</strong>: Because your time is valuable.</p></li>
 
-                    <li><p><strong>Pattern-matching controllers.</strong> Unlike other frameworks where you have to specify URL-matching patterns in a separate file, Chicago Boss uses Erlang's built-in <em>function-matching</em> to map a URL to an action. This design makes for the cleanest controllers on the market. The <a href="api-controller.html">Controller API</a> has details.</p></li>
+                    <li><p><strong>No JavaScript generation</strong>: <em>&#8220;Not my department!&#8221; &mdash;Boss</em></p></li>
 
-                    <li><p><strong>Bonus features.</strong> Chicago Boss automatically generates documentation and an admin interface for each of your models. You don't even have to type "make".</p></li>
+                    <li><p><strong>Admin interface</strong>: Save time by using the built-in /admin interface instead of writing CRUD-y pages that only developers will use anyway.</p>
+
+                    <li><p><strong>Automatic EDoc generation</strong>: You can always find up-to-date EDoc for your models at /doc on your development server; you don't even need to type "make".</li>
+
+                    <li><p><strong>World's easiest I18n</strong>: Stop messing with PO-files and do your localizing in a web browser. If you ask nicely, Boss will even <em>translate your app for you</em> using the Google Translate API.</p></li>
+
                 </ul>
 
                 <p class="question">Why should I switch to Erlang from Python/Ruby/Perl/PHP/FORTRAN?</p>
@@ -61,10 +66,9 @@
 
                 <p>Great question! Chicago Boss <strong>does NOT</strong> have:</p>
                 <ul>
-                    <li>Built-in tools for generating RSS</li>
                     <li>Built-in tools for sending email</li>
                     <li>Built-in deployment or monitoring tools</li>
-                    <li>Internationalization support</li>
+                    <li>Any kind of JavaScript generation tools</li>
                     <li>Support for partitioned databases</li>
                     <li>Support for databases other than Tokyo Tyrant</li>
                 </ul>
