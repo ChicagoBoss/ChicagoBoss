@@ -2,7 +2,7 @@
 
 Dependencies:
 
-    * Erlang R12B or later -
+    * Erlang R13A or later -
         http://www.erlang.org/download.html
 
         Check with erlang:system_info(otp_release).
@@ -20,7 +20,7 @@ directory. There will be a lot of PROGRESS REPORTs which look scary but
 hopefully everything is running smoothly. With this console you can interact
 directly with the running server. Next, point your browser to:
 
-http://localhost:8001/
+    http://localhost:8001/
 
 If all is well you will see "Hello, World!" Now you can get busy. See the FAQ
 and API files located in doc/.
