@@ -33,4 +33,33 @@
     {ok, [], [{<span class="string">"Content-Language"</span>, <span class="string">"fr"</span>}]}.
 </div>
 <p>That code would ensure that the French language strings are used (assuming you created a language file for <code>fr</code>).</p>
+
+<br />
+<br />
+<h3>Technical Appendix: How Boss Chooses Which Language To Serve</h3>
+<p>Most web browsers send an "Accept-Language" HTTP header which specifies the user's language preferences. This header will look something like:</p>
+<div class="code">
+    Accept-Language: en, fr;q=0.9, de;q=0.8
+</div>
+<p>That is, each language has "q-value" which specifies the strength of the preference. If a q-value is not specified, then it is assumed to be 1.0. Here, English gets a q-value of 1.0, French of 0.9, and German of 0.8.</p>
+<p>Q-values are <em>not</em> simply relative preferences; that is, changing the German q-value from 0.8 down to 0.6 could change which language gets served up, even though the order of preferred languages is completely unchanged. HTTP specifies that the "quality" of each translation be multiplied by the client's corresponding q-value, then the language with the highest resulting value be chosen. That is,</p>
+<div class="code">
+    LanguageScore = ClientQValue * TranslationQuality
+</div>
+<p>How does Boss define translation quality for a language? Simple: it just uses the <em>fraction of translatable strings in a given template that have been translated for that language</em>.</p>
+<p>Quick example: say a template has 3 translatable strings (in English), and the client q-values are 1.0 for French and 0.5 for English. The language score for English is </p>
+<div class="code">
+    EnglishScore = 0.5 * (3 / 3) = 0.5
+</div>
+<p>If two of the three strings are available in French, then
+<div class="code">
+    FrenchScore = 1.0 * (2 / 3) = 0.67
+</div>
+<p>And French will be served, because 0.67 is greater than 0.5. But if only one of the three strings is available in French, then</p>
+<div class="code">
+    FrenchScore = 1.0 * (1 / 3) = 0.33
+</div>
+<p>And English will be served, because 0.33 is less than 0.5.</p>
+
+<p>One side effect is that if strings in some templates have more translations than other templates, users could see different languages as they navigate the site. Sounds weird, but of course we're always delivering the best translation to the user that we can. The best thing to do is to translate all your strings!</p>
 {% endblock %}
