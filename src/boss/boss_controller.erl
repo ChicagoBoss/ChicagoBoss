@@ -318,31 +318,34 @@ choose_language_from_qvalues(Strings, QValues) ->
     % calculating translation coverage is costly so we start with the most preferred
     % languages and work our way down
     SortedQValues = lists:reverse(lists:keysort(2, QValues)),
-    AssumeLocale = case application:get_env(assume_locale) of
+    AssumedLocale = case application:get_env(assume_locale) of
         {ok, Val} -> Val;
         _ -> "en"
     end,
+    AssumedLocaleQValue = proplists:get_value(AssumedLocale, SortedQValues, 0.0),
     lists:foldl(
         fun
-            ({_, ThisQValue}, {BestLang, BestNetQValue}) when BestNetQValue >= ThisQValue ->
-                {BestLang, BestNetQValue};
-            ({ThisLang, ThisQValue}, {BestLang, BestNetQValue}) ->
-                case ThisQValue * translation_coverage(Strings, ThisLang, AssumeLocale) of
-                    NetQValue when NetQValue > BestNetQValue ->
-                        {ThisLang, NetQValue};
-                    _ ->
-                        {BestLang, BestNetQValue}
+            ({_, ThisQValue}, {BestLang, BestTranslationScore}) when BestTranslationScore >= ThisQValue ->
+                {BestLang, BestTranslationScore};
+            ({ThisLang, ThisQValue}, {_, BestTranslationScore}) when ThisLang =:= AssumedLocale andalso
+                                                                     ThisQValue > BestTranslationScore ->
+                {ThisLang, ThisQValue}; % translation coverage is 100%
+            ({ThisLang, ThisQValue}, {BestLang, BestTranslationScore}) ->
+                TranslationCoverage = translation_coverage(Strings, ThisLang),
+                TranslationScore = ThisQValue * TranslationCoverage + 
+                                    AssumedLocaleQValue * (1-TranslationCoverage),
+                case TranslationScore > BestTranslationScore of
+                    true -> {ThisLang, TranslationScore};
+                    false -> {BestLang, BestTranslationScore}
                 end
         end, {"xx-bork", 0.0}, SortedQValues).
 
 translation_fun_for(Locale) ->
     fun(String) -> boss_translator:lookup(String, Locale) end.
 
-translation_coverage(_, Lang, Lang) ->
-    1.0;
-translation_coverage([], _, _) ->
+translation_coverage([], _) ->
     0.0;
-translation_coverage(Strings, Locale, _) ->
+translation_coverage(Strings, Locale) ->
     case boss_translator:is_loaded(Locale) of
         true ->
             lists:foldl(fun(String, Acc) ->

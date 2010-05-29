@@ -137,7 +137,7 @@ parse_metadata_string([], [], MetadataAcc) ->
     MetadataAcc;
 parse_metadata_string([H|T], NameAcc, MetadataAcc) when H >= $A, H =< $Z ->
     parse_metadata_string(T, [], [{list_to_atom(lists:reverse(NameAcc)), H}|MetadataAcc]);
-parse_metadata_string([H|T], NameAcc, MetadataAcc) when H >= $a, H =< $z; H =:= $_ ->
+parse_metadata_string([H|T], NameAcc, MetadataAcc) when H >= $a, H =< $z; H =:= $_; H >= $0, H =< $9 ->
     parse_metadata_string(T, [H|NameAcc], MetadataAcc).
 
 activate_record(Record, Type) ->
