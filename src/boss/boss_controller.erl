@@ -8,21 +8,20 @@ start(Config) ->
     {ok, DBPort} = application:get_env(db_port),
     {ok, DBDriver} = application:get_env(db_driver),
     {ok, DBHost} = application:get_env(db_host),
-    {ok, LogFile} = application:get_env(log_file),
+    LogDir = case application:get_env(log_dir) of
+        {ok, Dir} -> Dir;
+        _ -> "log"
+    end,
+    LogFile = make_log_file_name(LogDir),
+    ok = error_logger:logfile({open, LogFile}),
     boss_db:start([ {port, DBPort}, {driver, DBDriver}, {host, DBHost} ]),
     boss_translator:start(),
-    case disk_log:open([{name, boss_error_log}, {file, LogFile}]) of
-        {ok, boss_error_log} -> ok;
-        {repaired,boss_error_log,_,_} -> repaired;
-        Error -> io:format("disk_log:open error ~p~n",[Error])
-    end,
-
     load_dir(boss_files:controller_path(), fun compile_controller/1),
     load_dir(boss_files:model_path(), fun compile_model/1),
     mochiweb_http:start([{loop, fun(Req) -> mochiweb_request(Req) end} | Config]).
 
 stop() ->
-    disk_log:close(boss_error_log),
+    error_logger:logfile(close),
     boss_db:stop(),
     mochiweb_http:stop().
 
@@ -30,11 +29,21 @@ mochiweb_request(Req) ->
     DocRoot = "./static",
     Request = simple_bridge:make_request(mochiweb_request_bridge, {Req, DocRoot}),
     case Request:path() of
+        "/favicon.ico" ->
+            Response = simple_bridge:make_response(mochiweb_response_bridge, {Req, DocRoot}),
+            (Response:file("/favicon.ico")):build_response();
         "/static/"++File -> 
             Response = simple_bridge:make_response(mochiweb_response_bridge, {Req, DocRoot}),
             (Response:file([$/|File])):build_response();
         _ -> 
             {StatusCode, Headers, Payload} = process_request(Request),
+            ErrorFormat = "~s ~s ~p~n", 
+            ErrorArgs = [Request:request_method(), Request:path(), StatusCode],
+            case StatusCode of
+                500 -> error_logger:error_msg(ErrorFormat, ErrorArgs);
+                404 -> error_logger:warning_msg(ErrorFormat, ErrorArgs);
+                _ -> error_logger:info_msg(ErrorFormat, ErrorArgs)
+            end,
             Response = simple_bridge:make_response(mochiweb_response_bridge, {Req, DocRoot}),
             Response1 = (Response:status_code(StatusCode)):data(Payload),
             Response2 = lists:foldl(fun({K, V}, Acc) -> Acc:header(K, V) end, Response1, Headers),
@@ -73,8 +82,7 @@ parse_path(_) ->
     {not_found, "File not found"}.
 
 process_result({error, Payload}) ->
-    disk_log:balog(boss_error_log, list_to_binary(format_now(erlang:now()) ++ 
-            " Error : "++io_lib:print(Payload)++"\n\n")),
+    error_logger:error_report(Payload),
     {500, [{"Content-Type", "text/html"}], "Error: <pre>" ++ io_lib:print(Payload) ++ "</pre>"};
 process_result({not_found, Payload}) ->
     {404, [{"Content-Type", "text/html"}], Payload};
@@ -402,7 +410,8 @@ module_older_than(CompileDate, [File|Rest]) ->
 view_module(Controller, Template) ->
     list_to_atom(lists:concat([Controller, "_view_", Template])).
 
-format_now(Time) ->
-    {{Year, Month, Day}, {Hour, Minute, Second}} = calendar:now_to_local_time(Time),
-    integer_to_list(Year) ++ "." ++ integer_to_list(Month) ++ "." ++ integer_to_list(Day) ++
-        " "++integer_to_list(Hour)++":"++integer_to_list(Minute)++":"++integer_to_list(Second).
+make_log_file_name(Dir) ->
+    {{Y, M, D}, {Hour, Min, Sec}} = calendar:local_time(), 
+    filename:join([Dir, 
+            lists:flatten(io_lib:format("boss_error-~4..0B-~2..0B-~2..0B.~2..0B-~2..0B-~2..0B.log", 
+                    [Y, M, D, Hour, Min, Sec]))]).
