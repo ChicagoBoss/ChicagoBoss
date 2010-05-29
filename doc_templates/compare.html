@@ -40,7 +40,12 @@
 {% block content %}
 <center>
 <h2>Comparison of Erlang Web Frameworks</h2>
-<p><em>FEATURES</em></p>
+<p style="font-size: 14px;"><em>Jump to:</em> &nbsp;
+<a href="#features">Features</a> &nbsp; 
+<a href="#niceties">More Features</a> &nbsp;
+<a href="#technologies">Technologies</a> &nbsp;
+<a href="#maturity">Maturity</a></p>
+<p><a name="features"></a><em>FEATURES</em></p>
 </center>
 <table>
 <thead>
@@ -116,6 +121,35 @@
 <td>-</td>
 </tr>
 <tr class="grouping">
+    <td>PRODUCTION</td>
+</tr>
+<tr>
+    <td>Error logging</td>
+    <td>-</td>
+    <td class="check">&#x2713;</td>
+    <td class="check">&#x2713;</td>
+    <td class="check">&#x2713;</td>
+    <td class="check">&#x2713;</td>
+    <td class="check">&#x2713;</td>
+</tr>
+</table>
+<br />
+<center>
+    <p><a name="niceties"></a><em>MORE FEATURES</em></p>
+</center>
+<table>
+    <thead>
+<tr><th></th>
+    <th><a href="http://github.com/davebryson/beepbeep">BeepBeep</a></th>
+<th>Chicago<br />Boss</th>
+<th><a href="http://www.erlang-web.org/">Erlang<br />Web</a></th>
+<th><a href="http://www.erlyweb.org/">ErlyWeb</a></th>
+<th><a href="http://nitrogenproject.com/">Nitrogen</a></th>
+<th><a href="http://zotonic.com/">Zotonic</a></th>
+</tr>
+</thead>
+<tbody>
+<tr class="grouping">
     <td>DATA MODEL</td>
     <td>n/a</td>
     <td></td>
@@ -155,7 +189,7 @@
 <td>I18N/L10N</td>
 </tr>
 <tr>
-    <td>Basic i18n</td>
+    <td>Basic I18n facilities</td>
 <td>-</td>
 <td class="check">&#x2713;</td>
 <td class="check">&#x2713;</td>
@@ -164,16 +198,7 @@
 <td class="check">&#x2713;</td>
 </tr>
 <tr>
-    <td>Browser interface</td>
-<td>-</td>
-<td class="check">&#x2713;</td>
-<td>-</td>
-<td>-</td>
-<td>-</td>
-<td>-</td>
-</tr>
-<tr>
-    <td>Automatic translation</td>
+    <td>Automatic translation w/ Google Translate</td>
 <td>-</td>
 <td class="check">&#x2713;</td>
 <td>-</td>
@@ -214,7 +239,7 @@
 </table>
 <br />
 <center>
-<p><em>TECHNOLOGIES</em></p>
+    <p><a name="technologies"></a><em>TECHNOLOGIES</em></p>
 </center>
 <table>
     <thead>
@@ -382,5 +407,83 @@
     <td>-</td>
 </tr>
 </tbody>
+</table>
+<br />
+<center>
+    <p><a name="maturity"></a><em>MATURITY</em></p>
+</center>
+<table>
+    <thead>
+<tr><th></th>
+    <th><a href="http://github.com/davebryson/beepbeep">BeepBeep</a></th>
+<th>Chicago<br />Boss</th>
+<th><a href="http://www.erlang-web.org/">Erlang<br />Web</a></th>
+<th><a href="http://www.erlyweb.org/">ErlyWeb</a></th>
+<th><a href="http://nitrogenproject.com/">Nitrogen</a></th>
+<th><a href="http://zotonic.com/">Zotonic</a></th>
+</tr>
+    </thead>
+    <tbody>
+        <tr class="grouping">
+            <td>PROJECT</td>
+        </tr>
+        <tr>
+            <td># Code commits</td>
+            <td><a href="http://github.com/davebryson/beepbeep/commits/master">~30</a></td>
+            <td><a href="http://github.com/evanmiller/ChicagoBoss/commits/master">~40</a></td>
+            <td><a href="http://bitbucket.org/etc/erlang-web/">~300</a></td>
+            <td><a href="http://github.com/yariv/erlyweb/commits/master">~200</a></td>
+            <td><a href="http://github.com/rklophaus/nitrogen/commits/master">~400</a></td>
+            <td><a href="http://github.com/arjan/zotonic/commits/master">~600</a></td>
+        </tr>
+        <tr>
+            <td># List subscribers</td>
+            <td>?</td>
+            <td><a href="http://groups.google.com/group/chicagoboss">~10</a></td>
+            <td>?</td>
+            <td><a href="http://groups.google.com/group/erlyweb">~400</a></td>
+            <td><a href="http://groups.google.com/group/nitrogenweb">~350</a></td>
+            <td><a href="http://groups.google.com/group/zotonic-users">~100</a></td>
+        </tr>
+        <tr>
+            <td>Bug tracker?</td>
+            <td>no</td>
+            <td>no</td>
+            <td><a href="http://sourceforge.net/tracker/?group_id=231549">yes</a></td>
+            <td><a href="http://code.google.com/p/erlyweb/issues/list">yes</a></td>
+            <td>?</td>
+            <td><a href="http://code.google.com/p/zotonic/issues/list">yes</a></td>
+        </tr>
+        <tr class="grouping">
+            <td>HISTORY</td>
+        </tr>
+        <tr>
+            <td>First release</td>
+            <td>2009</td>
+            <td>2010</td>
+            <td>2008</td>
+            <td>2006</td>
+            <td>2008</td>
+            <td>2009</td>
+        </tr>
+        <tr>
+            <td>Latest release</td>
+            <td>2009</td>
+            <td>2010</td>
+            <td>2009</td>
+            <td>2008</td>
+            <td>2010</td>
+            <td>2010</td>
+        </tr>
+        <tr>
+            <td>Newest version</td>
+            <td>?</td>
+            <td><a href="download.html">0.3.3</a></td>
+            <td><a href="http://www.erlang-web.org/download.html">1.4</a></td>
+            <td><a href="http://www.erlyweb.org/">0.7.1</a></td>
+            <td><a href="http://nitrogenproject.com/downloads">2.0.0</a></td>
+            <td><a href="http://zotonic.com/download">0.4.0</a></td>
+        </tr>
+    </tbody>
 </table>
 {% endblock %}
