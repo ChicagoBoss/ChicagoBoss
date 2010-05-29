@@ -14,6 +14,8 @@ start(Config) ->
     end,
     LogFile = make_log_file_name(LogDir),
     ok = error_logger:logfile({open, LogFile}),
+    ok = error_logger:tty(false),
+    ok = make_log_file_symlink(LogFile),
     boss_db:start([ {port, DBPort}, {driver, DBDriver}, {host, DBHost} ]),
     boss_translator:start(),
     load_dir(boss_files:controller_path(), fun compile_controller/1),
@@ -415,3 +417,8 @@ make_log_file_name(Dir) ->
     filename:join([Dir, 
             lists:flatten(io_lib:format("boss_error-~4..0B-~2..0B-~2..0B.~2..0B-~2..0B-~2..0B.log", 
                     [Y, M, D, Hour, Min, Sec]))]).
+
+make_log_file_symlink(LogFile) ->
+    SymLink = filename:join([filename:dirname(LogFile), "boss_error-LATEST.log"]),
+    file:delete(SymLink),
+    file:make_symlink(filename:basename(LogFile), SymLink).
