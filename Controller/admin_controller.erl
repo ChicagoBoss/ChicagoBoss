@@ -21,9 +21,19 @@ model('GET', [ModelName, PageName], Authorization) ->
     Model = list_to_atom(ModelName),
     RecordCount = boss_db:count(Model),
     Records = boss_db:find(Model, [], ?RECORDS_PER_PAGE, (Page - 1) * ?RECORDS_PER_PAGE, primary, str_descending),
+    AttributesWithDataTypes = lists:map(fun(Record) ->
+                lists:map(fun({Key, Val}) ->
+                            {Key, Val, boss_db:data_type(Key, Val)}
+                    end, Record:attributes())
+        end, Records),
+    AttributeNames = case length(Records) of
+        0 -> [];
+        _ -> (lists:nth(1, Records)):attribute_names()
+    end,
     Pages = lists:seq(1, ((RecordCount-1) div ?RECORDS_PER_PAGE)+1),
     {ok, 
-        [{records, Records}, {models, boss_files:model_list()}, {this_model, ModelName}, 
+        [{records, AttributesWithDataTypes}, {attribute_names, AttributeNames}, 
+            {models, boss_files:model_list()}, {this_model, ModelName}, 
             {pages, Pages}, {this_page, Page}], 
         [{"Cache-Control", "no-cache"}]}.
 

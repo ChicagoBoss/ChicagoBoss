@@ -29,29 +29,33 @@
         </p>
         {% endif %}
         <table border=1>
+            {% if attribute_names %}
+            <tr>
+                {% for attr in attribute_names %}
+                <th>{{ attr }}</th>
+                {% endfor %}
+            </tr>
+            {% endif %}
         {% for record in records %}
-        {% if forloop.first %}
         <tr>
-            {% for attr in record.attribute_names %}
-            <th>{{ attr }}</th>
-            {% endfor %}
-        </tr>
-        {% endif %}
-        <tr>
-            {% for key, val in record.attributes %}
-            {% ifequal key "id" %}
+            {% for key, val, datatype in record %}
+            {% if datatype == "id" %}
             <td><strong><a href="/admin/record/{{ val }}">{{ val }}</a></strong></td>
             {% else %}
-            {% if "_time" in key %}
+            {% if datatype == "datetime" %}
             <td>{{ val|date:"N j, Y, P" }}</td>
             {% else %}
-            {% if "_id" in key %}
+            {% if datatype == "foreign_id" %}
             <td><a href="/admin/record/{{ val }}">{{ val }}</a></td>
             {% else %}
+            {% if datatype == "string" or datatype == "binary" %}
             <td>{{ val|truncatewords:8 }}</td>
+            {% else %}
+            <td>{{ val }}</td>
             {% endif %}
             {% endif %}
-            {% endifequal %}
+            {% endif %}
+            {% endif %}
             {% endfor %}
         </tr>
         {% endfor %}

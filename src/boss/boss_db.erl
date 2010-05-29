@@ -18,7 +18,8 @@
         delete/1, 
         save_record/1, 
         validate_record/1,
-        type/1]).
+        type/1,
+        data_type/2]).
 
 start() ->
     start([]).
@@ -141,4 +142,20 @@ type(Key) ->
     case find(Key) of
         undefined -> undefined;
         Record -> element(1, Record)
+    end.
+
+data_type(_, _Val) when is_float(_Val) ->
+    "float";
+data_type(_, _Val) when is_binary(_Val) ->
+    "binary";
+data_type(_, _Val) when is_integer(_Val) ->
+    "integer";
+data_type(_, _Val) when is_tuple(_Val) ->
+    "datetime";
+data_type('id', _) ->
+    "id";
+data_type(Key, Val) when is_list(Val) ->
+    case lists:suffix("_id", atom_to_list(Key)) of
+        true -> "foreign_id";
+        false -> "string"
     end.
