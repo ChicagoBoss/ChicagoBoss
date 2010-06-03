@@ -20,7 +20,7 @@ model('GET', [ModelName, PageName], Authorization) ->
     Page = list_to_integer(PageName),
     Model = list_to_atom(ModelName),
     RecordCount = boss_db:count(Model),
-    Records = boss_db:find(Model, [], ?RECORDS_PER_PAGE, (Page - 1) * ?RECORDS_PER_PAGE, primary, str_descending),
+    Records = boss_db:find(Model, [], ?RECORDS_PER_PAGE, (Page - 1) * ?RECORDS_PER_PAGE, id, str_descending),
     AttributesWithDataTypes = lists:map(fun(Record) ->
                 lists:map(fun({Key, Val}) ->
                             {Key, Val, boss_db:data_type(Key, Val)}

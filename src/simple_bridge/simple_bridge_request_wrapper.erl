@@ -26,7 +26,8 @@ header(Header) ->
         true -> 
             Mod:header(Header, Req);
         false ->
-            proplists:get_value(Header, headers())
+            Headers = Mod:headers(Req),
+            proplists:get_value(Header, Headers)
     end.
 
 cookies() -> Mod:cookies(Req).
@@ -36,32 +37,17 @@ cookie(Cookie) ->
         true -> 
             Mod:cookie(Cookie, Req);
         false ->
-            proplists:get_value(Cookie, cookies())
+            Cookies = Mod:cookies(Req),
+            proplists:get_value(Cookie, Cookies)
     end.
 
 query_params() -> Mod:query_params(Req).
-
-query_param(QueryParam) ->
-    case erlang:function_exported(Mod, query_param, 2) of
-        true -> 
-            Mod:query_param(QueryParam, Req);
-        false ->
-            proplists:get_value(QueryParam, query_params())
-    end.
 
 post_params() -> 
     case {request_method(), IsMultiPart} of
         {'POST', true}  -> PostParams;
         {'POST', false} -> Mod:post_params(Req);
         _ -> []
-    end.
-
-post_param(PostParam) ->
-    case erlang:function_exported(Mod, post_param, 2) of
-        true -> 
-            Mod:post_param(PostParam, Req);
-        false ->
-            proplists:get_value(PostParam, post_params())
     end.
 
 post_files() -> PostFiles.

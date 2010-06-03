@@ -37,7 +37,7 @@ find(Type, Conditions, Max) when is_atom(Type) and is_list(Conditions) and is_in
     find(Type, Conditions, Max, 0).
 
 find(Type, Conditions, Max, Skip) ->
-    find(Type, Conditions, Max, Skip, primary).
+    find(Type, Conditions, Max, Skip, id).
 
 find(Type, Conditions, Max, Skip, Sort) ->
     find(Type, Conditions, Max, Skip, Sort, str_ascending).

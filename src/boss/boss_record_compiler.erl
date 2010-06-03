@@ -230,14 +230,12 @@ set_attributes_forms(ModuleName, Parameters) ->
 association_forms(ModuleName, Attributes) ->
     {Forms, BelongsToList} = lists:foldl(
         fun
-            ({has_many, HasMany}, {Acc, BT}) ->
-                {has_many_forms(HasMany, ModuleName) ++ Acc, BT};
-            ({has_up_to, {Limit, HasMany}}, {Acc, BT}) ->
-                {has_many_forms(HasMany, ModuleName, Limit) ++ Acc, BT};
-            ({has_up_to, {Limit, HasMany, Sort}}, {Acc, BT}) ->
-                {has_many_forms(HasMany, ModuleName, Limit, Sort) ++ Acc, BT};
-            ({has_up_to, {Limit, HasMany, Sort, SortOrder}}, {Acc, BT}) ->
-                {has_many_forms(HasMany, ModuleName, Limit, Sort, SortOrder) ++ Acc, BT};
+            ({has, {HasOne, 1}}, {Acc, BT}) ->
+                {has_one_forms(HasOne, ModuleName) ++ Acc, BT};
+            ({has, {HasMany, Limit}}, {Acc, BT}) ->
+                {has_many_forms(HasMany, ModuleName, Limit, []) ++ Acc, BT};
+            ({has, {HasMany, Limit, Opts}}, {Acc, BT}) ->
+                {has_many_forms(HasMany, ModuleName, Limit, Opts) ++ Acc, BT};
             ({belongs_to, BelongsTo}, {Acc, BT}) ->
                 {[belongs_to_forms(BelongsTo, ModuleName)|Acc], [BelongsTo|BT]};
             (_, Acc) ->
@@ -276,16 +274,24 @@ attribute_names_forms(ModuleName, Parameters) ->
                                     fun(P) -> erl_syntax:atom(parameter_to_colname(P)) end,
                                     Parameters))])]))].
 
-has_many_forms(HasMany, ModuleName) ->
-    has_many_forms(HasMany, ModuleName, 1000000).
+has_one_forms(HasOne, ModuleName) ->
+    [erl_syntax:add_precomments([erl_syntax:comment(
+                    [lists:concat(["% @spec ", HasOne, "() -> ", HasOne, " | undefined"]),
+                        lists:concat(["% @doc Retrieves the `", HasOne, "' with `", ModuleName, "_id' ",
+                                "set to the `Id' of this `", ModuleName, "'"])])],
+            erl_syntax:function(erl_syntax:atom(HasOne),
+                [erl_syntax:clause([], none, [
+                            first_or_undefined_forms(
+                                has_many_application_forms(HasOne, ModuleName, 1, id, str_ascending)
+                            )
+                        ])]))
+    ].
 
-has_many_forms(HasMany, ModuleName, Limit) ->
-    has_many_forms(HasMany, ModuleName, Limit, primary).
-
-has_many_forms(HasMany, ModuleName, Limit, Sort) ->
-    has_many_forms(HasMany, ModuleName, Limit, Sort, str_ascending).
-
-has_many_forms(HasMany, ModuleName, Limit, Sort, SortOrder) ->
+has_many_forms(HasMany, ModuleName, many, Opts) ->
+    has_many_forms(HasMany, ModuleName, 1000000, Opts);
+has_many_forms(HasMany, ModuleName, Limit, Opts) -> 
+    Sort = proplists:get_value(sort_by, Opts, primary),
+    SortOrder = proplists:get_value(sort_order, Opts, str_ascending),
     Type = inflector:singularize(atom_to_list(HasMany)),
     [erl_syntax:add_precomments([erl_syntax:comment(
                     ["% @spec "++atom_to_list(HasMany)++"() -> [ "++Type++" ]",
@@ -296,28 +302,32 @@ has_many_forms(HasMany, ModuleName, Limit, Sort, SortOrder) ->
                             has_many_application_forms(Type, ModuleName, Limit, Sort, SortOrder)
                         ])])),
         erl_syntax:add_precomments([erl_syntax:comment(
-                    ["% @spec first_"++Type++"() -> "++Type,
+                    ["% @spec first_"++Type++"() -> "++Type++" | undefined",
                         lists:concat(["% @doc Retrieves the first `", Type, 
                                 "' that would be returned by `", HasMany, "()'"])])],
             erl_syntax:function(erl_syntax:atom("first_"++Type),
                 [erl_syntax:clause([], none, [
-                            erl_syntax:application(
-                                erl_syntax:atom(erlang),
-                                erl_syntax:atom(hd), [ 
-                            has_many_application_forms(Type, ModuleName, 1, Sort, SortOrder)
-                        ])])])),
+                            first_or_undefined_forms(
+                                has_many_application_forms(Type, ModuleName, 1, Sort, SortOrder)
+                            )
+                        ])])),
         erl_syntax:add_precomments([erl_syntax:comment(
-                    ["% @spec last_"++Type++"() -> "++Type,
+                    ["% @spec last_"++Type++"() -> "++Type++" | undefined",
                         lists:concat(["% @doc Retrieves the last `", Type,
                                 "' that would be returned by `", HasMany, "()'"])])],
             erl_syntax:function(erl_syntax:atom("last_"++Type),
                 [erl_syntax:clause([], none, [
-                            erl_syntax:application(
-                                erl_syntax:atom(erlang),
-                                erl_syntax:atom(hd), [ 
+                            first_or_undefined_forms(
                                     has_many_application_forms(Type, ModuleName, 1, Sort, reverse_sort_order(SortOrder))
-                                ])])]))
+                                )
+                        ])]))
     ].
+
+first_or_undefined_forms(Forms) ->
+    erl_syntax:case_expr(Forms,
+        [erl_syntax:clause([erl_syntax:list([erl_syntax:variable("BOSSRECORDINTERNALRecord")])], none,
+                [erl_syntax:variable("BOSSRECORDINTERNALRecord")]),
+            erl_syntax:clause([erl_syntax:underscore()], none, [erl_syntax:atom(undefined)])]).
 
 reverse_sort_order(str_ascending) -> str_descending;
 reverse_sort_order(str_descending) -> str_ascending;

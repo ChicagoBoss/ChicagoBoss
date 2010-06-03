@@ -1,5 +1,5 @@
 -module(boss_controller).
--export([mochiweb_request/1, start/0, start/1, stop/0, render_view/2, process_request/1]).
+-export([start/0, start/1, stop/0, render_view/2, process_request/1]).
 
 start() ->
     start([]).
@@ -13,6 +13,10 @@ start(Config) ->
         _ -> "log"
     end,
     LogFile = make_log_file_name(LogDir),
+    {ServerMod, RequestMod, ResponseMod} = case application:get_env(server) of
+        {ok, mochiweb} -> {mochiweb_http, mochiweb_request_bridge, mochiweb_response_bridge};
+        _ -> {misultin, misultin_request_bridge, misultin_response_bridge}
+    end,
     ok = error_logger:logfile({open, LogFile}),
     ok = error_logger:tty(false),
     ok = make_log_file_symlink(LogFile),
@@ -20,22 +24,27 @@ start(Config) ->
     boss_translator:start(),
     load_dir(boss_files:controller_path(), fun compile_controller/1),
     load_dir(boss_files:model_path(), fun compile_model/1),
-    mochiweb_http:start([{loop, fun(Req) -> mochiweb_request(Req) end} | Config]).
+    ServerConfig = [{loop, fun(Req) -> handle_request(Req, RequestMod, ResponseMod) end} | Config],
+    case ServerMod of
+        mochiweb_http -> mochiweb_http:start(ServerConfig);
+        misultin -> misultin:start_link(ServerConfig)
+    end.
 
 stop() ->
     error_logger:logfile(close),
     boss_db:stop(),
-    mochiweb_http:stop().
+    mochiweb_http:stop(),
+    misultin:stop().
 
-mochiweb_request(Req) ->
+handle_request(Req, RequestMod, ResponseMod) ->
     DocRoot = "./static",
-    Request = simple_bridge:make_request(mochiweb_request_bridge, {Req, DocRoot}),
+    Request = simple_bridge:make_request(RequestMod, {Req, DocRoot}),
     case Request:path() of
         "/favicon.ico" ->
-            Response = simple_bridge:make_response(mochiweb_response_bridge, {Req, DocRoot}),
+            Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
             (Response:file("/favicon.ico")):build_response();
         "/static/"++File -> 
-            Response = simple_bridge:make_response(mochiweb_response_bridge, {Req, DocRoot}),
+            Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
             (Response:file([$/|File])):build_response();
         _ -> 
             {StatusCode, Headers, Payload} = process_request(Request),
@@ -46,7 +55,7 @@ mochiweb_request(Req) ->
                 404 -> error_logger:warning_msg(ErrorFormat, ErrorArgs);
                 _ -> error_logger:info_msg(ErrorFormat, ErrorArgs)
             end,
-            Response = simple_bridge:make_response(mochiweb_response_bridge, {Req, DocRoot}),
+            Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
             Response1 = (Response:status_code(StatusCode)):data(Payload),
             Response2 = lists:foldl(fun({K, V}, Acc) -> Acc:header(K, V) end, Response1, Headers),
             Response2:build_response()
