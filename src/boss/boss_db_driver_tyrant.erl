@@ -96,24 +96,19 @@ save_record(Record) when is_tuple(Record) ->
 
 pack_record(RecordWithId, Type) ->
     % metadata string stores the data types, <Data Type><attribute name>
-    % L = list, T = time, B = binary, A = atom, I = integer, F = float
     {Columns, MetadataString} = lists:mapfoldl(fun
             (Attr, Acc) -> 
-                {PackedValue, Acc1} = case RecordWithId:Attr() of
-                    Val when is_list(Val) ->
-                        {list_to_binary(Val), lists:concat([Attr, "L", Acc])};
-                    {MegaSec, Sec, MicroSec} when is_integer(MegaSec) andalso is_integer(Sec) andalso is_integer(MicroSec) ->
-                        {pack_now({MegaSec, Sec, MicroSec}), lists:concat([Attr, "T", Acc])};
-                    {{_, _, _} = Date, {_, _, _} = Time} ->
-                        {pack_datetime({Date, Time}), lists:concat([Attr, "T", Acc])};
-                    Val when is_binary(Val) ->
-                        {Val, lists:concat([Attr, "B", Acc])};
-                    Val when is_integer(Val) ->
-                        {list_to_binary(integer_to_list(Val)), lists:concat([Attr, "I", Acc])};
-                    Val when is_float(Val) ->
-                        {list_to_binary(integer_to_list(trunc(Val * ?TRILLION))), lists:concat([Attr, "F", Acc])}
+                Val = RecordWithId:Attr(),
+                MagicLetter = case Val of
+                    _Val when is_list(_Val) ->    "L";
+                    {_, _, _} ->                  "T"; % time
+                    {{_, _, _}, {_, _, _}} ->     "T";
+                    _Val when is_binary(_Val) ->  "B";
+                    _Val when is_integer(_Val) -> "I"; 
+                    _Val when is_float(_Val) ->   "F"
                 end,
-                {{attribute_to_colname(Attr, Type), PackedValue}, Acc1}
+                {{attribute_to_colname(Attr, Type), pack_value(Val)}, 
+                    lists:concat([Attr, MagicLetter, Acc])}
         end, [], RecordWithId:attribute_names()),
     [{attribute_to_colname('_type', Type), list_to_binary(atom_to_list(Type))},
         {attribute_to_colname('_metadata', Type), list_to_binary(MetadataString)}|Columns].
@@ -179,13 +174,26 @@ build_query(Type, Conditions, Max, Skip, Sort, SortOrder) ->
 
 build_conditions(Type, Conditions) ->
     lists:foldl(fun({K, V}, Acc) ->
-                medici:query_add_condition(Acc, attribute_to_colname(K, Type), str_eq, [list_to_binary(V)])
+                medici:query_add_condition(Acc, attribute_to_colname(K, Type), str_eq, [pack_value(V)])
         end, [], [{'_type', atom_to_list(Type)} | Conditions]).
 
 pack_datetime({Date, Time}) ->
     list_to_binary(integer_to_list(calendar:datetime_to_gregorian_seconds({Date, Time}))).
 
 pack_now(Now) -> pack_datetime(calendar:now_to_datetime(Now)).
+
+pack_value(V) when is_binary(V) ->
+    V;
+pack_value(V) when is_list(V) ->
+    list_to_binary(V);
+pack_value({MegaSec, Sec, MicroSec}) when is_integer(MegaSec) andalso is_integer(Sec) andalso is_integer(MicroSec) ->
+    pack_now({MegaSec, Sec, MicroSec});
+pack_value({{_, _, _}, {_, _, _}} = Val) ->
+    pack_datetime(Val);
+pack_value(Val) when is_integer(Val) ->
+    list_to_binary(integer_to_list(Val));
+pack_value(Val) when is_float(Val) ->
+    list_to_binary(integer_to_list(trunc(Val * ?TRILLION))).
 
 unpack_datetime(<<"">>) -> calendar:gregorian_seconds_to_datetime(0);
 unpack_datetime(Bin) -> calendar:universal_time_to_local_time(
