@@ -35,3 +35,6 @@ clean:
 edoc:
 	-mkdir -p doc
 	$(ERL) -pa ebin -noshell -eval "boss_doc:run()" -s init stop
+
+test: 
+	erl -pa ebin -run boss_test -noshell

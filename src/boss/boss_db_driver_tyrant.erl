@@ -8,8 +8,8 @@
 start() ->
     start([]).
 
-start(Options) ->
-    medici:start(Options).
+start(_Options) ->
+    medici:start().
 
 stop() ->
     medici:stop().

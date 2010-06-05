@@ -40,7 +40,7 @@
     </table><br /><br />
     {% endif %}
     {% endfor %} 
-    <form action="/admin/delete/{{ record.id }}">
+    <form name="delete" action="/admin/delete/{{ record.id }}">
         <input type="submit" value="Delete {{ record.id }}?" />
     </form>
 {% endblock %}

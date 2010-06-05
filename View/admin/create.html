@@ -10,7 +10,7 @@
 {% endfor %}
 </ol>
 {% endif %}
-<form method="post">
+<form name="create" method="post">
 <table>
     {% for key, val in record.attributes %}
     {% ifnotequal key "id" %}
@@ -18,7 +18,7 @@
     <tr><td>{{ key }}</td><td><input type="radio" name="{{ key }}" value="now" id="{{ key }}_now" checked="checked" /><label for="{{ key }}_now">Now</label>
             &nbsp; <input type="radio" name="{{ key }}" value="null" id="{{ key }}_now" /><label for="{{ key }}_null">Null</label>
     {% else %}
-    <tr><td>{{ key }}</td><td><textarea name="{{ key }}"></textarea></td></tr>
+    <tr><td><label for="{{ key }}_textarea">{{ key }}</label></td><td><textarea id="{{ key }}_textarea" name="{{ key }}">{% if errors %}{{ val|escape }}{% endif %}</textarea></td></tr>
     {% endif %}
     {% endifnotequal %}
     {% endfor %}

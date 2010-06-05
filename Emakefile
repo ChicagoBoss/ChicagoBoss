@@ -1,4 +1,5 @@
 {"src/boss/*", [debug_info, {outdir, "ebin"}, {i, "include"}]}.
+{"Test/*", [debug_info, {outdir, "ebin"}]}.
 {"src/medici/*", [debug_info, {outdir, "ebin"}]}.
 {"src/erlydtl/*", [debug_info, {outdir, "ebin"}]}.
 {"src/erlydtl/i18n/*", [debug_info, {outdir, "ebin"}]}.

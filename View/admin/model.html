@@ -22,7 +22,7 @@
         </p>
         {% if this_model %}
         <p>
-        <form action="/admin/create/{{ this_model }}">
+        <form name="new" action="/admin/create/{{ this_model }}">
             <input type="submit" value="+ New {{ this_model }}" />
             &nbsp; &nbsp; {% trans "See also" %}: <a href="/doc/{{ this_model }}">Documentation for the <code>{{ this_model }}</code> model</a>
         </form>

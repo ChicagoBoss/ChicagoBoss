@@ -39,7 +39,7 @@ loop([{Dict, IdCounter}|OldState] = State) ->
             From ! {boss_db_mock, length(Records)},
             loop(State);
         {From, {delete, Id}} ->
-            From ! ok,
+            From ! {boss_db_mock, ok},
             loop([{dict:erase(Id, Dict), IdCounter}|OldState]);
         {From, {counter, Id}} ->
             Value = case dict:find(Id, Dict) of

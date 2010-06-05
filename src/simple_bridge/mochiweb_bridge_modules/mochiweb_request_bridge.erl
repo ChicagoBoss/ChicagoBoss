@@ -29,9 +29,12 @@ uri({Req, _DocRoot}) ->
     Req:get(raw_path).
 
 peer_ip({Req, _DocRoot}) -> 
-    Socket = Req:get(socket),
-    {ok, {IP, _Port}} = inet:peername(Socket),
-    IP.
+    case Req:get(socket) of
+        false -> {127, 0, 0, 1};
+        Socket ->
+            {ok, {IP, _Port}} = inet:peername(Socket),
+            IP
+    end.
 
 peer_port({Req, _DocRoot}) -> 
     Socket = Req:get(socket),

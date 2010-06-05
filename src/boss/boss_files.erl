@@ -17,14 +17,13 @@ lang_path(Lang) -> filename:join([lang_path(), lists:concat(["strings.", Lang, "
 
 ebin_dir() -> filename:join([root_dir(), "ebin"]).
 
+test_path() -> filename:join([root_dir(), "Test"]).
+
+test_list() ->
+    module_list(test_path()).
+
 model_list() ->
-    {ok, Files} = file:list_dir(model_path()),
-    lists:sort(lists:map(fun(X) -> filename:basename(X, ".erl") end,
-            lists:filter(fun
-                    ("."++_) ->
-                        false;
-                    (File) -> lists:suffix(".erl", File)
-                end, Files))).
+    module_list(model_path()).
 
 view_file_list() ->
     Pattern = filename:join([view_path(), "*", "*.html"]),
@@ -36,4 +35,13 @@ language_list() ->
             lists:filter(fun
                     ("strings."++_Lang) -> true;
                     (_) -> false
+                end, Files))).
+
+module_list(Path) ->
+    {ok, Files} = file:list_dir(Path),
+    lists:sort(lists:map(fun(X) -> filename:basename(X, ".erl") end,
+            lists:filter(fun
+                    ("."++_) ->
+                        false;
+                    (File) -> lists:suffix(".erl", File)
                 end, Files))).

@@ -16,7 +16,7 @@ start_link(Args) ->
 
 init(Options) ->
     DBDriver = proplists:get_value(driver, Options, boss_db_driver_tyrant),
-    ok = DBDriver:start(Options),
+    ok = DBDriver:start(),
     {ok, #state{driver = DBDriver}}.
 
 handle_call({find, Key}, _From, State) ->

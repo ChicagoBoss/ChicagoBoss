@@ -6,14 +6,16 @@ start() ->
 
 start(Config) ->
     io:format("REACHED boss_controller~n", []),
-    LogDir = case application:get_env(log_dir) of
-        {ok, Dir} -> Dir;
-        _ -> "log"
-    end,
+    LogDir = get_env(log_dir, "log"),
     LogFile = make_log_file_name(LogDir),
     ok = error_logger:logfile({open, LogFile}),
     %ok = error_logger:tty(false),
     ok = make_log_file_symlink(LogFile),
+
+    case module_is_loaded(reloader) of
+        true -> put(boss_environment, development);
+        false -> put(boss_environment, production)
+    end,
 
     DBOptions = case application:get_env(db_port) of
         {ok, DBPort} ->
@@ -47,6 +49,7 @@ stop() ->
     misultin:stop().
 
 load_all_modules() ->
+    load_dir(boss_files:test_path(), fun compile_controller/1),
     load_dir(boss_files:controller_path(), fun compile_controller/1),
     load_dir(boss_files:model_path(), fun compile_model/1).
 
@@ -84,16 +87,22 @@ process_request(Req) ->
         end,
     process_result(Result).
 
+get_env(Key, Default) when is_atom(Key) ->
+    case application:get_env(Key) of
+        {ok, Val} -> Val;
+        _ -> Default
+    end.
+
 parse_path("/") ->
-    {ok, {Controller, Action}} = application:get_env(front_page),
+    {Controller, Action} = get_env(front_page, {"hello", "world"}), 
     {ok, {Controller, Action, []}};
 parse_path("/" ++ Url) ->
     Tokens = string:tokens(Url, "/"),
     case length(Tokens) of
         1 ->
             Controller = hd(Tokens),
-            {ok, DefaultAction} = application:get_env(default_action),
-            {ok, AllDefaultActions} = application:get_env(default_actions),
+            DefaultAction = get_env(default_action, "index"),
+            AllDefaultActions = get_env(default_actions, [{"admin", "model"}]),
             ThisAction = proplists:get_value(Controller, AllDefaultActions, DefaultAction),
             {ok, {Controller, ThisAction, []}};
         N when N >= 2 ->
@@ -132,9 +141,10 @@ trap_load_and_execute(Arg1, Arg2) ->
     end.
 
 load_and_execute(Location, Req) ->
-    case module_is_loaded(reloader) of
-        true -> load_and_execute_dev(Location, Req);
-        false -> load_and_execute_prod(Location, Req)
+    case get(boss_environment) of
+        production -> load_and_execute_prod(Location, Req);
+        testing -> load_and_execute_prod(Location, Req);
+        _ -> load_and_execute_dev(Location, Req)
     end.
 
 load_and_execute_prod({Controller, _, _} = Location, Req) ->
@@ -351,10 +361,7 @@ choose_language_from_qvalues(Strings, QValues) ->
     % calculating translation coverage is costly so we start with the most preferred
     % languages and work our way down
     SortedQValues = lists:reverse(lists:keysort(2, QValues)),
-    AssumedLocale = case application:get_env(assume_locale) of
-        {ok, Val} -> Val;
-        _ -> "en"
-    end,
+    AssumedLocale = get_env(assume_locale, "en"),
     AssumedLocaleQValue = proplists:get_value(AssumedLocale, SortedQValues, 0.0),
     lists:foldl(
         fun
