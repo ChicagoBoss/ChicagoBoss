@@ -57,7 +57,7 @@ BossRecords are <em>specially compiled parameterized modules</em> that follow th
     <span class="attr">-belongs_to</span>(foo).
 </div>
 
-<p>Requires a matching <code>FooId</code> in the parameter list. Adds a function <code>foo()</code> which returns the <code>foo</code> BossRecord with ID equal to the current BossRecord's <code>FooId</code>.</p>
+<p>Requires a matching <code>FooId</code> in the parameter list. Adds a function <code>foo()</code> which returns the BossRecord (of any type, usually <code>foo</code>) with ID equal to the current BossRecord's <code>FooId</code>.</p>
 
 <div class="code">
     <span class="attr">-has</span>({bar, 1}).<br />
@@ -81,6 +81,8 @@ BossRecords are <em>specially compiled parameterized modules</em> that follow th
         <li><code>num_ascending</code> - As number, low numbers first</li>
         <li><code>num_descending</code> - As number, high numbers first</li>
     </ul>
+    <li><code>module</code> - If the assocation name is different than the underlying module, use this option to specify the underlying module.</li>
+    <li><code>foreign_key</code> - If the associated module uses something unexpected for the foreign key, use this option to specify the foreign key (e.g. <code>person_id</code>).</li>
 </ul>
 
 <p>Note that Time and float attributes are stored internally as integers, so sort them with <code>num_ascending</code> or <code>num_descending</code>.</p>
