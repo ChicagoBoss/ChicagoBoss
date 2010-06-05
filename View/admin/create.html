@@ -3,6 +3,13 @@
 {% block body %}
 <h1>Create a new {{ type }}</h1>
 <p><em><a href="/admin/model/{{ type }}">Back to the {{ type }} list</a></em></p>
+{% if errors %}
+<ol>
+{% for error in errors %}
+<li><span style="color: red;">{{ error }}</span></li>
+{% endfor %}
+</ol>
+{% endif %}
 <form method="post">
 <table>
     {% for key, val in record.attributes %}

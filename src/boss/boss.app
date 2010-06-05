@@ -4,7 +4,10 @@
     {modules, [
         boss,
         boss_app,
-        boss_controller
+        boss_controller,
+        boss_db,
+        boss_db_controller,
+        boss_db_sup
             ]},
     {registered, []},
     {mod, {boss_app, []}},

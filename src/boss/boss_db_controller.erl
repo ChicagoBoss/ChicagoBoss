@@ -2,19 +2,22 @@
 
 -behaviour(gen_server).
 
--export([start_link/0]).
+-export([start_link/0, start_link/1]).
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 -record(state, {driver}).
 
 start_link() ->
-    gen_server:start_link({local, boss_db}, ?MODULE, [], []).
+    start_link([]).
+
+start_link(Args) ->
+    gen_server:start_link({local, boss_db}, ?MODULE, Args, []).
 
 init(Options) ->
-    Driver = proplists:get_value(driver, Options, boss_db_driver_tyrant),
-    ok = Driver:start(),
-    {ok, #state{driver = Driver}}.
+    DBDriver = proplists:get_value(driver, Options, boss_db_driver_tyrant),
+    ok = DBDriver:start(Options),
+    {ok, #state{driver = DBDriver}}.
 
 handle_call({find, Key}, _From, State) ->
     Driver = State#state.driver,

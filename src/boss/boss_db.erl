@@ -24,11 +24,11 @@
 start() ->
     start([]).
 
-start(_Options) ->
-    application:start(boss_db).
+start(Options) ->
+    boss_db_sup:start_link(Options).
 
 stop() ->
-    application:stop(boss_db).
+    ok.
 
 %% @spec find(Id::string()) -> BossRecord | {error, Reason}
 %% @doc Find a BossRecord with the specified `Id'.

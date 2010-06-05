@@ -1,29 +1,39 @@
 -module(boss_controller).
--export([start/0, start/1, stop/0, render_view/2, process_request/1]).
+-export([start/0, start/1, stop/0, load_all_modules/0, process_request/1]).
 
 start() ->
     start([]).
 
 start(Config) ->
-    {ok, DBPort} = application:get_env(db_port),
-    {ok, DBDriver} = application:get_env(db_driver),
-    {ok, DBHost} = application:get_env(db_host),
+    io:format("REACHED boss_controller~n", []),
     LogDir = case application:get_env(log_dir) of
         {ok, Dir} -> Dir;
         _ -> "log"
     end,
     LogFile = make_log_file_name(LogDir),
+    ok = error_logger:logfile({open, LogFile}),
+    %ok = error_logger:tty(false),
+    ok = make_log_file_symlink(LogFile),
+
+    DBOptions = case application:get_env(db_port) of
+        {ok, DBPort} ->
+            [{port, DBPort}];
+        _ -> []
+    end,
+    DBOptions1 = case application:get_env(db_host) of
+        {ok, DBHost} -> [{host, DBHost}|DBOptions];
+        _ -> DBOptions
+    end,
+    {ok, DBDriver} = application:get_env(db_driver),
+    DBOptions2 = [{driver, DBDriver}|DBOptions1],
+    boss_db:start(DBOptions2),
+
+    boss_translator:start(),
+    boss_controller:load_all_modules(),
     {ServerMod, RequestMod, ResponseMod} = case application:get_env(server) of
         {ok, mochiweb} -> {mochiweb_http, mochiweb_request_bridge, mochiweb_response_bridge};
         _ -> {misultin, misultin_request_bridge, misultin_response_bridge}
     end,
-    ok = error_logger:logfile({open, LogFile}),
-    ok = error_logger:tty(false),
-    ok = make_log_file_symlink(LogFile),
-    boss_db:start([ {port, DBPort}, {driver, DBDriver}, {host, DBHost} ]),
-    boss_translator:start(),
-    load_dir(boss_files:controller_path(), fun compile_controller/1),
-    load_dir(boss_files:model_path(), fun compile_model/1),
     ServerConfig = [{loop, fun(Req) -> handle_request(Req, RequestMod, ResponseMod) end} | Config],
     case ServerMod of
         mochiweb_http -> mochiweb_http:start(ServerConfig);
@@ -35,6 +45,10 @@ stop() ->
     boss_db:stop(),
     mochiweb_http:stop(),
     misultin:stop().
+
+load_all_modules() ->
+    load_dir(boss_files:controller_path(), fun compile_controller/1),
+    load_dir(boss_files:model_path(), fun compile_model/1).
 
 handle_request(Req, RequestMod, ResponseMod) ->
     DocRoot = "./static",

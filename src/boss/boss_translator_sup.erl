@@ -15,7 +15,7 @@ start_link(StartArgs) ->
 
 init(StartArgs) ->
     {ok, {{one_for_one, 10, 10}, [
-                {db_controller, {boss_translator_controller, start_link, StartArgs},
+                {translator_controller, {boss_translator_controller, start_link, StartArgs},
                     permanent,
                     2000,
                     worker,

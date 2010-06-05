@@ -72,7 +72,12 @@ create(Method, [RecordType], Authorization) ->
                                         _ -> Val
                                     end
                             end, DummyRecord:attribute_names())),
-                    {redirect, "/admin/record/"++(Record:save()):id()}
+                    case Record:save() of
+                        {ok, SavedRecord} ->
+                            {redirect, "/admin/record/"++SavedRecord:id()};
+                        {error, Errors} ->
+                            {ok, [{errors, Errors}, {type, RecordType}, {'record', Record}]}
+                    end
             end;
         _ ->
             {error, "Nonesuch model."}

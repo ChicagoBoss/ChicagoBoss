@@ -43,12 +43,18 @@ cookie(Cookie) ->
 
 query_params() -> Mod:query_params(Req).
 
+query_param(Param) ->
+    proplists:get_value(Param, query_params()).
+
 post_params() -> 
     case {request_method(), IsMultiPart} of
         {'POST', true}  -> PostParams;
         {'POST', false} -> Mod:post_params(Req);
         _ -> []
     end.
+
+post_param(Param) ->
+    proplists:get_value(Param, post_params()).
 
 post_files() -> PostFiles.
 

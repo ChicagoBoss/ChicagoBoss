@@ -1,20 +1,27 @@
 % In-memory database for fast tests and easy setup
 -module(boss_db_driver_mock).
 -behaviour(boss_db_driver).
--export([start/0, stop/0, find/1, find/3, find/4, find/5, find/6]).
+-export([start/0, start/1, stop/0, find/1, find/3, find/4, find/5, find/6]).
 -export([count/1, count/2, counter/1, incr/1, incr/2, delete/1, save_record/1]).
+-export([push/0, pop/0]).
 
 start() ->
-    register(boss_db_mock, spawn(fun() -> loop(dict:new(), 1) end)).
+    start([]).
+
+start(_Options) ->
+    register(boss_db_mock, spawn(fun() -> loop({[], 1}) end)),
+    ok.
 
 stop() ->
-    unregister(boss_db_mock).
+    ok.
 
-loop(Dict, IdCounter) ->
+loop({[], IdCounter}) ->
+    loop([{dict:new(), IdCounter}]);
+loop([{Dict, IdCounter}|OldState] = State) ->
     receive
         {From, reset} ->
             From ! {boss_db_mock, ok},
-            loop(dict:new(), 1);
+            loop([{dict:new(), 1}|OldState]);
         {From, {find, Id}} ->
             case dict:find(Id, Dict) of
                 {ok, Record} ->
@@ -22,18 +29,18 @@ loop(Dict, IdCounter) ->
                 error ->
                     From ! {boss_db_mock, undefined}
             end,
-            loop(Dict, IdCounter);
+            loop(State);
         {From, {find, Type, Conditions, Max, Skip, SortBy, SortOrder}} ->
             Records = do_find(Dict, Type, Conditions, Max, Skip, SortBy, SortOrder),
             From ! {boss_db_mock, Records},
-            loop(Dict, IdCounter);
+            loop(State);
         {From, {count, Type, Conditions}} ->
             Records = do_find(Dict, Type, Conditions, 0, 0, id, str_ascending),
             From ! {boss_db_mock, length(Records)},
-            loop(Dict, IdCounter);
+            loop(State);
         {From, {delete, Id}} ->
             From ! ok,
-            loop(dict:erase(Id, Dict), IdCounter);
+            loop([{dict:erase(Id, Dict), IdCounter}|OldState]);
         {From, {counter, Id}} ->
             Value = case dict:find(Id, Dict) of
                 {ok, Integer} when is_integer(Integer) ->
@@ -42,7 +49,7 @@ loop(Dict, IdCounter) ->
                     0
             end,
             From ! {boss_db_mock, Value},
-            loop(Dict, IdCounter);
+            loop(State);
         {From, {incr, Id, Amount}} ->
             NewValue = case dict:find(Id, Dict) of
                 {ok, OldValue} when is_integer(OldValue) ->
@@ -51,7 +58,7 @@ loop(Dict, IdCounter) ->
                     Amount
             end,
             From ! {boss_db_mock, NewValue},
-            loop(dict:store(Id, NewValue, Dict), IdCounter);
+            loop([{dict:store(Id, NewValue, Dict), IdCounter}|OldState]);
         {From, {save_record, Record}} ->
             Type = element(1, Record),
             {Id, IdCounter1} = case Record:id() of
@@ -60,7 +67,13 @@ loop(Dict, IdCounter) ->
             end,
             NewRecord = Record:id(Id),
             From ! {boss_db_mock, NewRecord},
-            loop(dict:store(Record:id(Id), Dict), IdCounter1)
+            loop([{dict:store(Id, Record:id(Id), Dict), IdCounter1}|OldState]);
+        {From, push} ->
+            From ! {boss_db_mock, ok},
+            loop([{Dict, IdCounter}|State]);
+        {From, pop} ->
+            From ! {boss_db_mock, ok},
+            loop(OldState)
     end.
 
 find(Id) ->
@@ -121,6 +134,23 @@ save_record(Record) ->
         {boss_db_mock, SavedRecord} ->
             {ok, SavedRecord}
     end.
+
+push() ->
+    boss_db_mock ! {self(), push},
+    receive
+        {boss_db_mock, ok} ->
+            ok
+    end.
+
+pop() ->
+    boss_db_mock ! {self(), pop},
+    receive
+        {boss_db_mock, ok} ->
+            ok
+    end.
+
+
+% internal
 
 do_find(Dict, Type, Conditions, Max, Skip, SortBy, SortOrder) ->
     lists:sublist(lists:nthtail(Skip, 

@@ -1,12 +1,15 @@
 -module(boss_db_driver_tyrant).
 -behaviour(boss_db_driver).
--export([start/0, stop/0, find/1, find/3, find/4, find/5, find/6]).
+-export([start/0, start/1, stop/0, find/1, find/3, find/4, find/5, find/6]).
 -export([count/1, count/2, counter/1, incr/1, incr/2, delete/1, save_record/1]).
 
 -define(TRILLION, (1000 * 1000 * 1000 * 1000)).
 
 start() ->
-    medici:start().
+    start([]).
+
+start(Options) ->
+    medici:start(Options).
 
 stop() ->
     medici:stop().
