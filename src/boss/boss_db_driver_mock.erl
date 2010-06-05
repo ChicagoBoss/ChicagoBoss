@@ -3,7 +3,7 @@
 -behaviour(boss_db_driver).
 -export([start/0, start/1, stop/0, find/1, find/3, find/4, find/5, find/6]).
 -export([count/1, count/2, counter/1, incr/1, incr/2, delete/1, save_record/1]).
--export([push/0, pop/0]).
+-export([push/0, pop/0, depth/0]).
 
 start() ->
     start([]).
@@ -73,7 +73,10 @@ loop([{Dict, IdCounter}|OldState] = State) ->
             loop([{Dict, IdCounter}|State]);
         {From, pop} ->
             From ! {boss_db_mock, ok},
-            loop(OldState)
+            loop(OldState);
+        {From, depth} ->
+            From ! {boss_db_mock, length(State)},
+            loop(State)
     end.
 
 find(Id) ->
@@ -147,6 +150,13 @@ pop() ->
     receive
         {boss_db_mock, ok} ->
             ok
+    end.
+
+depth() ->
+    boss_db_mock ! {self(), depth},
+    receive
+        {boss_db_mock, Depth} ->
+            Depth
     end.
 
 

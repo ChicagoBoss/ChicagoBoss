@@ -7,21 +7,22 @@ start() ->
     boss_translator:start(),
     boss_controller:load_all_modules(),
     put(boss_environment, testing),
-    Result = run_tests(),
-    io:format("Result: ~p~n", [Result]),
+    io:format("~-60s", ["Root test"]),
+    {NumSuccesses, FailureMessages} = run_tests(),
+    io:format("~70c~n", [$=]),
+    io:format("Passed: ~p~n", [NumSuccesses]),
+    io:format("Failed: ~p~n", [length(FailureMessages)]),
     erlang:halt().
 
 run_tests() ->
     admin_test:root_test().
 
 get_request(Url, Headers, AssertionFun, Continuations) ->
-    io:format("GET ~p~n", [Url]),
     RequesterPid = spawn(fun get_request_loop/0),
     RequesterPid ! {self(), Url, Headers},
     receive_response(RequesterPid, AssertionFun, Continuations).
 
 post_request(Url, Headers, Contents, AssertionFun, Continuations) ->
-    io:format("POST ~p~n~n~p~n", [Url, Contents]),
     RequesterPid = spawn(fun post_request_loop/0),
     RequesterPid ! {self(), Url, Headers, Contents},
     receive_response(RequesterPid, AssertionFun, Continuations).
@@ -72,19 +73,17 @@ find_link_with_text(_LinkName, []) ->
     undefined;
 find_link_with_text(LinkName, [Text|Rest]) when is_binary(Text) ->
     find_link_with_text(LinkName, Rest);
-find_link_with_text(LinkName, [{<<"a">>, Attrs, [LinkName]}|Rest]) ->
-    case proplists:get_value(<<"href">>, Attrs) of
-        undefined -> find_link_with_text(LinkName, Rest);
-        Url -> Url
-    end;
+find_link_with_text(LinkName, [{<<"a">>, Attrs, [LinkName]}|_Rest]) ->
+    proplists:get_value(<<"href">>, Attrs);
 find_link_with_text(LinkName, [{<<"a">>, Attrs, [{<<"img">>, ImgAttrs, []}]}|Rest]) ->
-    case proplists:get_value(<<"href">>, Attrs) of
-        undefined -> find_link_with_text(LinkName, Rest);
-        Url ->
-            case proplists:get_value(<<"alt">>, ImgAttrs) of
-                LinkName -> Url;
-                _ -> find_link_with_text(LinkName, Rest)
-            end
+    case proplists:get_value(<<"alt">>, ImgAttrs) of
+        LinkName -> proplists:get_value(<<"href">>, Attrs);
+        _ -> find_link_with_text(LinkName, Rest)
+    end;
+find_link_with_text(LinkName, [{<<"a">>, Attrs, Children}|Rest]) ->
+    case flatten_html(Children) of
+        LinkName -> proplists:get_value(<<"href">>, Attrs);
+        _ -> find_link_with_text(LinkName, Rest)
     end;
 find_link_with_text(LinkName, [{_OtherTag, _Attrs, []}|Rest]) ->
     find_link_with_text(LinkName, Rest);
@@ -93,6 +92,16 @@ find_link_with_text(LinkName, [{_OtherTag, _Attrs, Children}|Rest]) when is_list
         undefined -> find_link_with_text(LinkName, Rest);
         Url -> Url
     end.
+
+flatten_html(Children) ->
+    iolist_to_binary(lists:reverse(flatten_html1(Children, []))).
+
+flatten_html1([], Acc) ->
+    lists:reverse(Acc);
+flatten_html1([Text|Rest], Acc) when is_binary(Text) ->
+    flatten_html1(Rest, [Text|Acc]);
+flatten_html1([{_, _, Children}|Rest], Acc) ->
+    [flatten_html(Rest), flatten_html(Children) | Acc].
 
 find_form_named(FormName, ParseTree) when is_list(FormName) ->
     find_form_named(list_to_binary(FormName), ParseTree);
@@ -206,17 +215,22 @@ receive_response(RequesterPid, AssertionFun, Continuations) ->
                     ({false, Msg}, {N, Acc}) ->
                         {N, [Msg|Acc]}
                 end, {0, []}, AssertionFun(ParsedResponse)),
-            io:format("Successes: ~p~nFailures: ~p~n", [NumSuccesses, FailureMessages]),
             exit(RequesterPid, kill),
             case length(FailureMessages) of
                 0 ->
+                    io:format("~B passed~n", [NumSuccesses]),
                     {NewS, NewF} = process_continuations(Continuations, ParsedResponse),
                     {NumSuccesses + NewS, FailureMessages ++ NewF};
-                _ ->
+                N ->
+                    io:format("~c[01;31m~B failed~c[00m~n", [16#1B, N, 16#1B]),
+                    lists:map(fun(Msg) ->
+                                io:format("~s* ~c[01m~p~c[00m~n", 
+                                    [lists:duplicate(boss_db_driver_mock:depth() - 1, $\ ), 
+                                        16#1B, Msg, 16#1B])
+                        end, FailureMessages),
                     {NumSuccesses, FailureMessages}
             end;
-        Other ->
-            error_logger:error_msg("Unexpected message in receive_response: ~p~n", [Other]),
+        _ ->
             receive_response(RequesterPid, AssertionFun, Continuations)
     end.
 
@@ -224,7 +238,7 @@ assert_http_ok({Status, _, _, _}) ->
   {Status =:= 200, "HTTP Status not OK"}.
 
 assert_http_redirect({Status, _, _, _}) ->
-  {Status =:= 302, "HTTP Status not OK"}.
+  {Status =:= 302, "HTTP Status not Redirect"}.
 
 process_continuations(Continuations, Response) ->
     process_continuations(Continuations, Response, {0, []}).
@@ -233,7 +247,7 @@ process_continuations([], _, {NumSuccesses, FailureMessages}) ->
     {NumSuccesses, lists:reverse(FailureMessages)};
 process_continuations([Name, Fun | Rest], Response, {NumSuccesses, FailureMessages}) 
         when is_list(Name) and is_function(Fun) ->
-    io:format("Running test: ~p~n", [Name]),
+    io:format("~-60s", [lists:duplicate(boss_db_driver_mock:depth(), $\ ) ++ Name]),
     boss_db_driver_mock:push(),
     {TheseSuccesses, TheseFailureMessages} = Fun(Response),
     boss_db_driver_mock:pop(),

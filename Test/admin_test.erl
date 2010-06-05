@@ -3,8 +3,8 @@
 
 root_test() ->
   boss_test:get_request("/", [],
-    fun({Status, _, _, ParsedResponse}) ->
-        [{Status =:= 200, "HTTP Status not OK"},
+    fun({_, _, _, ParsedResponse} = Res) ->
+        [boss_test:assert_http_ok(Res),
           {boss_test:find_link_with_text("\"An Evening With Chicago Boss\"", ParsedResponse) =/= undefined,
             "No link to the 'Evening'"}]
     end,
@@ -57,37 +57,13 @@ root_test() ->
                                                                 [boss_test:assert_http_redirect(Res),
                                                                   {Redirect =:= GreetingUrl, 
                                                                     "Did not redirect to Greeting list"}] 
-                                                            end,
-                                                            []
-                                                          )
-                                                      end
-                                                    ]
-                                                  )
-                                              end
-                                            ]
-                                          )
-                                      end
-                                    ]
-                                  )
-                              end,
+                                                            end, []) end ]) end ]) end ]) end,
                               "Submit invalid greeting",
                               fun(Response4) ->
                                   boss_test:submit_form("create", [{"greeting_text", "Hi"}], Response4,
                                     fun({Status, _, RespHeaders, ParsedResponse} = Res) ->
                                         [boss_test:assert_http_ok(Res)]
-                                    end,
-                                    [
-                                    ]
-                                  )
-                              end
-                            ]
-                          )
-                      end
-                    ]
-                  )
-              end
-            ]
-          )
+                                    end, []) end ]) end ]) end ])
       end,
       "EDoc at /doc",
       fun(Response1) ->
