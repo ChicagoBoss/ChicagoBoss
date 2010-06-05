@@ -226,11 +226,11 @@ receive_response(RequesterPid, AssertionFun, Continuations) ->
             exit(RequesterPid, kill),
             case length(FailureMessages) of
                 0 ->
-                    io:format("~B passed~n", [NumSuccesses]),
+                    io:format("~3B passed~n", [NumSuccesses]),
                     {NewS, NewF} = process_continuations(Continuations, ParsedResponse),
                     {NumSuccesses + NewS, FailureMessages ++ NewF};
                 N ->
-                    io:format("~c[01;31m~B failed~c[00m~n", [16#1B, N, 16#1B]),
+                    io:format("~c[01;31m~3B failed~c[00m~n", [16#1B, N, 16#1B]),
                     lists:map(fun(Msg) ->
                                 io:format("~s* ~c[01m~p~c[00m~n", 
                                     [lists:duplicate(boss_db_driver_mock:depth() - 1, $\ ), 
