@@ -3,83 +3,80 @@
 
 root_test() ->
   boss_test:get_request("/", [],
-    fun({_, _, _, ParsedResponse} = Res) ->
-        [boss_test:assert_http_ok(Res),
-          {boss_test:find_link_with_text("\"An Evening With Chicago Boss\"", ParsedResponse) =/= undefined,
-            "No link to the 'Evening'"}]
+    fun(Res) -> [
+          boss_assert:http_ok(Res),
+          boss_assert:link_with_text("\"An Evening With Chicago Boss\"", Res),
+          boss_assert:link_with_text("chicagoboss.org", Res),
+          boss_assert:link_with_text("Chicago Boss Google Group", Res)
+        ]
     end,
     [
       "Admin interface at /admin",
       fun(Response1) ->
           boss_test:follow_link("/admin", Response1,
-            fun(Res) -> [boss_test:assert_http_ok(Res)] end,
+            fun(Res) -> [
+                  boss_assert:http_ok(Res),
+                  boss_assert:tag_with_text("title", "Chicago Boss Admin Interface", Res)
+                ] 
+            end,
             [
               "Click greeting",
               fun(Response2) ->
                   boss_test:follow_link("greeting", Response2,
-                    fun(Res) -> [boss_test:assert_http_ok(Res)] end,
+                    fun(Res) -> [
+                          boss_assert:http_ok(Res),
+                          boss_assert:link_with_text("Documentation for the greeting model", Res)
+                        ] end,
                     [
                       "Click + New greeting",
                       fun({_, GreetingUrl, _, _} = Response3) ->
                           boss_test:submit_form("new", [], Response3,
-                            fun({Status, _, _, ParsedResponse} = Res) ->
-                                [boss_test:assert_http_ok(Res),
-                                  {boss_test:find_link_with_text("Back to the greeting list", ParsedResponse) =/= undefined,
-                                    "No link back to the greeting list"}]
+                            fun(Res) -> [
+                                  boss_assert:http_ok(Res),
+                                  boss_assert:link_with_text("Back to the greeting list", Res)
+                                ]
                             end,
                             [
                               "Submit valid greeting",
                               fun(Response4) ->
                                   boss_test:submit_form("create", [{"greeting_text", "Hello"}], Response4,
-                                    fun(Res) -> [boss_test:assert_http_redirect(Res)] end,
+                                    fun(Res) -> [boss_assert:http_redirect(Res)] end,
                                     [
                                       "Redirect",
-                                      fun({_, _, RespHeaders1, _}) ->
-                                          NewGreetingUrl = proplists:get_value("Location", RespHeaders1),
-                                          boss_test:get_request(NewGreetingUrl, [],
-                                            fun({Status, _, RespHeaders, ParsedResponse} = Res) ->
-                                                [boss_test:assert_http_ok(Res),
-                                                  {boss_test:find_link_with_text(
-                                                      "Back to the greeting list", ParsedResponse) =/= undefined,
-                                                    "No link back to the greeting list"}]
+                                      fun(Response5) ->
+                                          boss_test:follow_redirect(Response5,
+                                            fun(Res) -> [
+                                                  boss_assert:http_ok(Res),
+                                                  boss_assert:link_with_text("Back to the greeting list", Res)
+                                                ]
                                             end,
                                             [
                                               "Delete record",
                                               fun(Response6) ->
                                                   boss_test:submit_form("delete", [], Response6,
-                                                    fun(Res) -> [boss_test:assert_http_ok(Res)] end,
+                                                    fun(Res) -> [boss_assert:http_ok(Res)] end,
                                                     [
                                                       "Really delete",
                                                       fun(Response7) ->
                                                           boss_test:submit_form("delete", [], Response7,
-                                                            fun({_, _, Headers8, _} = Res) -> 
-                                                                Redirect = proplists:get_value("Location", Headers8),
-                                                                [boss_test:assert_http_redirect(Res),
-                                                                  {Redirect =:= GreetingUrl, 
-                                                                    "Did not redirect to Greeting list"}] 
+                                                            fun(Res) -> [
+                                                                  boss_assert:http_redirect(Res),
+                                                                  boss_assert:redirect_location(GreetingUrl, Res)
+                                                                ]
                                                             end, []) end ]) end ]) end ]) end,
                               "Submit invalid greeting",
                               fun(Response4) ->
                                   boss_test:submit_form("create", [{"greeting_text", "Hi"}], Response4,
-                                    fun({Status, _, RespHeaders, ParsedResponse} = Res) ->
-                                        [boss_test:assert_http_ok(Res)]
+                                    fun(Res) ->
+                                        [boss_assert:http_ok(Res)]
                                     end, []) end ]) end ]) end ])
       end,
       "EDoc at /doc",
       fun(Response1) ->
           boss_test:follow_link("/doc", Response1,
-            fun({Status, _, RespHeaders, ParsedResponse}) ->
-                [{Status =:= 200, 
-                    "HTTP Status not OK"},
-                  {boss_test:find_link_with_text("Function Index", ParsedResponse) =/= undefined,
-                    "No link to function index"},
-                  {boss_test:find_link_with_text("id/0*", ParsedResponse) =/= undefined,
-                    "No link to id/0*"}
-                ]
-            end,
-            []
-          )
-      end
-    ]
-  ).
-
+            fun(Res) -> [
+                  boss_assert:http_ok(Res),
+                  boss_assert:link_with_text("Function Index", Res),
+                  boss_assert:link_with_text("id/0*", Res)
+                ] 
+            end, []) end ]).

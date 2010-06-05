@@ -34,6 +34,14 @@ follow_link(LinkName, {_, _, _, ParseTree}, AssertionFun, Continuations) ->
         Url -> get_request(binary_to_list(Url), [], AssertionFun, Continuations)
     end.
 
+follow_redirect({302, _, Headers, _}, AssertionFun, Continuations) ->
+  case proplists:get_value("Location", Headers) of
+    undefined ->
+      {0, ["No Location: header to follow!"]};
+    Url ->
+      get_request(Url, [], AssertionFun, Continuations)
+  end.
+
 submit_form(FormName, FormValues, {_, Uri, _, ParseTree}, AssertionFun, Continuations) ->
     case find_form_named(FormName, ParseTree) of
         undefined -> 
@@ -233,12 +241,6 @@ receive_response(RequesterPid, AssertionFun, Continuations) ->
         _ ->
             receive_response(RequesterPid, AssertionFun, Continuations)
     end.
-
-assert_http_ok({Status, _, _, _}) ->
-  {Status =:= 200, "HTTP Status not OK"}.
-
-assert_http_redirect({Status, _, _, _}) ->
-  {Status =:= 302, "HTTP Status not Redirect"}.
 
 process_continuations(Continuations, Response) ->
     process_continuations(Continuations, Response, {0, []}).
