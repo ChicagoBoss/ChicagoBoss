@@ -17,32 +17,32 @@ start() ->
 run_tests() ->
     admin_test:root_test().
 
-get_request(Url, Headers, AssertionFun, Continuations) ->
+get_request(Url, Headers, Assertions, Continuations) ->
     RequesterPid = spawn(fun get_request_loop/0),
     RequesterPid ! {self(), Url, Headers},
-    receive_response(RequesterPid, AssertionFun, Continuations).
+    receive_response(RequesterPid, Assertions, Continuations).
 
-post_request(Url, Headers, Contents, AssertionFun, Continuations) ->
+post_request(Url, Headers, Contents, Assertions, Continuations) ->
     RequesterPid = spawn(fun post_request_loop/0),
     RequesterPid ! {self(), Url, Headers, Contents},
-    receive_response(RequesterPid, AssertionFun, Continuations).
+    receive_response(RequesterPid, Assertions, Continuations).
 
-follow_link(LinkName, {_, _, _, ParseTree}, AssertionFun, Continuations) ->
+follow_link(LinkName, {_, _, _, ParseTree}, Assertions, Continuations) ->
     case find_link_with_text(LinkName, ParseTree) of
         undefined -> 
             {0, ["No link to follow!"]};
-        Url -> get_request(binary_to_list(Url), [], AssertionFun, Continuations)
+        Url -> get_request(binary_to_list(Url), [], Assertions, Continuations)
     end.
 
-follow_redirect({302, _, Headers, _}, AssertionFun, Continuations) ->
+follow_redirect({302, _, Headers, _}, Assertions, Continuations) ->
   case proplists:get_value("Location", Headers) of
     undefined ->
       {0, ["No Location: header to follow!"]};
     Url ->
-      get_request(Url, [], AssertionFun, Continuations)
+      get_request(Url, [], Assertions, Continuations)
   end.
 
-submit_form(FormName, FormValues, {_, Uri, _, ParseTree}, AssertionFun, Continuations) ->
+submit_form(FormName, FormValues, {_, Uri, _, ParseTree}, Assertions, Continuations) ->
     case find_form_named(FormName, ParseTree) of
         undefined -> 
             {0, ["No form to submit!"]};
@@ -51,10 +51,10 @@ submit_form(FormName, FormValues, {_, Uri, _, ParseTree}, AssertionFun, Continua
             EncodedForm = fill_out_form(InputFields, InputLabels, FormValues),
             case Method of
                 <<"post">> ->
-                    post_request(FormAction, [], EncodedForm, AssertionFun, Continuations);
+                    post_request(FormAction, [], EncodedForm, Assertions, Continuations);
                 _ ->
                     Url = lists:concat([FormAction, "?", EncodedForm]),
-                    get_request(Url, [], AssertionFun, Continuations)
+                    get_request(Url, [], Assertions, Continuations)
             end
     end.
 
@@ -209,7 +209,7 @@ make_request(Method, Uri, Headers) ->
     DocRoot = "./static",
     simple_bridge:make_request(mochiweb_request_bridge, {Req, DocRoot}).
 
-receive_response(RequesterPid, AssertionFun, Continuations) ->
+receive_response(RequesterPid, Assertions, Continuations) ->
     receive
         {RequesterPid, Uri, {Status, ResponseHeaders, ResponseBody}} ->
             ParsedResponseBody = case ResponseBody of
@@ -218,11 +218,14 @@ receive_response(RequesterPid, AssertionFun, Continuations) ->
             end,
             ParsedResponse = {Status, Uri, ResponseHeaders, ParsedResponseBody},
             {NumSuccesses, FailureMessages} = lists:foldl(fun
-                    ({true, _Msg}, {N, Acc}) ->
-                        {N+1, Acc};
-                    ({false, Msg}, {N, Acc}) ->
-                        {N, [Msg|Acc]}
-                end, {0, []}, AssertionFun(ParsedResponse)),
+                    (AssertionFun, {N, Acc}) when is_function(AssertionFun) ->
+                        case AssertionFun(ParsedResponse) of
+                            {true, _Msg} ->
+                                {N+1, Acc};
+                            {false, Msg} ->
+                                {N, [Msg|Acc]}
+                        end
+                end, {0, []}, Assertions),
             exit(RequesterPid, kill),
             case length(FailureMessages) of
                 0 ->
@@ -239,7 +242,7 @@ receive_response(RequesterPid, AssertionFun, Continuations) ->
                     {NumSuccesses, FailureMessages}
             end;
         _ ->
-            receive_response(RequesterPid, AssertionFun, Continuations)
+            receive_response(RequesterPid, Assertions, Continuations)
     end.
 
 process_continuations(Continuations, Response) ->
