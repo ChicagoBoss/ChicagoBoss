@@ -13,7 +13,7 @@ status_code(StatusCode) ->
 header(Name, Value) -> 
     Header = #header { name=Name, value=Value },
     Headers = Res#response.headers,
-    Headers1 = [X || X <- Headers, X#header.name /= Name],
+    Headers1 = [X || X <- Headers, X#header.name /= Name orelse X#header.name =:= "Set-Cookie"],
     Headers2 = [Header|Headers1],
     Res1 = Res#response { headers=Headers2 },
     ?MODULE:new(Mod, Req, Res1).	
