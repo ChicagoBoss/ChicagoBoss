@@ -3,16 +3,17 @@ Getting Started With Chicago Boss
 
 Dependencies:
 
-    * Erlang R13A or later -
+* Erlang R13A or later -
 
-        http://www.erlang.org/download.html
+    http://www.erlang.org/download.html
 
-        Check with `erlang:system_info(otp_release)`.
+  * Check with `erlang:system_info(otp_release)`.
 
-    * Tokyo Tyrant -
-        http://1978th.net/tokyotyrant/
+* Tokyo Tyrant -
 
-      * **You need Tyrant up and running with a Table database.**
+    http://1978th.net/tokyotyrant/
+
+  * **You need Tyrant up and running with a Table database.**
 
 Build Chicago Boss with `make`.
 

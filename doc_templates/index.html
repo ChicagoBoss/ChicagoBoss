@@ -38,9 +38,8 @@
             <div class="content">
                 {% block content %}
                 <p class="question">What's news?</p>
+                <p><em>June 15, 2010</em> &ndash; Chicago Boss 0.3.6 (<a href="download.html">download</a>) features a new <strong>framework for sending emails</strong>. The email framework uses Django templates, supports Boss's i18n features out of the box, and does not require an SMTP server (Postfix, Gmail, etc.). This release includes new API docs for <a href="api-test.html">writing functional tests</a> and of course for <a href="api-mail-controller.html">sending emails</a>.</p>
                 <p><em>June 5, 2010</em> &ndash; Chicago Boss 0.3.5 (<a href="download.html">download</a>) features support for the <strong>Misultin</strong> web server, some new <strong>association semantics</strong>, the beginnings of a <strong>functional test framework</strong>, and a few more <strong>bug-fixes</strong>.</p>
-                <p><em>May 29, 2010</em> &ndash; Chicago Boss 0.3.4 (<a href="download.html">download</a>) features <strong>improved error logging</strong> and several <strong>bug-fixes</strong>.</p>
-                <p>(And don't miss the new guide called <a href="guide-i18n.html">&#8220;I18n In 8 Minutes&#8221;</a> in addition to the beginner's guide, <a href="http://www.evanmiller.org/chicago-boss-guide.html">&#8220;An Evening With Chicago Boss&#8221;</a>.)</p>
 
                 <p class="question">How is Chicago Boss different from other Erlang MVC frameworks?</p>
 
@@ -54,20 +53,18 @@
 
                     <li><p><strong>Automatic EDoc generation</strong>: You can always find up-to-date EDoc for your models at /doc on your development server; you don't even need to type "make".</li>
 
-                    <li><p><strong>World's easiest I18n</strong>: Stop messing with PO-files and do your localizing in a web browser. If you ask nicely, Boss will even <em>translate your app for you</em> using the Google Translate API.</p></li>
-
-                    <li><p><strong>No JavaScript generation</strong>: <em>&#8220;Not my department!&#8221; &mdash;Boss</em></p></li>
+                    <li><p><strong>World's easiest I18n</strong>: Stop messing with PO-files and do your localizing in a web browser. If you ask nicely, Boss will even translate your app for you using the Google Translate API.</p></li>
                 </ul>
 
                 <p class="question">Why should I switch to Erlang from Python/Ruby/Perl/PHP/FORTRAN?</p>
 
                 <p>Because <strong>Erlang is the future of web programming.</strong> No other platform uses a purely <strong>asynchronous</strong> <nobr>I/O</nobr> strategy or has the same <strong>scalability</strong> and <strong>availability</strong>. Chicago Boss lets you take advantage of it all while writing clean, simple, elegant web apps. If you're new to Erlang, be sure to <a href="http://learnyousomeerlang.com/">Learn You Some Erlang For Great Good!</a>.</p>
 
-                <p class="question">I don't want to learn Boss only to find out it's missing Feature X. What features does Chicago Boss lack?</p>
+                <p class="question">What features does Chicago Boss lack? I don't want to learn Boss only to find out it's missing Feature X.</p>
 
                 <p>Great question! Chicago Boss <strong>does NOT</strong> have:</p>
                 <ul>
-                    <li>Built-in tools for sending email</li>
+                    <li><del>Built-in tools for sending email</del> <strong>Now in CBoss 0.3.6</strong></li>
                     <li>Built-in deployment or monitoring tools</li>
                     <li>Any kind of JavaScript generation tools</li>
                     <li>Support for partitioned databases</li>

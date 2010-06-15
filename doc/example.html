@@ -44,7 +44,7 @@
     <span class="attr">-has_many</span>(blog_posts).
 </div>
 
-<p>Controller/blog_post_controller.erl:</p>
+<p>Web/blog_post_controller.erl:</p>
 <div class="code">
     <span class="attr">-module</span>(blog_post_controller, [Req]).<br />
     <span class="attr">-compile</span>(export_all).<br />
@@ -64,7 +64,7 @@
     &nbsp;&nbsp;&nbsp;&nbsp;{ok, [{blog_post, <span class="function">boss_db</span>:<span class="function">find</span>(BlogPostId)}]}.<br />
 </div>
 
-<p>View/blog_post/create.html:</p>
+<p>Web/blog_post_views/create.html:</p>
 <div class="code">
     <span class="bracket">&lt;<span class="name">form</span> <span class="attr">method</span>=<span class="string">&quot;post&quot;</span>&gt;</span><br />
     Title: <span class="bracket">&lt;<span class="name">input</span> <span class="attr">name</span>=<span class="string">&quot;title&quot;</span>&gt;</span><span class="bracket">&lt;<span class="name">br</span> /&gt;</span><br />
@@ -73,7 +73,7 @@
     <span class="bracket">&lt;/<span class="name">form</span>&gt;</span>
 </div>
 
-<p>View/blog_post/view.html:</p>
+<p>Web/blog_post_views/view.html:</p>
 
 <div class="code">
     <span class="bracket">&lt;<span class="name">h1</span>&gt;</span><span class="braces">{{</span> <span class="var">blog_post</span>.<span class="attr">title</span> <span class="braces">}}</span><span class="bracket">&lt;/<span class="name">h1</span>&gt;</span><br />
