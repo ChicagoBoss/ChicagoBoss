@@ -1,6 +1,9 @@
 Getting Started With Chicago Boss
 =================================
 
+Quickstart
+----------
+
 Dependencies:
 
 * Erlang R13A or later -
@@ -25,8 +28,15 @@ directly with the running server. Next, point your browser to:
 
     http://localhost:8001/
 
-If all is well you will see "Hello, World!" Now you can get busy. See the FAQ
-and API files located in doc/.
+If all is well you will see "Hello, World!" Now you can get busy. 
+
+
+Documentation
+-------------
+
+See the FAQ and API files located at
+
+    http://www.chicagoboss.org/
 
 If you need help getting started, check out "An Evening With Chicago Boss":
 

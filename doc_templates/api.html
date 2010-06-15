@@ -21,6 +21,12 @@
 <p>The Chicago Boss API is mostly stable, but still might change before 1.0.</p>
 </div>
 <div class="subnav">
+    {% ifequal this_page "api-config.html" %}
+    <strong>Config</strong>
+    {% else %}
+    <a href="api-config.html">Config</a>
+    {% endifequal %}
+    &nbsp; | &nbsp; 
     {% ifequal this_page "api-db.html" %}
     <strong>BossDB</strong>
     {% else %}
@@ -40,9 +46,9 @@
     {% endifequal %}
     &nbsp; | &nbsp;
     {% ifequal this_page "api-mail-controller.html" %}
-    <strong>Mail Controller</strong>
+    <strong>Mail</strong>
     {% else %}
-    <a href="api-mail-controller.html">Mail Controller</a> 
+    <a href="api-mail-controller.html">Mail</a> 
     {% endifequal %}
     &nbsp; | &nbsp;
     {% ifequal this_page "api-view.html" %}

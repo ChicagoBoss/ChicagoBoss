@@ -1,0 +1,29 @@
+{% extends "api.html" %}
+{% block api_content %}
+<p>All configuration takes place in <code>boss.config</code> in your project directory. Valid configuration options are:</p>
+<ul>
+    <li><code>assume_locale</code> - The presumed locale of translatable strings. Defaults to "en".</li>
+    <li><code>db_host</code> - The hostname of the database. Defaults to "localhost".</li>
+    <li><code>db_port</code> - The port of the database. Defaults to 1978.</li>
+    <li><code>db_driver</code> - The database driver to use. Valid values are:
+    <ul>
+        <li><code>boss_db_driver_tyrant</code> - Tokyo Tyrant</li>
+        <li><code>boss_db_driver_mock</code> - In-memory (non-persistent) database, useful for testing</li>
+    </ul></li>
+    <li><code>default_action</code> - The action to call if none is specified. Defaults to "index"</li>
+    <li><code>default_actions</code> - A proplist of default actions to call if none is specified, keyed by controller name.</li>
+    <li><code>front_page</code> - The {Controller, Action} pair to be used on the home page. Defaults to <code>{"hello", "world"}</code>.</li>
+    <li><code>log_dir</code> - Directory in which to keep log files. Location is relative to the project directory. Defaults to "log".</li>
+    <li><code>mail_driver</code> - The email delivery driver to use. Valid values are:
+    <ul>
+        <li><code>boss_mail_driver_smtp_direct</code> - Direct SMTP delivery (i.e. no relay is used)</li>
+        <li><code>boss_mail_driver_mock</code> - A black hole, useful for testing.</li>
+    </ul></li>
+    <li><code>port</code> - The port to run the server on. Defaults to 8001.</li>
+    <li><code>server</code> - The HTTP server to use. Valid values are:
+    <ul>
+        <li><code>mochiweb</code> - The <a href="http://code.google.com/p/mochiweb/">Mochiweb</a> Web Server</li>
+        <li><code>misultin</code> - The <a href="http://code.google.com/p/misultin/">Misultin</a> Web Server</li>
+    </ul>
+    </li>
+{% endblock %}

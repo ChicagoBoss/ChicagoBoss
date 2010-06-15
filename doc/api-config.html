@@ -1,0 +1,98 @@
+<html>
+    <head>
+        <title>Chicago Boss - the MVC that packs a punch (chicagoboss.org)</title>
+        <link rel="stylesheet" type="text/css" href="boss.css" />
+            
+        <style type="text/css">
+        </style>
+            
+    </head>
+    <body>
+        
+        <div class="equation">
+            <span style="background-color: #B80009;">Rails Idioms</span> +
+            <span style="background-color: #004B00;">Django Templates</span> +
+            <span style="background-color: #0D0075;">Erlang Power</span> =
+            <em>Chicago</em> <strong>BOSS</strong>
+        </div>
+
+        <div class="nav">
+            
+<a href="index.html">F.A.Q.</a> &nbsp; | &nbsp; 
+<a href="compare.html">COMPARE</a> &nbsp; | &nbsp; 
+<a href="guide.html">GUIDES</a> &nbsp; | &nbsp; 
+<strong>API</strong> &nbsp; | &nbsp; 
+<a href="download.html">DOWNLOAD</a> &nbsp; | &nbsp;
+<a href="forum.html">COMMUNITY</a>
+
+        </div>
+        <div style="position: relative;">
+            <div class="content">
+                
+<div style="text-align: center; font-style: italic;">
+<p>The Chicago Boss API is mostly stable, but still might change before 1.0.</p>
+</div>
+<div class="subnav">
+    
+    <strong>Config</strong>
+    
+    &nbsp; | &nbsp; 
+    
+    <a href="api-db.html">BossDB</a>
+    
+    &nbsp; | &nbsp; 
+    
+    <a href="api-record.html">Models</a> 
+    
+    &nbsp; | &nbsp;
+    
+    <a href="api-controller.html">Web Controllers</a> 
+    
+    &nbsp; | &nbsp;
+    
+    <a href="api-mail-controller.html">Mail</a> 
+    
+    &nbsp; | &nbsp;
+    
+    <a href="api-view.html">Templates</a>
+    
+    &nbsp; | &nbsp;
+    
+    <a href="api-test.html">Tests</a>
+    
+</div>
+<div style="padding-top: 20px;">
+
+<p>All configuration takes place in <code>boss.config</code> in your project directory. Valid configuration options are:</p>
+<ul>
+    <li><code>assume_locale</code> - The presumed locale of translatable strings. Defaults to "en".</li>
+    <li><code>db_host</code> - The hostname of the database. Defaults to "localhost".</li>
+    <li><code>db_port</code> - The port of the database. Defaults to 1978.</li>
+    <li><code>db_driver</code> - The database driver to use. Valid values are:
+    <ul>
+        <li><code>boss_db_driver_tyrant</code> - Tokyo Tyrant</li>
+        <li><code>boss_db_driver_mock</code> - In-memory (non-persistent) database, useful for testing</li>
+    </ul></li>
+    <li><code>default_action</code> - The action to call if none is specified. Defaults to "index"</li>
+    <li><code>default_actions</code> - A proplist of default actions to call if none is specified, keyed by controller name.</li>
+    <li><code>front_page</code> - The {Controller, Action} pair to be used on the home page. Defaults to <code>{"hello", "world"}</code>.</li>
+    <li><code>log_dir</code> - Directory in which to keep log files. Location is relative to the project directory. Defaults to "log".</li>
+    <li><code>mail_driver</code> - The email delivery driver to use. Valid values are:
+    <ul>
+        <li><code>boss_mail_driver_smtp_direct</code> - Direct SMTP delivery (i.e. no relay is used)</li>
+        <li><code>boss_mail_driver_mock</code> - A black hole, useful for testing.</li>
+    </ul></li>
+    <li><code>port</code> - The port to run the server on. Defaults to 8001.</li>
+    <li><code>server</code> - The HTTP server to use. Valid values are:
+    <ul>
+        <li><code>mochiweb</code> - The <a href="http://code.google.com/p/mochiweb/">Mochiweb</a> Web Server</li>
+        <li><code>misultin</code> - The <a href="http://code.google.com/p/misultin/">Misultin</a> Web Server</li>
+    </ul>
+    </li>
+
+</div>
+
+            </div>
+        </div>
+    </body>
+</html>
