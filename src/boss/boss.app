@@ -4,7 +4,7 @@
     {modules, [
         boss,
         boss_app,
-        boss_controller,
+        boss_web_controller,
         boss_db,
         boss_db_controller,
         boss_db_sup

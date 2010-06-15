@@ -182,11 +182,23 @@ do_find(Dict, Type, Conditions, Max, Skip, SortBy, SortOrder) ->
                     dict:to_list(dict:filter(
                             fun(_Id, Record) when is_tuple(Record) ->
                                     element(1, Record) =:= Type andalso
-                                    length(Record:attributes() -- Conditions) =:= 
-                                    length(Record:attributes()) - length(Conditions);
+                                    record_matches_conditions(Record, Conditions);
                                 (_Id, _) ->
                                     false
                             end, Dict))))), Max).
+
+record_matches_conditions(_Record, []) ->
+    true;
+record_matches_conditions(Record, [{K, [H|_] = Values}|Rest]) when is_list(H) ->
+    case proplists:get_value(K, Record:attributes()) of
+        undefined -> false;
+        Val -> lists:member(Val, Values) andalso record_matches_conditions(Record, Rest)
+    end;
+record_matches_conditions(Record, [{K, V}|Rest]) ->
+    case proplists:get_value(K, Record:attributes()) of
+        V -> record_matches_conditions(Record, Rest);
+        _ -> false
+    end.
 
 sortable_attribute(Record, Attr) ->
     case Record:Attr() of

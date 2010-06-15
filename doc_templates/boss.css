@@ -60,7 +60,7 @@ div.code span.atom {
 div.nav {
     font-size: 20px; padding-top: 40px; padding-bottom: 20px;
 }
-div.subnav {text-align: center; font-size: 20px; padding: 16px;
+div.subnav {text-align: center; font-size: 18px; padding: 16px;
 }
 p.question {
     font-style: italic;
@@ -69,10 +69,10 @@ p.question {
 div.content {
     text-align: left; 
     position: absolute; 
-    margin-left: -385px; 
+    margin-left: -415px; 
     left: 50%; 
     padding: 20px; 
-    width: 730px; 
+    width: 790px; 
     border-width: 0px 1px; 
     border-color: black; 
     border-style: solid; font-size: 20px; padding-bottom: 300px;

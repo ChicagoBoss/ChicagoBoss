@@ -1,7 +1,7 @@
 -module(admin_test).
 -compile(export_all).
 
-root_test() ->
+start() ->
   boss_test:get_request("/", [],
     [ fun boss_assert:http_ok/1,
       fun(Res) -> boss_assert:link_with_text("\"An Evening With Chicago Boss\"", Res) end,
@@ -45,7 +45,7 @@ root_test() ->
                                                       fun(Response7) ->
                                                           boss_test:submit_form("delete", [], Response7,
                                                             [ fun boss_assert:http_redirect/1,
-                                                              fun(Res) -> boss_assert:redirect_location(GreetingUrl, Res) end
+                                                              fun(Res) -> boss_assert:http_redirect_location(GreetingUrl, Res) end
                                                             ], []) end ]) end,
                                               "Back to greeting list",
                                               fun(Response6) ->
@@ -78,4 +78,22 @@ root_test() ->
               fun(Res) -> boss_assert:link_with_text("save/0*", Res) end,
               fun(Res) -> boss_assert:link_with_text("validate/0*", Res) end,
               fun(Res) -> boss_assert:link_with_text("validation_tests/0*", Res) end
-            ], []) end ]).
+            ], []) 
+      end
+%      ,
+%
+%      "Check for confirmation email",
+%      fun(Response1) ->
+%          boss_test:read_email("test@test.com", "Confirmation email",
+%            [
+%              fun(Email2) -> boss_assert:link_with_text("Click here to confirm", Email) end
+%            ],
+%            [
+%              "Click confirmation link",
+%              fun(Email2) ->
+%                  boss_test:follow_link("Click here to confirm", Email,
+%                    [
+%                      fun(Response3) -> boss_assert:tag_with_text(
+%                    ],
+%      end
+    ]).

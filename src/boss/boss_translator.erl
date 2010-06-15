@@ -7,6 +7,7 @@
 -export([
         is_loaded/1,
         lookup/2, 
+        fun_for/1,
         reload/1
     ]).
 
@@ -30,3 +31,10 @@ is_loaded(Locale) ->
 %% @spec reload(Locale::string()) -> ok | {error, Reason}
 reload(Locale) ->
     gen_server:call(boss_translator, {reload, Locale}).
+
+%% @spec fun_for(Locale::string()) -> TranslationFun::function() | none
+fun_for(Locale) ->
+    case is_loaded(Locale) of
+        true -> fun(String) -> lookup(String, Locale) end;
+        false -> none
+    end.

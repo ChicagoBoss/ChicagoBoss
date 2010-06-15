@@ -1,18 +1,17 @@
--module(boss_controller).
--export([start/0, start/1, stop/0, load_all_modules/0, process_request/1]).
+-module(boss_web_controller).
+-export([start/0, start/1, stop/0, process_request/1]).
 
 start() ->
     start([]).
 
 start(Config) ->
-    io:format("REACHED boss_controller~n", []),
     LogDir = get_env(log_dir, "log"),
     LogFile = make_log_file_name(LogDir),
     ok = error_logger:logfile({open, LogFile}),
     %ok = error_logger:tty(false),
     ok = make_log_file_symlink(LogFile),
 
-    case module_is_loaded(reloader) of
+    case boss_load:module_is_loaded(reloader) of
         true -> put(boss_environment, development);
         false -> put(boss_environment, production)
     end,
@@ -26,12 +25,15 @@ start(Config) ->
         {ok, DBHost} -> [{host, DBHost}|DBOptions];
         _ -> DBOptions
     end,
-    {ok, DBDriver} = application:get_env(db_driver),
+    DBDriver = get_env(db_driver, boss_db_driver_tyrant),
     DBOptions2 = [{driver, DBDriver}|DBOptions1],
     boss_db:start(DBOptions2),
 
+    MailDriver = get_env(mail_driver, boss_mail_driver_smtp_direct),
+    boss_mail:start([{driver, MailDriver}]),
+
     boss_translator:start(),
-    boss_controller:load_all_modules(),
+    boss_load:load_all_modules(),
     {ServerMod, RequestMod, ResponseMod} = case application:get_env(server) of
         {ok, mochiweb} -> {mochiweb_http, mochiweb_request_bridge, mochiweb_response_bridge};
         _ -> {misultin, misultin_request_bridge, misultin_response_bridge}
@@ -47,11 +49,6 @@ stop() ->
     boss_db:stop(),
     mochiweb_http:stop(),
     misultin:stop().
-
-load_all_modules() ->
-    load_dir(boss_files:test_path(), fun compile_controller/1),
-    load_dir(boss_files:controller_path(), fun compile_controller/1),
-    load_dir(boss_files:model_path(), fun compile_model/1).
 
 handle_request(Req, RequestMod, ResponseMod) ->
     DocRoot = "./static",
@@ -148,14 +145,14 @@ load_and_execute(Location, Req) ->
     end.
 
 load_and_execute_prod({Controller, _, _} = Location, Req) ->
-    {ok, ControllerFiles} = file:list_dir(boss_files:controller_path()),
+    {ok, ControllerFiles} = file:list_dir(boss_files:web_controller_path()),
     case lists:member(Controller ++ "_controller.erl", ControllerFiles) of
         true -> execute_action(Location, Req);
         false -> render_view(Location, Req)
     end.
 
 load_and_execute_dev({"doc", ModelName, _}, Req) ->
-    case load_dir(boss_files:model_path(), fun compile_model/1) of
+    case boss_load:load_models() of
         {ok, _} ->
             Model = list_to_atom(ModelName),
             {Model, Edoc} = boss_record_compiler:edoc_module(
@@ -165,11 +162,11 @@ load_and_execute_dev({"doc", ModelName, _}, Req) ->
             render_errors(ErrorList, Req)
     end;
 load_and_execute_dev({Controller, _, _} = Location, Req) ->
-    case load_dir(boss_files:controller_path(), fun compile_controller/1) of
+    case boss_load:load_web_controllers() of
         {ok, Controllers} ->
             case lists:member(Controller ++ "_controller", Controllers) of
                 true ->
-                    case load_dir(boss_files:model_path(), fun compile_model/1) of
+                    case boss_load:load_models() of
                         {ok, _} ->
                             execute_action(Location, Req);
                         {error, ErrorList} ->
@@ -243,61 +240,6 @@ process_action_result(_, {output, Payload, Headers}) ->
 process_action_result(_, Else) ->
     Else.
 
-compile_controller(ModulePath) ->
-    CompileResult = compile:file(filename:rootname(ModulePath),
-        [{outdir, boss_files:ebin_dir() }, return_errors]),
-    case CompileResult of
-        {ok, Module} ->
-            code:purge(Module),
-            {module, Module} = code:load_file(Module),
-            ok;
-        Error ->
-            Error
-    end.
-
-compile_view_erlydtl(Controller, Template) ->
-    erlydtl_compiler:compile(
-        boss_files:view_path(Controller, Template), 
-        view_module(Controller, Template), 
-        [{doc_root, boss_files:view_path()}, {compiler_options, []}]).
-
-compile_model(ModulePath) ->
-    boss_record_compiler:compile(ModulePath).
-
-load_dir(Dir, Compiler) ->
-    {ok, Files} = file:list_dir(Dir),
-    {ModuleList, ErrorList} = lists:foldl(fun
-            ("."++_, Acc) ->
-                Acc;
-            (File, {Modules, Errors}) ->
-                case lists:suffix(".erl", File) of
-                    true ->
-                        Module = filename:basename(File, ".erl"),
-                        AbsPath = filename:join([Dir, File]),
-                        case module_older_than(list_to_atom(Module), [AbsPath]) of
-                            true ->
-                                case Compiler(AbsPath) of
-                                    ok ->
-                                        {[Module|Modules], Errors};
-                                    {error, Error} ->
-                                        {Modules, [Error | Errors]};
-                                    {error, NewErrors, _NewWarnings} when is_list(NewErrors) ->
-                                        {Modules, NewErrors ++ Errors}
-                                end;
-                            _ ->
-                                {[Module|Modules], Errors}
-                        end;
-                    _ ->
-                        {Modules, Errors}
-                end
-        end, {[], []}, Files),
-    case length(ErrorList) of
-        0 ->
-            {ok, ModuleList};
-        _ ->
-            {error, ErrorList}
-    end.
-
 render_view(Location, Req) ->
     render_view(Location, Req, []).
 
@@ -305,27 +247,12 @@ render_view(Location, Req, Variables) ->
     render_view(Location, Req, Variables, []).
 
 render_view({Controller, Template, _}, Req, Variables, Headers) ->
-    Module = view_module(Controller, Template),
-    LoadResult = case module_is_loaded(Module) of
-        true ->
-            case module_older_than(Module, lists:map(fun
-                            ({File, _CheckSum}) -> 
-                                File;
-                            (File) ->
-                                File
-                    end, [Module:source() | Module:dependencies()])) of
-                true ->
-                    compile_view_erlydtl(Controller, Template);
-                false ->
-                    ok
-            end;
-        false ->
-            compile_view_erlydtl(Controller, Template)
-    end,
-    TranslationFun = choose_translation_fun(Module:translatable_strings(), 
-        Req:header(accept_language), proplists:get_value("Content-Language", Headers)),
+    ViewPath = boss_files:web_view_path(Controller, Template),
+    LoadResult = boss_load:load_view_if_dev(ViewPath),
     case LoadResult of
-        ok ->
+        {ok, Module} ->
+            TranslationFun = choose_translation_fun(Module:translatable_strings(), 
+                Req:header(accept_language), proplists:get_value("Content-Language", Headers)),
             case Module:render(Variables, TranslationFun) of
                 {ok, Payload} ->
                     {ok, Payload, Headers};
@@ -352,10 +279,7 @@ choose_translation_fun(Strings, AcceptLanguages, undefined) ->
             end
     end;
 choose_translation_fun(_, _, ContentLanguage) ->
-    case boss_translator:is_loaded(ContentLanguage) of
-        true -> translation_fun_for(ContentLanguage);
-        false -> none
-    end.
+    boss_translator:fun_for(ContentLanguage).
 
 choose_language_from_qvalues(Strings, QValues) ->
     % calculating translation coverage is costly so we start with the most preferred
@@ -397,50 +321,6 @@ translation_coverage(Strings, Locale) ->
         false ->
             0.0
     end.
-
-module_is_loaded(Module) ->
-    case code:is_loaded(Module) of
-        {file, _} ->
-            true;
-        _ ->
-            false
-    end.
-
-module_older_than(Module, Files) when is_atom(Module) ->
-    case code:is_loaded(Module) of
-        {file, Loaded} ->
-            module_older_than(Loaded, Files);
-        _ ->
-            case code:load_file(Module) of
-                {module, _} ->
-                    case code:is_loaded(Module) of
-                        {file, Loaded} ->
-                            module_older_than(Loaded, Files)
-                    end;
-                {error, _} ->
-                    true
-            end
-    end;
-
-module_older_than(Module, Files) when is_list(Module) ->
-    case filelib:last_modified(Module) of
-        0 ->
-            true;
-        CompileDate ->
-            module_older_than(CompileDate, Files)
-    end;
-
-module_older_than(_Date, []) ->
-    false;
-
-module_older_than(CompileDate, [File|Rest]) ->
-    CompileSeconds = calendar:datetime_to_gregorian_seconds(CompileDate),
-    ModificationSeconds = calendar:datetime_to_gregorian_seconds(
-        filelib:last_modified(File)),
-    (ModificationSeconds >= CompileSeconds) orelse module_older_than(CompileDate, Rest).
-
-view_module(Controller, Template) ->
-    list_to_atom(lists:concat([Controller, "_view_", Template])).
 
 make_log_file_name(Dir) ->
     {{Y, M, D}, {Hour, Min, Sec}} = calendar:local_time(), 

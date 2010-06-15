@@ -1,15 +1,19 @@
-{% extends "admin/model.html" %}
+{% extends "admin_views/model.html" %}
 {% block title %}{{ record.id }} (Chicago Boss Admin Interface){% endblock %}
 {% block body %}
 <h1>Displaying {{ record.id }}</h1>
 <p><em><a href="/admin/model/{{ type }}">Back to the {{ type }} list</a></em></p>
-    {% for key, val in record.attributes %}
-    {% if "_id" not in key %}
+    {% for key, val, datatype in attributes %}
+    {% if not datatype == "id" %}
         <strong>{{ key }}</strong><br />
-        {% if "_time" in key %}
+        {% if datatype == "datetime" %}
             {{ val|date:"N j, Y, P" }}
         {% else %}
+        {% if datatype == "string" or datatype == "binary" %}
             {{ val|linebreaksbr }}
+        {% else %}
+            {{ val }}
+        {% endif %}
         {% endif %}
         <br /><br />
     {% endif %}

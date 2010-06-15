@@ -176,7 +176,11 @@ build_query(Type, Conditions, Max, Skip, Sort, SortOrder) ->
     medici:query_order(medici:query_limit(Query, Max, Skip), atom_to_list(Sort), SortOrder).
 
 build_conditions(Type, Conditions) ->
-    lists:foldl(fun({K, V}, Acc) ->
+    lists:foldl(fun
+            ({K, [H|_] = V}, Acc) when is_list(H) ->
+                MatchString = list_to_binary(string:join(V, " ")),
+                medici:query_add_condition(Acc, attribute_to_colname(K, Type), str_in_list, [MatchString]);
+            ({K, V}, Acc) ->
                 medici:query_add_condition(Acc, attribute_to_colname(K, Type), str_eq, [pack_value(V)])
         end, [], [{'_type', atom_to_list(Type)} | Conditions]).
 

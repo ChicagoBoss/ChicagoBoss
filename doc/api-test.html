@@ -1,0 +1,294 @@
+<html>
+    <head>
+        <title>Chicago Boss - the MVC that packs a punch (chicagoboss.org)</title>
+        <link rel="stylesheet" type="text/css" href="boss.css" />
+            
+        <style type="text/css">
+        </style>
+            
+    </head>
+    <body>
+        
+        <div class="equation">
+            <span style="background-color: #B80009;">Rails Idioms</span> +
+            <span style="background-color: #004B00;">Django Templates</span> +
+            <span style="background-color: #0D0075;">Erlang Power</span> =
+            <em>Chicago</em> <strong>BOSS</strong>
+        </div>
+
+        <div class="nav">
+            
+<a href="index.html">F.A.Q.</a> &nbsp; | &nbsp; 
+<a href="compare.html">COMPARE</a> &nbsp; | &nbsp; 
+<a href="guide.html">GUIDES</a> &nbsp; | &nbsp; 
+<strong>API</strong> &nbsp; | &nbsp; 
+<a href="download.html">DOWNLOAD</a> &nbsp; | &nbsp;
+<a href="forum.html">COMMUNITY</a>
+
+        </div>
+        <div style="position: relative;">
+            <div class="content">
+                
+<div style="text-align: center; font-style: italic;">
+<p>The Chicago Boss API is mostly stable, but still might change before 1.0.</p>
+</div>
+<div class="subnav">
+    
+    <a href="api-db.html">BossDB</a>
+    
+    &nbsp; | &nbsp; 
+    
+    <a href="api-record.html">Models</a> 
+    
+    &nbsp; | &nbsp;
+    
+    <a href="api-controller.html">Web Controllers</a> 
+    
+    &nbsp; | &nbsp;
+    
+    <a href="api-mail-controller.html">Mail Controller</a> 
+    
+    &nbsp; | &nbsp;
+    
+    <a href="api-view.html">Templates</a>
+    
+    &nbsp; | &nbsp;
+    
+    <strong>Tests</strong>
+    
+</div>
+<div style="padding-top: 20px;">
+
+<p style="font-size: 14px;"><em>Jump to: </em> <a href="#boss_test"><code>boss_test</code></a>  
+&nbsp; <a href="#boss_assert">boss_assert</a></p>
+<p>Chicago Boss ships with a unique functional test framework, where tests are structured as trees of continuations. All assertions are performed in callbacks, and additional tests are also performed in callbacks. For more information on the design of Boss's functional tests, see <a href="http://www.evanmiller.org/functional-tests-as-a-tree-of-continuations.html">&#8220;Functional Tests As A Tree Of Continuations&#8221;</a>.</p>
+
+<p>To create a test suite, create a module in the Test/ directory. Your test module should export a <code>start/0</code> function, which should invoke a function from the <code>boss_test</code> module. This function will in turn invoke functions in the <a href="#boss_assert"><code>boss_assert</code></a> module (to run assertions) and the <a href="#boss_test"><code>boss_test</code></a> module (to run further tests).</p>
+
+<p>When you are ready to run your test suite, type "make test" in your project directory.</p>
+
+<a name="boss_test"></a>
+<h3>boss_test</h3>
+<p>Functions in the <code>boss_test</code> issue HTTP requests to your web application (or check for emails sent by it). All functions in the <code>boss_test</code> module take the same two final arguments.</p>
+
+<p>Second to last, <code>Assertions</code> is a list of funs that must return a tuple <code>{Passed, ErrorMessage}</code>, where:
+<ul>
+    <li><code>Passed</code> - a boolean indicating whether the test passed</li>
+    <li><code>ErrorMessage</code> - an error message to be displayed if the test failed</li>
+</ul>
+<p>Each fun in <code>Assertions</code> takes a single argument, which is the response object of the current test. The response object will usually by an HTTP response, but in <code>boss_test:read_email/4</code>, it's an email.</p>
+
+<p>Most assertions will take the form of calls to <a href="#boss_assert"><code>boss_assert</code></a>, which is documented below.</p>
+
+<p>The last argument to any <code>boss_test</code> function is called <code>Continuations</code>. <code>Continuations</code> is a list of additional tests &mdash; funs that take the HTTP response value as their only argument, and use it to invoke additional tests from the <code>boss_test</code> module. Funs in <code>Continuations</code> should be preceded by a string label, e.g.:</p>
+<div class="code">
+    boss_test:get_request("/", [], [], <br />
+    &nbsp;&nbsp;&nbsp;[ "Click the register link", fun(Res) -&gt; ... end,<br />
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"Click the copyright link", fun(Res) -&gt; ... end, 
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;... ]).
+</div>
+<p>The key thing to understand about <code>Continuations</code> is that they are <em>performed in parallel</em>. Any database manipulations that occur in one continuation cannot affect sibling continuations.</p>
+
+<p>Functions available in the <code>boss_test</code> module include:</p>
+
+
+
+
+
+
+<div class="code">
+    get_request(Url, Headers, Assertions, Continuations) -> [{NumPassed, ErrorMessages}]
+</div>
+<p>This test issues an HTTP GET request to <code>Url</code> (a path such as "/"
+  -- no "http://" or domain name), passing in <code>RequestHeaders</code> to the
+  server.</p>
+
+
+
+<div class="code">
+    post_request(Url, Headers, Contents, Assertions, Continuations) -> [{NumPassed, ErrorMessages}]
+</div>
+<p>This test issues an HTTP POST request to <code>Url</code> (a path such as "/"
+  -- no "http://" or domain name), passing in <code>RequestHeaders</code> to the
+  server, and <code>Contents</code> as the request body.</p>
+
+
+
+<div class="code">
+    follow_link(LinkName, Response, Assertions, Continuations) -> [{NumPassed, ErrorMessages}]
+</div>
+<p>This test looks for a link labeled <code>LinkName</code> in <code>Response</code> and issues
+  an HTTP GET request to the associated URL. The label may be an "alt" attribute of a
+  hyperlinked &lt;img&gt; tag.</p>
+
+
+
+<div class="code">
+    follow_redirect(Response, Assertions, Continuations) -> [{NumPassed, ErrorMessages}]
+</div>
+<p>This test follows an HTTP redirect; that is, it issues a GET request to
+  the URL specified by the "Location" header in <code>Response</code></p>
+
+
+
+<div class="code">
+    submit_form(FormName, FormValues<span class="typevar">::proplist()</span>, Response, Assertions, Continuations) -> [{NumPassed, ErrorMessages}]
+</div>
+<p>This test inspects <code>Response</code> for an HTML form with a "name" attribute equal to <code>FormName</code>,
+  and submits it using <code>FormValues</code>, a proplist with keys equal to the labels of form fields.
+  (So all visible form fields should be labeled with a &lt;label&gt; HTML tag!)
+  If a particular value is not specified, the form's default value is used.</p>
+
+
+
+<div class="code">
+    read_email(ToAddress, Subject, Assertions, Continuations) -> [{NumPassed, ErrorMessages}]
+</div>
+<p>This test retrieves the most recent email sent by the application to <code>ToAddress</code> with
+  subject equal to <code>Subject</code>.</p>
+
+
+
+
+
+<a name="boss_assert">
+<h3>boss_assert</h3>
+<p>The <code>Assertions</code> list in a <code>boss_test</code> invocation will usually refer to functions in the <code>boss_assert</code> module. Available functions include:</p>
+
+
+<div class="code">
+    http_ok(Response) -> {Passed, ErrorMessage}
+</div>
+<p>Compares the HTTP status code in <code>Response</code> to 200 (HTTP OK).</p>
+
+
+
+<div class="code">
+    http_partial_content(Response) -> {Passed, ErrorMessage}
+</div>
+<p>Compares the HTTP status code in <code>Response</code> to 206 (HTTP Partial Content)</p>
+
+
+
+<div class="code">
+    http_redirect(Response) -> {Passed, ErrorMessage}
+</div>
+<p>Compares the HTTP status code in <code>Response</code> to 302 (HTTP Found).</p>
+
+
+
+<div class="code">
+    http_not_modified(Response) -> {Passed, ErrorMessage}
+</div>
+<p>Compares the HTTP status code in <code>Response</code> to 304 (HTTP Not Modified).</p>
+
+
+
+<div class="code">
+    http_bad_request(Response) -> {Passed, ErrorMessage}
+</div>
+<p>Compares the HTTP status code in <code>Response</code> to 400 (HTTP Bad Request).</p>
+
+
+
+<div class="code">
+    http_not_found(Response) -> {Passed, ErrorMessage}
+</div>
+<p>Compares the HTTP status code in <code>Response</code> to 404 (HTTP Not Found).</p>
+
+
+
+<div class="code">
+    link_with_text(Text, Response) -> {Passed, ErrorMessage}
+</div>
+<p>Looks in <code>Response</code> for a link with text equal to <code>Text</code>.
+  The text may be the inner text of an &lt;a&gt; tag, or the
+  "alt" attribute of a hyperlinked &lt;img&gt; tag.
+  <code>Response</code> may be an HTTP response, or an email.</p>
+
+
+
+<div class="code">
+    tag_with_text(Tag, Text, Response) -> {Passed, ErrorMessage}
+</div>
+<p>Looks in <code>Response</code> for an HTML tag of type <code>Tag</code> with inner
+  text equal to <code>Text</code>. <code>Response</code> may be an HTTP response, or an email.</p>
+
+
+
+<div class="code">
+    header(Key, Value, Response) -> {Passed, ErrorMessage}
+</div>
+<p>Compares the <code>Key</code> header in <code>Response</code> (HTTP or email) to <code>Value</code>.</p>
+
+
+
+<div class="code">
+    location_header(Url, Response) -> {Passed, ErrorMessage}
+</div>
+<p>Compares <code>Url</code> to the Location: header of <code>Response</code>.</p>
+
+
+
+<div class="code">
+    content_language_header(ContentLanguage, Response) -> {Passed, ErrorMessage}
+</div>
+<p>Compares <code>ContentLanguage</code> to the Content-Language: header of <code>Response</code></p>
+
+
+
+<div class="code">
+    content_type_header(ContentType, Response) -> {Passed, ErrorMessage}
+</div>
+<p>Compares <code>ContentType</code> to the Content-Type: header of <code>Response</code></p>
+
+
+
+<div class="code">
+    from_header(FromAddress, Email) -> {Passed, ErrorMessage}
+</div>
+<p>Compares <code>FromAddress</code> to the From: header field in <code>Email</code></p>
+
+
+
+<div class="code">
+    email_has_text(Email) -> {Passed, ErrorMessage}
+</div>
+<p>Checks whether <code>Email</code> contains a plain-text body.</p>
+
+
+
+<div class="code">
+    email_has_html(Email) -> {Passed, ErrorMessage}
+</div>
+<p>Checks whether <code>Email</code> contains an HTML body.</p>
+
+
+
+<div class="code">
+    email_is_text_only(Email) -> {Passed, ErrorMessage}
+</div>
+<p>Checks whether <code>Email</code> contains a plain-text body and not an HTML body.</p>
+
+
+
+<div class="code">
+    email_is_html_only(Email) -> {Passed, ErrorMessage}
+</div>
+<p>Checks whether <code>Email</code> contains an HTML body and not a plain-text body.</p>
+
+
+
+<div class="code">
+    email_is_multipart(Email) -> {Passed, ErrorMessage}
+</div>
+<p>Checks whether <code>Email</code> contains alternative text and HTML representations.</p>
+
+
+
+</div>
+
+            </div>
+        </div>
+    </body>
+</html>

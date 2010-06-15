@@ -1,40 +1,60 @@
 % web-centric functional tests
 -module(boss_test).
--compile(export_all).
+-export([start/0, run_tests/0, get_request/4, post_request/5, read_email/4]).
+-export([follow_link/4, follow_redirect/3, submit_form/5]).
+-export([find_link_with_text/2]).
 
 start() ->
     boss_db:start([{driver, boss_db_driver_mock}]),
+    boss_mail:start([{driver, boss_mail_driver_mock}]),
     boss_translator:start(),
-    boss_controller:load_all_modules(),
+    boss_load:load_all_modules(),
     put(boss_environment, testing),
-    io:format("~-60s", ["Root test"]),
-    {NumSuccesses, FailureMessages} = run_tests(),
-    io:format("~70c~n", [$=]),
-    io:format("Passed: ~p~n", [NumSuccesses]),
-    io:format("Failed: ~p~n", [length(FailureMessages)]),
+    run_tests(),
     erlang:halt().
 
 run_tests() ->
-    admin_test:root_test().
+    lists:map(fun(TestModule) ->
+                TestModuleAtom = list_to_atom(TestModule),
+                io:format("Running: ~p~n", [TestModule]),
+                io:format("~-60s", ["Root test"]),
+                {NumSuccesses, FailureMessages} = TestModuleAtom:start(),
+                io:format("~70c~n", [$=]),
+                io:format("Passed: ~p~n", [NumSuccesses]),
+                io:format("Failed: ~p~n", [length(FailureMessages)])
+        end, boss_files:test_list()).
 
+%% @spec get_request(Url, Headers, Assertions, Continuations) -> [{NumPassed, ErrorMessages}]
+%% @doc This test issues an HTTP GET request to `Url' (a path such as "/"
+%% -- no "http://" or domain name), passing in `RequestHeaders' to the
+%% server.
 get_request(Url, Headers, Assertions, Continuations) ->
     RequesterPid = spawn(fun get_request_loop/0),
     RequesterPid ! {self(), Url, Headers},
     receive_response(RequesterPid, Assertions, Continuations).
 
+%% @spec post_request(Url, Headers, Contents, Assertions, Continuations) -> [{NumPassed, ErrorMessages}]
+%% @doc This test issues an HTTP POST request to `Url' (a path such as "/"
+%% -- no "http://" or domain name), passing in `RequestHeaders' to the
+%% server, and `Contents' as the request body.
 post_request(Url, Headers, Contents, Assertions, Continuations) ->
     RequesterPid = spawn(fun post_request_loop/0),
     RequesterPid ! {self(), Url, Headers, Contents},
     receive_response(RequesterPid, Assertions, Continuations).
 
-follow_link(LinkName, {_, _, _, ParseTree}, Assertions, Continuations) ->
-    case find_link_with_text(LinkName, ParseTree) of
-        undefined -> 
-            {0, ["No link to follow!"]};
-        Url -> get_request(binary_to_list(Url), [], Assertions, Continuations)
-    end.
+%% @spec follow_link(LinkName, Response, Assertions, Continuations) -> [{NumPassed, ErrorMessages}]
+%% @doc This test looks for a link labeled `LinkName' in `Response' and issues
+%% an HTTP GET request to the associated URL. The label may be an "alt" attribute of a 
+%% hyperlinked &amp;lt;img&amp;gt; tag.
+follow_link(LinkName, {_, _, _, ParseTree} = _Response, Assertions, Continuations) ->
+    follow_link1(LinkName, ParseTree, Assertions, Continuations);
+follow_link(LinkName, {_, _, ParseTree} = _Response, Assertions, Continuations) ->
+    follow_link1(LinkName, ParseTree, Assertions, Continuations).
 
-follow_redirect({302, _, Headers, _}, Assertions, Continuations) ->
+%% @spec follow_redirect(Response, Assertions, Continuations) -> [{NumPassed, ErrorMessages}]
+%% @doc This test follows an HTTP redirect; that is, it issues a GET request to
+%% the URL specified by the "Location" header in `Response'
+follow_redirect({302, _, Headers, _} = _Response, Assertions, Continuations) ->
   case proplists:get_value("Location", Headers) of
     undefined ->
       {0, ["No Location: header to follow!"]};
@@ -42,7 +62,12 @@ follow_redirect({302, _, Headers, _}, Assertions, Continuations) ->
       get_request(Url, [], Assertions, Continuations)
   end.
 
-submit_form(FormName, FormValues, {_, Uri, _, ParseTree}, Assertions, Continuations) ->
+%% @spec submit_form(FormName, FormValues::proplist(), Response, Assertions, Continuations) -> [{NumPassed, ErrorMessages}]
+%% @doc This test inspects `Response' for an HTML form with a "name" attribute equal to `FormName',
+%% and submits it using `FormValues', a proplist with keys equal to the labels of form fields. 
+%% (So all visible form fields should be labeled with a &amp;lt;label&amp;gt; HTML tag!)
+%% If a particular value is not specified, the form's default value is used.
+submit_form(FormName, FormValues, {_, Uri, _, ParseTree} = _Response, Assertions, Continuations) ->
     case find_form_named(FormName, ParseTree) of
         undefined -> 
             {0, ["No form to submit!"]};
@@ -57,6 +82,38 @@ submit_form(FormName, FormValues, {_, Uri, _, ParseTree}, Assertions, Continuati
                     get_request(Url, [], Assertions, Continuations)
             end
     end.
+
+%% @spec read_email(ToAddress, Subject, Assertions, Continuations) -> [{NumPassed, ErrorMessages}]
+%% @doc This test retrieves the most recent email sent by the application to `ToAddress' with
+%% subject equal to `Subject'.
+read_email(ToAddress, Subject, Assertions, Continuations) ->
+    case boss_mail_driver_mock:read(ToAddress, Subject) of
+        undefined ->
+            {0, ["No such message was sent!"]};
+        {Type, SubType, Headers, _, Body} ->
+            {TextBody, HtmlBody} = parse_email_body(Type, SubType, Body),
+            process_assertions_and_continuations(Assertions, Continuations, {Headers, TextBody, HtmlBody})
+    end.
+
+% Internal
+
+follow_link1(LinkName, ParseTree, Assertions, Continuations) ->
+    case find_link_with_text(LinkName, ParseTree) of
+        undefined -> 
+            {0, ["No link to follow!"]};
+        Url -> get_request(binary_to_list(Url), [], Assertions, Continuations)
+    end.
+
+parse_email_body(<<"text">>, <<"plain">>, Body) ->
+    {Body, []};
+parse_email_body(<<"text">>, <<"html">>, Body) ->
+    ParsedBody = mochiweb_html:parse(Body),
+    {[], ParsedBody};
+parse_email_body(<<"multipart">>, <<"alternative">>, 
+    [{<<"text">>, <<"plain">>, _, _, TextBody}, 
+        {<<"text">>, <<"html">>, _, _, HtmlBody}]) ->
+    ParsedHtmlBody = mochiweb_html:parse(HtmlBody),
+    {TextBody, ParsedHtmlBody}.
 
 fill_out_form(InputFields, InputLabels, FormValues) ->
     MergedForm = lists:map(
@@ -184,7 +241,7 @@ get_request_loop() ->
     receive
         {From, Uri, Headers} ->
             Req = make_request('GET', Uri, Headers),
-            From ! {self(), Uri, boss_controller:process_request(Req)};
+            From ! {self(), Uri, boss_web_controller:process_request(Req)};
         Other ->
             error_logger:error_msg("Unexpected message in get_request_loop: ~p~n", [Other])
     end.
@@ -196,7 +253,7 @@ post_request_loop() ->
             erlang:put(mochiweb_request_body_length, length(Body)),
             erlang:put(mochiweb_request_post, mochiweb_util:parse_qs(Body)),
             Req = make_request('POST', Uri, [{"Content-Encoding", "application/x-www-form-urlencoded"} | Headers]),
-            From ! {self(), Uri, boss_controller:process_request(Req)};
+            From ! {self(), Uri, boss_web_controller:process_request(Req)};
         Other ->
             error_logger:error_msg("Unexpected message in post_request_loop: ~p~n", [Other])
     end.
@@ -216,34 +273,40 @@ receive_response(RequesterPid, Assertions, Continuations) ->
                 [] -> [];
                 Other -> mochiweb_html:parse(Other)
             end,
-            ParsedResponse = {Status, Uri, ResponseHeaders, ParsedResponseBody},
-            {NumSuccesses, FailureMessages} = lists:foldl(fun
-                    (AssertionFun, {N, Acc}) when is_function(AssertionFun) ->
-                        case AssertionFun(ParsedResponse) of
-                            {true, _Msg} ->
-                                {N+1, Acc};
-                            {false, Msg} ->
-                                {N, [Msg|Acc]}
-                        end
-                end, {0, []}, Assertions),
             exit(RequesterPid, kill),
-            case length(FailureMessages) of
-                0 ->
-                    io:format("~3B passed~n", [NumSuccesses]),
-                    {NewS, NewF} = process_continuations(Continuations, ParsedResponse),
-                    {NumSuccesses + NewS, FailureMessages ++ NewF};
-                N ->
-                    io:format("~c[01;31m~3B failed~c[00m~n", [16#1B, N, 16#1B]),
-                    lists:map(fun(Msg) ->
-                                io:format("~s* ~c[01m~p~c[00m~n", 
-                                    [lists:duplicate(boss_db_driver_mock:depth() - 1, $\ ), 
-                                        16#1B, Msg, 16#1B])
-                        end, FailureMessages),
-                    {NumSuccesses, FailureMessages}
-            end;
+            ParsedResponse = {Status, Uri, ResponseHeaders, ParsedResponseBody},
+            process_assertions_and_continuations(Assertions, Continuations, ParsedResponse);
         _ ->
             receive_response(RequesterPid, Assertions, Continuations)
     end.
+
+process_assertions_and_continuations(Assertions, Continuations, ParsedResponse) ->
+    {NumSuccesses, FailureMessages} = process_assertions(Assertions, ParsedResponse),
+    case length(FailureMessages) of
+        0 ->
+            io:format("~3B passed~n", [NumSuccesses]),
+            {NewS, NewF} = process_continuations(Continuations, ParsedResponse),
+            {NumSuccesses + NewS, FailureMessages ++ NewF};
+        N ->
+            io:format("~c[01;31m~3B failed~c[00m~n", [16#1B, N, 16#1B]),
+            lists:map(fun(Msg) ->
+                        io:format("~s* ~c[01m~p~c[00m~n", 
+                            [lists:duplicate(boss_db_driver_mock:depth() - 1, $\ ), 
+                                16#1B, Msg, 16#1B])
+                end, FailureMessages),
+            {NumSuccesses, FailureMessages}
+    end.
+
+process_assertions(Assertions, ParsedResponse) ->
+    lists:foldl(fun
+            (AssertionFun, {N, Acc}) when is_function(AssertionFun) ->
+                case AssertionFun(ParsedResponse) of
+                    {true, _Msg} ->
+                        {N+1, Acc};
+                    {false, Msg} ->
+                        {N, [Msg|Acc]}
+                end
+        end, {0, []}, Assertions).
 
 process_continuations(Continuations, Response) ->
     process_continuations(Continuations, Response, {0, []}).
@@ -254,7 +317,9 @@ process_continuations([Name, Fun | Rest], Response, {NumSuccesses, FailureMessag
         when is_list(Name) and is_function(Fun) ->
     io:format("~-60s", [lists:duplicate(boss_db_driver_mock:depth(), $\ ) ++ Name]),
     boss_db_driver_mock:push(),
+    boss_mail_driver_mock:push(),
     {TheseSuccesses, TheseFailureMessages} = Fun(Response),
+    boss_mail_driver_mock:pop(),
     boss_db_driver_mock:pop(),
     process_continuations(Rest, Response, {NumSuccesses + TheseSuccesses, TheseFailureMessages ++ FailureMessages}).
 

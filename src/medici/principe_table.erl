@@ -518,6 +518,8 @@ add_condition_op_val(Op) when is_atom(Op) ->
 	    ?QCSTRAND;
 	str_or ->
 	    ?QCSTROR;
+	str_in_list ->
+	    ?QCSTROREQ;
 	str_regex ->
 	    ?QCSTRRX;
 	num_eq ->

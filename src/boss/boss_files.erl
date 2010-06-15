@@ -3,14 +3,24 @@
 
 root_dir() -> filename:join([filename:dirname(code:which(?MODULE)), ".."]).
 
-view_path() -> filename:join([root_dir(), "View"]).
-view_path(Controller) -> filename:join([view_path(), Controller]).
-view_path(Controller, Template) -> filename:join([view_path(Controller), lists:concat([Template, ".html"])]).
+web_view_path() -> filename:join([root_dir(), "Web"]).
+web_view_path(Controller) -> 
+    filename:join([web_view_path(), lists:concat([Controller, "_views"])]).
+web_view_path(Controller, Template) -> web_view_path(Controller, Template, "html").
+web_view_path(Controller, Template, Extension) -> 
+    filename:join([web_view_path(Controller), lists:concat([Template, ".", Extension])]).
+
+mail_view_path() -> filename:join([root_dir(), "Mail", "views"]).
+mail_view_path(Template) -> mail_view_path(Template, "txt").
+mail_view_path(Template, Extension) -> 
+    filename:join([mail_view_path(), lists:concat([Template, ".", Extension])]).
 
 model_path() -> filename:join([root_dir(), "Model"]).
 model_path(Model) -> filename:join([model_path(), Model]).
 
-controller_path() -> filename:join([root_dir(), "Controller"]).
+web_controller_path() -> filename:join([root_dir(), "Web"]).
+
+mail_controller_path() -> filename:join([root_dir(), "Mail"]).
 
 lang_path() -> filename:join([root_dir(), "Lang"]).
 lang_path(Lang) -> filename:join([lang_path(), lists:concat(["strings.", Lang, ".po"])]).
@@ -26,7 +36,7 @@ model_list() ->
     module_list(model_path()).
 
 view_file_list() ->
-    Pattern = filename:join([view_path(), "*", "*.html"]),
+    Pattern = filename:join([root_dir(), "{Web,Mail}", "*views", "*.{html,txt}"]),
     filelib:wildcard(Pattern).
 
 language_list() ->

@@ -110,7 +110,7 @@ delete(Key) ->
 
 %% @spec save_record( BossRecord ) -> {ok, SavedBossRecord} | {error, [ErrorMessages]}
 %% @doc Save (that is, create or update) the given BossRecord in the database.
-%% Performs validation first; see `validate_record/0'.
+%% Performs validation first; see `validate_record/1'.
 save_record(Record) ->
     case validate_record(Record) of
         ok -> gen_server:call(boss_db, {save_record, Record});

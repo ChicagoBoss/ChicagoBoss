@@ -1,21 +1,139 @@
 % Assertion helper functions
+% Four-tuples are an HTTP response {Status, Location, Headers, ParsedHtml}, 
+% three-tuples are an Email {Headers, TextBody, ParsedHtml}
 -module(boss_assert).
--compile(export_all).
+-export([
+        http_ok/1, 
+        http_partial_content/1,
+        http_redirect/1, 
+        http_not_modified/1,
+        http_bad_request/1,
+        http_not_found/1,
+        link_with_text/2, 
+        tag_with_text/3, 
+        header/3, 
+        location_header/2,
+        content_language_header/2,
+        content_type_header/2,
+        from_header/2,
+        email_has_text/1, 
+        email_has_html/1,
+        email_is_text_only/1, 
+        email_is_html_only/1, 
+        email_is_multipart/1]).
 
-http_ok({Status, _, _, _}) ->
-  {Status =:= 200, "HTTP Status not OK"}.
+%% @spec http_ok(Response) -> {Passed, ErrorMessage}
+%% @doc Compares the HTTP status code in `Response' to 200 (HTTP OK).
+http_ok({Status, _, _, _} = _Response) ->
+    {Status =:= 200, "HTTP Status not 200 OK"}.
 
-http_redirect({Status, _, _, _}) ->
-  {Status =:= 302, "HTTP Status not Redirect"}.
+%% @spec http_partial_content(Response) -> {Passed, ErrorMessage}
+%% @doc Compares the HTTP status code in `Response' to 206 (HTTP Partial Content)
+http_partial_content({Status, _, _, _} = _Response) ->
+    {Status =:= 206, "HTTP Status not 206 Partial Content"}.
 
-redirect_location(Url, {_, _, Headers, _}) ->
-  {proplists:get_value("Location", Headers) =:= Url,
-    "Did not redirect to "++Url}.
+%% @spec http_redirect(Response) -> {Passed, ErrorMessage}
+%% @doc Compares the HTTP status code in `Response' to 302 (HTTP Found).
+http_redirect({Status, _, _, _} = _Response) ->
+    {Status =:= 302, "HTTP Status not 302 Redirect"}.
 
-tag_with_text(Tag, Text, {_, _, _, ParseTree}) ->
+%% @spec http_not_modified(Response) -> {Passed, ErrorMessage}
+%% @doc Compares the HTTP status code in `Response' to 304 (HTTP Not Modified).
+http_not_modified({Status, _, _, _} = _Response) ->
+    {Status =:= 304, "HTTP Status not 304 Not Modified"}.
+
+%% @spec http_bad_request(Response) -> {Passed, ErrorMessage}
+%% @doc Compares the HTTP status code in `Response' to 400 (HTTP Bad Request).
+http_bad_request({Status, _, _, _} = _Response) ->
+    {Status =:= 400, "HTTP Status not 400 Bad Request"}.
+
+%% @spec http_not_found(Response) -> {Passed, ErrorMessage}
+%% @doc Compares the HTTP status code in `Response' to 404 (HTTP Not Found).
+http_not_found({Status, _, _, _} = _Response) ->
+    {Status =:= 404, "HTTP Status not 404 Not Found"}.
+
+%% @spec link_with_text(Text, Response) -> {Passed, ErrorMessage}
+%% @doc Looks in `Response' for a link with text equal to `Text'. 
+%% The text may be the inner text of an &amp;lt;a&amp;gt; tag, or the 
+%% "alt" attribute of a hyperlinked &amp;lt;img&amp;gt; tag.
+%% `Response' may be an HTTP response, or an email.
+link_with_text(Text, {_, _, _, ParseTree} = _Response) ->
+    link_with_text1(Text, ParseTree);
+link_with_text(Text, {_, _, ParseTree} = _Response) ->
+    link_with_text1(Text, ParseTree).
+
+%% @spec tag_with_text(Tag, Text, Response) -> {Passed, ErrorMessage}
+%% @doc Looks in `Response' for an HTML tag of type `Tag' with inner
+%% text equal to `Text'. `Response' may be an HTTP response, or an email.
+tag_with_text(Tag, Text, {_, _, _, ParseTree} = _Response) ->
+    tag_with_text1(Tag, Text, ParseTree);
+tag_with_text(Tag, Text, {_, _, ParseTree} = _Response) ->
+    tag_with_text1(Tag, Text, ParseTree).
+
+%% @spec header(Key, Value, Response) -> {Passed, ErrorMessage}
+%% @doc Compares the `Key' header in `Response' (HTTP or email) to `Value'.
+header(Key, Value, {_, _, Headers, _} = _Response) ->
+    {proplists:get_value(Key, Headers) =:= Value,
+        "\""++Key++"\" header is not equal to \""++Value++"\""};
+header(Key, Value, {Headers, _, _} = _Response) ->
+    {proplists:get_value(list_to_binary(Key), Headers) =:= list_to_binary(Value),
+        "\""++Key++"\" header is not equal to \""++Value++"\""}.
+
+%% @spec location_header(Url, Response) -> {Passed, ErrorMessage}
+%% @doc Compares `Url' to the Location: header of `Response'.
+location_header(Url, Response) ->
+    header("Location", Url, Response).
+
+%% @spec content_language_header(ContentLanguage, Response) -> {Passed, ErrorMessage}
+%% @doc Compares `ContentLanguage' to the Content-Language: header of `Response'
+content_language_header(ContentLanguage, Response) ->
+    header("Content-Language", ContentLanguage, Response).
+
+%% @spec content_type_header(ContentType, Response) -> {Passed, ErrorMessage}
+%% @doc Compares `ContentType' to the Content-Type: header of `Response'
+content_type_header(ContentType, Response) ->
+    header("Content-Type", ContentType, Response).
+
+%% @spec from_header(FromAddress, Email) -> {Passed, ErrorMessage}
+%% @doc Compares `FromAddress' to the From: header field in `Email'
+from_header(FromAddress, Email) ->
+    header("From", FromAddress, Email).
+
+%% @spec email_has_text(Email) -> {Passed, ErrorMessage}
+%% @doc Checks whether `Email' contains a plain-text body.
+email_has_text({_, TextBody, _} = _Email) ->
+    {TextBody =/= "", "Email does not contain a plain-text body"}.
+
+%% @spec email_has_html(Email) -> {Passed, ErrorMessage}
+%% @doc Checks whether `Email' contains an HTML body.
+email_has_html({_, TextBody, _} = _Email) ->
+    {TextBody =/= "", "Email does not contain an HTML body"}.
+
+%% @spec email_is_text_only(Email) -> {Passed, ErrorMessage}
+%% @doc Checks whether `Email' contains a plain-text body and not an HTML body.
+email_is_text_only({_, TextBody, HtmlBody} = _Email) ->
+    {TextBody =/= "" andalso HtmlBody =:= "",
+        "Email is not text-only"}.
+
+%% @spec email_is_html_only(Email) -> {Passed, ErrorMessage}
+%% @doc Checks whether `Email' contains an HTML body and not a plain-text body.
+email_is_html_only({_, TextBody, HtmlBody} = _Email) ->
+    {TextBody =:= "" andalso HtmlBody =/= "",
+        "Email is not HTML-only"}.
+
+%% @spec email_is_multipart(Email) -> {Passed, ErrorMessage}
+%% @doc Checks whether `Email' contains alternative text and HTML representations.
+email_is_multipart({_, TextBody, HtmlBody} = _Email) ->
+    {TextBody =/= "" andalso HtmlBody =/= "",
+        "Email is not multipart"}.
+
+
+% internal
+
+tag_with_text1(Tag, Text, ParseTree) ->
     {has_tag_with_text(Tag, Text, ParseTree), "No <"++Tag++"> tag containing \""++Text++"\""}.
 
-link_with_text(Text, {_, _, _, Response}) ->
+link_with_text1(Text, Response) ->
     {boss_test:find_link_with_text(Text, Response) =/= undefined,
         "No link to \""++Text++"\""}.
 

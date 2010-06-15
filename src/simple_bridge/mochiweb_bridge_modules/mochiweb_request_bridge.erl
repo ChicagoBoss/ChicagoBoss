@@ -77,8 +77,8 @@ query_params({Req, _DocRoot}) ->
 post_params({Req, _DocRoot}) ->
     Req:parse_post().
 
-request_body({_Req, _DocRoot}) ->
-    undefined.
+request_body({Req, _DocRoot}) ->
+    Req:recv_body().
 
 socket({Req, _DocRoot}) -> 	
     Req:get(socket).

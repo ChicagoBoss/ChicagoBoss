@@ -38,7 +38,12 @@ model('GET', [ModelName, PageName], Authorization) ->
         [{"Cache-Control", "no-cache"}]}.
 
 record('GET', [RecordId], Authorization) ->
-    {ok, [{'record', boss_db:find(RecordId)}, {'type', boss_db:type(RecordId)}]}.
+    Record = boss_db:find(RecordId),
+    AttributesWithDataTypes = lists:map(fun({Key, Val}) ->
+                {Key, Val, boss_db:data_type(Key, Val)}
+        end, Record:attributes()),
+    {ok, [{'record', Record}, {'attributes', AttributesWithDataTypes}, 
+            {'type', boss_db:type(RecordId)}]}.
 
 delete('GET', [RecordId], Authorization) ->
     {ok, [{'record', boss_db:find(RecordId)}]};

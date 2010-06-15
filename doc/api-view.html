@@ -38,22 +38,30 @@
     
     &nbsp; | &nbsp; 
     
-    <a href="api-record.html">BossRecord</a> 
+    <a href="api-record.html">Models</a> 
     
     &nbsp; | &nbsp;
     
-    <a href="api-controller.html">Controllers</a> 
+    <a href="api-controller.html">Web Controllers</a> 
     
     &nbsp; | &nbsp;
     
-    <strong>Django Templates</strong>
+    <a href="api-mail-controller.html">Mail Controller</a> 
+    
+    &nbsp; | &nbsp;
+    
+    <strong>Templates</strong>
+    
+    &nbsp; | &nbsp;
+    
+    <a href="api-test.html">Tests</a>
     
 </div>
 <div style="padding-top: 20px;">
 
-<p>Chicago Boss liked <a href="http://docs.djangoproject.com/en/dev/topics/templates/">Django's templating language</a> so much, he decided to steal it. Template files go in your project's View folder, and will have access to the variables you pass from your <a href="api-controller.html#nav">Controller</a>. The template file associated with the function <code>foo_controller:bar</code> will be View/foo/bar.html.</p>
+<p>Chicago Boss liked <a href="http://docs.djangoproject.com/en/dev/topics/templates/">Django's templating language</a> so much, he decided to steal it. Template files go in your project's Web/ folder (in subdirectories that end in *_views), and will have access to the variables you pass from your <a href="api-controller.html#nav">Controller</a>. The template file associated with the function <code>foo_controller:bar</code> will be Web/foo_views/bar.html.</p>
 
-<p>Note: if you use the the <code>extends</code> tag, the file path should be relative to your project's "View" directory.</p>
+<p>Note: if you use the the <code>extends</code> tag, the file path should be relative to your project's Web/ directory.</p>
 
 <p>Chicago Boss has support for the most common features of the Django Template Language, so many existing Django templates should work out of the box. Your templates will be compiled down to Erlang BEAM code using <a href="http://code.google.com/p/erlydtl/">ErlyDTL</a> to give you the fastest Erlang templates on the planet.</p>
 

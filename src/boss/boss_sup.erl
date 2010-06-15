@@ -44,8 +44,8 @@ init([]) ->
     Ip = case os:getenv("MOCHIWEB_IP") of false -> "0.0.0.0"; Any -> Any end,   
     Port = case application:get_env(port) of {ok, P} -> P; undefined -> 8001 end,
     WebConfig = [ {ip, Ip}, {port, Port} ],
-    Web = {boss_controller,
-	   {boss_controller, start, [WebConfig]},
+    Web = {boss_web_controller,
+	   {boss_web_controller, start, [WebConfig]},
 	   permanent, 5000, worker, dynamic},
 
     Processes = [Web],

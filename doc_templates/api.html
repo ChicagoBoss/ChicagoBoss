@@ -28,21 +28,33 @@
     {% endifequal %}
     &nbsp; | &nbsp; 
     {% ifequal this_page "api-record.html" %}
-    <strong>BossRecord</strong>
+    <strong>Models</strong>
     {% else %}
-    <a href="api-record.html">BossRecord</a> 
+    <a href="api-record.html">Models</a> 
     {% endifequal %}
     &nbsp; | &nbsp;
     {% ifequal this_page "api-controller.html" %}
-    <strong>Controllers</strong>
+    <strong>Web Controllers</strong>
     {% else %}
-    <a href="api-controller.html">Controllers</a> 
+    <a href="api-controller.html">Web Controllers</a> 
+    {% endifequal %}
+    &nbsp; | &nbsp;
+    {% ifequal this_page "api-mail-controller.html" %}
+    <strong>Mail Controller</strong>
+    {% else %}
+    <a href="api-mail-controller.html">Mail Controller</a> 
     {% endifequal %}
     &nbsp; | &nbsp;
     {% ifequal this_page "api-view.html" %}
-    <strong>Django Templates</strong>
+    <strong>Templates</strong>
     {% else %}
-    <a href="api-view.html">Django Templates</a>
+    <a href="api-view.html">Templates</a>
+    {% endifequal %}
+    &nbsp; | &nbsp;
+    {% ifequal this_page "api-test.html" %}
+    <strong>Tests</strong>
+    {% else %}
+    <a href="api-test.html">Tests</a>
     {% endifequal %}
 </div>
 <div style="padding-top: 20px;">
