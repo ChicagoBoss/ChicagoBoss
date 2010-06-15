@@ -115,13 +115,14 @@ follow_link1(LinkName, ThisUrl, ParseTree, Assertions, Continuations) ->
 parse_email_body(<<"text">>, <<"plain">>, Body) ->
     {Body, []};
 parse_email_body(<<"text">>, <<"html">>, Body) ->
-    ParsedBody = mochiweb_html:parse(Body),
-    {[], ParsedBody};
+    {[], parse_html_email_body(Body)};
 parse_email_body(<<"multipart">>, <<"alternative">>, 
     [{<<"text">>, <<"plain">>, _, _, TextBody}, 
         {<<"text">>, <<"html">>, _, _, HtmlBody}]) ->
-    ParsedHtmlBody = mochiweb_html:parse(<<"<html>", HtmlBody/binary, "</html>">>), %hack
-    {TextBody, ParsedHtmlBody}.
+    {TextBody, parse_html_email_body(HtmlBody)}.
+
+parse_html_email_body(HtmlBody) -> %hack
+    mochiweb_html:parse(<<"<html>", HtmlBody/binary, "</html>">>).
 
 fill_out_form(InputFields, InputLabels, FormValues) ->
     MergedForm = lists:map(
