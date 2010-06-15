@@ -45,7 +45,7 @@ start() ->
                                                       fun(Response7) ->
                                                           boss_test:submit_form("delete", [], Response7,
                                                             [ fun boss_assert:http_redirect/1,
-                                                              fun(Res) -> boss_assert:http_redirect_location(GreetingUrl, Res) end
+                                                              fun(Res) -> boss_assert:location_header(GreetingUrl, Res) end
                                                             ], []) end ]) end,
                                               "Back to greeting list",
                                               fun(Response6) ->

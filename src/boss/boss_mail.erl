@@ -93,4 +93,4 @@ render_multipart_view1([], Boundary) ->
     ["--", Boundary, "--"];
 render_multipart_view1([{MimeType, Body}|Rest], Boundary) ->
     ["--", Boundary, "\r\n", "Content-Type: ", MimeType, "\r\n\r\n",
-        Body, render_multipart_view1(Rest, Boundary)].
+        Body, "\r\n", render_multipart_view1(Rest, Boundary)].

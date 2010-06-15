@@ -16,7 +16,7 @@ start() ->
 run_tests() ->
     lists:map(fun(TestModule) ->
                 TestModuleAtom = list_to_atom(TestModule),
-                io:format("Running: ~p~n", [TestModule]),
+                io:format("~nRunning: ~p~n", [TestModule]),
                 io:format("~-60s", ["Root test"]),
                 {NumSuccesses, FailureMessages} = TestModuleAtom:start(),
                 io:format("~70c~n", [$=]),
@@ -46,10 +46,10 @@ post_request(Url, Headers, Contents, Assertions, Continuations) ->
 %% @doc This test looks for a link labeled `LinkName' in `Response' and issues
 %% an HTTP GET request to the associated URL. The label may be an "alt" attribute of a 
 %% hyperlinked &amp;lt;img&amp;gt; tag.
-follow_link(LinkName, {_, _, _, ParseTree} = _Response, Assertions, Continuations) ->
-    follow_link1(LinkName, ParseTree, Assertions, Continuations);
+follow_link(LinkName, {_, Uri, _, ParseTree} = _Response, Assertions, Continuations) ->
+    follow_link1(LinkName, Uri, ParseTree, Assertions, Continuations);
 follow_link(LinkName, {_, _, ParseTree} = _Response, Assertions, Continuations) ->
-    follow_link1(LinkName, ParseTree, Assertions, Continuations).
+    follow_link1(LinkName, "", ParseTree, Assertions, Continuations).
 
 %% @spec follow_redirect(Response, Assertions, Continuations) -> [{NumPassed, ErrorMessages}]
 %% @doc This test follows an HTTP redirect; that is, it issues a GET request to
@@ -97,11 +97,19 @@ read_email(ToAddress, Subject, Assertions, Continuations) ->
 
 % Internal
 
-follow_link1(LinkName, ParseTree, Assertions, Continuations) ->
+follow_link1(LinkName, ThisUrl, ParseTree, Assertions, Continuations) ->
     case find_link_with_text(LinkName, ParseTree) of
         undefined -> 
             {0, ["No link to follow!"]};
-        Url -> get_request(binary_to_list(Url), [], Assertions, Continuations)
+        Url ->
+            AbsPath = case parse_url(Url) of
+                [$/|_] = AbsUrl ->
+                    AbsUrl;
+                Other ->
+                    Dirname = filename:dirname(ThisUrl),
+                    filename:join([Dirname, Other])
+            end,
+            get_request(AbsPath, [], Assertions, Continuations)
     end.
 
 parse_email_body(<<"text">>, <<"plain">>, Body) ->
@@ -112,7 +120,7 @@ parse_email_body(<<"text">>, <<"html">>, Body) ->
 parse_email_body(<<"multipart">>, <<"alternative">>, 
     [{<<"text">>, <<"plain">>, _, _, TextBody}, 
         {<<"text">>, <<"html">>, _, _, HtmlBody}]) ->
-    ParsedHtmlBody = mochiweb_html:parse(HtmlBody),
+    ParsedHtmlBody = mochiweb_html:parse(<<"<html>", HtmlBody/binary, "</html>">>), %hack
     {TextBody, ParsedHtmlBody}.
 
 fill_out_form(InputFields, InputLabels, FormValues) ->
@@ -157,6 +165,12 @@ find_link_with_text(LinkName, [{_OtherTag, _Attrs, Children}|Rest]) when is_list
         undefined -> find_link_with_text(LinkName, Rest);
         Url -> Url
     end.
+
+parse_url(Url) when is_binary(Url) ->
+    parse_url(binary_to_list(Url));
+parse_url(Url) ->
+    {_, _, Path, Query, Frag} = mochiweb_util:urlsplit(Url),
+    mochiweb_util:urlunsplit_path({Path, Query, Frag}).
 
 flatten_html(Children) ->
     iolist_to_binary(lists:reverse(flatten_html1(Children, []))).

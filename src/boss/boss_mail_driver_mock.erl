@@ -21,16 +21,17 @@ loop([InboxDict|OldState] = State) ->
                 Email ->
                     NewInbox = lists:delete(Email, Inbox),
                     From ! {boss_mock_inbox, Email},
-                    loop([dict:store(ToAddress, NewInbox)|OldState])
+                    loop([dict:store(ToAddress, NewInbox, InboxDict)|OldState])
             end;
         {From, {deliver, _FromAddress, ToAddress, Email}} ->
             Inbox = case dict:find(ToAddress, InboxDict) of
                 {ok, Val} -> Val;
                 _ -> []
             end,
-            ParsedEmail = mimemail:decode(Email),
+            DecodableEmail = iolist_to_binary(Email),
+            ParsedEmail = mimemail:decode(DecodableEmail),
             From ! {boss_mock_inbox, ok},
-            loop([dict:store(ToAddress, [ParsedEmail|Inbox])|OldState]);
+            loop([dict:store(ToAddress, [ParsedEmail|Inbox], InboxDict)|OldState]);
         {From, push} ->
             From ! {boss_mock_inbox, ok},
             loop([InboxDict|State]);
