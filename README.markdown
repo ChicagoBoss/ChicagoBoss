@@ -8,13 +8,13 @@ Dependencies:
 
 * Erlang R13A or later -
 
-    http://www.erlang.org/download.html
+    <http://www.erlang.org/download.html>
 
   * Check with `erlang:system_info(otp_release)`.
 
 * Tokyo Tyrant -
 
-    http://1978th.net/tokyotyrant/
+    <http://1978th.net/tokyotyrant/>
 
   * **You need Tyrant up and running with a Table database.**
 
@@ -36,12 +36,12 @@ Documentation
 
 See the FAQ and API files located at
 
-    http://www.chicagoboss.org/
+    <http://www.chicagoboss.org/>
 
 If you need help getting started, check out "An Evening With Chicago Boss":
 
-    http://www.evanmiller.org/chicago-boss-guide.html
+    <http://www.evanmiller.org/chicago-boss-guide.html>
 
 There's also the mailing list:
 
-    http://groups.google.com/group/chicagoboss
+    <http://groups.google.com/group/chicagoboss>
