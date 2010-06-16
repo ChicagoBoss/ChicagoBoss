@@ -36,12 +36,12 @@ Documentation
 
 See the FAQ and API files located at
 
-    <http://www.chicagoboss.org/>
+<http://www.chicagoboss.org/>
 
 If you need help getting started, check out "An Evening With Chicago Boss":
 
-    <http://www.evanmiller.org/chicago-boss-guide.html>
+<http://www.evanmiller.org/chicago-boss-guide.html>
 
 There's also the mailing list:
 
-    <http://groups.google.com/group/chicagoboss>
+<http://groups.google.com/group/chicagoboss>
