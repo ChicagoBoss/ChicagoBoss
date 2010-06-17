@@ -12,10 +12,13 @@ compile(File) ->
 %% @spec compile( File::string(), Options ) -> ok | {error, Reason}
 %% @doc Compile an Erlang source file as a BossRecord. Options:
 %% `compiler_options' - Passed directly to compile:forms/2. Defaults to [verbose, return_errors].
+%% `out_dir' - Directory in which to write a BEAM file.
 compile(File, Options) ->
     case parse(File) of
         {ok, Forms} ->
-            case compile_to_binary(trick_out_forms(Forms), File, Options) of
+            CompilerOptions = proplists:get_value(compiler_options, Options, [verbose, return_errors]),
+            RevertedForms = erl_syntax:revert_forms(trick_out_forms(Forms)),
+            case boss_load:compile_forms(RevertedForms, File, CompilerOptions) of
                 {ok, Module, Bin} ->
                     case proplists:get_value(out_dir, Options) of
                         undefined -> ok;
@@ -54,19 +57,6 @@ parse(File) ->
             end;
         Error ->
             Error
-    end.
-
-compile_to_binary(Forms, File, Options) ->
-    case compile:forms(erl_syntax:revert_forms(Forms), 
-            proplists:get_value(compiler_options, Options, [verbose, return_errors])) of
-        {ok, Module1, Bin} ->
-            code:purge(Module1),
-            case code:load_binary(Module1, File, Bin) of
-                {module, _} -> {ok, Module1, Bin};
-                _ -> {error, lists:concat(["code reload failed: ", Module1])}
-            end;
-        OtherError ->
-            OtherError
     end.
 
 trick_out_forms([{attribute, _, file, {_FileName, _FileNum}}|Rest]) ->

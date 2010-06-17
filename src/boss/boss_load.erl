@@ -65,16 +65,7 @@ load_views() ->
     lists:map(fun compile_view_erlydtl/1, boss_files:view_file_list()).
 
 compile_controller(ModulePath) ->
-    CompileResult = compile:file(filename:rootname(ModulePath),
-        [{outdir, boss_files:ebin_dir() }, return_errors]),
-    case CompileResult of
-        {ok, Module} ->
-            code:purge(Module),
-            {module, Module} = code:load_file(Module),
-            ok;
-        Error ->
-            Error
-    end.
+    boss_controller_compiler:compile(ModulePath).
 
 load_view_if_old(ViewPath, Module) ->
     NeedCompile = case module_is_loaded(Module) of
@@ -152,3 +143,14 @@ view_module(ViewPath) ->
     ModuleIOList = re:replace(Lc, "\\.", "_", [global]),
     list_to_atom(binary_to_list(iolist_to_binary(ModuleIOList))).
 
+compile_forms(Forms, File, Options) ->
+    case compile:forms(Forms, Options) of
+        {ok, Module1, Bin} ->
+            code:purge(Module1),
+            case code:load_binary(Module1, File, Bin) of
+                {module, _} -> {ok, Module1, Bin};
+                _ -> {error, lists:concat(["code reload failed: ", Module1])}
+            end;
+        OtherError ->
+            OtherError
+    end.

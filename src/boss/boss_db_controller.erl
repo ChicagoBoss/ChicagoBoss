@@ -23,6 +23,10 @@ handle_call({find, Key}, _From, State) ->
     Driver = State#state.driver,
     {reply, Driver:find(Key), State};
 
+handle_call({find, Type, Conditions}, _From, State) ->
+    Driver = State#state.driver,
+    {reply, Driver:find(Type, Conditions), State};
+
 handle_call({find, Type, Conditions, Max}, _From, State) ->
     Driver = State#state.driver,
     {reply, Driver:find(Type, Conditions, Max), State};

@@ -1,6 +1,74 @@
 {% extends "api.html" %}
 {% block api_content %}
 <p>BossDB is a database abstraction layer used for querying and updating the database. Currently only Tokyo Tyrant is supported, but other drivers will be added in the future.</p>
+
+<h2>Conditions</h2>
+
+<p>The "find" and "count" functions each take a set of <code>Conditions</code>, which specify search criteria. Similar to Microsoft's <a href="http://msdn.microsoft.com/en-us/library/bb308959.aspx">LINQ</a>, the <code>Conditions</code> can use a special non-Erlang syntax for conciseness. This special syntax can't be compiled with Erlang's default compiler, so you'll have to let Boss compile your controllers which use it.</p>
+
+<p><code>Conditions</code> looks like a list, but each element in the list uses a notation very similar to abstract mathematical notation with a left-hand side (an atom corresponding to a record attribute), a single-character operator, and a right-hand side (values to match to the attribute). <strong>The mathematical operators are not all ASCII!</strong> That's right, you may want to copy-paste the UTF-8 operators below.</p>
+
+<p>As a quick example, to count the number of people younger than 25 with occupation listed as "student" or "unemployed", you would use:</p>
+<div class="code">
+    boss_db:count(person, <br />
+    &nbsp;&nbsp;&nbsp;&nbsp;[age &lt; 25, occupation ∈ {"student", "unemployed"}]).
+</div>
+
+<p>Valid conditions are:</p>
+
+<div class="code">
+    key = Value
+</div>
+<p>The "key" attribute is exactly equal to Value.</p>
+
+<div class="code">
+    key ≠ Value
+</div>
+<p>The "key" attribute is not exactly equal to Value.</p>
+
+<div class="code">
+    key ∈ {Value1, Value2, ...}
+</div>
+<p>The "key" attribute is equal one element of the right-hand side.</p>
+
+<div class="code">
+    key ∉ {Value1, Value2, ...}
+</div>
+<p>The "key" attribute is not equal to any element on the right-hand side.</p>
+
+<div class="code">
+    key ∈ [Min, Max]
+</div>
+<p>The "key" attribute is numerically between Min and Max.</p>
+
+<div class="code">
+    key ∉ [Min, Max]
+</div>
+<p>The "key" attribute is not between Min and Max.</p>
+
+<div class="code">
+    key &gt; Value
+</div>
+<p>The "key" attribute is greater than Value.</p>
+
+<div class="code">
+    key &lt; Value
+</div>
+<p>The "key" attribute is less than Value.</p>
+
+<div class="code">
+    key ≥ Value
+</div>
+<p>The "key" attribute is greater than or equal to Value.</p>
+
+<div class="code">
+    key ≤ Value
+</div>
+<p>The "key" attribute is less than or equal to Value.</p>
+
+
+<h2>Functions</h2>
+
 <p>Functions in the <code>boss_db</code> module include:</p>
 {% for function in functions %}
 {% if function.description_long %}

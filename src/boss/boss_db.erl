@@ -6,6 +6,7 @@
 
 -export([
         find/1, 
+        find/2, 
         find/3, 
         find/4, 
         find/5, 
@@ -35,34 +36,35 @@ stop() ->
 find(Key) ->
     gen_server:call(boss_db, {find, Key}).
 
+%% @spec find(Type::atom(), Conditions) -> [ BossRecord ]
+%% @doc Query for BossRecords. Returns all BossRecords of type
+%% `Type' matching all of the given `Conditions'
+find(Type, Conditions) ->
+    gen_server:call(boss_db, {find, Type, Conditions}).
+
 %% @spec find(Type::atom(), Conditions, Max::integer()) -> [ BossRecord ]
-%%       Conditions = [{Key::atom(), Value::string()}]
 %% @doc Query for BossRecords. Returns up to `Max' number of BossRecords of type
-%% `Type' matching all of the given `Conditions' (attribute = value).
+%% `Type' matching all of the given `Conditions'
 find(Type, Conditions, Max) ->
     gen_server:call(boss_db, {find, Type, Conditions, Max}).
 
 %% @spec find( Type::atom(), Conditions, Max::integer(), Skip::integer() ) -> [ BossRecord ]
-%%       Conditions = [{Key::atom(), Value::string()}]
 %% @doc Query for BossRecords. Returns up to `Max' number of BossRecords of type
-%% `Type' matching all of the given `Conditions' (attribute = value), skipping the
-%% first `Skip' results.
+%% `Type' matching all of the given `Conditions', skipping the first `Skip' results.
 find(Type, Conditions, Max, Skip) ->
     gen_server:call(boss_db, {find, Type, Conditions, Max, Skip}).
 
 %% @spec find( Type::atom(), Conditions, Max::integer(), Skip::integer(), Sort::atom() ) -> [ BossRecord ]
-%%       Conditions = [{Key::atom(), Value::string()}]
 %% @doc Query for BossRecords. Returns up to `Max' number of BossRecords of type
-%% `Type' matching all of the given `Conditions' (attribute = value), skipping the
+%% `Type' matching all of the given `Conditions', skipping the
 %% first `Skip' results, sorted on the attribute `Sort'.
 find(Type, Conditions, Max, Skip, Sort) ->
     gen_server:call(boss_db, {find, Type, Conditions, Max, Skip, Sort}).
 
 %% @spec find( Type::atom(), Conditions, Max::integer(), Skip::integer(), Sort::atom(), SortOrder ) -> [ BossRecord ]
-%%       Conditions = [{Key::atom(), Value::string()}]
 %%       SortOrder = num_ascending | num_descending | str_ascending | str_descending
 %% @doc Query for BossRecords. Returns up to `Max' number of BossRecords of type
-%% Type matching all of the given `Conditions' (attribute = value), skipping the
+%% Type matching all of the given `Conditions', skipping the
 %% first `Skip' results, sorted on the attribute `Sort'. `SortOrder' specifies whether
 %% to treat values as strings or as numbers, and whether to sort ascending or
 %% descending. (`SortOrder' = `num_ascending', `num_descending', `str_ascending', or
@@ -80,9 +82,8 @@ count(Type) ->
     gen_server:call(boss_db, {count, Type}).
 
 %% @spec count( Type::atom(), Conditions ) -> integer()
-%%       Conditions = [{Key::atom(), Value::string()}]
 %% @doc Count the number of BossRecords of type `Type' in the database matching
-%% all of the given `Conditions' (attribute = value).
+%% all of the given `Conditions'.
 count(Type, Conditions) ->
     gen_server:call(boss_db, {count, Type, Conditions}).
 

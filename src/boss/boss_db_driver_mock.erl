@@ -1,7 +1,7 @@
 % In-memory database for fast tests and easy setup
 -module(boss_db_driver_mock).
 -behaviour(boss_db_driver).
--export([start/0, start/1, stop/0, find/1, find/3, find/4, find/5, find/6]).
+-export([start/0, start/1, stop/0, find/1, find/2, find/3, find/4, find/5, find/6]).
 -export([count/1, count/2, counter/1, incr/1, incr/2, delete/1, save_record/1]).
 -export([push/0, pop/0, depth/0]).
 
@@ -86,6 +86,8 @@ find(Id) ->
             Record
     end.
 
+find(Type, Conditions) ->
+    find(Type, Conditions, 1000000).
 find(Type, Conditions, Max) ->
     find(Type, Conditions, Max, 0).
 find(Type, Conditions, Max, Skip) ->
@@ -182,23 +184,33 @@ do_find(Dict, Type, Conditions, Max, Skip, SortBy, SortOrder) ->
                     dict:to_list(dict:filter(
                             fun(_Id, Record) when is_tuple(Record) ->
                                     element(1, Record) =:= Type andalso
-                                    record_matches_conditions(Record, Conditions);
+                                    match_cond(Record, Conditions);
                                 (_Id, _) ->
                                     false
                             end, Dict))))), Max).
 
-record_matches_conditions(_Record, []) ->
+match_cond(_Record, []) ->
     true;
-record_matches_conditions(Record, [{K, [H|_] = Values}|Rest]) when is_list(H) ->
-    case proplists:get_value(K, Record:attributes()) of
-        undefined -> false;
-        Val -> lists:member(Val, Values) andalso record_matches_conditions(Record, Rest)
-    end;
-record_matches_conditions(Record, [{K, V}|Rest]) ->
-    case proplists:get_value(K, Record:attributes()) of
-        V -> record_matches_conditions(Record, Rest);
-        _ -> false
-    end.
+match_cond(Record, [Key, 'equal', Value|Rest]) ->
+    Record:Key() =:= Value andalso match_cond(Record, Rest);
+match_cond(Record, [Key, 'not_equal', Value|Rest]) ->
+    Record:Key() =/= Value andalso match_cond(Record, Rest);
+match_cond(Record, [Key, 'in_list', Value|Rest]) when is_tuple(Value) ->
+    lists:member(Record:Key(), tuple_to_list(Value)) andalso match_cond(Record, Rest);
+match_cond(Record, [Key, 'not_in_list', Value|Rest]) when is_tuple(Value) ->
+    (not lists:member(Record:Key(), tuple_to_list(Value))) andalso match_cond(Record, Rest);
+match_cond(Record, [Key, 'in_list', [Min, Max]|Rest]) when Max >= Min ->
+    Record:Key() >= Min andalso Record:Key() =< Max andalso match_cond(Record, Rest);
+match_cond(Record, [Key, 'not_in_list', [Min, Max]|Rest]) when Max >= Min ->
+    (not (Record:Key() >= Min andalso Record:Key() =< Max)) andalso match_cond(Record, Rest);
+match_cond(Record, [Key, '>', Value|Rest]) ->
+    Record:Key() > Value andalso match_cond(Record, Rest);
+match_cond(Record, [Key, '<', Value|Rest]) ->
+    Record:Key() < Value andalso match_cond(Record, Rest);
+match_cond(Record, [Key, 'greater_equal', Value|Rest]) ->
+    Record:Key() >= Value andalso match_cond(Record, Rest);
+match_cond(Record, [Key, 'less_equal', Value|Rest]) ->
+    Record:Key() =< Value andalso match_cond(Record, Rest).
 
 sortable_attribute(Record, Attr) ->
     case Record:Attr() of

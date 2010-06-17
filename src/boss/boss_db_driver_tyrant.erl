@@ -1,6 +1,6 @@
 -module(boss_db_driver_tyrant).
 -behaviour(boss_db_driver).
--export([start/0, start/1, stop/0, find/1, find/3, find/4, find/5, find/6]).
+-export([start/0, start/1, stop/0, find/1, find/2, find/3, find/4, find/5, find/6]).
 -export([count/1, count/2, counter/1, incr/1, incr/2, delete/1, save_record/1]).
 
 -define(TRILLION, (1000 * 1000 * 1000 * 1000)).
@@ -36,7 +36,10 @@ find(Id) when is_binary(Id) ->
 
 find(_Id) -> {error, invalid_id}.
 
-find(Type, Conditions, Max) when is_atom(Type) and is_list(Conditions) and is_integer(Max) ->
+find(Type, Conditions) ->
+    find(Type, Conditions, 1000000).
+
+find(Type, Conditions, Max) ->
     find(Type, Conditions, Max, 0).
 
 find(Type, Conditions, Max, Skip) ->
@@ -45,7 +48,8 @@ find(Type, Conditions, Max, Skip) ->
 find(Type, Conditions, Max, Skip, Sort) ->
     find(Type, Conditions, Max, Skip, Sort, str_ascending).
 
-find(Type, Conditions, Max, Skip, Sort, SortOrder) ->
+find(Type, Conditions, Max, Skip, Sort, SortOrder) when is_atom(Type), is_list(Conditions), is_integer(Max),
+                                                        is_integer(Skip), is_atom(Sort), is_atom(SortOrder) ->
     case model_is_loaded(Type) of
         true ->
             Query = build_query(Type, Conditions, Max, Skip, Sort, SortOrder),
@@ -110,19 +114,19 @@ pack_record(RecordWithId, Type) ->
                     _Val when is_integer(_Val) -> "I"; 
                     _Val when is_float(_Val) ->   "F"
                 end,
-                {{attribute_to_colname(Attr, Type), pack_value(Val)}, 
+                {{attribute_to_colname(Attr), pack_value(Val)}, 
                     lists:concat([Attr, MagicLetter, Acc])}
         end, [], RecordWithId:attribute_names()),
-    [{attribute_to_colname('_type', Type), list_to_binary(atom_to_list(Type))},
-        {attribute_to_colname('_metadata', Type), list_to_binary(MetadataString)}|Columns].
+    [{attribute_to_colname('_type'), list_to_binary(atom_to_list(Type))},
+        {attribute_to_colname('_metadata'), list_to_binary(MetadataString)}|Columns].
 
 infer_type_from_id(Id) when is_binary(Id) ->
     infer_type_from_id(binary_to_list(Id));
 infer_type_from_id(Id) when is_list(Id) ->
     list_to_atom(hd(string:tokens(Id, "-"))).
 
-extract_metadata(Record, Type) ->
-    MetadataString = proplists:get_value(attribute_to_colname('_metadata', Type), Record),
+extract_metadata(Record, _Type) ->
+    MetadataString = proplists:get_value(attribute_to_colname('_metadata'), Record),
     case MetadataString of
         undefined -> [];
         Val when is_binary(Val) -> 
@@ -143,7 +147,7 @@ activate_record(Record, Type) ->
     Metadata = extract_metadata(Record, Type),
     apply(Type, new, lists:map(fun
                 (Key) ->
-                    Val = proplists:get_value(attribute_to_colname(Key, Type), Record, <<"">>),
+                    Val = proplists:get_value(attribute_to_colname(Key), Record, <<"">>),
                     case proplists:get_value(Key, Metadata) of
                         $B -> Val;
                         $I -> list_to_integer(binary_to_list(Val));
@@ -168,7 +172,7 @@ model_is_loaded(Type) ->
         false -> false
     end.
 
-attribute_to_colname(Attribute, _Type) ->
+attribute_to_colname(Attribute) ->
     list_to_binary(atom_to_list(Attribute)).
 
 build_query(Type, Conditions, Max, Skip, Sort, SortOrder) ->
@@ -176,13 +180,42 @@ build_query(Type, Conditions, Max, Skip, Sort, SortOrder) ->
     medici:query_order(medici:query_limit(Query, Max, Skip), atom_to_list(Sort), SortOrder).
 
 build_conditions(Type, Conditions) ->
-    lists:foldl(fun
-            ({K, [H|_] = V}, Acc) when is_list(H) ->
-                MatchString = list_to_binary(string:join(V, " ")),
-                medici:query_add_condition(Acc, attribute_to_colname(K, Type), str_in_list, [MatchString]);
-            ({K, V}, Acc) ->
-                medici:query_add_condition(Acc, attribute_to_colname(K, Type), str_eq, [pack_value(V)])
-        end, [], [{'_type', atom_to_list(Type)} | Conditions]).
+    build_conditions1(['_type', 'equal', atom_to_list(Type)|Conditions], []).
+
+build_conditions1([], Acc) ->
+    Acc;
+build_conditions1([{Key, Value}|Rest], Acc) ->
+    build_conditions1(Rest, add_cond(Acc, Key, str_eq, pack_value(Value)));
+build_conditions1([Key, 'equal', Value|Rest], Acc) ->
+    build_conditions1(Rest, add_cond(Acc, Key, str_eq, pack_value(Value)));
+build_conditions1([Key, 'not_equal', Value|Rest], Acc) ->
+    build_conditions1(Rest, add_cond(Acc, Key, {no, str_eq}, pack_value(Value)));
+build_conditions1([Key, 'in_list', Value|Rest], Acc) when is_tuple(Value) ->
+    PackedValues = pack_tokens(tuple_to_list(Value)),
+    build_conditions1(Rest, add_cond(Acc, Key, str_in_list, PackedValues));
+build_conditions1([Key, 'not_in_list', Value|Rest], Acc) when is_tuple(Value) ->
+    PackedValues = pack_tokens(tuple_to_list(Value)),
+    build_conditions1(Rest, add_cond(Acc, Key, {no, str_in_list}, PackedValues));
+build_conditions1([Key, 'in_list', [Min, Max]|Rest], Acc) when Max >= Min ->
+    PackedValues = pack_tokens([Min, Max]),
+    build_conditions1(Rest, add_cond(Acc, Key, num_between, PackedValues));
+build_conditions1([Key, 'not_in_list', [Min, Max]|Rest], Acc) when Max >= Min ->
+    PackedValues = pack_tokens([Min, Max]),
+    build_conditions1(Rest, add_cond(Acc, Key, {no, num_between}, PackedValues));
+build_conditions1([Key, '>', Value|Rest], Acc) ->
+    build_conditions1(Rest, add_cond(Acc, Key, num_gt, pack_value(Value)));
+build_conditions1([Key, '<', Value|Rest], Acc) ->
+    build_conditions1(Rest, add_cond(Acc, Key, num_lt, pack_value(Value)));
+build_conditions1([Key, 'greater_equal', Value|Rest], Acc) ->
+    build_conditions1(Rest, add_cond(Acc, Key, num_ge, pack_value(Value)));
+build_conditions1([Key, 'less_equal', Value|Rest], Acc) ->
+    build_conditions1(Rest, add_cond(Acc, Key, num_le, pack_value(Value))).
+
+add_cond(Acc, Key, Op, PackedVal) ->
+    medici:query_add_condition(Acc, attribute_to_colname(Key), Op, [PackedVal]).
+
+pack_tokens(Tokens) ->
+    list_to_binary(string:join(lists:map(fun(V) -> binary_to_list(pack_value(V)) end, Tokens), " ")).
 
 pack_datetime({Date, Time}) ->
     list_to_binary(integer_to_list(calendar:datetime_to_gregorian_seconds({Date, Time}))).
