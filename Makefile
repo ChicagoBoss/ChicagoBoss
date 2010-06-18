@@ -35,7 +35,6 @@ ebin/$(SERVER_APP): src/mochiweb/$(SERVER_APP)
 
 clean:
 	rm -fv ebin/*.beam
-	rm -fv $(PP_PARSER).erl
 	-for a in $(DRIVER_APP) $(APP) $(SERVER_APP); do rm -fv ebin/$$a; done
 
 edoc:
