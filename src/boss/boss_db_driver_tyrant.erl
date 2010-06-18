@@ -218,10 +218,14 @@ build_conditions1([Key, 'contains', Value|Rest], Acc) ->
     build_conditions1(Rest, add_cond(Acc, Key, str_and, pack_value(Value)));
 build_conditions1([Key, 'not_contains', Value|Rest], Acc) ->
     build_conditions1(Rest, add_cond(Acc, Key, {no, str_and}, pack_value(Value)));
-build_conditions1([Key, 'contains_set', Values|Rest], Acc) when is_list(Values) ->
+build_conditions1([Key, 'contains_all', Values|Rest], Acc) when is_list(Values) ->
     build_conditions1(Rest, add_cond(Acc, Key, str_and, pack_tokens(Values)));
-build_conditions1([Key, 'not_contains_set', Values|Rest], Acc) when is_list(Values) ->
-    build_conditions1(Rest, add_cond(Acc, Key, {no, str_and}, pack_tokens(Values))).
+build_conditions1([Key, 'not_contains_all', Values|Rest], Acc) when is_list(Values) ->
+    build_conditions1(Rest, add_cond(Acc, Key, {no, str_and}, pack_tokens(Values)));
+build_conditions1([Key, 'contains_any', Values|Rest], Acc) when is_list(Values) ->
+    build_conditions1(Rest, add_cond(Acc, Key, str_or, pack_tokens(Values)));
+build_conditions1([Key, 'not_contains_any', Values|Rest], Acc) when is_list(Values) ->
+    build_conditions1(Rest, add_cond(Acc, Key, {no, str_or}, pack_tokens(Values))).
 
 add_cond(Acc, Key, Op, PackedVal) ->
     medici:query_add_condition(Acc, attribute_to_colname(Key), Op, [PackedVal]).

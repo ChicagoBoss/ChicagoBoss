@@ -111,9 +111,15 @@ transform_char(8764) -> % ∼
 transform_char(8769) -> % ≁
     {ok, ",'not_match',"};
 transform_char(8839) -> % ⊇
-    {ok, ",'contains_set',"};
+    {ok, ",'contains_all',"};
 transform_char(8841) -> % ⊉
-    {ok, ",'not_contains_set',"};
+    {ok, ",'not_contains_all',"};
+transform_char(8745) -> % ∩
+    {ok, ",'contains_any',"};
+transform_char(8869) -> % ⊥
+    {ok, ",'not_contains_any',"};
+transform_char(10178) -> % ⊥ look-alike
+    {ok, ",'not_contains_any',"};
 transform_char(_) ->
     error.
 
