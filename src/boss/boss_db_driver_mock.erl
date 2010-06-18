@@ -195,13 +195,13 @@ match_cond(Record, [Key, 'equal', Value|Rest]) ->
     Record:Key() =:= Value andalso match_cond(Record, Rest);
 match_cond(Record, [Key, 'not_equal', Value|Rest]) ->
     Record:Key() =/= Value andalso match_cond(Record, Rest);
-match_cond(Record, [Key, 'in_list', Value|Rest]) when is_tuple(Value) ->
-    lists:member(Record:Key(), tuple_to_list(Value)) andalso match_cond(Record, Rest);
-match_cond(Record, [Key, 'not_in_list', Value|Rest]) when is_tuple(Value) ->
-    (not lists:member(Record:Key(), tuple_to_list(Value))) andalso match_cond(Record, Rest);
-match_cond(Record, [Key, 'in_list', [Min, Max]|Rest]) when Max >= Min ->
+match_cond(Record, [Key, 'element_of', Value|Rest]) when is_list(Value) ->
+    lists:member(Record:Key(), Value) andalso match_cond(Record, Rest);
+match_cond(Record, [Key, 'not_element_of', Value|Rest]) when is_list(Value) ->
+    (not lists:member(Record:Key(), Value)) andalso match_cond(Record, Rest);
+match_cond(Record, [Key, 'element_of', {Min, Max}|Rest]) when Max >= Min ->
     Record:Key() >= Min andalso Record:Key() =< Max andalso match_cond(Record, Rest);
-match_cond(Record, [Key, 'not_in_list', [Min, Max]|Rest]) when Max >= Min ->
+match_cond(Record, [Key, 'not_element_of', {Min, Max}|Rest]) when Max >= Min ->
     (not (Record:Key() >= Min andalso Record:Key() =< Max)) andalso match_cond(Record, Rest);
 match_cond(Record, [Key, '>', Value|Rest]) ->
     Record:Key() > Value andalso match_cond(Record, Rest);

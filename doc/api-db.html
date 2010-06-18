@@ -66,7 +66,7 @@
 
 <p>BossDB is a database abstraction layer used for querying and updating the database. Currently only Tokyo Tyrant is supported, but other drivers will be added in the future.</p>
 
-<h2>Conditions</h2>
+<h2>Conditions and Comparison Operators</h2>
 
 <p>The "find" and "count" functions each take a set of <code>Conditions</code>, which specify search criteria. Similar to Microsoft's <a href="http://msdn.microsoft.com/en-us/library/bb308959.aspx">LINQ</a>, the <code>Conditions</code> can use a special non-Erlang syntax for conciseness. This special syntax can't be compiled with Erlang's default compiler, so you'll have to let Boss compile your controllers which use it.</p>
 
@@ -75,7 +75,7 @@
 <p>As a quick example, to count the number of people younger than 25 with occupation listed as "student" or "unemployed", you would use:</p>
 <div class="code">
     boss_db:count(person, <br />
-    &nbsp;&nbsp;&nbsp;&nbsp;[age &lt; 25, occupation ∈ {"student", "unemployed"}]).
+    &nbsp;&nbsp;&nbsp;&nbsp;[age &lt; 25, occupation ∈ ["student", "unemployed"]]).
 </div>
 
 <p>Valid conditions are:</p>
@@ -91,24 +91,54 @@
 <p>The "key" attribute is not exactly equal to Value.</p>
 
 <div class="code">
-    key ∈ {Value1, Value2, ...}
+    key ∈ [Value1, Value2, ...]
 </div>
-<p>The "key" attribute is equal one element of the right-hand side.</p>
+<p>The "key" attribute is equal to at least one element on the right-hand side.</p>
 
 <div class="code">
-    key ∉ {Value1, Value2, ...}
+    key ∉ [Value1, Value2, ...]
 </div>
 <p>The "key" attribute is not equal to any element on the right-hand side.</p>
 
 <div class="code">
-    key ∈ [Min, Max]
+    key ∈ {Min, Max}
 </div>
 <p>The "key" attribute is numerically between Min and Max.</p>
 
 <div class="code">
-    key ∉ [Min, Max]
+    key ∉ {Min, Max}
 </div>
 <p>The "key" attribute is not between Min and Max.</p>
+
+<div class="code">
+    key ∼ RegularExpression
+</div>
+<p>The "key" attribute matches the RegularExpression.</p>
+
+<div class="code">
+    key ≁ RegularExpression
+</div>
+<p>The "key" attribute does not match the RegularExpression.</p>
+
+<div class="code">
+    key ∋ Token
+</div>
+<p>The "key" attribute contains Token.</p>
+
+<div class="code">
+    key ∌ Token
+</div>
+<p>The "key" attribute does not contain Token.</p>
+
+<div class="code">
+    key ⊇ [Token1, Token2, ...]
+</div>
+<p>The "key" attribute contains all tokens on the right-hand side.</p>
+
+<div class="code">
+    key ⊉ [Token1, Token2, ...]
+</div>
+<p>The "key" attribute does not contain all tokens on the right-hand side.</p>
 
 <div class="code">
     key &gt; Value

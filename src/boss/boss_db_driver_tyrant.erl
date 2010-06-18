@@ -190,16 +190,16 @@ build_conditions1([Key, 'equal', Value|Rest], Acc) ->
     build_conditions1(Rest, add_cond(Acc, Key, str_eq, pack_value(Value)));
 build_conditions1([Key, 'not_equal', Value|Rest], Acc) ->
     build_conditions1(Rest, add_cond(Acc, Key, {no, str_eq}, pack_value(Value)));
-build_conditions1([Key, 'in_list', Value|Rest], Acc) when is_tuple(Value) ->
-    PackedValues = pack_tokens(tuple_to_list(Value)),
+build_conditions1([Key, 'element_of', Value|Rest], Acc) when is_list(Value) ->
+    PackedValues = pack_tokens(Value),
     build_conditions1(Rest, add_cond(Acc, Key, str_in_list, PackedValues));
-build_conditions1([Key, 'not_in_list', Value|Rest], Acc) when is_tuple(Value) ->
-    PackedValues = pack_tokens(tuple_to_list(Value)),
+build_conditions1([Key, 'not_element_of', Value|Rest], Acc) when is_list(Value) ->
+    PackedValues = pack_tokens(Value),
     build_conditions1(Rest, add_cond(Acc, Key, {no, str_in_list}, PackedValues));
-build_conditions1([Key, 'in_list', [Min, Max]|Rest], Acc) when Max >= Min ->
+build_conditions1([Key, 'element_of', {Min, Max}|Rest], Acc) when Max >= Min ->
     PackedValues = pack_tokens([Min, Max]),
     build_conditions1(Rest, add_cond(Acc, Key, num_between, PackedValues));
-build_conditions1([Key, 'not_in_list', [Min, Max]|Rest], Acc) when Max >= Min ->
+build_conditions1([Key, 'not_element_of', {Min, Max}|Rest], Acc) when Max >= Min ->
     PackedValues = pack_tokens([Min, Max]),
     build_conditions1(Rest, add_cond(Acc, Key, {no, num_between}, PackedValues));
 build_conditions1([Key, '>', Value|Rest], Acc) ->
@@ -209,7 +209,19 @@ build_conditions1([Key, '<', Value|Rest], Acc) ->
 build_conditions1([Key, 'greater_equal', Value|Rest], Acc) ->
     build_conditions1(Rest, add_cond(Acc, Key, num_ge, pack_value(Value)));
 build_conditions1([Key, 'less_equal', Value|Rest], Acc) ->
-    build_conditions1(Rest, add_cond(Acc, Key, num_le, pack_value(Value))).
+    build_conditions1(Rest, add_cond(Acc, Key, num_le, pack_value(Value)));
+build_conditions1([Key, 'match', Value|Rest], Acc) ->
+    build_conditions1(Rest, add_cond(Acc, Key, str_regex, pack_value(Value)));
+build_conditions1([Key, 'not_match', Value|Rest], Acc) ->
+    build_conditions1(Rest, add_cond(Acc, Key, {no, str_regex}, pack_value(Value)));
+build_conditions1([Key, 'contains', Value|Rest], Acc) ->
+    build_conditions1(Rest, add_cond(Acc, Key, str_and, pack_value(Value)));
+build_conditions1([Key, 'not_contains', Value|Rest], Acc) ->
+    build_conditions1(Rest, add_cond(Acc, Key, {no, str_and}, pack_value(Value)));
+build_conditions1([Key, 'contains_set', Values|Rest], Acc) when is_list(Values) ->
+    build_conditions1(Rest, add_cond(Acc, Key, str_and, pack_tokens(Values)));
+build_conditions1([Key, 'not_contains_set', Values|Rest], Acc) when is_list(Values) ->
+    build_conditions1(Rest, add_cond(Acc, Key, {no, str_and}, pack_tokens(Values))).
 
 add_cond(Acc, Key, Op, PackedVal) ->
     medici:query_add_condition(Acc, attribute_to_colname(Key), Op, [PackedVal]).

@@ -99,9 +99,21 @@ transform_char(8804) -> % ≤
 transform_char(8805) -> % ≥
     {ok, ",'greater_equal',"};
 transform_char(8712) -> % ∈
-    {ok, ",'in_list',"};
+    {ok, ",'element_of',"};
 transform_char(8713) -> % ∉
-    {ok, ",'not_in_list',"};
+    {ok, ",'not_element_of',"};
+transform_char(8715) -> % ∋
+    {ok, ",'contains',"};
+transform_char(8716) -> % ∌
+    {ok, ",'not_contains',"};
+transform_char(8764) -> % ∼
+    {ok, ",'match',"};
+transform_char(8769) -> % ≁
+    {ok, ",'not_match',"};
+transform_char(8839) -> % ⊇
+    {ok, ",'contains_set',"};
+transform_char(8841) -> % ⊉
+    {ok, ",'not_contains_set',"};
 transform_char(_) ->
     error.
 
