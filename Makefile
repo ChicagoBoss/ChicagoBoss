@@ -38,7 +38,6 @@ clean:
 	-for a in $(DRIVER_APP) $(APP) $(SERVER_APP); do rm -fv ebin/$$a; done
 
 edoc:
-	-mkdir -p doc
 	$(ERL) -pa ebin -noshell -eval "boss_doc:run()" -s init stop
 
 test: 

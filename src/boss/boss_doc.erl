@@ -6,7 +6,7 @@
 -include("xmerl.hrl").
 
 run() ->
-    run("doc_templates", "doc").
+    run("doc/templates", "doc").
 
 run(InDir, OutDir) ->
     {ok, Filenames} = file:list_dir(InDir),
