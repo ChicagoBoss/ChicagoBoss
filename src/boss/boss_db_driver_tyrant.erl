@@ -4,6 +4,7 @@
 -export([count/1, count/2, counter/1, incr/1, incr/2, delete/1, save_record/1]).
 
 -define(TRILLION, (1000 * 1000 * 1000 * 1000)).
+-define(DEFAULT_MAX, (1000 * 1000 * 1000)).
 
 start() ->
     start([]).
@@ -37,7 +38,7 @@ find(Id) when is_binary(Id) ->
 find(_Id) -> {error, invalid_id}.
 
 find(Type, Conditions) ->
-    find(Type, Conditions, 1000000).
+    find(Type, Conditions, ?DEFAULT_MAX).
 
 find(Type, Conditions, Max) ->
     find(Type, Conditions, Max, 0).
@@ -88,16 +89,21 @@ delete(Id) when is_binary(Id) ->
 
 save_record(Record) when is_tuple(Record) ->
     Type = element(1, Record),
-    Id = case Record:id() of
+    {IsNew, Id} = case Record:id() of
         id ->
-            atom_to_list(Type) ++ "-" ++ binary_to_list(medici:genuid());
+            {true, atom_to_list(Type) ++ "-" ++ binary_to_list(medici:genuid())};
         Defined when is_list(Defined) ->
-            Defined
+            {false, Defined}
     end,
     RecordWithId = Record:id(Id),
-    Result = medici:put(list_to_binary(Id), pack_record(RecordWithId, Type)),
+    PackedRecord = pack_record(RecordWithId, Type),
+
+    boss_record_lib:run_before_hooks(Record, IsNew),
+    Result = medici:put(list_to_binary(Id), PackedRecord),
     case Result of
-        ok -> {ok, RecordWithId};
+        ok -> 
+            boss_record_lib:run_after_hooks(RecordWithId, IsNew),
+            {ok, RecordWithId};
         {error, Error} -> {error, [Error]}
     end.
 

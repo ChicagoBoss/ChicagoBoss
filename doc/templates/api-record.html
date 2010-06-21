@@ -1,7 +1,10 @@
 {% extends "api.html" %}
 {% block api_content %}
-<p style="font-size: 14px;"><em>Jump to: </em> <a href="#instance">Generated instance methods</a> 
-&nbsp; <a href="#associations">Associations (<code>belongs_to</code>, <code>has</code>)</a></p>
+<p style="font-size: 14px;"><em>Jump to: </em> 
+<a href="#instance">Generated instance methods</a> 
+&nbsp; <a href="#associations">Associations (<code>belongs_to</code>, <code>has</code>)</a>
+&nbsp; <a href="#hooks">Save hooks</a>
+</p>
 <p>
 BossRecords are <em>specially compiled parameterized modules</em> that follow the "active record" pattern. BossRecords go into your project's Model/ folder and will have functions generated for saving them into the database and for accessing related BossRecords. Important aspects of BossRecords:
 </p>
@@ -27,7 +30,7 @@ BossRecords are <em>specially compiled parameterized modules</em> that follow th
     <li><p>To see the full API for a BossRecord called <code>foo</code> at any time during development, point your browser to /doc/foo on your dev server.</p></li>
 </ul>
 <a name="instance"></a>
-<hr />
+<h2>Generated functions</h2>
 <p>Generated instance functions of a BossRecord include:</p>
 
 {% if functions %}
@@ -49,7 +52,7 @@ BossRecords are <em>specially compiled parameterized modules</em> that follow th
 <p>Other getters and setters are generated based on the parameters of your BossRecord.</p>
 
 <a name="associations"></a>
-<hr />
+<h2>Associations</h2>
 
 <p>Special associations are generated from the following module attributes:</p>
 
@@ -96,5 +99,18 @@ BossRecords are <em>specially compiled parameterized modules</em> that follow th
 <p>Generates a function <code>foo_counter()</code> which returns the value of the counter, initialized to zero. Each BossRecord may have an unlimited number of counters. Manipulate the counters with <code>reset</code> and <code>incr</code> above.</p>
 
 <p>SPECIAL NOTE: Everything in the Model directory will be compiled as a BossRecord rather than as a regular Erlang module; you don't need to do or declare anything special.</p>
+
+<a name="hooks"></a>
+<h2>Save hooks</h2>
+
+<p>You can specify logic to be run anytime a BossRecord is saved. Just define one or more of these functions in your module:</p>
+<ul>
+    <li><code>before_create()</code> - executed just before a new BossRecord is saved to the database.</li>
+    <li><code>before_update()</code> - executed just before an existing BossRecord is saved to the database.</li>
+    <li><code>after_create()</code> - executed just after a new BossRecord is saved to the database.</li>
+    <li><code>after_update()</code> - executed just after an existing BossRecord is saved to the database.</li>
+</ul>
+
+<p>Return values are ignored.</p>
 
 {% endblock %}

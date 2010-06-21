@@ -128,7 +128,7 @@ save_record(Record) ->
 %% if the `TestFunction' returns `false' on this particular BossRecord.
 validate_record(Record) ->
     Type = element(1, Record),
-    Errors = case lists:member({validation_tests, 1}, Type:module_info(exports)) of
+    Errors = case erlang:function_exported(Type, validation_tests, 1) of
         true -> [String || {TestFun, String} <- Record:validation_tests(), not TestFun()];
         false -> []
     end,
