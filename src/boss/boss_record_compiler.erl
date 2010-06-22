@@ -14,11 +14,12 @@ compile(File) ->
 %% `compiler_options' - Passed directly to compile:forms/2. Defaults to [verbose, return_errors].
 %% `out_dir' - Directory in which to write a BEAM file.
 compile(File, Options) ->
-    case parse(File) of
+    case boss_compiler:parse(File) of
         {ok, Forms} ->
             CompilerOptions = proplists:get_value(compiler_options, Options, [verbose, return_errors]),
+            CompilerOptionsWithPT = [{parse_transform, boss_db_pt}|CompilerOptions],
             RevertedForms = erl_syntax:revert_forms(trick_out_forms(Forms)),
-            case boss_load:compile_forms(RevertedForms, File, CompilerOptions) of
+            case boss_load:compile_forms(RevertedForms, File, CompilerOptionsWithPT) of
                 {ok, Module, Bin} ->
                     case proplists:get_value(out_dir, Options) of
                         undefined -> ok;
@@ -42,27 +43,12 @@ edoc_module(File) ->
 %% @doc Return an `edoc_module()' for the given Erlang source file when
 %% compiled as a BossRecord.
 edoc_module(File, Options) ->
-    {ok, Forms} = parse(File),
+    {ok, Forms} = boss_compiler:parse(File),
     edoc_extract:source(trick_out_forms(Forms), edoc:read_comments(File), 
         File, edoc_lib:get_doc_env([]), Options).
 
-parse(File) ->
-    case epp:parse_file(File, [filename:dirname(File)], []) of
-        {ok, Forms} ->
-            case proplists:get_all_values(error, Forms) of
-                [] ->
-                    {ok, Forms};
-                Errors ->
-                    {error, {File, Errors}}
-            end;
-        Error ->
-            Error
-    end.
-
-trick_out_forms([{attribute, _, file, {_FileName, _FileNum}}|Rest]) ->
-    trick_out_forms(Rest);
-
 trick_out_forms([
+        {attribute, _, file, {_FileName, _FileNum}},
         {attribute, _, module, {ModuleName, Parameters}}
         | _T] = Forms) ->
     trick_out_forms(Forms, ModuleName, Parameters).

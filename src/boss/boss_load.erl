@@ -65,7 +65,7 @@ load_views() ->
     lists:map(fun compile_view_erlydtl/1, boss_files:view_file_list()).
 
 compile_controller(ModulePath) ->
-    boss_controller_compiler:compile(ModulePath).
+    boss_compiler:compile(ModulePath).
 
 load_view_if_old(ViewPath, Module) ->
     NeedCompile = case module_is_loaded(Module) of

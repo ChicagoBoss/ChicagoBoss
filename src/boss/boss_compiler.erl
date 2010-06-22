@@ -1,31 +1,39 @@
--module(boss_controller_compiler).
+-module(boss_compiler).
 -compile(export_all).
 
 compile(File) ->
     compile(File, [verbose, return_errors]).
 
 compile(File, Options) ->
-    case file:read_file(File) of
-        {ok, FileContents} ->
-            compile_text(File, FileContents, Options);
+    case parse(File) of
+        {ok, Forms} ->
+            NewOptions = [{parse_transform, boss_db_pt}|Options],
+            case boss_load:compile_forms(Forms, File, NewOptions) of
+                {ok, _ModuleName, _Bin} ->
+                    ok;
+                Error ->
+                    Error
+            end;
         Error ->
             Error
     end.
 
-compile_text(FileName, FileContents, Options) ->
+parse(File) ->
+    case file:read_file(File) of
+        {ok, FileContents} ->
+            parse_text(File, FileContents);
+        Error ->
+            Error
+    end.
+
+parse_text(FileName, FileContents) ->
     case scan_transform(FileContents) of
         {ok, Tokens} ->
             {ok, ProcessedTokens} = aleppo:process_tokens(Tokens, [{file, FileName}]),
             {Forms, Errors} = parse_tokens(ProcessedTokens),
             case length(Errors) of
                 0 ->
-                    NewOptions = [{parse_transform, boss_db_pt}|Options],
-                    case boss_load:compile_forms(Forms, FileName, NewOptions) of
-                        {ok, ModuleName, Bin} ->
-                            ok;
-                        Error ->
-                            Error
-                    end;
+                    {ok, Forms};
                 _ ->
                     {error, Errors, []}
             end;
@@ -45,14 +53,16 @@ parse_tokens([{dot, _}=Token|Rest], TokenAcc, FormAcc, ErrorAcc) ->
         {error, ErrorInfo} ->
             parse_tokens(Rest, [], FormAcc, [ErrorInfo|ErrorAcc])
     end;
+parse_tokens([{eof, Location}], TokenAcc, FormAcc, ErrorAcc) ->
+    parse_tokens([], TokenAcc, [{eof, Location}|FormAcc], ErrorAcc);
 parse_tokens([Token|Rest], TokenAcc, FormAcc, ErrorAcc) ->
     parse_tokens(Rest, [Token|TokenAcc], FormAcc, ErrorAcc).
 
 scan_transform(FileContents) ->
     scan_transform(FileContents, {1, 1}).
 
-scan_transform([], _) ->
-    {ok, []};
+scan_transform([], StartLocation) ->
+    {ok, [{eof, StartLocation}]};
 scan_transform(FileContents, StartLocation) when is_binary(FileContents) ->
     scan_transform(unicode:characters_to_list(FileContents), StartLocation);
 scan_transform(FileContents, StartLocation) ->
@@ -65,8 +75,8 @@ scan_transform(FileContents, StartLocation) ->
                             {ok, Tokens ++ NewTokens};
                         Err -> Err
                     end;
-                {eof, _EndLocation} ->
-                    {ok, []};
+                {eof, EndLocation} ->
+                    {ok, [{eof, EndLocation}]};
                 {error, ErrorInfo, _EndLocation} ->
                     case ErrorInfo of
                         {ErrorLocation, erl_scan, {illegal,character}} ->
@@ -87,6 +97,8 @@ scan_transform(FileContents, StartLocation) ->
             case Return of
                 {ok, Tokens, _EndLocation} ->
                     {ok, Tokens};
+                {eof, EndLocation} ->
+                    {ok, [{eof, EndLocation}]};
                 {error, ErrorInfo, _EndLocation} ->
                     {error, ErrorInfo}
             end

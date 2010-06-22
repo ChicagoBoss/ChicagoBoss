@@ -11,6 +11,7 @@ Nonterminals
     Define
     Include
     IncludeLib
+    File
     Elements
     FormTokens
     Token
@@ -23,7 +24,7 @@ Nonterminals
 % Terminals taken from erl_parse.yrl
 Terminals
     ifdef_keyword else_keyword ifndef_keyword endif_keyword undef_keyword
-    define_keyword include_keyword include_lib_keyword
+    define_keyword include_keyword include_lib_keyword eof
 
     '?'
 
@@ -41,7 +42,9 @@ Terminals
     '!' '=' '::'
     dot.
 
-Rootsymbol Elements.
+Rootsymbol File.
+
+File -> Elements eof : '$1' ++ ['$2'].
 
 Elements -> '$empty' : [].
 Elements -> Elements IfBlock : '$1' ++ ['$2'].
