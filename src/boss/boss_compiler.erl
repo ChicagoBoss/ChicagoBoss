@@ -42,16 +42,20 @@ parse(File) ->
 parse_text(FileName, FileContents) ->
     case scan_transform(FileContents) of
         {ok, Tokens} ->
-            {ok, ProcessedTokens} = aleppo:process_tokens(Tokens, [{file, FileName}]),
-            {Forms, Errors} = parse_tokens(ProcessedTokens),
-            case length(Errors) of
-                0 ->
-                    {ok, Forms};
-                _ ->
-                    {error, Errors, []}
+            case aleppo:process_tokens(Tokens, [{file, FileName}]) of
+                {ok, ProcessedTokens} ->
+                    {Forms, Errors} = parse_tokens(ProcessedTokens),
+                    case length(Errors) of
+                        0 ->
+                            {ok, Forms};
+                        _ ->
+                            {error, Errors, []}
+                    end;
+                {error, ErrorInfo} ->
+                    {error, {FileName, [ErrorInfo]}}
             end;
-        {error, Error} ->
-            {error, Error}
+        Error ->
+            Error
     end.
 
 parse_tokens(Tokens) ->

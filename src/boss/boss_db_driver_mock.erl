@@ -210,7 +210,31 @@ match_cond(Record, [Key, '<', Value|Rest]) ->
 match_cond(Record, [Key, 'greater_equal', Value|Rest]) ->
     Record:Key() >= Value andalso match_cond(Record, Rest);
 match_cond(Record, [Key, 'less_equal', Value|Rest]) ->
-    Record:Key() =< Value andalso match_cond(Record, Rest).
+    Record:Key() =< Value andalso match_cond(Record, Rest);
+match_cond(Record, [Key, 'match', "*"++Value|Rest]) ->
+    re:run(Record:Key(), Value, [caseless]) =/= nomatch andalso match_cond(Record, Rest);
+match_cond(Record, [Key, 'match', Value|Rest]) ->
+    re:run(Record:Key(), Value, []) =/= nomatch andalso match_cond(Record, Rest);
+match_cond(Record, [Key, 'nomatch', "*"++Value|Rest]) ->
+    re:run(Record:Key(), Value, [caseless]) =:= nomatch andalso match_cond(Record, Rest);
+match_cond(Record, [Key, 'nomatch', Value|Rest]) ->
+    re:run(Record:Key(), Value, []) =:= nomatch andalso match_cond(Record, Rest);
+match_cond(Record, [Key, 'contains', Value|Rest]) ->
+    lists:member(Value, string:tokens(Record:Key(), " ")) andalso match_cond(Record, Rest);
+match_cond(Record, [Key, 'not_contains', Value|Rest]) ->
+    (not lists:member(Value, string:tokens(Record:Key(), " "))) andalso match_cond(Record, Rest);
+match_cond(Record, [Key, 'contains_all', Value|Rest]) ->
+    Tokens = string:tokens(Record:Key(), " "),
+    lists:all(fun(Token) -> lists:member(Token, Tokens) end, Value) andalso match_cond(Record, Rest);
+match_cond(Record, [Key, 'not_contains_all', Value|Rest]) ->
+    Tokens = string:tokens(Record:Key(), " "),
+    (not lists:all(fun(Token) -> lists:member(Token, Tokens) end, Value)) andalso match_cond(Record, Rest);
+match_cond(Record, [Key, 'contains_any', Value|Rest]) ->
+    Tokens = string:tokens(Record:Key(), " "),
+    lists:any(fun(Token) -> lists:member(Token, Tokens) end, Value) andalso match_cond(Record, Rest);
+match_cond(Record, [Key, 'not_contains_any', Value|Rest]) ->
+    Tokens = string:tokens(Record:Key(), " "),
+    (not lists:any(fun(Token) -> lists:member(Token, Tokens) end, Value)) andalso match_cond(Record, Rest).
 
 sortable_attribute(Record, Attr) ->
     case Record:Attr() of
