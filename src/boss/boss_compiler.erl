@@ -44,12 +44,15 @@ parse_text(FileName, FileContents) ->
         {ok, Tokens} ->
             case aleppo:process_tokens(Tokens, [{file, FileName}]) of
                 {ok, ProcessedTokens} ->
-                    {Forms, Errors} = parse_tokens(ProcessedTokens),
+                    {Forms, Errors} = parse_tokens(ProcessedTokens, FileName),
                     case length(Errors) of
                         0 ->
                             {ok, Forms};
                         _ ->
-                            {error, Errors, []}
+                            Errors1 = lists:map(fun(File) ->
+                                        {File, proplists:get_all_values(File, Errors)}
+                                end, proplists:get_keys(Errors)),
+                            {error, Errors1, []}
                     end;
                 {error, ErrorInfo} ->
                     {error, {FileName, [ErrorInfo]}}
@@ -58,22 +61,24 @@ parse_text(FileName, FileContents) ->
             Error
     end.
 
-parse_tokens(Tokens) ->
-    parse_tokens(Tokens, [], [], []).
+parse_tokens(Tokens, FileName) ->
+    parse_tokens(Tokens, [], [], [], FileName).
 
-parse_tokens([], _, FormAcc, ErrorAcc) ->
+parse_tokens([], _, FormAcc, ErrorAcc, _) ->
     {lists:reverse(FormAcc), lists:reverse(ErrorAcc)};
-parse_tokens([{dot, _}=Token|Rest], TokenAcc, FormAcc, ErrorAcc) ->
+parse_tokens([{dot, _}=Token|Rest], TokenAcc, FormAcc, ErrorAcc, FileName) ->
     case erl_parse:parse_form(lists:reverse([Token|TokenAcc])) of
+        {ok, {attribute, _, file, {NewFileName, _Line}} = AbsForm} ->
+            parse_tokens(Rest, [], [AbsForm|FormAcc], ErrorAcc, NewFileName);
         {ok, AbsForm} ->
-            parse_tokens(Rest, [], [AbsForm|FormAcc], ErrorAcc);
+            parse_tokens(Rest, [], [AbsForm|FormAcc], ErrorAcc, FileName);
         {error, ErrorInfo} ->
-            parse_tokens(Rest, [], FormAcc, [ErrorInfo|ErrorAcc])
+            parse_tokens(Rest, [], FormAcc, [{FileName, ErrorInfo}|ErrorAcc], FileName)
     end;
-parse_tokens([{eof, Location}], TokenAcc, FormAcc, ErrorAcc) ->
-    parse_tokens([], TokenAcc, [{eof, Location}|FormAcc], ErrorAcc);
-parse_tokens([Token|Rest], TokenAcc, FormAcc, ErrorAcc) ->
-    parse_tokens(Rest, [Token|TokenAcc], FormAcc, ErrorAcc).
+parse_tokens([{eof, Location}], TokenAcc, FormAcc, ErrorAcc, FileName) ->
+    parse_tokens([], TokenAcc, [{eof, Location}|FormAcc], ErrorAcc, FileName);
+parse_tokens([Token|Rest], TokenAcc, FormAcc, ErrorAcc, FileName) ->
+    parse_tokens(Rest, [Token|TokenAcc], FormAcc, ErrorAcc, FileName).
 
 scan_transform(FileContents) ->
     scan_transform(FileContents, {1, 1}).
