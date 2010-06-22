@@ -89,21 +89,18 @@ delete(Id) when is_binary(Id) ->
 
 save_record(Record) when is_tuple(Record) ->
     Type = element(1, Record),
-    {IsNew, Id} = case Record:id() of
+    Id = case Record:id() of
         id ->
-            {true, atom_to_list(Type) ++ "-" ++ binary_to_list(medici:genuid())};
+            atom_to_list(Type) ++ "-" ++ binary_to_list(medici:genuid());
         Defined when is_list(Defined) ->
-            {false, Defined}
+            Defined
     end,
     RecordWithId = Record:id(Id),
     PackedRecord = pack_record(RecordWithId, Type),
 
-    boss_record_lib:run_before_hooks(Record, IsNew),
     Result = medici:put(list_to_binary(Id), PackedRecord),
     case Result of
-        ok -> 
-            boss_record_lib:run_after_hooks(RecordWithId, IsNew),
-            {ok, RecordWithId};
+        ok -> {ok, RecordWithId};
         {error, Error} -> {error, [Error]}
     end.
 

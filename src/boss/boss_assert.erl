@@ -20,7 +20,9 @@
         email_has_html/1,
         email_is_text_only/1, 
         email_is_html_only/1, 
-        email_is_multipart/1]).
+        email_is_multipart/1,
+        email_received/1,
+        email_not_received/1]).
 
 %% @spec http_ok(Response) -> {Passed, ErrorMessage}
 %% @doc Compares the HTTP status code in `Response' to 200 (HTTP OK).
@@ -126,6 +128,16 @@ email_is_html_only({_, TextBody, HtmlBody} = _Email) ->
 email_is_multipart({_, TextBody, HtmlBody} = _Email) ->
     {TextBody =/= "" andalso HtmlBody =/= "",
         "Email is not multipart"}.
+
+%% @spec email_received(Email) -> {Passed, ErrorMessage}
+%% @doc Checks whether `Email' exists
+email_received(Email) ->
+    {Email =/= undefined, "Email was not received"}.
+
+%% @spec email_not_received(Email) -> {Passed, ErrorMessage}
+%% @doc Checks whether `Email' is undefined
+email_not_received(Email) ->
+    {Email =:= undefined, "Email was not supposed to be received (but was)"}.
 
 
 % internal

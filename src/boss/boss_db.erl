@@ -114,7 +114,15 @@ delete(Key) ->
 %% Performs validation first; see `validate_record/1'.
 save_record(Record) ->
     case validate_record(Record) of
-        ok -> gen_server:call(boss_db, {save_record, Record});
+        ok -> 
+            IsNew = (Record:id() =:= 'id'),
+            boss_record_lib:run_before_hooks(Record, IsNew),
+            case gen_server:call(boss_db, {save_record, Record}) of
+                {ok, SavedRecord} ->
+                    boss_record_lib:run_after_hooks(SavedRecord, IsNew),
+                    {ok, SavedRecord};
+                Err -> Err
+            end;
         Err -> Err
     end.
 

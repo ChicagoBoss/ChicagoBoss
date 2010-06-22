@@ -40,5 +40,5 @@ clean:
 edoc:
 	$(ERL) -pa ebin -noshell -eval "boss_doc:run()" -s init stop
 
-test: 
-	erl -pa ebin -run boss_test -noshell
+test:
+	$(ERL) -pa ebin -run boss_test -noshell

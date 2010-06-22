@@ -89,7 +89,7 @@ submit_form(FormName, FormValues, {_, Uri, _, ParseTree} = _Response, Assertions
 read_email(ToAddress, Subject, Assertions, Continuations) ->
     case boss_mail_driver_mock:read(ToAddress, Subject) of
         undefined ->
-            {0, ["No such message was sent!"]};
+            process_assertions_and_continuations(Assertions, Continuations, undefined);
         {Type, SubType, Headers, _, Body} ->
             {TextBody, HtmlBody} = parse_email_body(Type, SubType, Body),
             process_assertions_and_continuations(Assertions, Continuations, {Headers, TextBody, HtmlBody})
@@ -291,7 +291,8 @@ receive_response(RequesterPid, Assertions, Continuations) ->
             exit(RequesterPid, kill),
             ParsedResponse = {Status, Uri, ResponseHeaders, ParsedResponseBody},
             process_assertions_and_continuations(Assertions, Continuations, ParsedResponse);
-        _ ->
+        _Other ->
+            %error_logger:error_msg("Unexpected message in receive_response: ~p~n", [Other]),
             receive_response(RequesterPid, Assertions, Continuations)
     end.
 
@@ -309,6 +310,8 @@ process_assertions_and_continuations(Assertions, Continuations, ParsedResponse) 
                             [lists:duplicate(boss_db_driver_mock:depth() - 1, $\ ), 
                                 16#1B, Msg, 16#1B])
                 end, FailureMessages),
+            io:format("Last response: ~p~n~n", [ParsedResponse]),
+            io:format("Database: ~p~n~n", [boss_db_driver_mock:dump()]),
             {NumSuccesses, FailureMessages}
     end.
 
