@@ -93,7 +93,7 @@ scan_transform(FileContents, StartLocation) ->
                 {error, ErrorInfo, _EndLocation} ->
                     case ErrorInfo of
                         {ErrorLocation, erl_scan, {illegal,character}} ->
-                            {Truncated, IllegalChar, Rest} = cut_at_location(ErrorLocation, FileContents, StartLocation),
+                            {Truncated, IllegalChar, _} = cut_at_location(ErrorLocation, FileContents, StartLocation),
                             case transform_char(IllegalChar) of
                                 {ok, String} ->
                                     Transformed = Truncated ++ String ++ Rest,

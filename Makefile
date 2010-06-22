@@ -1,5 +1,5 @@
 ERL=erl
-ERLC=/usr/bin/erlc
+ERLC=erlc
 SERVER_APP=mochiweb.app
 DRIVER_APP=medici.app
 TRANSLATE_APP=boss_translator.app
