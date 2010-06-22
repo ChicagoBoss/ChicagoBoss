@@ -57,8 +57,8 @@ parse_text(FileName, FileContents) ->
                 {error, ErrorInfo} ->
                     {error, {FileName, [ErrorInfo]}}
             end;
-        Error ->
-            Error
+        {error, ErrorInfo} ->
+            {error, {FileName, [ErrorInfo]}}
     end.
 
 parse_tokens(Tokens, FileName) ->
