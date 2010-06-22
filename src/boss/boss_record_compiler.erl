@@ -2,37 +2,14 @@
 -author('emmiller@gmail.com').
 -define(DATABASE_MODULE, boss_db).
 
--export([compile/1, compile/2, edoc_module/1, edoc_module/2]).
+-export([compile/1, edoc_module/1, edoc_module/2]).
 
 %% @spec compile( File::string() ) -> ok | {error, Reason}
 %% @equiv compile(File, [])
 compile(File) ->
-    compile(File, []).
-
-%% @spec compile( File::string(), Options ) -> ok | {error, Reason}
-%% @doc Compile an Erlang source file as a BossRecord. Options:
-%% `compiler_options' - Passed directly to compile:forms/2. Defaults to [verbose, return_errors].
-%% `out_dir' - Directory in which to write a BEAM file.
-compile(File, Options) ->
-    case boss_compiler:parse(File) of
-        {ok, Forms} ->
-            CompilerOptions = proplists:get_value(compiler_options, Options, [verbose, return_errors]),
-            CompilerOptionsWithPT = [{parse_transform, boss_db_pt}|CompilerOptions],
-            RevertedForms = erl_syntax:revert_forms(trick_out_forms(Forms)),
-            case boss_load:compile_forms(RevertedForms, File, CompilerOptionsWithPT) of
-                {ok, Module, Bin} ->
-                    case proplists:get_value(out_dir, Options) of
-                        undefined -> ok;
-                        OutDir ->
-                            BeamFile = filename:join([OutDir, atom_to_list(Module) ++ ".beam"]),
-                            file:write_file(BeamFile, Bin)
-                    end;
-                Error ->
-                    Error
-            end;
-        Error ->
-            Error
-    end.
+    boss_compiler:compile(File, 
+        [{pre_compile_transform, fun trick_out_forms/1},
+            {out_dir, "ebin"}]).
 
 %% @spec edoc_module( File::string() ) -> {Module::atom(), EDoc}
 %% @equiv edoc_module(File, [])

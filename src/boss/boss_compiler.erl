@@ -2,15 +2,28 @@
 -compile(export_all).
 
 compile(File) ->
-    compile(File, [verbose, return_errors]).
+    compile(File, []).
 
 compile(File, Options) ->
     case parse(File) of
         {ok, Forms} ->
-            NewOptions = [{parse_transform, boss_db_pt}|Options],
-            case boss_load:compile_forms(Forms, File, NewOptions) of
-                {ok, _ModuleName, _Bin} ->
-                    ok;
+            CompilerOptions = proplists:get_value(compiler_options, Options, 
+                [verbose, return_errors, {parse_transform, boss_db_pt}]),
+            NewForms = case proplists:get_value(pre_compile_transform, Options) of
+                undefined ->
+                    Forms;
+                TransformFun when is_function(TransformFun) ->
+                    TransformFun(Forms)
+            end,
+            RevertedForms = erl_syntax:revert(NewForms),
+            case boss_load:compile_forms(RevertedForms, File, CompilerOptions) of
+                {ok, Module, Bin} ->
+                    case proplists:get_value(out_dir, Options) of
+                        undefined -> ok;
+                        OutDir ->
+                            BeamFile = filename:join([OutDir, lists:concat([Module, ".beam"])]),
+                            file:write_file(BeamFile, Bin)
+                    end;
                 Error ->
                     Error
             end;
