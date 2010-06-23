@@ -35,6 +35,11 @@
     {% else %}
     <a href="guide-i18n.html">I18n In 8 Minutes</a> 
     {% endifequal %}
+    {% ifequal this_page "guide-db-driver.html" %}
+    <strong>DB Driver Quickstart</strong>
+    {% else %}
+    <a href="guide-db-driver.html">DB Driver Quickstart</a> 
+    {% endifequal %}
 </div>
 {% block guide_content %}
 {% endblock %}

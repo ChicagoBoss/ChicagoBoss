@@ -1,0 +1,48 @@
+{% extends "guide.html" %}
+{% block guide_content %}
+<p>Want Chicago Boss to support your favorite database? Then write a driver! This page explains how.</p>
+<p>Database drivers should conform to the <code>boss_db_driver</code> behaviour and need to implement the following nine functions:</p>
+<div class="code">
+    start() -&gt; ok
+</div>
+<p>Performs any initialization.</p>
+<div class="code">
+    stop() -&gt; ok
+</div>
+<p>Performs any tear-downs.</p>
+<div class="code">
+    find(Id<span class="typevar">::string()</span>) -&gt; BossRecord | {error, Reason}
+</div>
+<p>Returns a BossRecord matching the <code>Id</code>. The <code>Id</code> must be unique across data types.</p>
+<div class="code">
+    find(Type<span class="typevar">::atom()</span>, Conditions, Max<span class="typevar">::integer()</span>, Skip<span class="typevar">::integer()</span>, Sort<span class="typevar">::atom()</span>, SortOrder) -&gt; [BossRecord]
+</div>
+<p>Queries for BossRecords. The <code>Conditions</code> are guaranteed to be in {Key, Operator, Value} format. See <a href="api-db.html">the BossDB API</a> for a list of query operators you need to support.</p>
+<div class="code">
+    count(Type<span class="typevar">::atom()</span>, Conditions) -&gt; <span class="typevar">::integer()</span>
+</div>
+<p>Counts the number of BossRecords of type <code>Type</code> matching <code>Conditions</code>.</p>
+<div class="code">
+    counter(Id<span class="typevar">::string()</span>) -&gt; <span class="typevar">::integer()</span>
+</div>
+<p>Retrieves the value of a counter, or 0 if the counter does not exist.</p>
+<div class="code">
+    incr(Id<span class="typevar">::string()</span>, Increment<span class="typevar">::integer()</span>) -&gt; <span class="typevar">::integer()</span>
+</div>
+<p>Increments the value of a counter by <code>Increment</code>, and returns the new value.</p>
+<div class="code">
+    delete(Id<span class="typevar">::string()</span>) -&gt; ok | {error, Reason}
+</div>
+<p>Delete the BossRecord with the given <code>Id</code>.</p>
+<div class="code">
+    save_record(RecordBossRecord) -&gt; {ok, SavedBossRecord}
+</div>
+<p>Saves (that is, creates or updates) the given BossRecord in the database. If the ID is set to <code>'id'</code>, the function must generate an ID that is unique across data types. This function should not perform validation or run save hooks.</p>
+<p>When you're finished, just:</p>
+<ol>
+    <li>Put the driver into src/boss</li>
+    <li>Specify the module name as the <code>db_driver</code> in boss.config</li>
+    <li>Test it out</li>
+    <li>Send a note to the <a href="http://groups.google.com/group/chicagoboss">Chicago Boss mailing list</a></li>
+</ol>
+{% endblock %}
