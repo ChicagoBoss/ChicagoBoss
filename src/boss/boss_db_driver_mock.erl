@@ -1,8 +1,8 @@
 % In-memory database for fast tests and easy setup
 -module(boss_db_driver_mock).
 -behaviour(boss_db_driver).
--export([start/0, start/1, stop/0, find/1, find/2, find/3, find/4, find/5, find/6]).
--export([count/1, count/2, counter/1, incr/1, incr/2, delete/1, save_record/1]).
+-export([start/0, start/1, stop/0]).
+-export([find/1, find/6, count/2, counter/1, incr/2, delete/1, save_record/1]).
 -export([push/0, pop/0, depth/0, dump/0]).
 
 start() ->
@@ -89,23 +89,12 @@ find(Id) ->
             Record
     end.
 
-find(Type, Conditions) ->
-    find(Type, Conditions, 1000000).
-find(Type, Conditions, Max) ->
-    find(Type, Conditions, Max, 0).
-find(Type, Conditions, Max, Skip) ->
-    find(Type, Conditions, Max, Skip, id).
-find(Type, Conditions, Max, Skip, SortBy) ->
-    find(Type, Conditions, Max, Skip, SortBy, str_ascending).
 find(Type, Conditions, Max, Skip, SortBy, SortOrder) ->
     boss_db_mock ! {self(), {find, Type, Conditions, Max, Skip, SortBy, SortOrder}},
     receive
         {boss_db_mock, Records} ->
             Records
     end.
-
-count(Type) ->
-    count(Type, []).
 
 count(Type, Conditions) ->
     boss_db_mock ! {self(), {count, Type, Conditions}},
@@ -121,8 +110,6 @@ counter(Id) ->
             Count
     end.
 
-incr(Id) ->
-    incr(Id, 1).
 incr(Id, Amount) ->
     boss_db_mock ! {self(), {incr, Id, Amount}},
     receive
@@ -201,48 +188,48 @@ do_find(Dict, Type, Conditions, Max, Skip, SortBy, SortOrder) ->
 
 match_cond(_Record, []) ->
     true;
-match_cond(Record, [Key, 'equal', Value|Rest]) ->
+match_cond(Record, [{Key, 'equals', Value}|Rest]) ->
     Record:Key() =:= Value andalso match_cond(Record, Rest);
-match_cond(Record, [Key, 'not_equal', Value|Rest]) ->
+match_cond(Record, [{Key, 'not_equals', Value}|Rest]) ->
     Record:Key() =/= Value andalso match_cond(Record, Rest);
-match_cond(Record, [Key, 'element_of', Value|Rest]) when is_list(Value) ->
+match_cond(Record, [{Key, 'in', Value}|Rest]) when is_list(Value) ->
     lists:member(Record:Key(), Value) andalso match_cond(Record, Rest);
-match_cond(Record, [Key, 'not_element_of', Value|Rest]) when is_list(Value) ->
+match_cond(Record, [{Key, 'not_in', Value}|Rest]) when is_list(Value) ->
     (not lists:member(Record:Key(), Value)) andalso match_cond(Record, Rest);
-match_cond(Record, [Key, 'element_of', {Min, Max}|Rest]) when Max >= Min ->
+match_cond(Record, [{Key, 'in', {Min, Max}}|Rest]) when Max >= Min ->
     Record:Key() >= Min andalso Record:Key() =< Max andalso match_cond(Record, Rest);
-match_cond(Record, [Key, 'not_element_of', {Min, Max}|Rest]) when Max >= Min ->
+match_cond(Record, [{Key, 'not_in', {Min, Max}}|Rest]) when Max >= Min ->
     (not (Record:Key() >= Min andalso Record:Key() =< Max)) andalso match_cond(Record, Rest);
-match_cond(Record, [Key, '>', Value|Rest]) ->
+match_cond(Record, [{Key, 'gt', Value}|Rest]) ->
     Record:Key() > Value andalso match_cond(Record, Rest);
-match_cond(Record, [Key, '<', Value|Rest]) ->
+match_cond(Record, [{Key, 'lt', Value}|Rest]) ->
     Record:Key() < Value andalso match_cond(Record, Rest);
-match_cond(Record, [Key, 'greater_equal', Value|Rest]) ->
+match_cond(Record, [{Key, 'ge', Value}|Rest]) ->
     Record:Key() >= Value andalso match_cond(Record, Rest);
-match_cond(Record, [Key, 'less_equal', Value|Rest]) ->
+match_cond(Record, [{Key, 'le', Value}|Rest]) ->
     Record:Key() =< Value andalso match_cond(Record, Rest);
-match_cond(Record, [Key, 'match', "*"++Value|Rest]) ->
+match_cond(Record, [{Key, 'matches', "*"++Value}|Rest]) ->
     re:run(Record:Key(), Value, [caseless]) =/= nomatch andalso match_cond(Record, Rest);
-match_cond(Record, [Key, 'match', Value|Rest]) ->
+match_cond(Record, [{Key, 'matches', Value}|Rest]) ->
     re:run(Record:Key(), Value, []) =/= nomatch andalso match_cond(Record, Rest);
-match_cond(Record, [Key, 'nomatch', "*"++Value|Rest]) ->
+match_cond(Record, [{Key, 'not_matches', "*"++Value}|Rest]) ->
     re:run(Record:Key(), Value, [caseless]) =:= nomatch andalso match_cond(Record, Rest);
-match_cond(Record, [Key, 'nomatch', Value|Rest]) ->
+match_cond(Record, [{Key, 'not_matches', Value}|Rest]) ->
     re:run(Record:Key(), Value, []) =:= nomatch andalso match_cond(Record, Rest);
-match_cond(Record, [Key, 'contains', Value|Rest]) ->
+match_cond(Record, [{Key, 'contains', Value}|Rest]) ->
     lists:member(Value, string:tokens(Record:Key(), " ")) andalso match_cond(Record, Rest);
-match_cond(Record, [Key, 'not_contains', Value|Rest]) ->
+match_cond(Record, [{Key, 'not_contains', Value}|Rest]) ->
     (not lists:member(Value, string:tokens(Record:Key(), " "))) andalso match_cond(Record, Rest);
-match_cond(Record, [Key, 'contains_all', Value|Rest]) ->
+match_cond(Record, [{Key, 'contains_all', Value}|Rest]) ->
     Tokens = string:tokens(Record:Key(), " "),
     lists:all(fun(Token) -> lists:member(Token, Tokens) end, Value) andalso match_cond(Record, Rest);
-match_cond(Record, [Key, 'not_contains_all', Value|Rest]) ->
+match_cond(Record, [{Key, 'not_contains_all', Value}|Rest]) ->
     Tokens = string:tokens(Record:Key(), " "),
     (not lists:all(fun(Token) -> lists:member(Token, Tokens) end, Value)) andalso match_cond(Record, Rest);
-match_cond(Record, [Key, 'contains_any', Value|Rest]) ->
+match_cond(Record, [{Key, 'contains_any', Value}|Rest]) ->
     Tokens = string:tokens(Record:Key(), " "),
     lists:any(fun(Token) -> lists:member(Token, Tokens) end, Value) andalso match_cond(Record, Rest);
-match_cond(Record, [Key, 'not_contains_any', Value|Rest]) ->
+match_cond(Record, [{Key, 'contains_none', Value}|Rest]) ->
     Tokens = string:tokens(Record:Key(), " "),
     (not lists:any(fun(Token) -> lists:member(Token, Tokens) end, Value)) andalso match_cond(Record, Rest).
 

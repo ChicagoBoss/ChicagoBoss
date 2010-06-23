@@ -127,23 +127,23 @@ scan_transform(FileContents, StartLocation) ->
     end.
 
 transform_char(8800) -> % ≠
-    {ok, ",'not_equal',"};
+    {ok, ",'not_equals',"};
 transform_char(8804) -> % ≤
-    {ok, ",'less_equal',"};
+    {ok, ",'le',"};
 transform_char(8805) -> % ≥
-    {ok, ",'greater_equal',"};
+    {ok, ",'ge',"};
 transform_char(8712) -> % ∈
-    {ok, ",'element_of',"};
+    {ok, ",'in',"};
 transform_char(8713) -> % ∉
-    {ok, ",'not_element_of',"};
+    {ok, ",'not_in',"};
 transform_char(8715) -> % ∋
     {ok, ",'contains',"};
 transform_char(8716) -> % ∌
     {ok, ",'not_contains',"};
 transform_char(8764) -> % ∼
-    {ok, ",'match',"};
+    {ok, ",'matches',"};
 transform_char(8769) -> % ≁
-    {ok, ",'not_match',"};
+    {ok, ",'not_matches',"};
 transform_char(8839) -> % ⊇
     {ok, ",'contains_all',"};
 transform_char(8841) -> % ⊉
@@ -151,9 +151,9 @@ transform_char(8841) -> % ⊉
 transform_char(8745) -> % ∩
     {ok, ",'contains_any',"};
 transform_char(8869) -> % ⊥
-    {ok, ",'not_contains_any',"};
+    {ok, ",'contains_none',"};
 transform_char(10178) -> % ⊥ look-alike
-    {ok, ",'not_contains_any',"};
+    {ok, ",'contains_none',"};
 transform_char(_) ->
     error.
 

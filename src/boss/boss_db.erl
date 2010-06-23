@@ -22,6 +22,8 @@
         type/1,
         data_type/2]).
 
+-define(DEFAULT_MAX, (1000 * 1000 * 1000)).
+
 start() ->
     start([]).
 
@@ -40,26 +42,26 @@ find(Key) ->
 %% @doc Query for BossRecords. Returns all BossRecords of type
 %% `Type' matching all of the given `Conditions'
 find(Type, Conditions) ->
-    gen_server:call(boss_db, {find, Type, Conditions}).
+    find(Type, Conditions, ?DEFAULT_MAX).
 
 %% @spec find(Type::atom(), Conditions, Max::integer()) -> [ BossRecord ]
 %% @doc Query for BossRecords. Returns up to `Max' number of BossRecords of type
 %% `Type' matching all of the given `Conditions'
 find(Type, Conditions, Max) ->
-    gen_server:call(boss_db, {find, Type, Conditions, Max}).
+    find(Type, Conditions, Max, 0).
 
 %% @spec find( Type::atom(), Conditions, Max::integer(), Skip::integer() ) -> [ BossRecord ]
 %% @doc Query for BossRecords. Returns up to `Max' number of BossRecords of type
 %% `Type' matching all of the given `Conditions', skipping the first `Skip' results.
 find(Type, Conditions, Max, Skip) ->
-    gen_server:call(boss_db, {find, Type, Conditions, Max, Skip}).
+    find(Type, Conditions, Max, Skip, id).
 
 %% @spec find( Type::atom(), Conditions, Max::integer(), Skip::integer(), Sort::atom() ) -> [ BossRecord ]
 %% @doc Query for BossRecords. Returns up to `Max' number of BossRecords of type
 %% `Type' matching all of the given `Conditions', skipping the
 %% first `Skip' results, sorted on the attribute `Sort'.
 find(Type, Conditions, Max, Skip, Sort) ->
-    gen_server:call(boss_db, {find, Type, Conditions, Max, Skip, Sort}).
+    find(Type, Conditions, Max, Skip, Sort, str_ascending).
 
 %% @spec find( Type::atom(), Conditions, Max::integer(), Skip::integer(), Sort::atom(), SortOrder ) -> [ BossRecord ]
 %%       SortOrder = num_ascending | num_descending | str_ascending | str_descending
@@ -74,18 +76,18 @@ find(Type, Conditions, Max, Skip, Sort) ->
 %% sort them numerically.
 
 find(Type, Conditions, Max, Skip, Sort, SortOrder) ->
-    gen_server:call(boss_db, {find, Type, Conditions, Max, Skip, Sort, SortOrder}).
+    gen_server:call(boss_db, {find, Type, normalize_conditions(Conditions), Max, Skip, Sort, SortOrder}).
 
 %% @spec count( Type::atom() ) -> integer()
 %% @doc Count the number of BossRecords of type `Type' in the database.
 count(Type) ->
-    gen_server:call(boss_db, {count, Type}).
+    count(Type, []).
 
 %% @spec count( Type::atom(), Conditions ) -> integer()
 %% @doc Count the number of BossRecords of type `Type' in the database matching
 %% all of the given `Conditions'.
 count(Type, Conditions) ->
-    gen_server:call(boss_db, {count, Type, Conditions}).
+    gen_server:call(boss_db, {count, Type, normalize_conditions(Conditions)}).
 
 %% @spec counter( Id::string() ) -> integer()
 %% @doc Treat the record associated with `Id' as a counter and return its value.
@@ -97,7 +99,7 @@ counter(Key) ->
 %% @spec incr( Id::string() ) -> integer()
 %% @doc Treat the record associated with `Id' as a counter and atomically increment its value by 1.
 incr(Key) ->
-    gen_server:call(boss_db, {incr, Key}).
+    incr(Key, 1).
 
 %% @spec incr( Id::string(), Increment::integer() ) -> integer()
 %% @doc Treat the record associated with `Id' as a counter and atomically increment its value by `Increment'.
@@ -168,3 +170,13 @@ data_type(Key, Val) when is_list(Val) ->
         true -> "foreign_id";
         false -> "string"
     end.
+
+normalize_conditions(Conditions) ->
+    normalize_conditions(Conditions, []).
+
+normalize_conditions([], Acc) ->
+    lists:reverse(Acc);
+normalize_conditions([Key, Operator, Value|Rest], Acc) when is_atom(Key), is_atom(Operator) ->
+    normalize_conditions(Rest, [{Key, Operator, Value}|Acc]);
+normalize_conditions([{Key, Operator, Value}|Rest], Acc) when is_atom(Key), is_atom(Operator) ->
+    normalize_conditions(Rest, [{Key, Operator, Value}|Acc]).

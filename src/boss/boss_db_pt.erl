@@ -48,13 +48,17 @@ replace_operators({cons, _Location, {match, MatchLoc, LHS, RHS}, Rest}) ->
     LHSLoc = element(2, LHS),
     RHSLoc = element(2, RHS),
     {cons, LHSLoc, LHS,
-        {cons, MatchLoc, {atom, MatchLoc, 'equal'},
+        {cons, MatchLoc, {atom, MatchLoc, 'equals'},
             {cons, RHSLoc, RHS, replace_operators(Rest)}}};
 replace_operators({cons, _Location, {op, OpLoc, Operator, LHS, RHS}, Rest}) when Operator =:= '>'; Operator =:= '<' ->
+    Replacement = case Operator of
+        '>' -> 'gt';
+        '<' -> 'lt'
+    end,
     LHSLoc = element(2, LHS),
     RHSLoc = element(2, RHS),
     {cons, LHSLoc, LHS,
-        {cons, OpLoc, {atom, OpLoc, Operator},
+        {cons, OpLoc, {atom, OpLoc, Replacement},
             {cons, RHSLoc, RHS, replace_operators(Rest)}}};
 replace_operators({cons, Location, First, Rest}) ->
     {cons, Location, First, replace_operators(Rest)};

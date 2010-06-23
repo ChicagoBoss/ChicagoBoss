@@ -1,10 +1,9 @@
 -module(boss_db_driver_tyrant).
 -behaviour(boss_db_driver).
--export([start/0, start/1, stop/0, find/1, find/2, find/3, find/4, find/5, find/6]).
--export([count/1, count/2, counter/1, incr/1, incr/2, delete/1, save_record/1]).
+-export([start/0, start/1, stop/0, find/1, find/6]).
+-export([count/2, counter/1, incr/2, delete/1, save_record/1]).
 
 -define(TRILLION, (1000 * 1000 * 1000 * 1000)).
--define(DEFAULT_MAX, (1000 * 1000 * 1000)).
 
 start() ->
     start([]).
@@ -37,18 +36,6 @@ find(Id) when is_binary(Id) ->
 
 find(_Id) -> {error, invalid_id}.
 
-find(Type, Conditions) ->
-    find(Type, Conditions, ?DEFAULT_MAX).
-
-find(Type, Conditions, Max) ->
-    find(Type, Conditions, Max, 0).
-
-find(Type, Conditions, Max, Skip) ->
-    find(Type, Conditions, Max, Skip, id).
-
-find(Type, Conditions, Max, Skip, Sort) ->
-    find(Type, Conditions, Max, Skip, Sort, str_ascending).
-
 find(Type, Conditions, Max, Skip, Sort, SortOrder) when is_atom(Type), is_list(Conditions), is_integer(Max),
                                                         is_integer(Skip), is_atom(Sort), is_atom(SortOrder) ->
     case model_is_loaded(Type) of
@@ -59,9 +46,6 @@ find(Type, Conditions, Max, Skip, Sort, SortOrder) when is_atom(Type), is_list(C
         false ->
             []
     end.
-
-count(Type) ->
-    count(Type, []).
 
 count(Type, Conditions) ->
     medici:searchcount(build_conditions(Type, Conditions)).
@@ -75,9 +59,6 @@ counter(Id) when is_binary(Id) ->
                     proplists:get_value(<<"_num">>, Record, <<"0">>)));
         {error, _Reason} -> 0
     end.
-
-incr(Id) ->
-    medici:addint(Id, 1).
 
 incr(Id, Count) ->
     medici:addint(Id, Count).
@@ -183,51 +164,49 @@ build_query(Type, Conditions, Max, Skip, Sort, SortOrder) ->
     medici:query_order(medici:query_limit(Query, Max, Skip), atom_to_list(Sort), SortOrder).
 
 build_conditions(Type, Conditions) ->
-    build_conditions1(['_type', 'equal', atom_to_list(Type)|Conditions], []).
+    build_conditions1([{'_type', 'equals', atom_to_list(Type)}|Conditions], []).
 
 build_conditions1([], Acc) ->
     Acc;
-build_conditions1([{Key, Value}|Rest], Acc) ->
+build_conditions1([{Key, 'equals', Value}|Rest], Acc) ->
     build_conditions1(Rest, add_cond(Acc, Key, str_eq, pack_value(Value)));
-build_conditions1([Key, 'equal', Value|Rest], Acc) ->
-    build_conditions1(Rest, add_cond(Acc, Key, str_eq, pack_value(Value)));
-build_conditions1([Key, 'not_equal', Value|Rest], Acc) ->
+build_conditions1([{Key, 'not_equals', Value}|Rest], Acc) ->
     build_conditions1(Rest, add_cond(Acc, Key, {no, str_eq}, pack_value(Value)));
-build_conditions1([Key, 'element_of', Value|Rest], Acc) when is_list(Value) ->
+build_conditions1([{Key, 'in', Value}|Rest], Acc) when is_list(Value) ->
     PackedValues = pack_tokens(Value),
     build_conditions1(Rest, add_cond(Acc, Key, str_in_list, PackedValues));
-build_conditions1([Key, 'not_element_of', Value|Rest], Acc) when is_list(Value) ->
+build_conditions1([{Key, 'not_in', Value}|Rest], Acc) when is_list(Value) ->
     PackedValues = pack_tokens(Value),
     build_conditions1(Rest, add_cond(Acc, Key, {no, str_in_list}, PackedValues));
-build_conditions1([Key, 'element_of', {Min, Max}|Rest], Acc) when Max >= Min ->
+build_conditions1([{Key, 'in', {Min, Max}}|Rest], Acc) when Max >= Min ->
     PackedValues = pack_tokens([Min, Max]),
     build_conditions1(Rest, add_cond(Acc, Key, num_between, PackedValues));
-build_conditions1([Key, 'not_element_of', {Min, Max}|Rest], Acc) when Max >= Min ->
+build_conditions1([{Key, 'not_in', {Min, Max}}|Rest], Acc) when Max >= Min ->
     PackedValues = pack_tokens([Min, Max]),
     build_conditions1(Rest, add_cond(Acc, Key, {no, num_between}, PackedValues));
-build_conditions1([Key, '>', Value|Rest], Acc) ->
+build_conditions1([{Key, 'gt', Value}|Rest], Acc) ->
     build_conditions1(Rest, add_cond(Acc, Key, num_gt, pack_value(Value)));
-build_conditions1([Key, '<', Value|Rest], Acc) ->
+build_conditions1([{Key, 'lt', Value}|Rest], Acc) ->
     build_conditions1(Rest, add_cond(Acc, Key, num_lt, pack_value(Value)));
-build_conditions1([Key, 'greater_equal', Value|Rest], Acc) ->
+build_conditions1([{Key, 'ge', Value}|Rest], Acc) ->
     build_conditions1(Rest, add_cond(Acc, Key, num_ge, pack_value(Value)));
-build_conditions1([Key, 'less_equal', Value|Rest], Acc) ->
+build_conditions1([{Key, 'le', Value}|Rest], Acc) ->
     build_conditions1(Rest, add_cond(Acc, Key, num_le, pack_value(Value)));
-build_conditions1([Key, 'match', Value|Rest], Acc) ->
+build_conditions1([{Key, 'matches', Value}|Rest], Acc) ->
     build_conditions1(Rest, add_cond(Acc, Key, str_regex, pack_value(Value)));
-build_conditions1([Key, 'not_match', Value|Rest], Acc) ->
+build_conditions1([{Key, 'not_matches', Value}|Rest], Acc) ->
     build_conditions1(Rest, add_cond(Acc, Key, {no, str_regex}, pack_value(Value)));
-build_conditions1([Key, 'contains', Value|Rest], Acc) ->
+build_conditions1([{Key, 'contains', Value}|Rest], Acc) ->
     build_conditions1(Rest, add_cond(Acc, Key, str_and, pack_value(Value)));
-build_conditions1([Key, 'not_contains', Value|Rest], Acc) ->
+build_conditions1([{Key, 'not_contains', Value}|Rest], Acc) ->
     build_conditions1(Rest, add_cond(Acc, Key, {no, str_and}, pack_value(Value)));
-build_conditions1([Key, 'contains_all', Values|Rest], Acc) when is_list(Values) ->
+build_conditions1([{Key, 'contains_all', Values}|Rest], Acc) when is_list(Values) ->
     build_conditions1(Rest, add_cond(Acc, Key, str_and, pack_tokens(Values)));
-build_conditions1([Key, 'not_contains_all', Values|Rest], Acc) when is_list(Values) ->
+build_conditions1([{Key, 'not_contains_all', Values}|Rest], Acc) when is_list(Values) ->
     build_conditions1(Rest, add_cond(Acc, Key, {no, str_and}, pack_tokens(Values)));
-build_conditions1([Key, 'contains_any', Values|Rest], Acc) when is_list(Values) ->
+build_conditions1([{Key, 'contains_any', Values}|Rest], Acc) when is_list(Values) ->
     build_conditions1(Rest, add_cond(Acc, Key, str_or, pack_tokens(Values)));
-build_conditions1([Key, 'not_contains_any', Values|Rest], Acc) when is_list(Values) ->
+build_conditions1([{Key, 'contains_none', Values}|Rest], Acc) when is_list(Values) ->
     build_conditions1(Rest, add_cond(Acc, Key, {no, str_or}, pack_tokens(Values))).
 
 add_cond(Acc, Key, Op, PackedVal) ->

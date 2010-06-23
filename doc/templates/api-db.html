@@ -6,103 +6,108 @@
 
 <p>The "find" and "count" functions each take a set of <code>Conditions</code>, which specify search criteria. Similar to Microsoft's <a href="http://msdn.microsoft.com/en-us/library/bb308959.aspx">LINQ</a>, the <code>Conditions</code> can use a special non-Erlang syntax for conciseness. This special syntax can't be compiled with Erlang's default compiler, so you'll have to let Boss compile your controllers which use it.</p>
 
-<p><code>Conditions</code> looks like a list, but each element in the list uses a notation very similar to abstract mathematical notation with a left-hand side (an atom corresponding to a record attribute), a single-character operator, and a right-hand side (values to match to the attribute). <strong>The mathematical operators are not all ASCII!</strong> That's right, you may want to copy-paste the UTF-8 operators below.</p>
+<p><code>Conditions</code> looks like a list, but each element in the list uses a notation very similar to abstract mathematical notation with a left-hand side (an atom corresponding to a record attribute), a single-character operator, and a right-hand side (values to match to the attribute). <strong>The mathematical operators are not all ASCII!</strong> You may want to copy-paste the UTF-8 operators below. As an alternative, you can also specify each condition with a 3-tuple with easier-to-type operator names.</p>
 
 <p>As a quick example, to count the number of people younger than 25 with occupation listed as "student" or "unemployed", you would use:</p>
 <div class="code">
     boss_db:count(person, <br />
     &nbsp;&nbsp;&nbsp;&nbsp;[age &lt; 25, occupation ∈ ["student", "unemployed"]]).
 </div>
+<p>This could also be written:</p>
+<div class="code">
+    boss_db:count(person, <br />
+    &nbsp;&nbsp;&nbsp;&nbsp;[{age, 'lt', 25}, {occupation, 'in', ["student", "unemployed"]}]).
+</div>
 
 <p>Valid conditions are:</p>
 
 <div class="code">
-    key = Value
+    key = Value | {key, 'equals', Value}
 </div>
 <p>The "key" attribute is exactly equal to Value.</p>
 
 <div class="code">
-    key ≠ Value
+    key ≠ Value | {key, 'not_equals', Value}
 </div>
 <p>The "key" attribute is not exactly equal to Value.</p>
 
 <div class="code">
-    key ∈ [Value1, Value2, ...]
+    key ∈ [Value1, Value2, ...] | {key, 'in', [Value1, Value2, ...]}
 </div>
 <p>The "key" attribute is equal to at least one element on the right-hand side.</p>
 
 <div class="code">
-    key ∉ [Value1, Value2, ...]
+    key ∉ [Value1, Value2, ...] | {key, 'not_in', [Value1, Value2, ...]}
 </div>
 <p>The "key" attribute is not equal to any element on the right-hand side.</p>
 
 <div class="code">
-    key ∈ {Min, Max}
+    key ∈ {Min, Max} | {key, 'in', {Min, Max{{ "}}" }}
 </div>
 <p>The "key" attribute is numerically between Min and Max.</p>
 
 <div class="code">
-    key ∉ {Min, Max}
+    key ∉ {Min, Max} | {key, 'not_in', {Min, Max{{ "}}" }}
 </div>
 <p>The "key" attribute is not between Min and Max.</p>
 
 <div class="code">
-    key ∼ RegularExpression
+    key ∼ RegularExpression | {key, 'matches', RegularExpression}
 </div>
 <p>The "key" attribute matches the RegularExpression.</p>
 
 <div class="code">
-    key ≁ RegularExpression
+    key ≁ RegularExpression | {key, 'not_matches', RegularExpression}
 </div>
 <p>The "key" attribute does not match the RegularExpression.</p>
 
 <div class="code">
-    key ∋ Token
+    key ∋ Token | {key, 'contains', Token}
 </div>
 <p>The "key" attribute contains Token.</p>
 
 <div class="code">
-    key ∌ Token
+    key ∌ Token | {key, 'not_contains', Token}
 </div>
 <p>The "key" attribute does not contain Token.</p>
 
 <div class="code">
-    key ⊇ [Token1, Token2, ...]
+    key ⊇ [Token1, Token2, ...] | {key, 'contains_all', [Token1, Token2, ...]} 
 </div>
 <p>The "key" attribute contains all tokens on the right-hand side.</p>
 
 <div class="code">
-    key ⊉ [Token1, Token2, ...]
+    key ⊉ [Token1, Token2, ...] | {key, 'not_contains_all', [Token1, Token2, ...]}
 </div>
 <p>The "key" attribute does not contain all tokens on the right-hand side.</p>
 
 <div class="code">
-    key ∩ [Token1, Token2, ...]
+    key ∩ [Token1, Token2, ...] | {key, 'contains_any', [Token1, Token2, ...]}
 </div>
 <p>The "key" attribute contains at least one of the tokens on the right-hand side.</p>
 
 <div class="code">
-    key ⊥ [Token1, Token2, ...]
+    key ⊥ [Token1, Token2, ...] | {key, 'contains_none', [Token1, Token2, ...]}
 </div>
-<p>The "key" attribute does not contain at least one of the tokens on the right-hand side.</p>
+<p>The "key" attribute contains none of the tokens on the right-hand side.</p>
 
 <div class="code">
-    key &gt; Value
+    key &gt; Value | {key, 'gt', Value}
 </div>
 <p>The "key" attribute is greater than Value.</p>
 
 <div class="code">
-    key &lt; Value
+    key &lt; Value | {key, 'lt', Value}
 </div>
 <p>The "key" attribute is less than Value.</p>
 
 <div class="code">
-    key ≥ Value
+    key ≥ Value | {key, 'ge', Value}
 </div>
 <p>The "key" attribute is greater than or equal to Value.</p>
 
 <div class="code">
-    key ≤ Value
+    key ≤ Value | {key, 'le', Value}
 </div>
 <p>The "key" attribute is less than or equal to Value.</p>
 

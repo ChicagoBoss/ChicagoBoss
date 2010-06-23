@@ -94,7 +94,7 @@ columnize_values([], Current, Stack) ->
     FinalStack = lists:reverse([list_to_binary(lists:reverse(Current)) | Stack]),
     return_column_vals(FinalStack, []);
 columnize_values([0 | T], [], Stack) ->
-    columnize_values(T, [], Stack);
+    columnize_values(T, [], [<<"">>|Stack]);
 columnize_values([0 | T], Current, Stack) ->
     columnize_values(T, [], [list_to_binary(lists:reverse(Current)) | Stack]);
 columnize_values([H | T], Current, Stack) ->
