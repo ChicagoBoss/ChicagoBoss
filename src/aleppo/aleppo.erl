@@ -33,10 +33,11 @@ process_tokens(Tokens, Options) ->
     end.
 
 process_tree(ParseTree, Options) ->
-    {Dict0, IncludeTrail, TokenAcc} = case proplists:get_value(file, Options) of
-        undefined -> {dict:new(), [], []};
+    {Dict0, IncludeTrail, IncludeDirs, TokenAcc} = case proplists:get_value(file, Options) of
+        undefined -> {dict:new(), [], ["."], []};
         FileName -> {dict:store('FILE', [{string, 1, FileName}], dict:new()),
                 [filename:absname(FileName)], 
+                [".", filename:dirname(FileName)],
                 lists:reverse(file_attribute_tokens(FileName, 1))}
     end,
 
@@ -51,7 +52,7 @@ process_tree(ParseTree, Options) ->
 
     Context = #ale_context{ 
         include_trail = IncludeTrail, 
-        include_dirs = proplists:get_value(include, Options, ["."]), 
+        include_dirs = IncludeDirs ++ proplists:get_value(include, Options, []), 
         macro_dict = Dict2 },
 
     case catch process_tree(ParseTree, TokenAcc, Context) of
