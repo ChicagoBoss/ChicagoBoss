@@ -2,6 +2,12 @@
 -module(aleppo).
 -export([process_file/1, process_tokens/1, process_tokens/2, scan_file/1]).
 
+-record(ale_context, {
+        include_trail = [],
+        include_dirs = [],
+        macro_dict = dict:new()
+    }).
+
 process_file(FileName) ->
     ModuleName = list_to_atom(filename:rootname(filename:basename(FileName))),
     case scan_file(FileName) of
@@ -14,6 +20,9 @@ process_file(FileName) ->
 process_tokens(Tokens) ->
     process_tokens(Tokens, []).
 
+% Valid options:
+% - file: The path of the file being processed
+% - include: A list of directories to include in the .hrl search path
 process_tokens(Tokens, Options) ->
     {Tokens1, Module} = mark_keywords(Tokens),
     case aleppo_parser:parse(Tokens1) of
@@ -24,7 +33,7 @@ process_tokens(Tokens, Options) ->
     end.
 
 process_tree(ParseTree, Options) ->
-    {Dict0, InclusionTrail, TokenAcc} = case proplists:get_value(file, Options) of
+    {Dict0, IncludeTrail, TokenAcc} = case proplists:get_value(file, Options) of
         undefined -> {dict:new(), [], []};
         FileName -> {dict:store('FILE', [{string, 1, FileName}], dict:new()),
                 [filename:absname(FileName)], 
@@ -40,74 +49,79 @@ process_tree(ParseTree, Options) ->
 
     Dict2 = dict:store('MACHINE',  [{atom, 1, list_to_atom(erlang:system_info(machine))}], Dict1),
 
-    case catch process_tree(ParseTree, Dict2, InclusionTrail, TokenAcc) of
+    Context = #ale_context{ 
+        include_trail = IncludeTrail, 
+        include_dirs = proplists:get_value(include, Options, ["."]), 
+        macro_dict = Dict2 },
+
+    case catch process_tree(ParseTree, TokenAcc, Context) of
         {error, What} ->
             {error, What};
         {_MacroDict, RevTokens} ->
             {ok, lists:reverse(RevTokens)}
     end.
 
-process_tree([], MacroDict, _, TokenAcc) ->
-    {MacroDict, TokenAcc};
-process_tree([Node|Rest], MacroDict, InclusionTrail, TokenAcc) ->
+process_tree([], TokenAcc, Context) ->
+    {Context#ale_context.macro_dict, TokenAcc};
+process_tree([Node|Rest], TokenAcc, Context) ->
     case Node of
         {'macro_define', {_Type, Loc, MacroName}} ->
-            NewDict = dict:store(MacroName, [{atom,Loc,true}], MacroDict),
-            process_tree(Rest, NewDict, InclusionTrail, TokenAcc);
+            NewDict = dict:store(MacroName, [{atom,Loc,true}], Context#ale_context.macro_dict),
+            process_tree(Rest, TokenAcc, Context#ale_context{ macro_dict = NewDict });
         {'macro_define', {_Type, _Loc, MacroName}, MacroTokens} ->
-            NewDict = dict:store(MacroName, MacroTokens, MacroDict),
-            process_tree(Rest, NewDict, InclusionTrail, TokenAcc);
+            NewDict = dict:store(MacroName, MacroTokens, Context#ale_context.macro_dict),
+            process_tree(Rest, TokenAcc, Context#ale_context{ macro_dict = NewDict });
         {'macro_define', {_Type, _Loc, MacroName}, MacroArgs, MacroTokens} ->
-            NewDict = dict:store({MacroName, length(MacroArgs)}, {MacroArgs, MacroTokens}, MacroDict),
-            process_tree(Rest, NewDict, InclusionTrail, TokenAcc);
+            NewDict = dict:store({MacroName, length(MacroArgs)}, {MacroArgs, MacroTokens}, Context#ale_context.macro_dict),
+            process_tree(Rest, TokenAcc, Context#ale_context{ macro_dict = NewDict });
         {'macro_undef', {_Type, _Loc, MacroName}} ->
-            NewDict = dict:erase(MacroName, MacroDict),
-            process_tree(Rest, NewDict, InclusionTrail, TokenAcc);
+            NewDict = dict:erase(MacroName, Context#ale_context.macro_dict),
+            process_tree(Rest, TokenAcc, Context#ale_context{ macro_dict = NewDict });
         {'macro_include', {string, Loc, FileName}} ->
-            AbsName = filename:absname(FileName),
-            {IncludeMacroDict, IncludeTokens} = process_inclusion(AbsName, Loc, MacroDict, InclusionTrail),
-            process_tree(Rest, IncludeMacroDict, InclusionTrail, IncludeTokens ++ TokenAcc);
+            AbsName = expand_filename(FileName, Context),
+            {NewDict, IncludeTokens} = process_inclusion(AbsName, Loc, Context),
+            process_tree(Rest, IncludeTokens ++ TokenAcc, Context#ale_context{ macro_dict = NewDict });
         {'macro_include_lib', {string, Loc, FileName}} ->
             AbsName = expand_include_lib(FileName),
-            {IncludeMacroDict, IncludeTokens} = process_inclusion(AbsName, Loc, MacroDict, InclusionTrail),
-            process_tree(Rest, IncludeMacroDict, InclusionTrail, IncludeTokens ++ TokenAcc);
+            {NewDict, IncludeTokens} = process_inclusion(AbsName, Loc, Context),
+            process_tree(Rest, IncludeTokens ++ TokenAcc, Context#ale_context{ macro_dict = NewDict });
         {'macro_ifdef', {_Type, _Loc, MacroName}, IfBody} ->
-            process_ifelse(Rest, MacroName, IfBody, [], MacroDict, InclusionTrail, TokenAcc);
+            process_ifelse(Rest, MacroName, IfBody, [], TokenAcc, Context);
         {'macro_ifdef', {_Type, _Loc, MacroName}, IfBody, ElseBody} ->
-            process_ifelse(Rest, MacroName, IfBody, ElseBody, MacroDict, InclusionTrail, TokenAcc);
+            process_ifelse(Rest, MacroName, IfBody, ElseBody, TokenAcc, Context);
         {'macro_ifndef', {_Type, _Loc, MacroName}, IfBody} ->
-            process_ifelse(Rest, MacroName, [], IfBody, MacroDict, InclusionTrail, TokenAcc);
+            process_ifelse(Rest, MacroName, [], IfBody, TokenAcc, Context);
         {'macro_ifndef', {_Type, _Loc, MacroName}, IfBody, ElseBody} ->
-            process_ifelse(Rest, MacroName, ElseBody, IfBody, MacroDict, InclusionTrail, TokenAcc);
+            process_ifelse(Rest, MacroName, ElseBody, IfBody, TokenAcc, Context);
         {'macro', {var, {Line, _Col} = Loc, 'LINE'}} ->
-            process_tree(Rest, MacroDict, InclusionTrail, [{integer, Loc, Line}|TokenAcc]);
+            process_tree(Rest, [{integer, Loc, Line}|TokenAcc], Context);
         {'macro', {var, Line, 'LINE'}} when is_integer(Line) ->
-            process_tree(Rest, MacroDict, InclusionTrail, [{integer, Line, Line}|TokenAcc]);
+            process_tree(Rest, [{integer, Line, Line}|TokenAcc], Context);
         {'macro', {_Type, _Loc, MacroName}} ->
-            InsertTokens = dict:fetch(MacroName, MacroDict),
-            {_, RevProcessedTokens} = process_tree(InsertTokens, MacroDict, InclusionTrail, []),
-            process_tree(Rest, MacroDict, InclusionTrail, RevProcessedTokens ++ TokenAcc);
+            InsertTokens = dict:fetch(MacroName, Context#ale_context.macro_dict),
+            {_, RevProcessedTokens} = process_tree(InsertTokens, [], Context),
+            process_tree(Rest, RevProcessedTokens ++ TokenAcc, Context);
         {'macro', {_Type, Loc, MacroName}, MacroArgs} ->
-            {DefinedArgs, DefinedTokens} = dict:fetch({MacroName, length(MacroArgs)}, MacroDict),
+            {DefinedArgs, DefinedTokens} = dict:fetch({MacroName, length(MacroArgs)}, Context#ale_context.macro_dict),
             InsertTokens = expand_macro_fun(Loc, DefinedArgs, DefinedTokens, MacroArgs),
-            {_, RevProcessedTokens} = process_tree(InsertTokens, MacroDict, InclusionTrail, []),
-            process_tree(Rest, MacroDict, InclusionTrail, RevProcessedTokens ++ TokenAcc);
+            {_, RevProcessedTokens} = process_tree(InsertTokens, [], Context),
+            process_tree(Rest, RevProcessedTokens ++ TokenAcc, Context);
         OtherToken ->
-            process_tree(Rest, MacroDict, InclusionTrail, [OtherToken|TokenAcc])
+            process_tree(Rest, [OtherToken|TokenAcc], Context)
     end.
 
-process_ifelse(Rest, MacroName, IfBody, ElseBody, MacroDict, InclusionTrail, TokenAcc) ->
-    ChooseBody = case dict:is_key(MacroName, MacroDict) of
+process_ifelse(Rest, MacroName, IfBody, ElseBody, TokenAcc, Context) ->
+    ChooseBody = case dict:is_key(MacroName, Context#ale_context.macro_dict) of
         true -> IfBody;
         false -> ElseBody
     end,
-    {NewMacroDict, NewTokens} = process_tree(ChooseBody, MacroDict, InclusionTrail, []),
-    process_tree(Rest, NewMacroDict, InclusionTrail, NewTokens ++ TokenAcc).
+    {NewDict, NewTokens} = process_tree(ChooseBody, [], Context),
+    process_tree(Rest, NewTokens ++ TokenAcc, Context#ale_context{ macro_dict = NewDict }).
 
-process_inclusion(FileName, {Line, _}, MacroDict, InclusionTrail) ->
-    process_inclusion(FileName, Line, MacroDict, InclusionTrail);
-process_inclusion(FileName, Line, MacroDict, InclusionTrail) ->
-    case lists:member(FileName, InclusionTrail) of
+process_inclusion(FileName, {Line, _}, Context) ->
+    process_inclusion(FileName, Line, Context);
+process_inclusion(FileName, Line, Context) ->
+    case lists:member(FileName, Context#ale_context.include_trail) of
         true ->
             throw({error, {circular_inclusion, FileName}});
         false ->
@@ -115,14 +129,16 @@ process_inclusion(FileName, Line, MacroDict, InclusionTrail) ->
             {NewTokens, _} = mark_keywords(Tokens),
             case aleppo_parser:parse(NewTokens) of
                 {ok, ParseTree} ->
-                    ThisFile = case dict:find('FILE', MacroDict) of
+                    ThisFile = case dict:find('FILE', Context#ale_context.macro_dict) of
                         {ok, Val} -> Val;
                         _ -> undefined
                     end,
-                    Dict1 = dict:store('FILE', [{string, 1, FileName}], MacroDict),
+                    Dict1 = dict:store('FILE', [{string, 1, FileName}], Context#ale_context.macro_dict),
                     TokenAcc = lists:reverse(file_attribute_tokens(FileName, 1)),
-                    {Dict2, IncludedTokens} = process_tree(ParseTree, Dict1, 
-                        [FileName|InclusionTrail], TokenAcc),
+                    {Dict2, IncludedTokens} = process_tree(ParseTree, TokenAcc, 
+                        Context#ale_context{ 
+                            macro_dict = Dict1, 
+                            include_trail = [FileName|Context#ale_context.include_trail]}),
                     case ThisFile of
                         undefined -> {Dict2, IncludedTokens};
                         {string, _Loc, ThisFileName} -> 
@@ -141,6 +157,40 @@ file_attribute_tokens(FileName, Line) ->
 expand_include_lib(FileName) ->
     [Lib | Rest] = filename:split(FileName),
     filename:join([code:lib_dir(list_to_atom(Lib))|Rest]).
+
+expand_filename([$/|_] = FileName, _) ->
+    case filelib:is_file(FileName) of
+        true -> FileName;
+        false -> throw({error, {not_found, FileName}})
+    end;
+expand_filename([$$|FileNameMinusDollar] = FileName, Context) ->
+    [Var | Rest] = filename:split(FileNameMinusDollar),
+    case os:getenv(Var) of
+        false ->
+            expand_relative_filename(FileName, Context);
+        Value ->
+            expand_filename(filename:join([Value|Rest]), Context)
+    end;
+expand_filename(FileName, Context) ->
+    expand_relative_filename(FileName, Context).
+
+expand_relative_filename(FileName, Context) ->
+    ExpandedFileName = lists:foldl(
+        fun
+            (Dir, "") ->
+                ExpandedFileName = filename:join(Dir, FileName),
+                case filelib:is_file(ExpandedFileName) of
+                    true -> ExpandedFileName;
+                    false -> ""
+                end;
+            (_, F) ->
+                F
+        end, "", Context#ale_context.include_dirs),
+    case ExpandedFileName of
+        "" -> throw({error, {not_found, FileName}});
+        ExpandedFileName ->
+            filename:absname(ExpandedFileName)
+    end.
 
 scan_file(FileName) ->
     {ok, FileContents} = file:read_file(FileName),
