@@ -142,7 +142,7 @@ process_inclusion(FileName, Line, Context) ->
                             include_trail = [FileName|Context#ale_context.include_trail]}),
                     case ThisFile of
                         undefined -> {Dict2, IncludedTokens};
-                        {string, _Loc, ThisFileName} -> 
+                        [{string, _Loc, ThisFileName}] -> 
                             {dict:store('FILE', ThisFile, Dict2),
                                 lists:reverse(file_attribute_tokens(ThisFileName, Line)) ++ IncludedTokens}
                     end;
