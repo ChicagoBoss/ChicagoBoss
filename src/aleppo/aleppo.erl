@@ -130,13 +130,15 @@ process_inclusion(FileName, Line, Context) ->
             {NewTokens, _} = mark_keywords(Tokens),
             case aleppo_parser:parse(NewTokens) of
                 {ok, ParseTree} ->
+                    [{eof, _}|Rest] = lists:reverse(ParseTree),
+                    ParseTreeNoEOF = lists:reverse(Rest),
                     ThisFile = case dict:find('FILE', Context#ale_context.macro_dict) of
                         {ok, Val} -> Val;
                         _ -> undefined
                     end,
                     Dict1 = dict:store('FILE', [{string, 1, FileName}], Context#ale_context.macro_dict),
                     TokenAcc = lists:reverse(file_attribute_tokens(FileName, 1)),
-                    {Dict2, IncludedTokens} = process_tree(ParseTree, TokenAcc, 
+                    {Dict2, IncludedTokens} = process_tree(ParseTreeNoEOF, TokenAcc, 
                         Context#ale_context{ 
                             macro_dict = Dict1, 
                             include_trail = [FileName|Context#ale_context.include_trail]}),
