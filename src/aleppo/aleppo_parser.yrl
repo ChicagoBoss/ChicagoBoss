@@ -12,14 +12,25 @@ Nonterminals
     Include
     IncludeLib
     File
+
     Elements
     FormTokens
     Token
+
     Macro
     MacroName
+    MacroString
     MacroArgs
+    NonEmptyMacroArgs
     ApplyMacroArgs
-    ApplyMacroArg.
+    NonEmptyApplyMacroArgs
+    ApplyMacroArg
+
+    Expression
+    NonEmptyExpression
+    ExpressionList
+    NonEmptyExpressionList
+    ExpressionToken.
 
 % Terminals taken from erl_parse.yrl
 Terminals
@@ -59,6 +70,8 @@ Elements -> Elements dot : '$1' ++ ['$2'].
 
 FormTokens -> '$empty' : [].
 FormTokens -> FormTokens Token : '$1' ++ ['$2'].
+FormTokens -> FormTokens Macro : '$1' ++ ['$2'].
+FormTokens -> FormTokens MacroString : '$1' ++ ['$2'].
 
 Define -> '-' define_keyword '(' MacroName ')' dot : {'macro_define', '$4'}.
 Define -> '-' define_keyword '(' MacroName ',' FormTokens ')' dot : {'macro_define', '$4', '$6'}.
@@ -83,93 +96,109 @@ Undef -> '-' undef_keyword '(' MacroName ')' dot : {'macro_undef', '$4'}.
 Macro -> '?' MacroName : {'macro', '$2'}.
 Macro -> '?' MacroName '(' ApplyMacroArgs ')' : {'macro', '$2', '$4'}.
 
-MacroArgs -> '$empty' : [].
-MacroArgs -> MacroArgs ',' var : '$1' ++ ['$2', '$3'].
-MacroArgs -> var : ['$1'].
-
-ApplyMacroArgs -> '$empty' : [].
-ApplyMacroArgs -> ApplyMacroArgs ',' ApplyMacroArg : '$1' ++ ['$2', '$3'].
-ApplyMacroArgs -> ApplyMacroArg : ['$1'].
-
-% This is weak -- we really want to allow any valid Erlang term.
-% For now, just variables, macros, and literals
-ApplyMacroArg -> var : '$1'.
-ApplyMacroArg -> integer : '$1'.
-ApplyMacroArg -> float : '$1'.
-ApplyMacroArg -> string : '$1'.
-ApplyMacroArg -> atom : '$1'.
-ApplyMacroArg -> Macro : '$1'.
+MacroString -> '?' '?' var : {'macro_string', '$3'}.
 
 MacroName -> atom : '$1'.
 MacroName -> var : '$1'.
 
+MacroArgs -> '$empty' : [].
+MacroArgs -> NonEmptyMacroArgs : '$1'.
 
-Token -> char : '$1'.
-Token -> integer : '$1'.
-Token -> float : '$1'.
-Token -> atom : '$1'.
-Token -> string : '$1'.
-Token -> var : '$1'.
+NonEmptyMacroArgs -> NonEmptyMacroArgs ',' var : '$1' ++ ['$3'].
+NonEmptyMacroArgs -> var : ['$1'].
+
+ApplyMacroArgs -> '$empty' : [].
+ApplyMacroArgs -> NonEmptyApplyMacroArgs : '$1'.
+
+NonEmptyApplyMacroArgs -> ApplyMacroArg : '$1'.
+NonEmptyApplyMacroArgs -> NonEmptyApplyMacroArgs ',' ApplyMacroArg : '$1' ++ ['$3'].
+
+ApplyMacroArg -> NonEmptyExpression : ['$1'].
+
+NonEmptyExpression -> Expression ExpressionToken : '$1' ++ ['$2'].
+NonEmptyExpression -> Expression Macro : '$1' ++ ['$2'].
+NonEmptyExpression -> Expression MacroString : '$1' ++ ['$2'].
+NonEmptyExpression -> Expression '(' ExpressionList ')' : '$1' ++ ['$2'] ++ '$3' ++ ['$4'].
+NonEmptyExpression -> Expression '{' ExpressionList '}' : '$1' ++ ['$2'] ++ '$3' ++ ['$4'].
+NonEmptyExpression -> Expression '[' ExpressionList ']' : '$1' ++ ['$2'] ++ '$3' ++ ['$4'].
+
+Expression -> '$empty' : [].
+Expression -> NonEmptyExpression : '$1'.
+
+ExpressionList -> '$empty' : [].
+ExpressionList -> NonEmptyExpressionList : '$1'.
+
+NonEmptyExpressionList -> NonEmptyExpressionList ',' NonEmptyExpression : '$1' ++ ['$2'] ++ '$3'.
+NonEmptyExpressionList -> NonEmptyExpression : '$1'.
+
 Token -> '(' : '$1'.
 Token -> ')' : '$1'.
 Token -> ',' : '$1'.
-Token -> '->' : '$1'.
-Token -> ':-' : '$1'.
 Token -> '{' : '$1'.
 Token -> '}' : '$1'.
 Token -> '[' : '$1'.
 Token -> ']' : '$1'.
-Token -> '|' : '$1'.
-Token -> '||' : '$1'.
-Token -> '<-' : '$1'.
-Token -> ';' : '$1'.
-Token -> ':' : '$1'.
-Token -> '#' : '$1'.
-Token -> '.' : '$1'.
-Token -> 'after' : '$1'.
-Token -> 'begin' : '$1'.
-Token -> 'case' : '$1'.
-Token -> 'try' : '$1'.
-Token -> 'catch' : '$1'.
-Token -> 'end' : '$1'.
-Token -> 'fun' : '$1'.
-Token -> 'if' : '$1'.
-Token -> 'of' : '$1'.
-Token -> 'receive' : '$1'.
-Token -> 'when' : '$1'.
-Token -> 'andalso' : '$1'.
-Token -> 'orelse' : '$1'.
-Token -> 'query' : '$1'.
-Token -> 'spec' : '$1'.
-Token -> 'bnot' : '$1'.
-Token -> 'not' : '$1'.
-Token -> '*' : '$1'.
-Token -> '/' : '$1'.
-Token -> 'div' : '$1'.
-Token -> 'rem' : '$1'.
-Token -> 'band' : '$1'.
-Token -> 'and' : '$1'.
-Token -> '+' : '$1'.
-Token -> '-' : '$1'.
-Token -> 'bor' : '$1'.
-Token -> 'bxor' : '$1'.
-Token -> 'bsl' : '$1'.
-Token -> 'bsr' : '$1'.
-Token -> 'or' : '$1'.
-Token -> 'xor' : '$1'.
-Token -> '++' : '$1'.
-Token -> '--' : '$1'.
-Token -> '==' : '$1'.
-Token -> '/=' : '$1'.
-Token -> '=<' : '$1'.
-Token -> '<' : '$1'.
-Token -> '>=' : '$1'.
-Token -> '>' : '$1'.
-Token -> '=:=' : '$1'.
-Token -> '=/=' : '$1'.
-Token -> '<=' : '$1'.
-Token -> '<<' : '$1'.
-Token -> '>>' : '$1'.
-Token -> '!' : '$1'.
-Token -> '=' : '$1'.
-Token -> '::' : '$1'.
+Token -> ExpressionToken : '$1'.
+
+ExpressionToken -> char : '$1'.
+ExpressionToken -> integer : '$1'.
+ExpressionToken -> float : '$1'.
+ExpressionToken -> atom : '$1'.
+ExpressionToken -> string : '$1'.
+ExpressionToken -> var : '$1'.
+ExpressionToken -> '->' : '$1'.
+ExpressionToken -> ':-' : '$1'.
+ExpressionToken -> '|' : '$1'.
+ExpressionToken -> '||' : '$1'.
+ExpressionToken -> '<-' : '$1'.
+ExpressionToken -> ';' : '$1'.
+ExpressionToken -> ':' : '$1'.
+ExpressionToken -> '#' : '$1'.
+ExpressionToken -> '.' : '$1'.
+ExpressionToken -> 'after' : '$1'.
+ExpressionToken -> 'begin' : '$1'.
+ExpressionToken -> 'case' : '$1'.
+ExpressionToken -> 'try' : '$1'.
+ExpressionToken -> 'catch' : '$1'.
+ExpressionToken -> 'end' : '$1'.
+ExpressionToken -> 'fun' : '$1'.
+ExpressionToken -> 'if' : '$1'.
+ExpressionToken -> 'of' : '$1'.
+ExpressionToken -> 'receive' : '$1'.
+ExpressionToken -> 'when' : '$1'.
+ExpressionToken -> 'andalso' : '$1'.
+ExpressionToken -> 'orelse' : '$1'.
+ExpressionToken -> 'query' : '$1'.
+ExpressionToken -> 'spec' : '$1'.
+ExpressionToken -> 'bnot' : '$1'.
+ExpressionToken -> 'not' : '$1'.
+ExpressionToken -> '*' : '$1'.
+ExpressionToken -> '/' : '$1'.
+ExpressionToken -> 'div' : '$1'.
+ExpressionToken -> 'rem' : '$1'.
+ExpressionToken -> 'band' : '$1'.
+ExpressionToken -> 'and' : '$1'.
+ExpressionToken -> '+' : '$1'.
+ExpressionToken -> '-' : '$1'.
+ExpressionToken -> 'bor' : '$1'.
+ExpressionToken -> 'bxor' : '$1'.
+ExpressionToken -> 'bsl' : '$1'.
+ExpressionToken -> 'bsr' : '$1'.
+ExpressionToken -> 'or' : '$1'.
+ExpressionToken -> 'xor' : '$1'.
+ExpressionToken -> '++' : '$1'.
+ExpressionToken -> '--' : '$1'.
+ExpressionToken -> '==' : '$1'.
+ExpressionToken -> '/=' : '$1'.
+ExpressionToken -> '=<' : '$1'.
+ExpressionToken -> '<' : '$1'.
+ExpressionToken -> '>=' : '$1'.
+ExpressionToken -> '>' : '$1'.
+ExpressionToken -> '=:=' : '$1'.
+ExpressionToken -> '=/=' : '$1'.
+ExpressionToken -> '<=' : '$1'.
+ExpressionToken -> '<<' : '$1'.
+ExpressionToken -> '>>' : '$1'.
+ExpressionToken -> '!' : '$1'.
+ExpressionToken -> '=' : '$1'.
+ExpressionToken -> '::' : '$1'.

@@ -85,11 +85,13 @@ process_tree([Node|Rest], MacroDict, InclusionTrail, TokenAcc) ->
             process_tree(Rest, MacroDict, InclusionTrail, [{integer, Line, Line}|TokenAcc]);
         {'macro', {_Type, _Loc, MacroName}} ->
             InsertTokens = dict:fetch(MacroName, MacroDict),
-            process_tree(Rest, MacroDict, InclusionTrail, lists:reverse(InsertTokens) ++ TokenAcc);
+            {_, RevProcessedTokens} = process_tree(InsertTokens, MacroDict, InclusionTrail, []),
+            process_tree(Rest, MacroDict, InclusionTrail, RevProcessedTokens ++ TokenAcc);
         {'macro', {_Type, Loc, MacroName}, MacroArgs} ->
             {DefinedArgs, DefinedTokens} = dict:fetch({MacroName, length(MacroArgs)}, MacroDict),
             InsertTokens = expand_macro_fun(Loc, DefinedArgs, DefinedTokens, MacroArgs),
-            process_tree(Rest, MacroDict, InclusionTrail, lists:reverse(InsertTokens) ++ TokenAcc);
+            {_, RevProcessedTokens} = process_tree(InsertTokens, MacroDict, InclusionTrail, []),
+            process_tree(Rest, MacroDict, InclusionTrail, RevProcessedTokens ++ TokenAcc);
         OtherToken ->
             process_tree(Rest, MacroDict, InclusionTrail, [OtherToken|TokenAcc])
     end.
@@ -158,8 +160,8 @@ scan_tokens(Data, StartLocation) ->
                             {ok, Tokens ++ NewTokens};
                         Err -> Err
                     end;
-                {eof, _EndLocation} ->
-                    {ok, []};
+                {eof, EndLocation} ->
+                    {ok, [{eof, EndLocation}]};
                 {error, ErrorInfo, _EndLocation} ->
                     {error, ErrorInfo}
             end;
@@ -168,18 +170,47 @@ scan_tokens(Data, StartLocation) ->
             case Return of
                 {ok, Tokens, _EndLocation} ->
                     {ok, Tokens};
-                {eof, _EndLocation} ->
-                    {ok, []};
+                {eof, EndLocation} ->
+                    {ok, [{eof, EndLocation}]};
                 {error, ErrorInfo, _EndLocation} ->
                     {error, ErrorInfo}
             end
     end.
 
 expand_macro_fun(Loc, DefinedArgs, DefinedTokens, ApplyArgs) ->
-    [{'(', Loc}, {'fun', Loc}, {'(', Loc}|DefinedArgs] ++ % includes commas
-        [{')', Loc}, {'->', Loc}|DefinedTokens] ++
-        [{'end', Loc}, {')', Loc}, {'(', Loc}|ApplyArgs] ++
+    ExpandedTokens = replace_macro_strings(DefinedTokens, DefinedArgs, ApplyArgs),
+    DefinedArgsWithCommas = insert_comma_tokens(DefinedArgs, Loc),
+    ApplyArgsWithCommas = insert_comma_tokens(ApplyArgs, Loc),
+    [{'(', Loc}, {'fun', Loc}, {'(', Loc}|DefinedArgsWithCommas] ++
+        [{')', Loc}, {'->', Loc}|ExpandedTokens] ++
+        [{'end', Loc}, {')', Loc}, {'(', Loc}|ApplyArgsWithCommas] ++
         [{')', Loc}].
+
+replace_macro_strings(DefinedTokens, DefinedArgs, ApplyArgs) ->
+    MacroStringDict = dict:from_list(lists:zipwith(fun({var, _, VarName}, ApplyTokens) ->
+                    ArgAsString = lists:concat(lists:foldr(
+                            fun
+                                (Token, []) -> 
+                                    [erl_scan:token_info(Token, symbol)];
+                                (Token, Acc) -> 
+                                    [erl_scan:token_info(Token, symbol), " "|Acc]
+                            end, [], ApplyTokens)),
+                    {VarName, ArgAsString}
+            end, DefinedArgs, ApplyArgs)),
+    replace_macro_strings1(DefinedTokens, MacroStringDict, []).
+
+replace_macro_strings1([], _, Acc) ->
+    lists:reverse(Acc);
+replace_macro_strings1([{'macro_string', {var, Loc, VarName}}|Rest], MacroStringDict, Acc) ->
+    replace_macro_strings1(Rest, MacroStringDict, [{string, Loc, dict:fetch(VarName, MacroStringDict)}|Acc]);
+replace_macro_strings1([OtherToken|Rest], MacroStringDict, Acc) ->
+    replace_macro_strings1(Rest, MacroStringDict, [OtherToken|Acc]).
+
+insert_comma_tokens(Args, Loc) ->
+    lists:foldr(fun
+            (Arg, []) -> Arg;
+            (Arg, Acc) -> Arg ++ [{',', Loc}|Acc]
+        end, Args).
 
 mark_keywords(Tokens) ->
     mark_keywords(Tokens, undefined, []).
