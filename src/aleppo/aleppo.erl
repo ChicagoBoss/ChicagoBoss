@@ -240,13 +240,15 @@ expand_macro_fun(Loc, DefinedArgs, DefinedTokens, ApplyArgs) ->
         [{')', Loc}].
 
 replace_macro_strings(DefinedTokens, DefinedArgs, ApplyArgs) ->
-    MacroStringDict = dict:from_list(lists:zipwith(fun({var, _, VarName}, ApplyTokens) ->
+    MacroStringDict = dict:from_list(lists:zipwith(fun([{var, _, VarName}], ApplyTokens) ->
                     ArgAsString = lists:concat(lists:foldr(
                             fun
                                 (Token, []) -> 
-                                    [erl_scan:token_info(Token, symbol)];
+                                    {symbol, Symbol} = erl_scan:token_info(Token, symbol),
+                                    [Symbol];
                                 (Token, Acc) -> 
-                                    [erl_scan:token_info(Token, symbol), " "|Acc]
+                                    {symbol, Symbol} = erl_scan:token_info(Token, symbol),
+                                    [Symbol, " "|Acc]
                             end, [], ApplyTokens)),
                     {VarName, ArgAsString}
             end, DefinedArgs, ApplyArgs)),
@@ -263,7 +265,7 @@ insert_comma_tokens(Args, Loc) ->
     lists:foldr(fun
             (Arg, []) -> Arg;
             (Arg, Acc) -> Arg ++ [{',', Loc}|Acc]
-        end, Args).
+        end, [], Args).
 
 mark_keywords(Tokens) ->
     mark_keywords(Tokens, undefined, []).

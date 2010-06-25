@@ -5101,7 +5101,7 @@ yeccpars2_155_(__Stack0) ->
 yeccpars2_158_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
-   [ __1 ]
+   [ [ __1 ] ]
   end | __Stack].
 
 -compile({inline,yeccpars2_160_/1}).
@@ -5124,7 +5124,7 @@ yeccpars2_163_(__Stack0) ->
 yeccpars2_165_(__Stack0) ->
  [__3,__2,__1 | __Stack] = __Stack0,
  [begin
-   __1 ++ [ __3 ]
+   __1 ++ [ [ __3 ] ]
   end | __Stack].
 
 -compile({inline,yeccpars2_167_/1}).

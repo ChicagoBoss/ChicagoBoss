@@ -104,8 +104,8 @@ MacroName -> var : '$1'.
 MacroArgs -> '$empty' : [].
 MacroArgs -> NonEmptyMacroArgs : '$1'.
 
-NonEmptyMacroArgs -> NonEmptyMacroArgs ',' var : '$1' ++ ['$3'].
-NonEmptyMacroArgs -> var : ['$1'].
+NonEmptyMacroArgs -> NonEmptyMacroArgs ',' var : '$1' ++ [['$3']].
+NonEmptyMacroArgs -> var : [['$1']].
 
 ApplyMacroArgs -> '$empty' : [].
 ApplyMacroArgs -> NonEmptyApplyMacroArgs : '$1'.
