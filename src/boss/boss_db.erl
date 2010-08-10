@@ -178,5 +178,7 @@ normalize_conditions([], Acc) ->
     lists:reverse(Acc);
 normalize_conditions([Key, Operator, Value|Rest], Acc) when is_atom(Key), is_atom(Operator) ->
     normalize_conditions(Rest, [{Key, Operator, Value}|Acc]);
+normalize_conditions([{Key, Value}|Rest], Acc) when is_atom(Key) ->
+    normalize_conditions(Rest, [{Key, 'equals', Value}|Acc]).
 normalize_conditions([{Key, Operator, Value}|Rest], Acc) when is_atom(Key), is_atom(Operator) ->
     normalize_conditions(Rest, [{Key, Operator, Value}|Acc]).

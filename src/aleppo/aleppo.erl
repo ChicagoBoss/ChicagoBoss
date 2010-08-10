@@ -241,15 +241,7 @@ expand_macro_fun(Loc, DefinedArgs, DefinedTokens, ApplyArgs) ->
 
 replace_macro_strings(DefinedTokens, DefinedArgs, ApplyArgs) ->
     MacroStringDict = dict:from_list(lists:zipwith(fun([{var, _, VarName}], ApplyTokens) ->
-                    ArgAsString = lists:concat(lists:foldr(
-                            fun
-                                (Token, []) -> 
-                                    {symbol, Symbol} = erl_scan:token_info(Token, symbol),
-                                    [Symbol];
-                                (Token, Acc) -> 
-                                    {symbol, Symbol} = erl_scan:token_info(Token, symbol),
-                                    [Symbol, " "|Acc]
-                            end, [], ApplyTokens)),
+                    ArgAsString = stringify_tokens(ApplyTokens),
                     {VarName, ArgAsString}
             end, DefinedArgs, ApplyArgs)),
     replace_macro_strings1(DefinedTokens, MacroStringDict, []).
@@ -260,6 +252,18 @@ replace_macro_strings1([{'macro_string', {var, Loc, VarName}}|Rest], MacroString
     replace_macro_strings1(Rest, MacroStringDict, [{string, Loc, dict:fetch(VarName, MacroStringDict)}|Acc]);
 replace_macro_strings1([OtherToken|Rest], MacroStringDict, Acc) ->
     replace_macro_strings1(Rest, MacroStringDict, [OtherToken|Acc]).
+
+stringify_tokens(TokenList) ->
+    stringify_tokens1(TokenList, []).
+
+stringify_tokens1([], Acc) ->
+    lists:concat(lists:reverse(Acc));
+stringify_tokens1([Token|Rest], []) ->
+    {symbol, Symbol} = erl_scan:token_info(Token, symbol),
+    stringify_tokens1(Rest, [Symbol]);
+stringify_tokens1([Token|Rest], Acc) ->
+    {symbol, Symbol} = erl_scan:token_info(Token, symbol),
+    stringify_tokens1(Rest, [Symbol, " "|Acc]).
 
 insert_comma_tokens(Args, Loc) ->
     lists:foldr(fun

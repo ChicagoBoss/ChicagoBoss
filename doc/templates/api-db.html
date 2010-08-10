@@ -26,109 +26,145 @@
 <p>Valid conditions are:</p>
 
 <div class="code">
-    key = Value | <br />
+    key = Value
+</div>
+<div class="code">
     {key, 'equals', Value}
 </div>
 <p>The "key" attribute is exactly equal to Value.</p>
 
 <div class="code">
-    key ≠ Value | <br />
+    key ≠ Value
+</div>
+<div class="code">
     {key, 'not_equals', Value}
 </div>
 <p>The "key" attribute is not exactly equal to Value.</p>
 
 <div class="code">
-    key ∈ [Value1, Value2, ...] | <br />
+    key ∈ [Value1, Value2, ...]
+</div>
+<div class="code">
     {key, 'in', [Value1, Value2, ...]}
 </div>
 <p>The "key" attribute is equal to at least one element on the right-hand side.</p>
 
 <div class="code">
-    key ∉ [Value1, Value2, ...] | <br />
+    key ∉ [Value1, Value2, ...]
+</div>
+<div class="code">
     {key, 'not_in', [Value1, Value2, ...]}
 </div>
 <p>The "key" attribute is not equal to any element on the right-hand side.</p>
 
 <div class="code">
-    key ∈ {Min, Max} | <br />
+    key ∈ {Min, Max}
+</div>
+<div class="code">
     {key, 'in', {Min, Max{{ "}}" }}
 </div>
 <p>The "key" attribute is numerically between Min and Max.</p>
 
 <div class="code">
-    key ∉ {Min, Max} | <br />
+    key ∉ {Min, Max}
+</div>
+<div class="code">
     {key, 'not_in', {Min, Max{{ "}}" }}
 </div>
 <p>The "key" attribute is not between Min and Max.</p>
 
 <div class="code">
-    key ∼ RegularExpression | <br />
+    key ∼ RegularExpression
+</div>
+<div class="code">
     {key, 'matches', RegularExpression}
 </div>
 <p>The "key" attribute matches the RegularExpression.</p>
 
 <div class="code">
-    key ≁ RegularExpression | <br />
+    key ≁ RegularExpression
+</div>
+<div class="code">
 {key, 'not_matches', RegularExpression}
 </div>
 <p>The "key" attribute does not match the RegularExpression.</p>
 
 <div class="code">
-    key ∋ Token | <br />
+    key ∋ Token
+</div>
+<div class="code">
 {key, 'contains', Token}
 </div>
 <p>The "key" attribute contains Token.</p>
 
 <div class="code">
-    key ∌ Token | <br />
+    key ∌ Token
+</div>
+<div class="code">
 {key, 'not_contains', Token}
 </div>
 <p>The "key" attribute does not contain Token.</p>
 
 <div class="code">
-    key ⊇ [Token1, Token2, ...] | <br />
+    key ⊇ [Token1, Token2, ...]
+</div>
+<div class="code">
 {key, 'contains_all', [Token1, Token2, ...]} 
 </div>
 <p>The "key" attribute contains all tokens on the right-hand side.</p>
 
 <div class="code">
-    key ⊉ [Token1, Token2, ...] | <br />
+    key ⊉ [Token1, Token2, ...]
+</div>
+<div class="code">
 {key, 'not_contains_all', [Token1, Token2, ...]}
 </div>
 <p>The "key" attribute does not contain all tokens on the right-hand side.</p>
 
 <div class="code">
-    key ∩ [Token1, Token2, ...] | <br />
+    key ∩ [Token1, Token2, ...]
+</div>
+<div class="code">
 {key, 'contains_any', [Token1, Token2, ...]}
 </div>
 <p>The "key" attribute contains at least one of the tokens on the right-hand side.</p>
 
 <div class="code">
-    key ⊥ [Token1, Token2, ...] | <br />
+    key ⊥ [Token1, Token2, ...]
+</div>
+<div class="code">
 {key, 'contains_none', [Token1, Token2, ...]}
 </div>
 <p>The "key" attribute contains none of the tokens on the right-hand side.</p>
 
 <div class="code">
-    key &gt; Value | <br />
+    key &gt; Value
+</div>
+<div class="code">
 {key, 'gt', Value}
 </div>
 <p>The "key" attribute is greater than Value.</p>
 
 <div class="code">
-    key &lt; Value | <br />
+    key &lt; Value
+</div>
+<div class="code">
 {key, 'lt', Value}
 </div>
 <p>The "key" attribute is less than Value.</p>
 
 <div class="code">
-    key ≥ Value | <br />
+    key ≥ Value
+</div>
+<div class="code">
 {key, 'ge', Value}
 </div>
 <p>The "key" attribute is greater than or equal to Value.</p>
 
 <div class="code">
-    key ≤ Value | <br />
+    key ≤ Value
+</div>
+<div class="code">
 {key, 'le', Value}
 </div>
 <p>The "key" attribute is less than or equal to Value.</p>
