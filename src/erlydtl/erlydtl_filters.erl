@@ -147,7 +147,7 @@ divisibleby(Input, Divisor) when is_integer(Input), is_integer(Divisor) ->
 
 %% @doc Escapes characters for use in JavaScript strings.
 escapejs(Input) when is_binary(Input) ->
-    escapejs(Input, 0);
+    escapejs(binary_to_list(Input));
 escapejs(Input) when is_list(Input) ->
     escapejs(Input, []).
 
@@ -204,7 +204,7 @@ get_digit(Input, Digit) when is_integer(Input) ->
     get_digit(integer_to_list(Input), Digit);
 get_digit(Input, Digit) when is_list(Digit) ->
     get_digit(Input, list_to_integer(Digit));
-get_digit(Input, Digit) when Digit > length(Input) ->
+get_digit(Input, Digit) when Digit > erlang:length(Input) ->
     0;
 get_digit(Input, Digit) when Digit > 0 ->
     lists:nth(Digit, lists:reverse(Input)) - $0;
@@ -365,23 +365,12 @@ escape([C | Rest], Acc) ->
 
 escapejs([], Acc) ->
     lists:reverse(Acc);
-escapejs("'" ++ Rest, Acc) ->
-    escapejs(Rest, lists:reverse("\\'", Acc));
-escapejs("\"" ++ Rest, Acc) ->
-    escapejs(Rest, lists:reverse("\\\"", Acc));
+escapejs([C | Rest], Acc) when C < 32; C =:= $"; C =:= $'; C =:= $\\; C =:= $<;
+                               C =:= $>; C =:= $&; C =:= $=; C =:= $-; C =:= $;; 
+                               C =:= 8232; C =:= 8233 -> % just following django here...
+    escapejs(Rest, lists:reverse(lists:flatten(io_lib:format("\\u~4.16.0B", [C])), Acc));
 escapejs([C | Rest], Acc) ->
-    escapejs(Rest, [C | Acc]);
-escapejs(Binary, Index) when is_binary(Binary) ->
-    case Binary of
-        <<Pre:Index/binary, 39, Post/binary>> ->
-            process_binary_match(Pre, <<"\\'">>, size(Post), escapejs(Post, 0));
-        <<Pre:Index/binary, 34, Post/binary>> ->
-            process_binary_match(Pre, <<"\\\"">>, size(Post), escapejs(Post, 0));
-        <<_:Index/binary, _/binary>> ->
-            escapejs(Binary, Index + 1);
-        _ ->
-            Binary
-    end.
+    escapejs(Rest, [C | Acc]).
 
 filesizeformat(Bytes, UnitStr) ->
     lists:flatten(io_lib:format("~.1f ~s", [Bytes, UnitStr])).
