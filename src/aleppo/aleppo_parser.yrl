@@ -24,7 +24,6 @@ Nonterminals
     NonEmptyMacroArgs
     ApplyMacroArgs
     NonEmptyApplyMacroArgs
-    ApplyMacroArg
 
     Expression
     NonEmptyExpression
@@ -110,10 +109,8 @@ NonEmptyMacroArgs -> var : [['$1']].
 ApplyMacroArgs -> '$empty' : [].
 ApplyMacroArgs -> NonEmptyApplyMacroArgs : '$1'.
 
-NonEmptyApplyMacroArgs -> ApplyMacroArg : '$1'.
-NonEmptyApplyMacroArgs -> NonEmptyApplyMacroArgs ',' ApplyMacroArg : '$1' ++ ['$3'].
-
-ApplyMacroArg -> NonEmptyExpression : ['$1'].
+NonEmptyApplyMacroArgs -> NonEmptyExpression : ['$1'].
+NonEmptyApplyMacroArgs -> NonEmptyApplyMacroArgs ',' NonEmptyExpression : '$1' ++ ['$3'].
 
 NonEmptyExpression -> Expression ExpressionToken : '$1' ++ ['$2'].
 NonEmptyExpression -> Expression Macro : '$1' ++ ['$2'].
