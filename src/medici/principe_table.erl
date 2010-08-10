@@ -456,14 +456,14 @@ query_order(_Sock, Query, ColName, Type) when is_atom(Type) ->
 %%
 %% @doc Run a prepared query against the table and return matching keys.
 search(Socket, Query) ->
-    ?TRaw(<<"search">>, [V || {_K, V}=Prop <- Query, is_tuple(Prop), size(Prop)==2]).
+    ?TRaw(<<"search">>, [V || {_K, V}=Prop <- Query, is_tuple(Prop), erlang:size(Prop)==2]).
 
 %% @spec searchcount(Socket::port,
 %%                   Query::proplist()) -> [integer()] | error()
 %%
 %% @doc Run a prepared query against the table and get the count of matching keys.
 searchcount(Socket, Query) ->
-    case ?TRaw(<<"search">>, [V || {_K, V}=Prop <- Query, is_tuple(Prop), size(Prop)==2] ++ ["count"]) of
+    case ?TRaw(<<"search">>, [V || {_K, V}=Prop <- Query, is_tuple(Prop), erlang:size(Prop)==2] ++ ["count"]) of
 	{error, Reason} ->
 	    {error, Reason};
 	[] ->
@@ -477,7 +477,7 @@ searchcount(Socket, Query) ->
 %%
 %% @doc Run a prepared query against the table and remove the matching records.
 searchout(Socket, Query) ->
-    ?TSimple(<<"search">>, [V || {_K, V}=Prop <- Query, is_tuple(Prop), size(Prop)==2] ++ ["out"]).
+    ?TSimple(<<"search">>, [V || {_K, V}=Prop <- Query, is_tuple(Prop), erlang:size(Prop)==2] ++ ["out"]).
 
 %% %% Run a prepared query against the table and get the matching records.  Due
 %% %% to protocol restraints, the returned result cannot include columns whose
