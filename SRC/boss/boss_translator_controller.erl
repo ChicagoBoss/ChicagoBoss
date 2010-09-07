@@ -11,7 +11,7 @@
 start_link() ->
     gen_server:start_link({local, boss_translator}, ?MODULE, [], []).
 
-init(Options) ->
+init(_Options) ->
     DictionaryList = lists:map(fun(Lang) ->
                 {Lang, dict:from_list(boss_lang:extract_po_strings(Lang))}
         end, boss_files:language_list()),
@@ -41,7 +41,7 @@ handle_call({reload, Locale}, _From, State) ->
 handle_cast(_Request, State) ->
     {noreply, State}.
 
-terminate(_Reason, State) ->
+terminate(_Reason, _State) ->
     ok.
 
 code_change(_OldVsn, State, _Extra) ->
