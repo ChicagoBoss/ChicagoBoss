@@ -1,0 +1,54 @@
+{% extends "api.html" %}
+{% block api_content %}
+<p style="font-size: 14px;"><em>Jump to: </em> <a href="#boss_test"><code>boss_test</code></a>  
+&nbsp; <a href="#boss_assert">boss_assert</a></p>
+<p>Chicago Boss ships with a unique functional test framework, where tests are structured as trees of continuations. All assertions are performed in callbacks, and additional tests are also performed in callbacks. For more information on the design of Boss's functional tests, see <a href="http://www.evanmiller.org/functional-tests-as-a-tree-of-continuations.html">&#8220;Functional Tests As A Tree Of Continuations&#8221;</a>.</p>
+
+<p>To create a test suite, create a module in the test/ directory. Your test module should export a <code>start/0</code> function, which should invoke a function from the <code>boss_test</code> module. This function will in turn invoke functions in the <a href="#boss_assert"><code>boss_assert</code></a> module (to run assertions) and the <a href="#boss_test"><code>boss_test</code></a> module (to run further tests).</p>
+
+<p>When you are ready to run your test suite, type "make test" in your project directory.</p>
+
+<a name="boss_test"></a>
+<h3>boss_test</h3>
+<p>Functions in the <code>boss_test</code> issue HTTP requests to your web application (or check for emails sent by it). All functions in the <code>boss_test</code> module take the same two final arguments.</p>
+
+<p>Second to last, <code>Assertions</code> is a list of funs that must return a tuple <code>{Passed, ErrorMessage}</code>, where:
+<ul>
+    <li><code>Passed</code> - a boolean indicating whether the test passed</li>
+    <li><code>ErrorMessage</code> - an error message to be displayed if the test failed</li>
+</ul>
+<p>Each fun in <code>Assertions</code> takes a single argument, which is the response object of the current test. The response object will usually by an HTTP response, but in <code>boss_test:read_email/4</code>, it's an email.</p>
+
+<p>Most assertions will take the form of calls to <a href="#boss_assert"><code>boss_assert</code></a>, which is documented below.</p>
+
+<p>The last argument to any <code>boss_test</code> function is called <code>Continuations</code>. <code>Continuations</code> is a list of additional tests &mdash; funs that take the HTTP response value as their only argument, and use it to invoke additional tests from the <code>boss_test</code> module. Funs in <code>Continuations</code> should be preceded by a string label, e.g.:</p>
+<div class="code">
+    boss_test:get_request("/", [], [], <br />
+    &nbsp;&nbsp;&nbsp;[ "Click the register link", fun(Res) -&gt; ... end,<br />
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"Click the copyright link", fun(Res) -&gt; ... end, 
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;... ]).
+</div>
+<p>The key thing to understand about <code>Continuations</code> is that they are <em>performed in parallel</em>. Any database manipulations that occur in one continuation cannot affect sibling continuations.</p>
+
+<p>Functions available in the <code>boss_test</code> module include:</p>
+{% for function in test_functions %}
+{% if function.description_long %}
+<div class="code">
+    {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
+</div>
+<p>{{ function.description_long }}</p>
+{% endif %}
+{% endfor %}
+
+<a name="boss_assert">
+<h3>boss_assert</h3>
+<p>The <code>Assertions</code> list in a <code>boss_test</code> invocation will usually refer to functions in the <code>boss_assert</code> module. Available functions include:</p>
+{% for function in assert_functions %}
+{% if function.description_long %}
+<div class="code">
+    {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
+</div>
+<p>{{ function.description_long }}</p>
+{% endif %}
+{% endfor %}
+{% endblock %}

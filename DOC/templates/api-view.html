@@ -1,0 +1,21 @@
+{% extends "api.html" %}
+{% block api_content %}
+<p>Chicago Boss liked <a href="http://docs.djangoproject.com/en/dev/topics/templates/">Django's templating language</a> so much, he decided to steal it. Template files go in your project's view/ folder (in subdirectories that end in *_views), and will have access to the variables you pass from your <a href="api-controller.html#nav">Controller</a>. The template file associated with the function <code>foo_controller:bar</code> will be view/foo/bar.html.</p>
+
+<p>Note: if you use the the <code>extends</code> tag, the file path should be relative to your project's Web/ directory.</p>
+
+<p>Chicago Boss has support for the most common features of the Django Template Language, so many existing Django templates should work out of the box. Your templates will be compiled down to Erlang BEAM code using <a href="http://code.google.com/p/erlydtl/">ErlyDTL</a> to give you the fastest Erlang templates this side of Stockholm.</p>
+
+<p>The following Django filters are supported in Chicago Boss. Hopefully this list will grow over time.</p>
+
+<table style="margin-left: 80px; margin-top: 30px;">
+    {% for filter in filters %}
+    {% if filter.description %}
+    <tr><td>
+            <a href="http://docs.djangoproject.com/en/dev/ref/templates/builtins/#{{ filter.function }}">{{ filter.function }}</a></td>
+        <td>{{ filter.description }}</td>
+    </tr>
+    {% endif %}
+    {% endfor %}
+</table>
+{% endblock %}

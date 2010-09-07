@@ -12,19 +12,12 @@ Dependencies:
 
   * Check with `erlang:system_info(otp_release)`.
 
-* Tokyo Tyrant -
-
-    <http://1978th.net/tokyotyrant/>
-
-  * **You need Tyrant up and running with a Table database.**
-
 Build Chicago Boss with `make`.
 
-Open up boss.config to set your database info and the port you want to run the
-server on. When you're ready to rock and roll, run `./start-dev.sh` in this
-directory. There will be a lot of PROGRESS REPORTs which look scary but
-hopefully everything is running smoothly. With this console you can interact
-directly with the running server. Next, point your browser to:
+When you're ready to rock and roll, run `./START-DEV.SH` in this directory.
+There will be a lot of PROGRESS REPORTs which look scary but hopefully
+everything is running smoothly. With this console you can interact directly
+with the running server. Next, point your browser to:
 
     http://localhost:8001/
 

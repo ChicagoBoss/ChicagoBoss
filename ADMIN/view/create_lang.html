@@ -1,0 +1,48 @@
+{% extends "view/model.html" %}
+{% block title %}Create a language file?{% endblock %}
+{% block scripts %}
+<script type="text/javascript" src="http://www.google.com/jsapi">
+</script>
+<script type="text/javascript">
+    var translated_language_codes = {
+        {% if languages %}
+        {% for lang in languages %}
+        '{{ lang }}' : 1,
+        {% endfor %}
+        '' : ''
+        {% endif %}
+    };
+    google.load("language", 1);
+    function initialize() {
+        var selectbox = document.getElementById('select_language');
+        var langs = new Array();
+        for (var lang in google.language.Languages) {
+            var code = google.language.Languages[lang];
+            if (google.language.isTranslatable(code) && !translated_language_codes[code]) {
+                langs.push(lang);
+            }
+        }
+        var sortedLangs = langs.sort();
+        for (var i = 0; i < sortedLangs.length; i++) {
+            var lang = sortedLangs[i];
+            var code = google.language.Languages[lang];
+            var option = document.createElement('option');
+            option.value = code;
+            option.innerText = lang + ' ('+code.toLowerCase()+')';
+            selectbox.appendChild(option);
+        }
+    }
+    google.setOnLoadCallback(initialize);
+</script>
+{% endblock %}
+{% block body %}
+<div style="text-align: center; padding: 100px">
+    <h1>Choose a new language!</h1>
+    <form method="post">
+        <select id="select_language" name="language" style="width: 120px;">
+        </select>
+        <input type="submit" value="Create language file" />
+    </form>
+</div>
+{% endblock %}
+

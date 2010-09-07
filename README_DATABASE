@@ -1,0 +1,27 @@
+The Database README
+===================
+
+By default Chicago Boss uses an in-memory database, which is useful for
+development and testing but not much else.
+
+
+Using Tokyo Tyrant
+------------------
+
+Tokyo Tyrant is a non-relational database developed by FAL Labs.
+
+1. Download and install Tokyo Tyrant from <http://fallabs.com/tokyotyrant/>
+
+2. Open up boss.config and set db_driver to boss_db_driver_tyrant
+
+
+Using Mnesia (EXPERIMENTAL)
+---------------------------
+
+Notes:
+
+1. The erlang VM needs a name to run Mnesia (-name or -sname option on the erl command)
+
+2. There needs to be a cookie set (file .erlang.cookie) even on a single node db
+
+3. Open up boss.config and set db_driver to boss_db_driver_mnesia

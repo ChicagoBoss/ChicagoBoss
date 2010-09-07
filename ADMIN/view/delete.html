@@ -1,0 +1,11 @@
+{% extends "view/model.html" %}
+{% block title %}Delete {{ record.id }}?{% endblock %}
+{% block body %}
+<div style="text-align: center; padding: 100px">
+    <h1>Really delete {{ record.id }}?</h1>
+    <p>This action cannot be undone</p>
+    <form name="delete" method="post">
+        <input type="submit" value="Delete {{ record.id }}" />
+    </form>
+</div>
+{% endblock %}

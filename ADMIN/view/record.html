@@ -1,0 +1,50 @@
+{% extends "view/model.html" %}
+{% block title %}{{ record.id }} (Chicago Boss Admin Interface){% endblock %}
+{% block body %}
+<h1>Displaying {{ record.id }}</h1>
+<p><em><a href="/admin/model/{{ type }}">Back to the {{ type }} list</a></em></p>
+    {% for key, val, datatype in attributes %}
+    {% if not datatype == "id" %}
+        <strong>{{ key }}</strong><br />
+        {% if datatype == "datetime" %}
+            {{ val|date:"N j, Y, P" }}
+        {% else %}
+        {% if datatype == "string" or datatype == "binary" %}
+            {{ val|linebreaksbr }}
+        {% else %}
+            {{ val }}
+        {% endif %}
+        {% endif %}
+        <br /><br />
+    {% endif %}
+    {% endfor %}
+
+    {% for key, val in record.belongs_to %}
+    {% if val %}
+    <strong>{{ key }}</strong>
+    <table border=1>
+        <tr>
+        {% for attr in val.attribute_names %}
+        <th>{{ attr }}</th>
+        {% endfor %}
+    </tr>
+    <tr>
+        {% for attr_name, attr_val in val.attributes %}
+        {% ifequal "id" attr_name %}
+        <td><strong><a href="/admin/record/{{ attr_val }}">{{ attr_val }}</a></strong></td>
+        {% else %}
+        {% if "_time" in attr_name %}
+        <td>{{ attr_val|date:"N j, Y, P" }}</td>
+        {% else %}
+        <td>{{ attr_val|truncatewords:8 }}</td>
+        {% endif %}
+        {% endifequal %}
+        {% endfor %}
+    </tr>
+    </table><br /><br />
+    {% endif %}
+    {% endfor %} 
+    <form name="delete" action="/admin/delete/{{ record.id }}">
+        <input type="submit" value="Delete {{ record.id }}?" />
+    </form>
+{% endblock %}

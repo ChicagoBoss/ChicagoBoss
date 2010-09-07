@@ -1,0 +1,328 @@
+<html>
+    <head>
+        <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+        <title>Chicago Boss - the MVC that packs a punch (chicagoboss.org)</title>
+        <link rel="stylesheet" type="text/css" href="boss.css" />
+            
+        <style type="text/css">
+        </style>
+            
+    </head>
+    <body>
+        
+        <div class="equation">
+            <span style="background-color: #B80009;">Rails Idioms</span> +
+            <span style="background-color: #004B00;">Django Templates</span> +
+            <span style="background-color: #0D0075;">Erlang Power</span> =
+            <em>Chicago</em> <strong>BOSS</strong>
+        </div>
+
+        <div class="nav">
+            
+<a href="index.html">F.A.Q.</a> &nbsp; | &nbsp; 
+<a href="compare.html">COMPARE</a> &nbsp; | &nbsp; 
+<a href="guide.html">GUIDES</a> &nbsp; | &nbsp; 
+<strong>API</strong> &nbsp; | &nbsp; 
+<a href="download.html">DOWNLOAD</a> &nbsp; | &nbsp;
+<a href="forum.html">COMMUNITY</a>
+
+        </div>
+        <div style="position: relative;">
+            <div class="content">
+                
+<div style="text-align: center; font-style: italic;">
+<p>The Chicago Boss API is mostly stable, but still might change before 1.0.</p>
+</div>
+<div class="subnav">
+    
+    <a href="api-config.html">Config</a>
+    
+    &nbsp; | &nbsp; 
+    
+    <a href="api-db.html">BossDB</a>
+    
+    &nbsp; | &nbsp; 
+    
+    <strong>Models</strong>
+    
+    &nbsp; | &nbsp;
+    
+    <a href="api-controller.html">Web Controllers</a> 
+    
+    &nbsp; | &nbsp;
+    
+    <a href="api-mail-controller.html">Mail</a> 
+    
+    &nbsp; | &nbsp;
+    
+    <a href="api-view.html">Templates</a>
+    
+    &nbsp; | &nbsp;
+    
+    <a href="api-test.html">Tests</a>
+    
+</div>
+<div style="padding-top: 20px;">
+
+<p style="font-size: 14px;"><em>Jump to: </em> 
+<a href="#instance">Generated instance methods</a> 
+&nbsp; <a href="#associations">Associations (<code>belongs_to</code>, <code>has</code>)</a>
+&nbsp; <a href="#hooks">Save hooks</a>
+</p>
+<p>
+BossRecords are <em>specially compiled parameterized modules</em> that follow the "active record" pattern. BossRecords go into your project's model/ folder and will have functions generated for saving them into the database and for accessing related BossRecords. Important aspects of BossRecords:
+</p>
+
+<ul>
+    <li><p>The first parameter of a BossRecord should always be called <code>Id</code>, and the
+    other parameters should be CamelCased attributes of your data model.</p></li>
+
+    <li><p>All parameters will be available as lower-case, underscored functions,
+    e.g. <code>-module(foo, [Id, TheText])</code> will generate the getter functions 
+    <code>id()</code> and <code>the_text()</code>, and the setters <code>id(NewId)</code> 
+    and <code>the_text(NewText)</code>. Note that setters do not save the BossRecord.</p></li>
+
+    <li><p>To auto-generate an ID, pass the atom <code>'id'</code> as the first parameter to <code>my_module:new</code>.</p></li>
+
+    <li><p>Call <code>new</code> with strings, floats, integers, atoms, or binaries for all other parameters</p></li>
+
+    <li><p>Parameters that end in "Time" (e.g., <code>CreationTime</code>, <code>UpdateTime</code>) should be
+    passed either <code>erlang:now()</code> or a DateTime tuple.</p></li>
+
+    <li><p>You can add your own functions to a BossRecord module, which will have access to the generated functions described below.</p></li>
+
+    <li><p>To see the full API for a BossRecord called <code>foo</code> at any time during development, point your browser to /doc/foo on your dev server.</p></li>
+</ul>
+<a name="instance"></a>
+<h2>Generated functions</h2>
+<p>Generated instance functions of a BossRecord include:</p>
+
+
+
+
+<a name="save"></a>
+<div class="code">
+    save() -> {ok, SavedBossRecord} | {error, [ErrorMessages]}
+</div>
+<p>
+
+Saves this <code>boss_record</code> record to the database. The returned record
+  will have an auto-generated ID if the record's ID was set to 'id'.
+  Performs validation first, returning <code>ErrorMessages</code> if validation fails.  See <code>validate/0</code>.
+
+</p>
+
+
+
+<a name="validate"></a>
+<div class="code">
+    validate() -> ok | {error, [ErrorMessages]}
+</div>
+<p>
+
+Validates this <code>boss_record</code> without saving to the database.
+  Errors are generated from this model's <code>validation_tests/0</code> function (if defined), 
+  which should return a list of <code>{TestFunction, ErrorMessage}</code> tuples. For each test, 
+  <code>TestFunction</code> should be a fun of arity 0 that returns <code>true</code> if the record is valid 
+  or <code>false</code> if it is invalid. <code>ErrorMessage</code> should be a (constant) string that will be 
+  included in <code>ErrorMessages</code> if the associated <code>TestFunction</code> returns <code>false</code> on this 
+  particular <code>boss_record</code>.
+
+</p>
+
+
+
+<a name="attributes"></a>
+<div class="code">
+    attributes(Proplist) -> BossRecord
+</div>
+<p>
+
+Set multiple record attributes at once. Does not save the record.
+
+</p>
+
+
+
+<a name="attributes"></a>
+<div class="code">
+    attributes() -> [{Key<span class="typevar">::atom()</span>, Value<span class="typevar">::string()</span> | undefined}]
+</div>
+<p>
+
+A proplist of the <code>boss_record</code> parameters and their values.
+
+</p>
+
+
+
+<a name="attribute_names"></a>
+<div class="code">
+    attribute_names() -> [<span class="typevar">::atom()</span>]
+</div>
+<p>
+
+A list of the lower-case <code>boss_record</code> parameters.
+
+</p>
+
+
+
+
+
+<a name="reset"></a>
+<div class="code">
+    reset(Counter<span class="typevar">::atom()</span>) -> ok | {error, Reason}
+</div>
+<p>
+
+Reset a counter to zero
+
+</p>
+
+
+
+<a name="incr"></a>
+<div class="code">
+    incr(Counter<span class="typevar">::atom()</span>) -> <span class="typevar">::integer()</span>
+</div>
+<p>
+
+Atomically increment a counter by 1.
+
+</p>
+
+
+
+<a name="incr"></a>
+<div class="code">
+    incr(Counter<span class="typevar">::atom()</span>, Increment<span class="typevar">::integer()</span>) -> <span class="typevar">::integer()</span>
+</div>
+<p>
+
+Atomically increment a counter by the specified increment
+
+</p>
+
+
+
+<a name="belongs_to_names"></a>
+<div class="code">
+    belongs_to_names() -> [{<span class="typevar">::atom()</span>}]
+</div>
+<p>
+
+Retrieve a list of the names of <code>belongs_to</code> associations.
+
+</p>
+
+
+
+<a name="belongs_to"></a>
+<div class="code">
+    belongs_to() -> [{<span class="typevar">::atom()</span>, BossRecord}]
+</div>
+<p>
+
+Retrieve all of the <code>belongs_to</code> associations at once.
+
+</p>
+
+
+
+<a name="id"></a>
+<div class="code">
+    id() -> Id
+</div>
+<p>
+
+Returns the value of <code>Id</code>
+
+</p>
+
+
+
+<a name="id"></a>
+<div class="code">
+    id(Id<span class="typevar">::string()</span>) -> BossRecord
+</div>
+<p>
+
+Set the value of <code>Id</code>.
+
+</p>
+
+
+
+
+<p>Other getters and setters are generated based on the parameters of your BossRecord.</p>
+
+<a name="associations"></a>
+<h2>Associations</h2>
+
+<p>Special associations are generated from the following module attributes:</p>
+
+<div class="code">
+    <span class="attr">-belongs_to</span>(foo).
+</div>
+
+<p>Requires a matching <code>FooId</code> in the parameter list. Adds a function <code>foo()</code> which returns the BossRecord (of any type, usually <code>foo</code>) with ID equal to the current BossRecord's <code>FooId</code>.</p>
+
+<div class="code">
+    <span class="attr">-has</span>({bar, 1}).<br />
+    <span class="attr">-has</span>({bars, Count}). % Count &gt; 1<br />
+    <span class="attr">-has</span>({bars, many}). % alias for 1 million<br />
+</div>
+
+<p>Generates a function <code>bar()</code> or <code>bars()</code> which returns up to <code>Count</code> "bar" BossRecords with <code>FooId</code> equal to this BossRecord's ID. If Count is greater than 1, also creates <code>first_bar()</code> and <code>last_bar()</code> which return the first and last items in the association.</p>
+
+<p>When <code>Count</code> is not equal to 1, <code>has</code> can also take a proplist of options as the third element in the tuple:</p>
+<div class="code">
+    <span class="attr">-has</span>({bars, many, [{sort_by, first_name}]}).</span>
+</div>
+<p>Valid options are:</p>
+<ul>
+    <li><code>sort_by</code> - attribute to sort on. Defaults to 'id'</li>
+    <li><code>sort_order</code> - whether to sort numerically or as a string, and ascending or descending. Valid values are:
+    <ul>
+        <li><code>str_ascending</code> - As string in dictionary order A-Z</li>
+        <li><code>str_descending</code> - As string in reverse dictionary order Z-A</li>
+        <li><code>num_ascending</code> - As number, low numbers first</li>
+        <li><code>num_descending</code> - As number, high numbers first</li>
+    </ul>
+    <li><code>module</code> - If the assocation name is different than the underlying module, use this option to specify the underlying module.</li>
+    <li><code>foreign_key</code> - If the associated module uses something unexpected for the foreign key, use this option to specify the foreign key (e.g. <code>person_id</code>).</li>
+</ul>
+
+<p>Note that Time and float attributes are stored internally as integers, so sort them with <code>num_ascending</code> or <code>num_descending</code>.</p>
+
+<p>The two above attributes work similar to <code>belongs_to</code> and <code>has_many/has_one</code> in Rails.</p>
+
+<div class="code">
+    <span class="attr">-counter</span>(foo_counter).
+</div>
+
+<p>Generates a function <code>foo_counter()</code> which returns the value of the counter, initialized to zero. Each BossRecord may have an unlimited number of counters. Manipulate the counters with <code>reset</code> and <code>incr</code> above.</p>
+
+<p>SPECIAL NOTE: Everything in the Model directory will be compiled as a BossRecord rather than as a regular Erlang module; you don't need to do or declare anything special.</p>
+
+<a name="hooks"></a>
+<h2>Save hooks</h2>
+
+<p>You can specify logic to be run anytime a BossRecord is saved. Just define one or more of these functions in your module:</p>
+<ul>
+    <li><code>before_create()</code> - executed just before a new BossRecord is saved to the database.</li>
+    <li><code>before_update()</code> - executed just before an existing BossRecord is saved to the database.</li>
+    <li><code>after_create()</code> - executed just after a new BossRecord is saved to the database.</li>
+    <li><code>after_update()</code> - executed just after an existing BossRecord is saved to the database.</li>
+</ul>
+
+<p>Return values are ignored.</p>
+
+
+</div>
+
+            </div>
+        </div>
+    </body>
+</html>

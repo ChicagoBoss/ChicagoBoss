@@ -1,0 +1,29 @@
+Upgrade: From 0.3 to 0.4
+------------------------
+
+The directory structure has changed somewhat. The MVC files have moved around, and
+files for the /admin interface are in a separate directory (ADMIN). 
+
+The following steps should get you most of the way to an upgrade:
+
+   cp -a /path/to/old/ChicagoBoss/boss.config .
+   cp -a /path/to/old/ChicagoBoss/Web/*_controller.erl controller/
+   rm controller/admin_controller.erl
+   cp -a /path/to/old/ChicagoBoss/Web/*.erl lib/
+   cp -a /path/to/old/ChicagoBoss/Model/* model/
+   cp -a /path/to/old/ChicagoBoss/Web/*_views view/
+   rm -r view/admin_views
+   cp -a /path/to/old/ChicagoBoss/static/* static/
+   make clean
+   make
+
+
+Upgrade: From 0.4.x to 0.4.y
+----------------------------
+
+Starting with Chicago Boss 0.4, application upgrades are as simple as:
+
+   cp -a /path/to/old/ChicagoBoss/[a-z]* .
+
+In general, files in the project directory that start with an upper-case letter
+belong to Boss. Files which start with a lower-case letter belong to you.
