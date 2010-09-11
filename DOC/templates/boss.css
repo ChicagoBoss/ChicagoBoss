@@ -1,7 +1,7 @@
 body {
     font-family: Arial;
     text-align: center;
-    background-color: black;
+    background-color: #434F55;
 }
 div.equation {
     color: white;
@@ -61,7 +61,6 @@ div.code span.atom {
 }
 div.nav {
     clear: both;
-    background-color: black;
     color: white;
     font-size: 20px; 
     margin-bottom: 20px;
@@ -85,7 +84,7 @@ div.main_logo {
     padding: 40px; 
     color: white; 
     margin-right: auto; 
-    width: 300px; 
+    width: 280px; 
     float: left;
 }
 div.main_checklist {
@@ -119,14 +118,16 @@ div.content {
     left: 50%; 
     padding: 30px 30px;
     width: 790px; 
+    /*
     border-width: 0px 1px; 
     border-color: black; 
-    border-style: solid; font-size: 20px; padding-bottom: 300px;
+    border-style: solid; */
+    font-size: 20px; padding-bottom: 300px;
 }
 div.content .top_left {
     width: 30px;
     height: 30px;
-    background-image: url('http://maps.evanmiller.org/circle/000000/ffffff/30.gif');
+    background-image: url('http://maps.evanmiller.org/circle/434F55/ffffff/30.gif');
     background-repeat: no-repeat;
     background-position: top left;
     top: 0px;
@@ -137,7 +138,7 @@ div.content .top_left {
 div.content .top_right {
     width: 30px;
     height: 30px;
-    background-image: url('http://maps.evanmiller.org/circle/000000/ffffff/30.gif');
+    background-image: url('http://maps.evanmiller.org/circle/434F55/ffffff/30.gif');
     background-repeat: no-repeat;
     background-position: top right;
     top: 0px;

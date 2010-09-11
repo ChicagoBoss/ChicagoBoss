@@ -11,11 +11,11 @@
 
 
 %% @spec start(_Type, _StartArgs) -> ServerRet
-%% @doc application start callback for rr.
+%% @doc application start callback for boss.
 start(_Type, _StartArgs) ->
     boss_sup:start_link().
 
 %% @spec stop(_State) -> ServerRet
-%% @doc application stop callback for rr.
+%% @doc application stop callback for boss.
 stop(_State) ->
     ok.

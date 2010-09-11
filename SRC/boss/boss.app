@@ -1,6 +1,6 @@
 {application, boss,
-    [{description, "boss"},
-    {vsn, "0.01"},
+    [{description, "Chicago Boss"},
+    {vsn, "0.4.1"},
     {modules, [
         boss,
         boss_app,

@@ -18,6 +18,11 @@
         incr/2, 
         delete/1, 
         save_record/1, 
+        push/0,
+        pop/0,
+        depth/0,
+        dump/0,
+        execute/1,
         validate_record/1,
         type/1,
         data_type/2]).
@@ -25,7 +30,18 @@
 -define(DEFAULT_MAX, (1000 * 1000 * 1000)).
 
 start() ->
-    start([]).
+    DBOptions = lists:foldl(fun(OptName, Acc) ->
+                case application:get_env(OptName) of
+                    {ok, Val} -> [{OptName, Val}|Acc];
+                    _ -> Acc
+                end
+        end, [], [db_port, db_host, db_username, db_password, db_database]),
+    DBDriver = case application:get_env(db_adapter) of
+        {ok, Val} -> Val;
+        _ -> mock
+    end,
+    DBOptions1 = [{adapter, list_to_atom("boss_db_adapter_"++atom_to_list(DBDriver))}|DBOptions],
+    start(DBOptions1).
 
 start(Options) ->
     boss_db_sup:start_link(Options).
@@ -112,6 +128,23 @@ incr(Key, Count) ->
 %% @doc Delete the BossRecord with the given `Id'.
 delete(Key) ->
     gen_server:call(boss_db, {delete, Key}).
+
+push() ->
+    gen_server:call(boss_db, push).
+
+pop() ->
+    gen_server:call(boss_db, pop).
+
+depth() ->
+    gen_server:call(boss_db, depth).
+
+dump() ->
+    gen_server:call(boss_db, depth).
+
+%% @spec execute( Commands::iolist() ) -> RetVal
+%% @doc Execute raw database commands on SQL databases
+execute(Commands) ->
+    gen_server:call(boss_db, {execute, Commands}).
 
 %% @spec save_record( BossRecord ) -> {ok, SavedBossRecord} | {error, [ErrorMessages]}
 %% @doc Save (that is, create or update) the given BossRecord in the database.

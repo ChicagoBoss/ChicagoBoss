@@ -1,18 +1,18 @@
 % In-memory database for fast tests and easy setup
--module(boss_db_driver_mock).
--behaviour(boss_db_driver).
--export([start/0, start/1, stop/0]).
--export([find/1, find/6, count/2, counter/1, incr/2, delete/1, save_record/1]).
--export([push/0, pop/0, depth/0, dump/0]).
+-module(boss_db_adapter_mock).
+-behaviour(boss_db_adapter).
+-export([start/0, start/1, stop/1]).
+-export([find/2, find/7, count/3, counter/2, incr/3, delete/2, save_record/2]).
+-export([push/2, pop/2, dump/1]).
 
 start() ->
     start([]).
 
 start(_Options) ->
     register(boss_db_mock, spawn(fun() -> loop({[], 1}) end)),
-    ok.
+    {ok, undefined}.
 
-stop() ->
+stop(_) ->
     ok.
 
 loop({[], IdCounter}) ->
@@ -82,84 +82,74 @@ loop([{Dict, IdCounter}|OldState] = State) ->
         {From, pop} ->
             From ! {boss_db_mock, ok},
             loop(OldState);
-        {From, depth} ->
-            From ! {boss_db_mock, length(State)},
-            loop(State);
         {From, dump} ->
             From ! {boss_db_mock, dict:to_list(Dict)},
             loop(State)
     end.
 
-find(Id) ->
+find(_, Id) ->
     boss_db_mock ! {self(), {find, Id}},
     receive
         {boss_db_mock, Record} ->
             Record
     end.
 
-find(Type, Conditions, Max, Skip, SortBy, SortOrder) ->
+find(_, Type, Conditions, Max, Skip, SortBy, SortOrder) ->
     boss_db_mock ! {self(), {find, Type, Conditions, Max, Skip, SortBy, SortOrder}},
     receive
         {boss_db_mock, Records} ->
             Records
     end.
 
-count(Type, Conditions) ->
+count(_, Type, Conditions) ->
     boss_db_mock ! {self(), {count, Type, Conditions}},
     receive
         {boss_db_mock, Count} ->
             Count
     end.
 
-counter(Id) ->
+counter(_, Id) ->
     boss_db_mock ! {self(), {counter, Id}},
     receive
         {boss_db_mock, Count} ->
             Count
     end.
 
-incr(Id, Amount) ->
+incr(_, Id, Amount) ->
     boss_db_mock ! {self(), {incr, Id, Amount}},
     receive
         {boss_db_mock, Int} -> Int
     end.
 
-delete(Id) ->
+delete(_, Id) ->
     boss_db_mock ! {self(), {delete, Id}},
     receive
         {boss_db_mock, ok} ->
             ok
     end.
 
-save_record(Record) ->
+save_record(_, Record) ->
     boss_db_mock ! {self(), {save_record, Record}},
     receive
         {boss_db_mock, SavedRecord} ->
             {ok, SavedRecord}
     end.
 
-push() ->
+push(_, _Depth) ->
     boss_db_mock ! {self(), push},
     receive
         {boss_db_mock, ok} ->
             ok
     end.
 
-pop() ->
+pop(_, _Depth) ->
     boss_db_mock ! {self(), pop},
     receive
         {boss_db_mock, ok} ->
             ok
     end.
 
-depth() ->
-    boss_db_mock ! {self(), depth},
-    receive
-        {boss_db_mock, Depth} ->
-            Depth
-    end.
-
-dump() ->
+dump(_) ->
     boss_db_mock ! {self(), dump},
     receive
         {boss_db_mock, Data} ->

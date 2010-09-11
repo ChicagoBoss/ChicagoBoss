@@ -1,7 +1,7 @@
--module(boss_db_driver_tyrant).
--behaviour(boss_db_driver).
--export([start/0, start/1, stop/0, find/1, find/6]).
--export([count/2, counter/1, incr/2, delete/1, save_record/1]).
+-module(boss_db_adapter_tyrant).
+-behaviour(boss_db_adapter).
+-export([start/0, start/1, stop/1, find/2, find/7]).
+-export([count/3, counter/2, incr/3, delete/2, save_record/2]).
 
 -define(TRILLION, (1000 * 1000 * 1000 * 1000)).
 
@@ -9,16 +9,17 @@ start() ->
     start([]).
 
 start(_Options) ->
-    medici:start().
+    ok = medici:start(),
+    {ok, undefined}.
 
-stop() ->
+stop(_) ->
     medici:stop().
 
-find(Id) when is_list(Id) ->
-    find(list_to_binary(Id));
-find(<<"">>) ->
+find(Conn, Id) when is_list(Id) ->
+    find(Conn, list_to_binary(Id));
+find(_, <<"">>) ->
     undefined;
-find(Id) when is_binary(Id) ->
+find(_, Id) when is_binary(Id) ->
     Type = infer_type_from_id(Id),
     case medici:get(Id) of
         Record when is_list(Record) ->
@@ -34,9 +35,9 @@ find(Id) when is_binary(Id) ->
             {error, Reason}
     end;
 
-find(_Id) -> {error, invalid_id}.
+find(_, _Id) -> {error, invalid_id}.
 
-find(Type, Conditions, Max, Skip, Sort, SortOrder) when is_atom(Type), is_list(Conditions), is_integer(Max),
+find(_, Type, Conditions, Max, Skip, Sort, SortOrder) when is_atom(Type), is_list(Conditions), is_integer(Max),
                                                         is_integer(Skip), is_atom(Sort), is_atom(SortOrder) ->
     case model_is_loaded(Type) of
         true ->
@@ -47,12 +48,12 @@ find(Type, Conditions, Max, Skip, Sort, SortOrder) when is_atom(Type), is_list(C
             []
     end.
 
-count(Type, Conditions) ->
+count(_, Type, Conditions) ->
     medici:searchcount(build_conditions(Type, Conditions)).
 
-counter(Id) when is_list(Id) ->
-    counter(list_to_binary(Id));
-counter(Id) when is_binary(Id) ->
+counter(Conn, Id) when is_list(Id) ->
+    counter(Conn, list_to_binary(Id));
+counter(_, Id) when is_binary(Id) ->
     case medici:get(Id) of
         Record when is_list(Record) ->
             list_to_integer(binary_to_list(
@@ -60,15 +61,15 @@ counter(Id) when is_binary(Id) ->
         {error, _Reason} -> 0
     end.
 
-incr(Id, Count) ->
+incr(_, Id, Count) ->
     medici:addint(Id, Count).
 
-delete(Id) when is_list(Id) ->
-    delete(list_to_binary(Id));
-delete(Id) when is_binary(Id) ->
+delete(Conn, Id) when is_list(Id) ->
+    delete(Conn, list_to_binary(Id));
+delete(_, Id) when is_binary(Id) ->
     medici:out(Id).
 
-save_record(Record) when is_tuple(Record) ->
+save_record(_, Record) when is_tuple(Record) ->
     Type = element(1, Record),
     Id = case Record:id() of
         id ->
@@ -84,6 +85,8 @@ save_record(Record) when is_tuple(Record) ->
         ok -> {ok, RecordWithId};
         {error, Error} -> {error, [Error]}
     end.
+
+% internal
 
 pack_record(RecordWithId, Type) ->
     % metadata string stores the data types, <Data Type><attribute name>

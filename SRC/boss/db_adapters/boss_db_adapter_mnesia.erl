@@ -1,7 +1,7 @@
--module(boss_db_driver_mnesia).
--behaviour(boss_db_driver).
--export([start/0, start/1, stop/0, find/1, find/6]).
--export([count/2, counter/1, incr/2, delete/1, save_record/1]).
+-module(boss_db_adapter_mnesia).
+-behaviour(boss_db_adapter).
+-export([start/0, start/1, stop/1, find/2, find/7]).
+-export([count/3, counter/2, incr/3, delete/2, save_record/2]).
 
 %-define(TRILLION, (1000 * 1000 * 1000 * 1000)).
 
@@ -12,19 +12,20 @@ start() ->
 
 start(_Options) ->
 %io:format("==> Start/1 Called~n"),
-    application:start(mnesia).
+    application:start(mnesia),
+    {ok, undefined}.
 
 % -----
-stop() ->
+stop(_) ->
 %io:format("==> Stop/0 Called~n"),
     application:stop(mnesia).
 
 % -----
-find(Id) when is_binary(Id) ->
-    find(binary_to_list(Id));
-find("") ->
+find(Conn, Id) when is_binary(Id) ->
+    find(Conn, binary_to_list(Id));
+find(_, "") ->
     undefined;
-find(Id) when is_list(Id) ->
+find(_, Id) when is_list(Id) ->
     Type = infer_type_from_id(Id),
     Fun = fun () -> mnesia:read(Type,Id) end,
     case mnesia:transaction(Fun)  of
@@ -42,10 +43,10 @@ find(Id) when is_list(Id) ->
             {error, Reason}
     end;
 
-find(_Id) -> {error, invalid_id}.
+find(_, _Id) -> {error, invalid_id}.
 
 % -----
-find(Type, Conditions, Max, Skip, Sort, SortOrder) when is_atom(Type), is_list(Conditions), is_integer(Max),
+find(_, Type, Conditions, Max, Skip, Sort, SortOrder) when is_atom(Type), is_list(Conditions), is_integer(Max),
                                                         is_integer(Skip), is_atom(Sort), is_atom(SortOrder) ->
 % Mnesia allows a pattern to be provided against which it will check records.
 % This allows 'eq' conditions to be handled by Mnesia itself. The list of remaining
@@ -163,26 +164,26 @@ test_rec(Rec,{Key, 'contains_none', Values}) when is_list(Values) ->
     lists:any(fun (Ele) -> not lists:member(Ele, apply(Rec,Key,[])) end, Values).
 
 % -----
-count(Type, Conditions) ->
-    length(find(Type, Conditions,0,0,id,ascending)).
+count(Conn, Type, Conditions) ->
+    length(find(Conn, Type, Conditions,0,0,id,ascending)).
 
 % -----
-counter(Id) when is_list(Id) ->
-    counter(list_to_binary(Id));
-counter(Id) when is_binary(Id) ->
+counter(Conn, Id) when is_list(Id) ->
+    counter(Conn, list_to_binary(Id));
+counter(_, Id) when is_binary(Id) ->
     mnesia:dirty_update_counter('_ids_', Id, 0).
 
 % -----
-incr(Id, Count) when is_list(Id) ->
-    incr(list_to_binary(Id), Count);
-incr(Id, Count) ->
+incr(Conn, Id, Count) when is_list(Id) ->
+    incr(Conn, list_to_binary(Id), Count);
+incr(_, Id, Count) ->
     mnesia:dirty_update_counter('_ids_', Id, Count).
 
 % -----
-delete(Id) when is_binary(Id) ->
+delete(Conn, Id) when is_binary(Id) ->
 %io:format("==> Delete/1 Called with binary ~p~n",[Id]),
-    delete(binary_to_list(Id));
-delete(Id) when is_list(Id) ->
+    delete(Conn, binary_to_list(Id));
+delete(_, Id) when is_list(Id) ->
 %io:format("==> Delete/1 Called with list ~p~n",[Id]),
     Type = infer_type_from_id(Id),
     Fun = fun () -> mnesia:delete({Type,Id}) end,
@@ -194,7 +195,7 @@ delete(Id) when is_list(Id) ->
     end.
 
 % -----
-save_record(Record) when is_tuple(Record) ->
+save_record(_, Record) when is_tuple(Record) ->
     Type = element(1, Record),
     Id = case Record:id() of
         id ->
@@ -241,13 +242,13 @@ model_is_loaded(Type) ->
     end.
 
 %----- 
-build_query(Type, Conditions, Max, Skip, Sort, SortOrder) -> % a Query is a {Pattern, Filter} combo
+build_query(Type, Conditions, _Max, _Skip, _Sort, _SortOrder) -> % a Query is a {Pattern, Filter} combo
     Fldnames = mnesia:table_info(Type, attributes),
     BlankPattern = [ {Fld, '_'} || Fld <- Fldnames],
-    {Pattern, Filter} = build_conditions(Type, BlankPattern, [], Conditions),
+    {Pattern, Filter} = build_conditions(BlankPattern, [], Conditions),
     {[proplists:get_value(Fldname, Pattern) || Fldname <- Fldnames], Filter}.
 
-build_conditions(Type, Pattern, Filter, Conditions) ->
+build_conditions(Pattern, Filter, Conditions) ->
     build_conditions1(Conditions, Pattern, Filter).
 
 build_conditions1([], Pattern, Filter) ->

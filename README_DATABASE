@@ -12,7 +12,9 @@ Tokyo Tyrant is a non-relational database developed by FAL Labs.
 
 1. Download and install Tokyo Tyrant from <http://fallabs.com/tokyotyrant/>
 
-2. Open up boss.config and set db_driver to boss_db_driver_tyrant
+2. Run Tyrant with a table database. Other database types are not supported.
+
+3. Open up boss.config and set db_driver to boss_db_driver_tyrant
 
 
 Using Mnesia (EXPERIMENTAL)
@@ -25,3 +27,16 @@ Notes:
 2. There needs to be a cookie set (file .erlang.cookie) even on a single node db
 
 3. Open up boss.config and set db_driver to boss_db_driver_mnesia
+
+
+Using PostgreSQL
+----------------
+
+To use the counter features, you need a table called "counters" with columns like these:
+
+CREATE TABLE counters
+(
+  "name" character varying(255)[] NOT NULL, 
+  "value" integer NOT NULL DEFAULT 0,
+  PRIMARY KEY ("name")
+); 

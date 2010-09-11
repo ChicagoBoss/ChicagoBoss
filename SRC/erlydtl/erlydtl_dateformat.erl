@@ -6,6 +6,7 @@
     C =:= $A orelse
     C =:= $b orelse
     C =:= $B orelse
+    C =:= $c orelse
     C =:= $d orelse
     C =:= $D orelse
     C =:= $f orelse
@@ -55,9 +56,6 @@ format({{_,_,_} = Date,{_,_,_} = Time}, FormatString) ->
 %
 % Format a tuple of the form {Y,M,D}
 %
-format({MegaSec,_,_} = ErlangNow, FormatString) when MegaSec < 1900 ->
-   {Date, Time} = calendar:now_to_datetime(ErlangNow),
-   replace_tags(Date, Time, FormatString);
 format({_,_,_} = Date, FormatString) ->
    replace_tags(Date, {0,0,0}, FormatString);
 format(DateTime, FormatString) ->
@@ -94,6 +92,15 @@ tag_to_value($A, _, _) -> "AM";
 % Swatch Internet time
 tag_to_value($B, _, _) ->
    ""; % NotImplementedError
+
+% ISO 8601 Format.
+tag_to_value($c, Date, Time) ->
+    tag_to_value($Y, Date, Time) ++ 
+    "-" ++ tag_to_value($m, Date, Time) ++ 
+    "-" ++ tag_to_value($d, Date, Time) ++ 
+    "T" ++ tag_to_value($H, Date, Time) ++
+    ":" ++ tag_to_value($i, Date, Time) ++
+    ":" ++ tag_to_value($s, Date, Time);
 
 %
 % Time, in 12-hour hours and minutes, with minutes

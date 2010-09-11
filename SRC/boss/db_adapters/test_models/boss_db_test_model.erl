@@ -1,0 +1,2 @@
+-module(boss_db_test_model, [Id, SomeText, SomeTime, SomeBoolean, SomeInteger, SomeFloat]).
+-compile(export_all).

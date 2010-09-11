@@ -16,18 +16,7 @@ start(Config) ->
         false -> put(boss_environment, production)
     end,
 
-    DBOptions = case application:get_env(db_port) of
-        {ok, DBPort} ->
-            [{port, DBPort}];
-        _ -> []
-    end,
-    DBOptions1 = case application:get_env(db_host) of
-        {ok, DBHost} -> [{host, DBHost}|DBOptions];
-        _ -> DBOptions
-    end,
-    DBDriver = get_env(db_driver, boss_db_driver_tyrant),
-    DBOptions2 = [{driver, DBDriver}|DBOptions1],
-    boss_db:start(DBOptions2),
+    boss_db:start(),
 
     MailDriver = get_env(mail_driver, boss_mail_driver_smtp_direct),
     boss_mail:start([{driver, MailDriver}]),

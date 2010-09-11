@@ -58,16 +58,20 @@ read(ToAddress, Subject) ->
     end.
 
 push() ->
-    boss_mock_inbox ! {self(), push},
-    receive
-        {boss_mock_inbox, ok} ->
+    case lists:member(boss_mock_inbox, erlang:registered()) of
+        true ->
+            boss_mock_inbox ! {self(), push},
+            receive {boss_mock_inbox, ok} -> ok end;
+        false ->
             ok
     end.
 
 pop() ->
-    boss_mock_inbox ! {self(), pop},
-    receive
-        {boss_mock_inbox, ok} ->
+    case lists:member(boss_mock_inbox, erlang:registered()) of
+        true ->
+            boss_mock_inbox ! {self(), pop},
+            receive {boss_mock_inbox, ok} -> ok end;
+        false ->
             ok
     end.
 
