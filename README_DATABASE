@@ -14,7 +14,7 @@ Tokyo Tyrant is a non-relational database developed by FAL Labs.
 
 2. Run Tyrant with a table database. Other database types are not supported.
 
-3. Open up boss.config and set db_driver to boss_db_driver_tyrant
+3. Open up boss.config and set db_adapter to tyrant
 
 
 Using Mnesia (EXPERIMENTAL)
@@ -26,11 +26,20 @@ Notes:
 
 2. There needs to be a cookie set (file .erlang.cookie) even on a single node db
 
-3. Open up boss.config and set db_driver to boss_db_driver_mnesia
+3. Open up boss.config and set db_adapter to mnesia
 
 
 Using PostgreSQL
 ----------------
+
+Open up boss.config and set db_adapter to pgsql
+
+To use Chicago Boss with PostgreSQL, you need to create a table for each of
+your model files. The table name should be the plural of the model name. Field
+names should be the underscored versions of the model attribute names. Use
+whatever data types make sense for your application. The "id" field should be
+a serial integer. (However, the generated BossRecord ID exposed to your
+application will still have the form "model_name-1".)
 
 To use the counter features, you need a table called "counters" with columns like these:
 
@@ -40,3 +49,4 @@ CREATE TABLE counters
   "value" integer NOT NULL DEFAULT 0,
   PRIMARY KEY ("name")
 ); 
+
