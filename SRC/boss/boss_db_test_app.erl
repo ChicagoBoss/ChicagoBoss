@@ -158,6 +158,25 @@ run_tests() ->
                             "Incorrect # of records in the DB"}
                       end
                     ], [])
+              end,
+
+              "Update records",
+              fun([Id1|_]) ->
+                  do(fun() ->
+                        Record = boss_db:find(Id1),
+                        {ok, SavedRecord} = (Record:some_integer(43)):save(),
+                        SavedRecord
+                    end,
+                    [
+                      fun(SavedRecord) ->
+                          {SavedRecord:some_integer() =:= 43,
+                            "Record did not update"}
+                      end,
+                      fun(_) ->
+                          Count = boss_db:count(boss_db_test_model, [{some_integer, 'equals', 43}]),
+                          {Count =:= 1, "Updated record not found"}
+                      end
+                    ], [])
               end
             ]
           )

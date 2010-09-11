@@ -208,9 +208,7 @@ build_insert_query(Record) ->
     ].
 
 build_update_query(Record) ->
-    Type = element(1, Record),
-    Id = Record:id(),
-    TableName = type_to_table_name(Type),
+    {_, TableName, Id} = infer_type_from_id(Record:id()),
     Updates = lists:foldl(fun
             ({id, _}, Acc) -> Acc;
             ({A, V}, Acc) -> [atom_to_list(A) ++ " = " ++ pack_value(V)|Acc]
