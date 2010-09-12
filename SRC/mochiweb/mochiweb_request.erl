@@ -604,7 +604,7 @@ maybe_redirect(RelPath, FullPath, ExtraHeaders) ->
 
 maybe_serve_file(File, ExtraHeaders) ->
     case file:read_file_info(File) of
-        {ok, FileInfo} ->
+        {ok, _FileInfo} ->
             % HACK EMM
             %LastModified = httpd_util:rfc1123_date(FileInfo#file_info.mtime),
             LastModified = httpd_util:rfc1123_date(),

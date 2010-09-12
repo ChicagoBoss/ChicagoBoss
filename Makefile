@@ -12,7 +12,7 @@ DB_CONFIG_DIR=SRC/boss/db_adapters/test_config
 
 all: $(PP_PARSER).erl ebin/$(APP) ebin/$(DRIVER_APP) ebin/$(SERVER_APP) \
     ebin/$(TEMPLATE_APP) ebin/$(TRANSLATE_APP) ebin/$(DB_TEST_APP) dirs
-	$(ERL) -make
+	$(ERL) -pa ebin -make
 
 $(PP_PARSER).erl: $(PP_PARSER).yrl
 	$(ERLC) -o SRC/aleppo $(PP_PARSER).yrl

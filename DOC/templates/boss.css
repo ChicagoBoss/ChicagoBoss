@@ -81,7 +81,7 @@ div.main_header {
 }
 div.main_logo {
     text-align: left; 
-    padding: 40px; 
+    padding: 40px 40px 40px 30px; 
     color: white; 
     margin-right: auto; 
     width: 280px; 

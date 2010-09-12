@@ -225,10 +225,6 @@ infer_type_from_id(Id) when is_binary(Id) ->
 infer_type_from_id(Id) when is_list(Id) ->
     list_to_atom(hd(string:tokens(Id, "-"))).
 
-%-----
-model_attribute_names(Type) ->
-    (apply(Type, new, lists:seq(1, proplists:get_value(new, Type:module_info(exports))))):attribute_names().
-
 % -----
 model_is_loaded(Type) ->
     case code:is_loaded(Type) of
