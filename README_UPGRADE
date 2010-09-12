@@ -1,3 +1,14 @@
+Upgrade: From 0.4.x to 0.4.y
+----------------------------
+
+Starting with Chicago Boss 0.4, application upgrades are as simple as:
+
+   cp -a /path/to/old/ChicagoBoss/[a-z]* .
+
+In general, files in the project directory that start with an upper-case letter
+belong to Boss. Files which start with a lower-case letter belong to you.
+
+
 Upgrade: From 0.3 to 0.4
 ------------------------
 
@@ -16,14 +27,3 @@ The following steps should get you most of the way to an upgrade:
    cp -a /path/to/old/ChicagoBoss/static/* static/
    make clean
    make
-
-
-Upgrade: From 0.4.x to 0.4.y
-----------------------------
-
-Starting with Chicago Boss 0.4, application upgrades are as simple as:
-
-   cp -a /path/to/old/ChicagoBoss/[a-z]* .
-
-In general, files in the project directory that start with an upper-case letter
-belong to Boss. Files which start with a lower-case letter belong to you.
