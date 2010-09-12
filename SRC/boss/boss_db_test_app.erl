@@ -21,8 +21,10 @@ run_setup() ->
   case file:read_file(lists:concat(["SRC/boss/db_adapters/test_sql/", DBAdapter, ".sql"])) of
     {ok, FileContents} ->
       io:format("Running setup SQL...~n", []),
-      RetVal = boss_db:execute(FileContents),
-      io:format("Returned: ~p~n", [RetVal]);
+      lists:map(fun(Cmd) ->
+                  RetVal = boss_db:execute(Cmd),
+                  io:format("Returned: ~p~n", [RetVal])
+      end, re:split(FileContents, ";"));
     {error, _Reason} ->
       ok
   end.
@@ -95,9 +97,9 @@ run_tests() ->
             fun() ->
                 % boss_db_test_model:new(id, <<"Economists do it with models">>, 
                 % {{1776, 7, 4}, {0, 0, 0}}, true, 42, 3.14159),
-                {ok, Model2} = (boss_db_test_model:new(id, <<"Just do it.">>, 
+                {ok, Model2} = (boss_db_test_model:new(id, <<"Bold coffee">>, 
                     {{1969, 7, 20}, {0, 0, 0}}, false, 100, 5.5)):save(),
-                {ok, Model3} = (boss_db_test_model:new(id, <<"A Just Society">>, 
+                {ok, Model3} = (boss_db_test_model:new(id, <<"A Bold Society">>, 
                     {{1984, 1, 1}, {0, 0, 0}}, true, 200, 28.8)):save(),
                 [Model1:id(), Model2:id(), Model3:id()]
             end, 
@@ -114,9 +116,9 @@ run_tests() ->
                   Res = boss_db:find(boss_db_test_model, [], 1, 0, some_text, str_ascending),
                   {(hd(Res)):id() =:= Id3, "Sort str_ascending failed"}
               end,
-              fun([_Id1, Id2, _Id3]) ->
+              fun([Id1, _Id2, _Id3]) ->
                   Res = boss_db:find(boss_db_test_model, [], 1, 0, some_text, str_descending),
-                  {(hd(Res)):id() =:= Id2, "Sort str_descending failed"}
+                  {(hd(Res)):id() =:= Id1, "Sort str_descending failed"}
               end,
               fun([Id1, _Id2, _Id3]) ->
                   Res = boss_db:find(boss_db_test_model, [], 1, 0, some_integer, num_ascending),
@@ -144,22 +146,6 @@ run_tests() ->
                   do(fun() -> ok end, [], generate_query_tests(Ids))
               end,
 
-              "Delete records",
-              fun([Id1|_]) ->
-                  do(fun() ->
-                        boss_db:delete(Id1)
-                    end, 
-                    [
-                      fun(RetVal) ->
-                          {RetVal =:= ok, "Return value not OK"}
-                      end,
-                      fun(_RetVal) ->
-                          {boss_db:count(boss_db_test_model) =:= 2,
-                            "Incorrect # of records in the DB"}
-                      end
-                    ], [])
-              end,
-
               "Update records",
               fun([Id1|_]) ->
                   do(fun() ->
@@ -175,6 +161,22 @@ run_tests() ->
                       fun(_) ->
                           Count = boss_db:count(boss_db_test_model, [{some_integer, 'equals', 43}]),
                           {Count =:= 1, "Updated record not found"}
+                      end
+                    ], [])
+              end,
+
+              "Delete records",
+              fun([Id1|_]) ->
+                  do(fun() ->
+                        boss_db:delete(Id1)
+                    end, 
+                    [
+                      fun(RetVal) ->
+                          {RetVal =:= ok, "Return value not OK"}
+                      end,
+                      fun(_RetVal) ->
+                          {boss_db:count(boss_db_test_model) =:= 2,
+                            "Incorrect # of records in the DB"}
                       end
                     ], [])
               end
@@ -222,16 +224,20 @@ query_tests([Id1, Id2, Id3]) ->
     {[{some_time, 'lt', {{1969, 7, 20}, {0, 0, 0}}}],   [Id1          ]},
     {[{some_time, 'le', {{1969, 7, 20}, {0, 0, 0}}}],   [Id1, Id2     ]},
 
-    {[{some_text, 'equals', "Just do it."}],            [     Id2     ]},
-    {[{some_text, 'not_equals', "Just do it."}],        [Id1,      Id3]},
-    {[{some_text, 'matches', "do it[\\. ]"}],           [Id1, Id2     ]},
-    {[{some_text, 'not_matches', "do it[\\. ]"}],       [          Id3]},
-    {[{some_text, 'contains', "Just"}],                 [     Id2, Id3]},
-    {[{some_text, 'not_contains', "Just"}],             [Id1          ]},
-    {[{some_text, 'contains_all', ["Just", "A"]}],      [          Id3]},
-    {[{some_text, 'not_contains_all', ["Just", "A"]}],  [Id1, Id2     ]},
-    {[{some_text, 'contains_any', ["with", "A"]}],      [Id1,      Id3]},
-    {[{some_text, 'contains_none', ["with", "A"]}],     [     Id2     ]}
+    {[{some_text, 'equals', "Bold coffee"}],            [     Id2     ]},
+    {[{some_text, 'not_equals', "Bold coffee"}],        [Id1,      Id3]},
+    {[{some_text, 'matches', "Bold [cS]"}],             [     Id2, Id3]},
+    {[{some_text, 'not_matches', "Bold [cS]"}],         [Id1          ]},
+    {[{some_text, 'contains', "Bold"}],                 [     Id2, Id3]},
+    {[{some_text, 'not_contains', "Bold"}],             [Id1          ]},
+    {[{some_text, 'contains_all', ["Bold", "Society"]}], 
+        [          Id3]},
+    {[{some_text, 'not_contains_all', ["Bold", "Society"]}],  
+        [Id1, Id2     ]},
+    {[{some_text, 'contains_any', ["models", "Society"]}],      
+        [Id1,      Id3]},
+    {[{some_text, 'contains_none', ["models", "Society"]}],     
+        [     Id2     ]}
 
   ].
 

@@ -1,4 +1,4 @@
--module(boss_db_adapter_pgsql).
+-module(boss_db_adapter_mysql).
 -behaviour(boss_db_adapter).
 -export([start/0, start/1, stop/1, find/2, find/7]).
 -export([count/3, counter/2, incr/3, delete/2, save_record/2]).
@@ -9,118 +9,141 @@ start() ->
 
 start(Options) ->
     DBHost = proplists:get_value(db_host, Options, "localhost"),
-    DBPort = proplists:get_value(db_port, Options, 5432),
+    DBPort = proplists:get_value(db_port, Options, 3306),
     DBUsername = proplists:get_value(db_username, Options, "guest"),
     DBPassword = proplists:get_value(db_password, Options, ""),
     DBDatabase = proplists:get_value(db_database, Options, "test"),
-    pgsql:connect(DBHost, DBUsername, DBPassword, 
-        [{port, DBPort}, {database, DBDatabase}]).
+    mysql:start(boss_pool, DBHost, DBPort, DBUsername, DBPassword, DBDatabase),
+    {ok, boss_pool}.
 
-stop(Conn) ->
-    pgsql:close(Conn).
+stop(_Pid) -> ok.
 
-find(Conn, Id) when is_list(Id) ->
+find(Pid, Id) when is_list(Id) ->
     {Type, TableName, TableId} = infer_type_from_id(Id),
-    Res = pgsql:equery(Conn, ["SELECT * FROM ", TableName, " WHERE id = $1"], [TableId]),
+    Res = mysql:fetch(Pid, ["SELECT * FROM ", TableName,
+            " WHERE id = ", pack_value(TableId)]),
     case Res of
-        {ok, _Columns, []} ->
-            undefined;
-        {ok, Columns, [Record]} ->
-            case model_is_loaded(Type) of
-                true -> activate_record(Record, Columns, Type);
-                false -> {error, {module_not_loaded, Type}}
+        {data, MysqlRes} ->
+            case mysql:get_result_rows(MysqlRes) of
+                [] -> undefined;
+                [Row] ->
+                    Columns = mysql:get_result_field_info(MysqlRes),
+                    case model_is_loaded(Type) of
+                        true -> activate_record(Row, Columns, Type);
+                        false -> {error, {module_not_loaded, Type}}
+                    end
             end;
-        {error, Reason} ->
-            {error, Reason}
+        {error, MysqlRes} ->
+            {error, mysql:get_result_reason(MysqlRes)}
     end.
 
-find(Conn, Type, Conditions, Max, Skip, Sort, SortOrder) when is_atom(Type), is_list(Conditions), 
+find(Pid, Type, Conditions, Max, Skip, Sort, SortOrder) when is_atom(Type), is_list(Conditions), 
                                                               is_integer(Max), is_integer(Skip), 
                                                               is_atom(Sort), is_atom(SortOrder) ->
     case model_is_loaded(Type) of
         true ->
             Query = build_select_query(Type, Conditions, Max, Skip, Sort, SortOrder),
-            Res = pgsql:equery(Conn, Query, []),
+            Res = mysql:fetch(Pid, Query),
             case Res of
-                {ok, Columns, Rows} ->
+                {data, MysqlRes} ->
+                    Columns = mysql:get_result_field_info(MysqlRes),
                     lists:map(fun(Row) ->
                                 activate_record(Row, Columns, Type)
-                        end, Rows);
-                {error, Reason} ->
-                    {error, Reason}
+                        end, mysql:get_result_rows(MysqlRes));
+                {error, MysqlRes} ->
+                    {error, mysql:get_result_reason(MysqlRes)}
             end;
         false -> {error, {module_not_loaded, Type}}
     end.
 
-count(Conn, Type, Conditions) ->
+count(Pid, Type, Conditions) ->
     ConditionClause = build_conditions(Conditions),
     TableName = type_to_table_name(Type),
-    {ok, _, [{Count}]} = pgsql:equery(Conn, 
-        ["SELECT COUNT(*) AS count FROM ", TableName, " WHERE ", ConditionClause]),
-    Count.
-
-counter(Conn, Id) when is_list(Id) ->
-    Res = pgsql:equery(Conn, "SELECT value FROM counters WHERE name = $1", [Id]),
+    Res = mysql:fetch(Pid, ["SELECT COUNT(*) AS count FROM ", TableName, 
+            " WHERE ", ConditionClause]),
     case Res of
-        {ok, _, [{Value}]} -> Value;
+        {data, MysqlRes} ->
+            [[Count]] = mysql:get_result_rows(MysqlRes),
+            Count;
+        {error, MysqlRes} ->
+            {error, mysql:get_result_reason(MysqlRes)}
+    end.
+
+counter(Pid, Id) when is_list(Id) ->
+    Res = mysql:fetch(Pid, ["SELECT value FROM counters WHERE name = ", pack_value(Id)]),
+    case Res of
+        {data, MysqlRes} ->
+            [[Value]] = mysql:get_result_rows(MysqlRes),
+            Value;
         {error, _Reason} -> 0
     end.
 
-incr(Conn, Id, Count) ->
-    Res = pgsql:equery(Conn, "UPDATE counters SET value = value + $1 WHERE name = $2 RETURNING value", 
-        [Count, Id]),
+incr(Pid, Id, Count) ->
+    Res = mysql:fetch(Pid, ["UPDATE counters SET value = value + ", pack_value(Count), 
+            " WHERE name = ", pack_value(Id)]),
     case Res of
-        {ok, _, _, [{Value}]} -> Value;
+        {updated, _} ->
+            counter(Pid, Id); % race condition
         {error, _Reason} -> 
-            Res1 = pgsql:equery(Conn, "INSERT INTO counters (name, value) VALUES ($1, $2) RETURNING value", 
-                [Id, Count]),
+            Res1 = mysql:fetch(Pid, ["INSERT INTO counters (name, value) VALUES (",
+                    pack_value(Id), ", ", pack_value(Count), ")"]),
             case Res1 of
-                {ok, _, _, [{Value}]} -> Value;
-                {error, Reason} -> {error, Reason}
+                {updated, _} -> counter(Pid, Id); % race condition
+                {error, MysqlRes} -> {error, mysql:get_result_reason(MysqlRes)}
             end
     end.
 
-delete(Conn, Id) when is_list(Id) ->
+delete(Pid, Id) when is_list(Id) ->
     {_, TableName, TableId} = infer_type_from_id(Id),
-    Res = pgsql:equery(Conn, ["DELETE FROM ", TableName, " WHERE id = $1"], [TableId]),
+    Res = mysql:fetch(Pid, ["DELETE FROM ", TableName, " WHERE id = ", 
+            pack_value(TableId)]),
     case Res of
-        {ok, _Count} -> 
-            pgsql:equery(Conn, "DELETE FROM counters WHERE name = $1", [Id]),
+        {updated, _} ->
+            mysql:fetch(Pid, ["DELETE FROM counters WHERE name = ", 
+                    pack_value(Id)]),
             ok;
-        {error, Reason} -> {error, Reason}
+        {error, MysqlRes} -> {error, mysql:get_result_reason(MysqlRes)}
     end.
 
-save_record(Conn, Record) when is_tuple(Record) ->
+save_record(Pid, Record) when is_tuple(Record) ->
     case Record:id() of
         id ->
             Type = element(1, Record),
             Query = build_insert_query(Record),
-            Res = pgsql:equery(Conn, Query, []),
+            Res = mysql:fetch(Pid, Query),
             case Res of
-                {ok, _, _, [{Id}]} ->
-                    {ok, Record:id(lists:concat([Type, "-", integer_to_list(Id)]))};
-                {error, Reason} -> {error, Reason}
+                {updated, _} ->
+                    Res1 = mysql:fetch(Pid, "SELECT last_insert_id()"),
+                    case Res1 of
+                        {data, MysqlRes} ->
+                            [[Id]] = mysql:get_result_rows(MysqlRes),
+                            {ok, Record:id(lists:concat([Type, "-", integer_to_list(Id)]))};
+                        {error, MysqlRes} ->
+                            {error, mysql:get_result_reason(MysqlRes)}
+                    end;
+                {error, MysqlRes} -> {error, mysql:get_result_reason(MysqlRes)}
             end;
         Defined when is_list(Defined) ->
             Query = build_update_query(Record),
-            Res = pgsql:equery(Conn, Query, []),
+            Res = mysql:fetch(Pid, Query),
             case Res of
-                {ok, _} -> {ok, Record};
-                {error, Reason} -> {error, Reason}
+                {updated, _} -> {ok, Record};
+                {error, MysqlRes} -> {error, mysql:get_result_reason(MysqlRes)}
             end
     end.
 
-push(Conn, Depth) ->
-    case Depth of 0 -> pgsql:squery(Conn, "BEGIN"); _ -> ok end,
-    pgsql:squery(Conn, "SAVEPOINT savepoint"++integer_to_list(Depth)).
+push(Pid, Depth) ->
+    case Depth of 0 -> mysql:fetch(Pid, "BEGIN"); _ -> ok end,
+    mysql:fetch(Pid, ["SAVEPOINT savepoint", integer_to_list(Depth)]).
 
-pop(Conn, Depth) ->
-    pgsql:squery(Conn, "ROLLBACK TO SAVEPOINT savepoint"++integer_to_list(Depth - 1)).
+pop(Pid, Depth) ->
+    mysql:fetch(Pid, ["ROLLBACK TO SAVEPOINT savepoint", integer_to_list(Depth - 1)]),
+    mysql:fetch(Pid, ["RELEASE SAVEPOINT savepoint", integer_to_list(Depth - 1)]).
 
 dump(_Conn) -> "".
 
-execute(Conn, Commands) ->
-    pgsql:squery(Conn, Commands).
+execute(Pid, Commands) ->
+    mysql:fetch(Pid, Commands).
 
 % internal
 
@@ -138,12 +161,11 @@ activate_record(Record, Metadata, Type) ->
     apply(Type, new, lists:map(fun
                 (id) ->
                     Index = keyindex(<<"id">>, 2, Metadata),
-                    atom_to_list(Type) ++ "-" ++ integer_to_list(element(Index, Record));
+                    atom_to_list(Type) ++ "-" ++ integer_to_list(lists:nth(Index, Record));
                 (Key) ->
                     Index = keyindex(list_to_binary(atom_to_list(Key)), 2, Metadata),
-                    case element(Index, Record) of
-                        {Date, {_, _, S} = Time} when is_float(S) ->
-                            {Date, setelement(3, Time, round(S))};
+                    case lists:nth(Index, Record) of
+                        {datetime, DateTime} -> DateTime;
                         Val -> Val
                     end
             end, DummyRecord:attribute_names())).
@@ -191,8 +213,7 @@ build_insert_query(Record) ->
         string:join(Attributes, ", "),
         ") values (",
         string:join(Values, ", "),
-        ")",
-        " RETURNING id"
+        ")"
     ].
 
 build_update_query(Record) ->
@@ -243,37 +264,37 @@ build_conditions1([{Key, 'ge', Value}|Rest], Acc) ->
 build_conditions1([{Key, 'le', Value}|Rest], Acc) ->
     build_conditions1(Rest, add_cond(Acc, Key, "<=", pack_value(Value)));
 build_conditions1([{Key, 'matches', "*"++Value}|Rest], Acc) ->
-    build_conditions1(Rest, add_cond(Acc, Key, "~*", pack_value(Value)));
+    build_conditions1(Rest, add_cond(Acc, Key, "REGEXP", pack_value(Value)));
 build_conditions1([{Key, 'not_matches', "*"++Value}|Rest], Acc) ->
-    build_conditions1(Rest, add_cond(Acc, Key, "!~*", pack_value(Value)));
+    build_conditions1(Rest, add_cond(Acc, Key, "NOT REGEXP", pack_value(Value)));
 build_conditions1([{Key, 'matches', Value}|Rest], Acc) ->
-    build_conditions1(Rest, add_cond(Acc, Key, "~", pack_value(Value)));
+    build_conditions1(Rest, add_cond(Acc, Key, "REGEXP BINARY", pack_value(Value)));
 build_conditions1([{Key, 'not_matches', Value}|Rest], Acc) ->
-    build_conditions1(Rest, add_cond(Acc, Key, "!~", pack_value(Value)));
+    build_conditions1(Rest, add_cond(Acc, Key, "NOT REGEXP BINARY", pack_value(Value)));
 build_conditions1([{Key, 'contains', Value}|Rest], Acc) ->
-    build_conditions1(Rest, add_cond(Acc, pack_tsvector(Key), "@@", pack_tsquery([Value], "&")));
+    build_conditions1(Rest, add_cond(Acc, pack_match(Key), "AGAINST", pack_boolean_query([Value], "")));
 build_conditions1([{Key, 'not_contains', Value}|Rest], Acc) ->
-    build_conditions1(Rest, add_cond(Acc, pack_tsvector(Key), "@@", pack_tsquery_not([Value], "&")));
+    build_conditions1(Rest, add_cond(Acc, pack_match_not(Key), "AGAINST", pack_boolean_query([Value], "")));
 build_conditions1([{Key, 'contains_all', Values}|Rest], Acc) when is_list(Values) ->
-    build_conditions1(Rest, add_cond(Acc, pack_tsvector(Key), "@@", pack_tsquery(Values, "&")));
+    build_conditions1(Rest, add_cond(Acc, pack_match(Key), "AGAINST", pack_boolean_query(Values, "+")));
 build_conditions1([{Key, 'not_contains_all', Values}|Rest], Acc) when is_list(Values) ->
-    build_conditions1(Rest, add_cond(Acc, pack_tsvector(Key), "@@", pack_tsquery_not(Values, "&")));
+    build_conditions1(Rest, add_cond(Acc, pack_match_not(Key), "AGAINST", pack_boolean_query(Values, "+")));
 build_conditions1([{Key, 'contains_any', Values}|Rest], Acc) when is_list(Values) ->
-    build_conditions1(Rest, add_cond(Acc, pack_tsvector(Key), "@@", pack_tsquery(Values, "|")));
+    build_conditions1(Rest, add_cond(Acc, pack_match(Key), "AGAINST", pack_boolean_query(Values, "")));
 build_conditions1([{Key, 'contains_none', Values}|Rest], Acc) when is_list(Values) ->
-    build_conditions1(Rest, add_cond(Acc, pack_tsvector(Key), "@@", pack_tsquery_not(Values, "|"))).
+    build_conditions1(Rest, add_cond(Acc, pack_match_not(Key), "AGAINST", pack_boolean_query(Values, ""))).
 
 add_cond(Acc, Key, Op, PackedVal) ->
     [lists:concat([Key, " ", Op, " ", PackedVal, " AND "])|Acc].
 
-pack_tsvector(Key) ->
-    atom_to_list(Key) ++ "::tsvector".
+pack_match(Key) ->
+    lists:concat(["MATCH(", Key, ")"]).
 
-pack_tsquery(Values, Op) ->
-    "'" ++ string:join(lists:map(fun escape_sql/1, Values), " "++Op++" ") ++ "'::tsquery".
+pack_match_not(Key) ->
+    lists:concat(["NOT MATCH(", Key, ")"]).
 
-pack_tsquery_not(Values, Op) ->
-    "'!(" ++ string:join(lists:map(fun escape_sql/1, Values), " "++Op++" ") ++ ")'::tsquery".
+pack_boolean_query(Values, Op) ->
+    "('" ++ string:join(lists:map(fun(Val) -> Op ++ escape_sql(Val) end, Values), " ") ++ "' IN BOOLEAN MODE)".
 
 pack_set(Values) ->
     "(" ++ string:join(lists:map(fun pack_value/1, Values), ", ") ++ ")".
@@ -292,7 +313,7 @@ escape_sql1([C|Rest], Acc) ->
     escape_sql1(Rest, [C|Acc]).
 
 pack_datetime(DateTime) ->
-    "TIMESTAMP '" ++ erlydtl_filters:date(DateTime, "c") ++ "'".
+    "'" ++ erlydtl_filters:date(DateTime, "Y-m-d H:i:s") ++ "'".
 
 pack_now(Now) -> pack_datetime(calendar:now_to_datetime(Now)).
 

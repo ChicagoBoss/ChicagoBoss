@@ -21,10 +21,6 @@ stop(_) ->
     application:stop(mnesia).
 
 % -----
-find(Conn, Id) when is_binary(Id) ->
-    find(Conn, binary_to_list(Id));
-find(_, "") ->
-    undefined;
 find(_, Id) when is_list(Id) ->
     Type = infer_type_from_id(Id),
     Fun = fun () -> mnesia:read(Type,Id) end,
@@ -41,9 +37,7 @@ find(_, Id) when is_list(Id) ->
             end;
         {aborted, Reason} ->
             {error, Reason}
-    end;
-
-find(_, _Id) -> {error, invalid_id}.
+    end.
 
 % -----
 find(_, Type, Conditions, Max, Skip, Sort, SortOrder) when is_atom(Type), is_list(Conditions), is_integer(Max),

@@ -9,5 +9,6 @@
 {"SRC/medici/*", [debug_info, {outdir, "ebin"}]}.
 {"SRC/misultin/*", [debug_info, {outdir, "ebin"}, {i, "INCLUDE"}]}.
 {"SRC/mochiweb/*", [debug_info, {outdir, "ebin"}]}.
+{"SRC/mysql/*", [debug_info, {outdir, "ebin"}, {i, "INCLUDE"}]}.
 {"SRC/simple_bridge/*", [debug_info, {outdir, "ebin"}, {i, "INCLUDE"}]}.
 {"SRC/simple_bridge/*_bridge_modules/*", [debug_info, {outdir, "ebin"}, {i, "INCLUDE"}]}.

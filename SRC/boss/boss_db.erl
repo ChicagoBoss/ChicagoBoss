@@ -51,8 +51,11 @@ stop() ->
 
 %% @spec find(Id::string()) -> BossRecord | {error, Reason}
 %% @doc Find a BossRecord with the specified `Id'.
-find(Key) ->
-    gen_server:call(boss_db, {find, Key}).
+find("") -> undefined;
+find(Key) when is_list(Key) ->
+    gen_server:call(boss_db, {find, Key});
+find(_) ->
+    {error, invalid_id}.
 
 %% @spec find(Type::atom(), Conditions) -> [ BossRecord ]
 %% @doc Query for BossRecords. Returns all BossRecords of type

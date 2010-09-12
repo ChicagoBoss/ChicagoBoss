@@ -15,13 +15,9 @@ start(_Options) ->
 stop(_) ->
     medici:stop().
 
-find(Conn, Id) when is_list(Id) ->
-    find(Conn, list_to_binary(Id));
-find(_, <<"">>) ->
-    undefined;
-find(_, Id) when is_binary(Id) ->
+find(_, Id) when is_list(Id) ->
     Type = infer_type_from_id(Id),
-    case medici:get(Id) of
+    case medici:get(list_to_binary(Id)) of
         Record when is_list(Record) ->
             case model_is_loaded(Type) of
                 true ->
@@ -33,9 +29,7 @@ find(_, Id) when is_binary(Id) ->
             undefined;
         {error, Reason} ->
             {error, Reason}
-    end;
-
-find(_, _Id) -> {error, invalid_id}.
+    end.
 
 find(_, Type, Conditions, Max, Skip, Sort, SortOrder) when is_atom(Type), is_list(Conditions), is_integer(Max),
                                                         is_integer(Skip), is_atom(Sort), is_atom(SortOrder) ->
@@ -51,23 +45,19 @@ find(_, Type, Conditions, Max, Skip, Sort, SortOrder) when is_atom(Type), is_lis
 count(_, Type, Conditions) ->
     medici:searchcount(build_conditions(Type, Conditions)).
 
-counter(Conn, Id) when is_list(Id) ->
-    counter(Conn, list_to_binary(Id));
-counter(_, Id) when is_binary(Id) ->
-    case medici:get(Id) of
+counter(_, Id) when is_list(Id) ->
+    case medici:get(list_to_binary(Id)) of
         Record when is_list(Record) ->
             list_to_integer(binary_to_list(
                     proplists:get_value(<<"_num">>, Record, <<"0">>)));
         {error, _Reason} -> 0
     end.
 
-incr(_, Id, Count) ->
-    medici:addint(Id, Count).
+incr(_, Id, Count) when is_list(Id) ->
+    medici:addint(list_to_binary(Id), Count).
 
-delete(Conn, Id) when is_list(Id) ->
-    delete(Conn, list_to_binary(Id));
-delete(_, Id) when is_binary(Id) ->
-    medici:out(Id).
+delete(_, Id) when is_list(Id) ->
+    medici:out(list_to_binary(Id)).
 
 save_record(_, Record) when is_tuple(Record) ->
     Type = element(1, Record),

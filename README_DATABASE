@@ -29,24 +29,29 @@ Notes:
 3. Open up boss.config and set db_adapter to mnesia
 
 
-Using PostgreSQL
-----------------
+Using PostgreSQL/MySQL (EXPERIMENTAL)
+-------------------------------------
 
-Open up boss.config and set db_adapter to pgsql
+Open up boss.config and set db_adapter to pgsql or mysql. You should also set:
 
-To use Chicago Boss with PostgreSQL, you need to create a table for each of
+ - db_host
+ - db_port
+ - db_username
+ - db_password
+ - db_database
+
+To use Chicago Boss with a SQL database, you need to create a table for each of
 your model files. The table name should be the plural of the model name. Field
 names should be the underscored versions of the model attribute names. Use
 whatever data types make sense for your application. The "id" field should be
 a serial integer. (However, the generated BossRecord ID exposed to your
 application will still have the form "model_name-1".)
 
-To use the counter features, you need a table called "counters" with columns like these:
+To use the counter features, you need a table called "counters" with a "name"
+and "value" column, like these: 
 
-CREATE TABLE counters
-(
-  "name" character varying(255)[] NOT NULL, 
-  "value" integer NOT NULL DEFAULT 0,
-  PRIMARY KEY ("name")
-); 
+CREATE TABLE counters (
+    name                VARCHAR(255) PRIMARY KEY,
+    value               INTEGER DEFAULT 0
+);
 
