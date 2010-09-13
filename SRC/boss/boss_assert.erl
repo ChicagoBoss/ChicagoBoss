@@ -146,7 +146,7 @@ tag_with_text1(Tag, Text, ParseTree) ->
     {has_tag_with_text(Tag, Text, ParseTree), "No <"++Tag++"> tag containing \""++Text++"\""}.
 
 link_with_text1(Text, Response) ->
-    {boss_test:find_link_with_text(Text, Response) =/= undefined,
+    {boss_web_test:find_link_with_text(Text, Response) =/= undefined,
         "No link to \""++Text++"\""}.
 
 has_tag_with_text(Tag, Text, ParseTree) when is_list(Tag) ->

@@ -49,7 +49,7 @@ edoc:
 
 .PHONY: test
 test:
-	$(ERL) -pa ebin -run boss_test -noshell
+	$(ERL) -pa ebin -run boss_web_test -noshell
 
 test_mock:
 	$(ERL) -pa ebin -run boss_db_test start -config $(DB_CONFIG_DIR)/mock -noshell
