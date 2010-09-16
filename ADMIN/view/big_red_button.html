@@ -1,0 +1,50 @@
+{% extends "view/model.html" %} 
+{% block title %}The Big Red Button{% endblock %}
+{% block scripts %}
+<script type="text/javascript" src="http://www.google.com/jsapi">
+</script>
+<script type="text/javascript" src="/admin/static/lang.js"></script>
+<script type="text/javascript">
+    var untranslated_messages = {
+        {% for lang in languages %}
+            "{{ lang.code }}": [
+            {% for string in lang.untranslated_strings %}
+                "{{ string|escapejs }}"{% if not forloop.last %},{% endif %}
+            {% endfor %}
+            ]{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    };
+
+    var all_messages = [
+{% for string in strings %}
+"{{ string|escapejs }}"{% if not forloop.last %},{% endif %}
+{% endfor %}
+    ];
+    google.load("language", 1);
+    google.load("jquery", "1.4.2");
+    var langs = new Array();
+    var did_alert = false;
+google.setOnLoadCallback(initialize);
+</script>
+{% endblock %}
+{% block body %}
+<p><a href="/admin/lang">Back</a></p>
+<p>The Big Red Button fills in all the blanks in your language files with the Google Translate API.</p>
+<div style="text-align: center;">
+<button style="width: 400px; height: 60px; font-size: 18px; background-color: #94060D; color: white;" >PUSH ME</button>
+</div>
+
+<p><em>Language files that will be created or updated:</em></p>
+<table id="new_language_table" border="1">
+    <tr><th>Language</th><th>Status</th></tr>
+</table>
+
+<p><em>Language files that will be unaffected:</em>
+{% for lang in languages %}
+{% if not lang.untranslated_strings|length %}
+{{ lang.code }}
+{% endif %}
+{% endfor %}
+</p>
+
+{% endblock %}

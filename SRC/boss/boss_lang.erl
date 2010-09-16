@@ -2,7 +2,7 @@
 -compile(export_all).
 
 extract_strings() ->
-    extract_model_strings() ++ extract_view_strings().
+    lists:usort(extract_model_strings() ++ extract_view_strings()).
 
 extract_strings(Lang) ->
     AllStrings = extract_strings(),
@@ -46,7 +46,7 @@ extract_model_strings() ->
 extract_view_strings() ->
     ViewFiles = boss_files:view_file_list(),
     lists:foldl(fun(File, Acc) -> Acc ++ process_view_file(File) end,
-        [], ViewFiles).
+            [], ViewFiles).
 
 process_view_file(ViewFile) ->
     {ok, Contents} = file:read_file(ViewFile),

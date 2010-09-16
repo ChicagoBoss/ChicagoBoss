@@ -22,6 +22,9 @@ model_path(Model) -> filename:join([hd(model_path()), Model]).
 lang_path() -> filename:join([root_dir(), "lang"]).
 lang_path(Lang) -> filename:join([lang_path(), lists:concat(["strings.", Lang, ".po"])]).
 
+static_path() -> filename:join([root_dir(), "static"]).
+admin_static_path() -> filename:join([root_admin_dir(), "static"]).
+
 lib_path() -> [filename:join([root_dir(), "lib"])].
 
 web_controller_path() -> [filename:join([root_dir(), "controller"]), filename:join([root_admin_dir()])].
@@ -42,9 +45,10 @@ web_controller_list() ->
     module_list(web_controller_path()).
 
 view_file_list() ->
-    Pattern = filename:join([root_dir(), "{Web,Mail}", "*views", "*.{html,txt}"]),
-    AdminPattern = filename:join([root_admin_dir(), "{Web,Mail}", "*views", "*.{html,txt}"]),
-    filelib:wildcard(Pattern) ++ filelib:wildcard(AdminPattern).
+    Pattern = filename:join([root_dir(), "view", "*", "*.{html,txt}"]),
+    MailPattern = filename:join([root_dir(), "mail", "view", "*.{html,txt}"]),
+    AdminPattern = filename:join([root_admin_dir(), "view", "*.{html,txt}"]),
+    filelib:wildcard(Pattern) ++ filelib:wildcard(MailPattern) ++ filelib:wildcard(AdminPattern).
 
 language_list() ->
     {ok, Files} = file:list_dir(lang_path()),
