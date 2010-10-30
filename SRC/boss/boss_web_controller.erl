@@ -40,7 +40,7 @@ stop() ->
     misultin:stop().
 
 handle_request(Req, RequestMod, ResponseMod) ->
-    DocRoot = "./static",
+    DocRoot = boss_files:static_path(),
     Request = simple_bridge:make_request(RequestMod, {Req, DocRoot}),
     case Request:path() of
         "/favicon.ico" ->
@@ -48,6 +48,9 @@ handle_request(Req, RequestMod, ResponseMod) ->
             (Response:file("/favicon.ico")):build_response();
         "/static/"++File -> 
             Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
+            (Response:file([$/|File])):build_response();
+        "/admin/static/"++File ->
+            Response = simple_bridge:make_response(ResponseMod, {Req, boss_files:admin_static_path()}),
             (Response:file([$/|File])):build_response();
         _ -> 
             {StatusCode, Headers, Payload} = process_request(Request),

@@ -100,13 +100,12 @@ lang('GET', [Lang], Auth) ->
             {translated_messages, Translated},
             {last_modified, LastModified}],
         [{"Cache-Control", "no-cache"}]};
-lang('POST', [Lang], Auth) ->
+lang('POST', [Lang|Fmt], Auth) ->
     LangFile = boss_files:lang_path(Lang),
     {ok, IODevice} = file:open(LangFile, [write, append]),
-    MessageCount = list_to_integer(Req:post_param("message_count")),
-    lists:map(fun(Index) ->
-                Original = Req:post_param(lists:concat(["orig", Index])),
-                Translation = Req:post_param(lists:concat(["trans", Index])),
+    lists:map(fun(Message) ->
+                Original = proplists:get_value("orig", Message),
+                Translation = proplists:get_value("trans", Message),
                 case Translation of
                     "" -> ok;
                     _ -> 
@@ -115,10 +114,13 @@ lang('POST', [Lang], Auth) ->
                         file:write(IODevice, 
                             "msgstr \""++boss_lang:escape_quotes(Translation)++"\"\n")
                 end
-        end, lists:seq(1, MessageCount)),
+        end, Req:deep_post_param(["messages"])),
     file:close(IODevice),
     boss_translator:reload(Lang),
-    {redirect, "/admin/lang/"++Lang}.
+    case Fmt of
+        ["json"] -> {json, [{success, true}]};
+        [] -> {redirect, "/admin/lang/"++Lang}
+    end.
 
 create_lang('GET', [], Auth) ->
     {ok, [{languages, boss_files:language_list()}]};
@@ -135,3 +137,10 @@ delete_lang('GET', [Lang], Auth) ->
 delete_lang('POST', [Lang], Auth) ->
     ok = file:delete(boss_files:lang_path(Lang)),
     {redirect, "/admin/lang"}.
+
+big_red_button('GET', [], Auth) ->
+    Languages = lists:map(fun(Lang) ->
+                {Untranslated, Translated} = boss_lang:extract_strings(Lang),
+                [{code, Lang}, {untranslated_strings, Untranslated}]
+        end, boss_files:language_list()),
+    {ok, [{languages, Languages}, {strings, boss_lang:extract_strings()}]}.

@@ -7,9 +7,9 @@
     var translated_language_codes = {
         {% if languages %}
         {% for lang in languages %}
-        '{{ lang }}' : 1,
+        '{{ lang }}' : 1
+        {% if not forloop.last %},{% endif %}
         {% endfor %}
-        '' : ''
         {% endif %}
     };
     google.load("language", 1);
@@ -23,7 +23,7 @@
             }
         }
         var sortedLangs = langs.sort();
-        for (var i = 0; i < sortedLangs.length; i++) {
+        for (var i=0; i<sortedLangs.length; i++) {
             var lang = sortedLangs[i];
             var code = google.language.Languages[lang];
             var option = document.createElement('option');
