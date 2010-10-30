@@ -206,6 +206,7 @@ build_insert_query(Record) ->
     TableName = type_to_table_name(Type),
     {Attributes, Values} = lists:foldl(fun
             ({id, _}, Acc) -> Acc;
+            ({_, undefined}, Acc) -> Acc;
             ({A, V}, {Attrs, Vals}) ->
                 {[atom_to_list(A)|Attrs], [pack_value(V)|Vals]}
         end, {[], []}, Record:attributes()),

@@ -20,16 +20,22 @@
 {% block content %}
 <p><em>We have a few guides to get you started. Choose the one that's right for you:</em></p>
 <div class="subnav">
-    {% ifequal this_page "guide-example.html" %}
-    <strong>Example App</strong>
+    {% ifequal this_page "guide-screencast.html" %}
+    <strong>Screencast</strong>
     {% else %}
-    <a href="guide-example.html">Example App</a>
+    <a href="guide-screencast.html">Screencast</a>
+    {% endifequal %}
+    &nbsp; | &nbsp; 
+    {% ifequal this_page "guide-example.html" %}
+    <strong>Example</strong>
+    {% else %}
+    <a href="guide-example.html">Example</a>
     {% endifequal %}
     &nbsp; | &nbsp; 
     {% ifequal this_page "guide-evening.html" %}
-    <strong>An Evening...</strong>
+    <strong>Tutorial</strong>
     {% else %}
-    <a href="guide-evening.html">An Evening...</a> 
+    <a href="guide-evening.html">Tutorial</a> 
     {% endifequal %}
     &nbsp; | &nbsp;
     {% ifequal this_page "guide-i18n.html" %}
