@@ -1,5 +1,6 @@
 -module(boss_web_controller).
 -export([start/0, start/1, stop/0, process_request/1]).
+-define(DEBUGPRINT(A), error_logger:info_report("~~o)> " ++ A)).
 
 start() ->
     start([]).
@@ -352,10 +353,25 @@ make_log_file_name(Dir) ->
             lists:flatten(io_lib:format("boss_error-~4..0B-~2..0B-~2..0B.~2..0B-~2..0B-~2..0B.log", 
                     [Y, M, D, Hour, Min, Sec]))]).
 
+
 make_log_file_symlink(LogFile) ->
     SymLink = filename:join([filename:dirname(LogFile), "boss_error-LATEST.log"]),
-    file:delete(SymLink),
-    file:make_symlink(filename:basename(LogFile), SymLink).
+     case os:type() of
+        {unix,_} ->
+            file:delete(SymLink),
+            file:make_symlink(filename:basename(LogFile), SymLink);
+        {win32,_} ->
+            file:delete(SymLink),
+            {ok, Cwd} = file:get_cwd(),
+            LinkTarget = Cwd ++ "/log/" ++ filename:basename(LogFile),
+            mk_win_dir_syslink("boss_error-LATEST.log", filename:dirname(LogFile), LinkTarget)
+     end.
+
+%% @doc Make symbolik link in current directory on windows vista or highter
+mk_win_dir_syslink(LinkName, DestDir, LinkTarget) ->
+    S = (list_to_atom(lists:append(["cd ", DestDir, "& mklink ", LinkName, " \"", LinkTarget, "\""]))),
+    os:cmd(S),
+    ok.
 
 json_data(Data) ->
     mochijson2:encode({struct, json_data1(Data, [])}).
