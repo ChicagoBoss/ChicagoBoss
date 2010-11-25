@@ -123,6 +123,15 @@ save_record(Pid, Record) when is_tuple(Record) ->
                     end;
                 {error, MysqlRes} -> {error, mysql:get_result_reason(MysqlRes)}
             end;
+		Identifier when is_integer(Identifier) ->
+            Type = element(1, Record),
+            Query = build_insert_query(Record),
+            Res = mysql:fetch(Pid, Query),
+            case Res of
+                {updated, _} ->
+					{ok, Record:id(lists:concat([Type, "-", integer_to_list(Identifier)]))};
+                {error, MysqlRes} -> {error, mysql:get_result_reason(MysqlRes)}
+            end;			
         Defined when is_list(Defined) ->
             Query = build_update_query(Record),
             Res = mysql:fetch(Pid, Query),
@@ -205,7 +214,8 @@ build_insert_query(Record) ->
     Type = element(1, Record),
     TableName = type_to_table_name(Type),
     {Attributes, Values} = lists:foldl(fun
-            ({id, _}, Acc) -> Acc;
+			({id, V}, {Attrs, Vals}) when is_integer(V) -> {[atom_to_list(id)|Attrs], [pack_value(V)|Vals]};
+			({id, _}, Acc) -> Acc;
             ({_, undefined}, Acc) -> Acc;
             ({A, V}, {Attrs, Vals}) ->
                 {[atom_to_list(A)|Attrs], [pack_value(V)|Vals]}
@@ -318,6 +328,8 @@ pack_datetime(DateTime) ->
 
 pack_now(Now) -> pack_datetime(calendar:now_to_datetime(Now)).
 
+pack_value(undefined) ->
+	"''";
 pack_value(V) when is_binary(V) ->
     pack_value(binary_to_list(V));
 pack_value(V) when is_list(V) ->
