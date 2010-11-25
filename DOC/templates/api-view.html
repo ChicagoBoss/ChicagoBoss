@@ -1,6 +1,6 @@
 {% extends "api.html" %}
 {% block api_content %}
-<p>Chicago Boss liked <a href="http://docs.djangoproject.com/en/dev/topics/templates/">Django's templating language</a> so much, he decided to steal it. Template files go in your project's view/ folder (in subdirectories that end in *_views), and will have access to the variables you pass from your <a href="api-controller.html#nav">Controller</a>. The template file associated with the function <code>foo_controller:bar</code> will be view/foo/bar.html.</p>
+<p>Chicago Boss liked <a href="http://docs.djangoproject.com/en/dev/topics/templates/">Django's templating language</a> so much, he decided to steal it. Template files go in your project's view/ folder (in subdirectories that correspond to the controller name), and will have access to the variables you pass from your <a href="api-controller.html#nav">Controller</a>. The template file associated with the function <code>foo_controller:bar</code> will be view/foo/bar.html.</p>
 
 <p>Note: if you use the the <code>extends</code> tag, the file path should be relative to your project's Web/ directory.</p>
 
@@ -18,4 +18,5 @@
     {% endif %}
     {% endfor %}
 </table>
+<p>Custom ErlyDTL tags using the <code>tag</code> tag may be placed in the <code>view/lib/</code> folder.</p>
 {% endblock %}

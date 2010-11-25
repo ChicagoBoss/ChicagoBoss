@@ -90,7 +90,8 @@ view_doc_root(ViewPath) ->
 
 compile_view_erlydtl(ViewPath) ->
     erlydtl_compiler:compile(ViewPath, view_module(ViewPath),
-        [{doc_root, view_doc_root(ViewPath)}, {compiler_options, []}]).
+        [{doc_root, view_doc_root(ViewPath)}, {custom_tags_dir, boss_files:web_view_path("lib")},
+            {compiler_options, []}]).
 
 compile_model(ModulePath) ->
     boss_record_compiler:compile(ModulePath).
