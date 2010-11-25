@@ -14,7 +14,12 @@ Dependencies:
 
 Build Chicago Boss with `make`.
 
-When you're ready to rock and roll, run `./START-DEV.SH` in this directory.
+* On Windows Vista or Windows 7 -
+
+    1. you need install win openSSl (http://www.slproweb.com/products/Win32OpenSSL.html)
+    2. make mochiweb with msys or cygwin
+
+When you're ready to rock and roll, run `./START-DEV.SH` (or start-dev.bat) in this directory (admin priveleges needed).
 There will be a lot of PROGRESS REPORTs which look scary but hopefully
 everything is running smoothly. With this console you can interact directly
 with the running server. Next, point your browser to:
