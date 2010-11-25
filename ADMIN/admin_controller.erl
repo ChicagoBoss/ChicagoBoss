@@ -8,6 +8,8 @@
             {ok, local};
         {127, 0, 0, 1} ->
             {ok, local};
+        {10, 0, _, _} ->
+            {ok, local};
         _ ->
             {redirect, "/admin/access_denied"}
     end.
