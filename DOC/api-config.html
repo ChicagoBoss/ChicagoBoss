@@ -92,9 +92,10 @@
     <li><code>log_dir</code> - Directory in which to keep log files. Location is relative to the project directory. Defaults to "log".</li>
     <li><code>mail_driver</code> - The email delivery driver to use. Valid values are:
     <ul>
-        <li><code>boss_mail_driver_smtp_direct</code> - Direct SMTP delivery (i.e. no relay is used)</li>
+        <li><code>boss_mail_driver_smtp</code> - SMTP delivery. If <code>mail_relay</code> is present, it is used as a relay, otherwise direct delivery is attempted.</li>
         <li><code>boss_mail_driver_mock</code> - A black hole, useful for testing.</li>
     </ul></li>
+    <li><code>mail_relay</code> - The relay server for SMTP mail deliveries.</li>
     <li><code>port</code> - The port to run the server on. Defaults to 8001.</li>
     <li><code>server</code> - The HTTP server to use. Valid values are:
     <ul>

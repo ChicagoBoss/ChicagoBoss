@@ -15,7 +15,7 @@ start_link(Args) ->
     gen_server:start_link({local, boss_mail}, ?MODULE, Args, []).
 
 init(Options) ->
-    MailDriver = proplists:get_value(driver, Options, boss_mail_driver_smtp_direct),
+    MailDriver = proplists:get_value(driver, Options, boss_mail_driver_smtp),
     ok = MailDriver:start(),
     {ok, #state{driver = MailDriver}}.
 

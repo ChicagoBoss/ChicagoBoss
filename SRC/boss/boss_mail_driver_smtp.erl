@@ -1,10 +1,16 @@
--module(boss_mail_driver_smtp_direct).
+-module(boss_mail_driver_smtp).
 -export([start/0, stop/0, deliver/3]).
 
 start() ->
-    Options = [{auth, never}, {tls, if_available}, 
-        {ssl, false}, {hostname, smtp_util:guess_FQDN()}, {retries, 1}],
-    register(boss_mail_smtp_direct, spawn(fun() -> loop(Options, dict:new()) end)),
+     OptionsBase = [{auth, never}, {tls, if_available},
+            {ssl, false}, {hostname, smtp_util:guess_FQDN()}, {retries, 1}],
+     Options = case application:get_env(mail_relay) of
+           {ok, Relay} ->
+               [{relay, Relay} | OptionsBase];
+           undefined ->
+               OptionsBase
+           end,
+     register(boss_mail_smtp, spawn(fun() -> loop(Options, dict:new()) end)),
     ok.
 
 stop() ->
@@ -21,21 +27,27 @@ loop(Options, PidDict) ->
             EmailFailure:save(),
             loop(Options, dict:erase(From, PidDict));
         {From, {deliver, FromAddress, ToAddress, BodyFun}} ->
-            [_User, Host] = string:tokens(ToAddress, "@"),
+            MailOptions = case proplists:lookup(relay, Options) of
+                none ->
+                    [_User, Host] = string:tokens(ToAddress, "@"),
+                    [{relay, Host} | Options];
+                _ ->
+                    Options
+            end,
             Email = {FromAddress, [ToAddress], BodyFun},
-            {RetVal, NewDict} = case gen_smtp_client:send(Email, [{relay, Host}|Options]) of
+            {RetVal, NewDict} = case gen_smtp_client:send(Email, MailOptions) of
                 {ok, SenderPid} ->
                     {ok, dict:store(SenderPid, Email, PidDict)};
                 {error, Reason} ->
                     {{error, Reason}, PidDict}
             end,
-            From ! {boss_mail_smtp_direct, RetVal},
+            From ! {boss_mail_smtp, RetVal},
             loop(Options, NewDict)
     end.
 
 deliver(FromAddress, ToAddress, BodyFun) ->
-    boss_mail_smtp_direct ! {self(), {deliver, FromAddress, ToAddress, BodyFun}},
+    boss_mail_smtp ! {self(), {deliver, FromAddress, ToAddress, BodyFun}},
     receive
-        {boss_mail_smtp_direct, ok} ->
+        {boss_mail_smtp, ok} ->
             ok
     end.

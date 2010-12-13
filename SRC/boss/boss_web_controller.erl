@@ -19,7 +19,7 @@ start(Config) ->
 
     boss_db:start(),
 
-    MailDriver = get_env(mail_driver, boss_mail_driver_smtp_direct),
+    MailDriver = get_env(mail_driver, boss_mail_driver_smtp),
     boss_mail:start([{driver, MailDriver}]),
 
     boss_translator:start(),
