@@ -214,9 +214,9 @@ execute_action({Controller, Action, Tokens} = Location, Req, LocationTrail) ->
                     end,
                     Result = case ActionResult of
                         undefined ->
-                            render_view(Location, Req);
+                            render_view(Location, Req, [{"_auth", Info}]);
                         ActionResult ->
-                            process_action_result({Location, Req, LocationTrail}, ActionResult)
+                            process_action_result({Location, Req, LocationTrail}, ActionResult, Info)
                     end,
                     case proplists:get_value("_filter", ExportStrings) of
                         3 ->
@@ -231,38 +231,38 @@ execute_action({Controller, Action, Tokens} = Location, Req, LocationTrail) ->
             end
     end.
 
-process_action_result(Info, ok) ->
-    process_action_result(Info, {ok, []});
-process_action_result(Info, {ok, Data}) ->
-    process_action_result(Info, {ok, Data, []});
-process_action_result({Location, Req, _}, {ok, Data, Headers}) ->
-    render_view(Location, Req, Data, Headers);
+process_action_result(Info, ok, AuthInfo) ->
+    process_action_result(Info, {ok, []}, AuthInfo);
+process_action_result(Info, {ok, Data}, AuthInfo) ->
+    process_action_result(Info, {ok, Data, []}, AuthInfo);
+process_action_result({Location, Req, _}, {ok, Data, Headers}, AuthInfo) ->
+    render_view(Location, Req, [{"_auth", AuthInfo}|Data], Headers);
 
-process_action_result(Info, {render_other, OtherLocation}) ->
-    process_action_result(Info, {render_other, OtherLocation, []});
-process_action_result(Info, {render_other, OtherLocation, Data}) ->
-    process_action_result(Info, {render_other, OtherLocation, Data, []});
-process_action_result(Info, {render_other, {Controller, Action}, Data, Headers}) ->
-    process_action_result(Info, {render_other, {Controller, Action, []}, Data, Headers});
-process_action_result({_, Req, _}, {render_other, {_, _, _} = OtherLocation, Data, Headers}) ->
-    render_view(OtherLocation, Req, Data, Headers);
+process_action_result(Info, {render_other, OtherLocation}, AuthInfo) ->
+    process_action_result(Info, {render_other, OtherLocation, []}, AuthInfo);
+process_action_result(Info, {render_other, OtherLocation, Data}, AuthInfo) ->
+    process_action_result(Info, {render_other, OtherLocation, Data, []}, AuthInfo);
+process_action_result(Info, {render_other, {Controller, Action}, Data, Headers}, AuthInfo) ->
+    process_action_result(Info, {render_other, {Controller, Action, []}, Data, Headers}, AuthInfo);
+process_action_result({_, Req, _}, {render_other, {_, _, _} = OtherLocation, Data, Headers}, AuthInfo) ->
+    render_view(OtherLocation, Req, [{"_auth", AuthInfo}|Data], Headers);
 
-process_action_result({_, Req, LocationTrail}, {action_other, OtherLocation}) ->
+process_action_result({_, Req, LocationTrail}, {action_other, OtherLocation}, _) ->
     execute_action(OtherLocation, Req, [OtherLocation | LocationTrail]);
 
-process_action_result(Info, {json, Data}) ->
-    process_action_result(Info, {json, Data, []});
-process_action_result(Info, {json, Data, Headers}) ->
+process_action_result(Info, {json, Data}, AuthInfo) ->
+    process_action_result(Info, {json, Data, []}, AuthInfo);
+process_action_result(Info, {json, Data, Headers}, AuthInfo) ->
     process_action_result(Info, {output, json_data(Data),
             [{"Content-Type", proplists:get_value("Content-Type", Headers, "application/json")}
-                |proplists:delete("Content-Type", Headers)]});
+                |proplists:delete("Content-Type", Headers)]}, AuthInfo);
 
-process_action_result(Info, {output, Payload}) ->
-    process_action_result(Info, {output, Payload, []});
-process_action_result(_, {output, Payload, Headers}) ->
+process_action_result(Info, {output, Payload}, AuthInfo) ->
+    process_action_result(Info, {output, Payload, []}, AuthInfo);
+process_action_result(_, {output, Payload, Headers}, _) ->
     {ok, Payload, Headers};
 
-process_action_result(_, Else) ->
+process_action_result(_, Else, _) ->
     Else.
 
 render_view(Location, Req) ->

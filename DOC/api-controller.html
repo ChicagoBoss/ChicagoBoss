@@ -119,7 +119,7 @@ view(<span class="atom">'GET'</span>, [Year, Month]) -&gt;<br />
     {ok, ExtraInfo}
 </div>
 
-<p><code>ExtraInfo</code> will be passed as the third argument to the action.</p>
+<p><code>ExtraInfo</code> will be passed as the third argument to the action, and as a variable called "_auth" to the templates.</p>
 
 <div class="code">
     {redirect, Location<span class="typevar">::string()</span>}

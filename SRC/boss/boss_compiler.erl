@@ -1,5 +1,5 @@
 -module(boss_compiler).
--compile(export_all).
+-export([compile/1, compile/2, parse/1]).
 
 compile(File) ->
     compile(File, []).
@@ -8,14 +8,16 @@ compile(File, Options) ->
     case parse(File) of
         {ok, Forms} ->
             CompilerOptions = proplists:get_value(compiler_options, Options, 
-                [verbose, return_errors, {parse_transform, boss_db_pt}]),
-            NewForms = case proplists:get_value(pre_compile_transform, Options) of
+                [verbose, return_errors]),
+            NewForms = case proplists:get_value(pre_revert_transform, Options) of
                 undefined ->
                     Forms;
                 TransformFun when is_function(TransformFun) ->
                     TransformFun(Forms)
             end,
-            RevertedForms = erl_syntax:revert(NewForms),
+            RevertedForms = lists:foldl(fun(Mod, Acc) ->
+                       Mod:parse_transform(Acc, CompilerOptions)
+               end, erl_syntax:revert(NewForms), [boss_db_pt, smart_exceptions]),
             case boss_load:compile_forms(RevertedForms, File, CompilerOptions) of
                 {ok, Module, Bin} ->
                     case proplists:get_value(out_dir, Options) of

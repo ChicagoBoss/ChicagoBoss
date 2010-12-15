@@ -8,7 +8,7 @@
 %% @equiv compile(File, [])
 compile(File) ->
     boss_compiler:compile(File, 
-        [{pre_compile_transform, fun trick_out_forms/1},
+        [{pre_revert_transform, fun trick_out_forms/1},
             {out_dir, "ebin"}]).
 
 %% @spec edoc_module( File::string() ) -> {Module::atom(), EDoc}

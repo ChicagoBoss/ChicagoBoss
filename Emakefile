@@ -12,3 +12,4 @@
 {"SRC/mysql/*", [debug_info, {outdir, "ebin"}, {i, "INCLUDE"}]}.
 {"SRC/simple_bridge/*", [debug_info, {outdir, "ebin"}, {i, "INCLUDE"}]}.
 {"SRC/simple_bridge/*_bridge_modules/*", [debug_info, {outdir, "ebin"}, {i, "INCLUDE"}]}.
+{"SRC/smart_exceptions/*", [debug_info, nowarn_unused_vars, {outdir, "ebin"}]}.
