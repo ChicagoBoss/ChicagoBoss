@@ -142,14 +142,19 @@ load_and_execute_prod({Controller, _, _} = Location, Req) ->
     end.
 
 load_and_execute_dev({"doc", ModelName, _}, Req) ->
-    case boss_load:load_models() of
-        {ok, _} ->
-            Model = list_to_atom(ModelName),
-            {Model, Edoc} = boss_record_compiler:edoc_module(
-                boss_files:model_path(ModelName++".erl"), [{private, true}]),
-            {ok, edoc:layout(Edoc), []};
-        {error, ErrorList} ->
-            render_errors(ErrorList, Req)
+    case string:chr(ModelName, $.) of
+        0 ->
+            case boss_load:load_models() of
+                {ok, _} ->
+                    Model = list_to_atom(ModelName),
+                    {Model, Edoc} = boss_record_compiler:edoc_module(
+                        boss_files:model_path(ModelName++".erl"), [{private, true}]),
+                    {ok, edoc:layout(Edoc), []};
+                {error, ErrorList} ->
+                    render_errors(ErrorList, Req)
+            end;
+        _ ->
+            {not_found, "File not found"}
     end;
 load_and_execute_dev({Controller, _, _} = Location, Req) ->
     case boss_load:load_libraries() of
