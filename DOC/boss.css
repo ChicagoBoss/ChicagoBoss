@@ -1,7 +1,7 @@
 body {
     font-family: Arial;
     text-align: center;
-    background-color: #434F55;
+    background-color: #9EC5D3;
 }
 div.equation {
     color: white;
@@ -16,8 +16,12 @@ span.chicago {
     font-size: 72px;
 }
 span.boss {
+    color: black;
     font-size: 98px;
     font-weight: bold;
+}
+span.bullet {
+    font-size: 36px;
 }
 div.quote {
     font-style: italic;
@@ -66,7 +70,7 @@ div.nav {
     margin-bottom: 20px;
 }
 div.nav a {
-    color: #ABF9ff;
+    color: #000;
     font-size: 20px; margin-top: 40px; margin-bottom: 20px;
 }
 div.subnav {text-align: center; font-size: 18px; padding: 16px;
@@ -88,7 +92,7 @@ div.main_logo {
     float: left;
 }
 div.main_checklist {
-    color: white; 
+    color: black; 
     font-size: 30px; 
     text-align: left; 
     float: left; 
@@ -106,6 +110,9 @@ div.secondary_header {
 div.secondary_logo {
     float: left;
     font-size: 24px;
+}
+div.secondary_logo strong {
+    color: black;
 }
 div.secondary_quote {
     float: right;
@@ -127,7 +134,7 @@ div.content {
 div.content .top_left {
     width: 30px;
     height: 30px;
-    background-image: url('http://maps.evanmiller.org/circle/434F55/ffffff/30.gif');
+    background-image: url('http://maps.evanmiller.org/circle/9EC5D3/ffffff/30.gif');
     background-repeat: no-repeat;
     background-position: top left;
     top: 0px;
@@ -138,7 +145,7 @@ div.content .top_left {
 div.content .top_right {
     width: 30px;
     height: 30px;
-    background-image: url('http://maps.evanmiller.org/circle/434F55/ffffff/30.gif');
+    background-image: url('http://maps.evanmiller.org/circle/9EC5D3/ffffff/30.gif');
     background-repeat: no-repeat;
     background-position: top right;
     top: 0px;
