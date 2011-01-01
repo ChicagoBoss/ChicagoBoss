@@ -471,9 +471,9 @@ merge_info(Info1, Info2) ->
 
 with_dependencies([], Args) ->
     Args;
-with_dependencies([H, T], Args) ->
-     with_dependencies(T, with_dependency(H, Args)).
-        
+with_dependencies([Dependency | Rest], Args) ->
+     with_dependencies(Rest, with_dependency(Dependency, Args)).
+
 with_dependency(FilePath, {{Ast, Info}, TreeWalker}) ->
     {{Ast, Info#ast_info{dependencies = [FilePath | Info#ast_info.dependencies]}}, TreeWalker}.
 
