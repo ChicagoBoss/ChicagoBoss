@@ -57,13 +57,17 @@ start() ->
 %% options until you restart your Erlang VM.
 %% @end
 start(StartupOptions) when is_list(StartupOptions) ->
-    {ok, AppEnvOptions} = application:get_env(medici, options),
-    CombinedOptions = [StartupOptions | AppEnvOptions],
+    AppEnvOptions = case application:get_env(medici, options) of
+        {ok, Val} -> Val;
+        undefined -> []
+    end,
+    CombinedOptions = StartupOptions ++ AppEnvOptions,
     %% Merge into a single set of options, favoring those passed in
     %% to start/1 over the app env.
     MediciOptions = [{K, proplists:get_value(K, CombinedOptions)} || 
-			K <- proplists:get_keys(CombinedOptions)],
-    application:put_env(medici, {options, MediciOptions}),
+        K <- proplists:get_keys(CombinedOptions)],
+    application:load(medici),
+    ok = application:set_env(medici, options, MediciOptions),
     application:start(medici).
 
 stop() ->

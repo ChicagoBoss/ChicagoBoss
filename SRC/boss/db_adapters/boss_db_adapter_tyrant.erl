@@ -8,8 +8,10 @@
 start() ->
     start([]).
 
-start(_Options) ->
-    ok = medici:start(),
+start(Options) ->
+    Host = proplists:get_value(db_host, Options, "localhost"),
+    Port = proplists:get_value(db_port, Options, 1978),
+    ok = medici:start([{hostname, Host}, {port, Port}]),
     {ok, undefined}.
 
 stop(_) ->

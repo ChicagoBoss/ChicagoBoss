@@ -22,7 +22,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/0]).
+-export([start_link/0, start_link/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -43,12 +43,10 @@
 %%
 %% @private Start the Tyrant port server
 start_link() ->
-    case application:get_env(options) of
-	{ok, MediciOpts} ->
-	    ServerOpts = proplists:get_value(run_server, MediciOpts, []);
-	_ ->
-	    ServerOpts = []
-    end,
+    start_link([]).
+
+start_link(MediciOpts) ->
+    ServerOpts = proplists:get_value(run_server, MediciOpts, []),
     case proplists:get_value(server_name, ServerOpts) of
 	undefined ->
 	    gen_server:start_link({local, ?PORT_SRV_NAME}, ?MODULE, [], []);
@@ -59,15 +57,10 @@ start_link() ->
 %%====================================================================
 %% gen_server callbacks
 %%====================================================================
-init(_Args) ->
+init(MediciOpts) ->
     {ok, LogMatch} = re:compile(?LOG_REGEXP),
     {ok, PidMatch} = re:compile(?PID_REGEXP),
-    case application:get_env(options) of
-	{ok, MediciOpts} ->
-	    ServerOpts = proplists:get_value(run_server, MediciOpts, []);
-	_ ->
-	    ServerOpts = []
-    end,
+    ServerOpts = proplists:get_value(run_server, MediciOpts, []),
     process_flag(trap_exit, true),
     start_server(ServerOpts, #state{log_match=LogMatch,
 				    pid_match=PidMatch}).

@@ -26,7 +26,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/0]).
+-export([start_link/0, start_link/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -39,7 +39,9 @@
 %% @spec start_link() -> {ok,Pid} | ignore | {error,Error}
 %% @private Starts the connection handler
 start_link() ->
-    {ok, MediciOpts} = application:get_env(options),
+    start_link([]).
+
+start_link(MediciOpts) ->
     gen_server:start_link(?MODULE, MediciOpts, []).
 
 %%====================================================================

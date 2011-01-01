@@ -42,20 +42,19 @@ start_link(StartArgs) ->
 %% to find out about restart strategy, maximum restart frequency and child 
 %% specifications.
 %%--------------------------------------------------------------------
-init(StartArgs) ->
-    {ok, MediciOpts} = application:get_env(options),
+init(MediciOpts) ->
     ClientCount = proplists:get_value(num_connections, MediciOpts, ?NUM_CLIENTS),
     case proplists:get_bool(native, MediciOpts) of
 	false ->
 	    ChildList = [{list_to_atom("medici_connection_"++integer_to_list(ChildNum)), 
-			  {medici_conn, start_link, StartArgs},
+			  {medici_conn, start_link, [MediciOpts]},
 			  permanent,
 			  2000,
 			  worker,
 			  [medici_conn]} || ChildNum <- lists:seq(1, ClientCount)];
 	true ->
 	    ChildList = [{list_to_atom("medici_connection_"++integer_to_list(ChildNum)), 
-			  {medici_native_conn, start_link, StartArgs},
+			  {medici_native_conn, start_link, [MediciOpts]},
 			  permanent,
 			  2000,
 			  worker,
