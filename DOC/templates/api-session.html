@@ -1,0 +1,39 @@
+{% extends "api.html" %}
+{% block api_content %}
+<p>BossSession is a multiadapter session management. Currently ets and Mnesia (for distributed setups) are supported. For distributed setups, is necessary start Boss with a node name.</p>
+<p>BossSession is automatically started, so, by default an ets based session support is provided</p>
+
+<h2>Operations</h2>
+
+<h3>get_session_data/1</h3>
+<div class="code">
+boss_session:get_session_data(Req) -&gt; list | {error, Reason}
+</div>
+<p>Get all session data associated to the Request.</p>
+
+<h3>get_session_data/2</h3>
+<div class="code">
+boss_session:get_session_data(Req, Key) -&gt; list | {error, Reason}
+</div>
+<p>Get session data for the Request for a given Key.</p>
+
+
+<h3>set_session_data/3</h3>
+<div class="code">
+set_session_data(Req,Key,Value) -&gt; ok | {error, Reason}
+</div>
+<p>Set session data for the Request with key Key and value Value.</p>
+
+<h3>delete_session/1</h3>
+<div class="code">
+delete_session(Req) -&gt; ok | {error, Reason}
+</div>
+<p>Delete all session data for the Request.</p>
+
+<h3>remove_session_data/2</h3>
+<div class="code">
+remove_session_data(Sid, Key) -&gt; ok | {error, Reason}
+</div>
+<p>Remove the Key from session data for the Request.</p>
+
+{% endblock %}

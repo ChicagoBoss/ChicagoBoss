@@ -1,5 +1,6 @@
 {"SRC/boss/*", [debug_info, {outdir, "ebin"}, {i, "INCLUDE"}]}.
 {"SRC/boss/db_adapters/*", [debug_info, {outdir, "ebin"}, {i, "INCLUDE"}]}.
+{"SRC/boss/session_adapters/*", [debug_info, {outdir, "ebin"}, {i, "INCLUDE"}]}.
 {"test/*", [debug_info, {outdir, "ebin"}]}.
 {"SRC/erlydtl/*", [debug_info, {outdir, "ebin"}]}.
 {"SRC/erlydtl/i18n/*", [debug_info, {outdir, "ebin"}]}.

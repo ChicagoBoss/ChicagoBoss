@@ -1,6 +1,7 @@
 ERL=erl
 ERLC=erlc
 DB_TEST_APP=boss_db_test.app
+SESSION_TEST_APP=boss_session_test.app
 SERVER_APP=mochiweb.app
 DRIVER_APP=medici.app
 TRANSLATE_APP=boss_translator.app
@@ -9,9 +10,10 @@ APPLICATION=boss
 DEPS 	= erlydtl mochiweb
 PP_PARSER=SRC/aleppo/aleppo_parser
 DB_CONFIG_DIR=SRC/boss/db_adapters/test_config
+SESSION_CONFIG_DIR=SRC/boss/session_adapters/test_config
 
 all: $(PP_PARSER).erl ebin/$(APP) ebin/$(DRIVER_APP) ebin/$(SERVER_APP) \
-    ebin/$(TEMPLATE_APP) ebin/$(TRANSLATE_APP) ebin/$(DB_TEST_APP) dirs
+    ebin/$(TEMPLATE_APP) ebin/$(TRANSLATE_APP) ebin/$(DB_TEST_APP) ebin/$(SESSION_TEST_APP) dirs
 	$(ERL) -pa ebin -make
 
 $(PP_PARSER).erl: $(PP_PARSER).yrl
@@ -36,13 +38,17 @@ ebin/$(DB_TEST_APP): SRC/boss/$(DB_TEST_APP)
 	-mkdir -p ebin
 	cp $< $@
 
-ebin/$(SERVER_APP): SRC/mochiweb/$(SERVER_APP)
+ebin/$(SESSION_TEST_APP): SRC/boss/$(SESSION_TEST_APP)
 	-mkdir -p ebin
 	cp $< $@
 
+ebin/$(SERVER_APP): SRC/mochiweb/$(SERVER_APP)
+	-mkdir -p ebin
+	cp $< $@DB
+
 clean:
 	rm -fv ebin/*.beam
-	-for a in $(DRIVER_APP) $(APP) $(SERVER_APP) $(TRANSLATE_APP); do rm -fv ebin/$$a; done
+	-for a in $(DRIVER_APP) $(DB_TEST_APP) $(APP) $(SERVER_APP) $(TRANSLATE_APP); do rm -fv ebin/$$a; done
 
 edoc:
 	$(ERL) -pa ebin -noshell -eval "boss_doc:run()" -s init stop
@@ -59,3 +65,10 @@ test_mysql:
 
 test_pgsql:
 	$(ERL) -pa ebin -run boss_db_test start -config $(DB_CONFIG_DIR)/pgsql -noshell
+
+test_session_ets:
+	$(ERL) -pa ebin -run boss_session_test start -config $(SESSION_CONFIG_DIR)/ets -noshell
+
+test_session_mnesia:
+	$(ERL) -pa ebin -run boss_session_test start -config $(SESSION_CONFIG_DIR)/mnesia -noshell
+		

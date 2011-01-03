@@ -32,5 +32,13 @@
         <li><code>mochiweb</code> - The <a href="http://code.google.com/p/mochiweb/">Mochiweb</a> Web Server</li>
         <li><code>misultin</code> - The <a href="http://code.google.com/p/misultin/">Misultin</a> Web Server</li>
     </ul>
-    </li>
+    <li><code>session_adapter</code> Selects the session driver to use. Valid values:</li>
+    <ul>
+        <li><code>ets</code> (default)</li>
+        <li><code>mnesia</code></li>
+    </ul>
+    <li><code>session_key</code>: Cookie key for sessions. Defaults to "_boss_session"</li>
+    <li><code>session_exp_time</code>: Expiration time for the session cookie. Defaults to 525600</li>	
+    <li><code>session_mnesia_nodes</code>: (optional, Mnesia sessions only) - List of Mnesia nodes, defaults to node()</li>
+</ul>
 {% endblock %}

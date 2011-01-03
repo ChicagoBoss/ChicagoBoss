@@ -7,7 +7,10 @@
         boss_web_controller,
         boss_db,
         boss_db_controller,
-        boss_db_sup
+        boss_db_sup,
+        boss_session,
+        boss_session_controller,
+        boss_session_sup        
             ]},
     {registered, []},
     {mod, {boss_app, []}},

@@ -18,7 +18,8 @@ start(Config) ->
     end,
 
     boss_db:start(),
-
+	boss_session:start(),
+	
     MailDriver = get_env(mail_driver, boss_mail_driver_smtp),
     boss_mail:start([{driver, MailDriver}]),
 
@@ -37,6 +38,7 @@ start(Config) ->
 stop() ->
     error_logger:logfile(close),
     boss_db:stop(),
+	boss_session:stop(),
     mochiweb_http:stop(),
     misultin:stop().
 
@@ -54,7 +56,9 @@ handle_request(Req, RequestMod, ResponseMod) ->
             Response = simple_bridge:make_response(ResponseMod, {Req, boss_files:admin_static_path()}),
             (Response:file([$/|File])):build_response();
         _ -> 
-            {StatusCode, Headers, Payload} = process_request(Request),
+            SessionKey = boss_session:get_session_key(),
+			SessionId = boss_session:new_session(Request:cookie(SessionKey)),			
+			{StatusCode, Headers, Payload} = process_request(Request),
             ErrorFormat = "~s ~s ~p~n", 
             ErrorArgs = [Request:request_method(), Request:path(), StatusCode],
             case StatusCode of
@@ -64,8 +68,10 @@ handle_request(Req, RequestMod, ResponseMod) ->
             end,
             Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
             Response1 = (Response:status_code(StatusCode)):data(Payload),
-            Response2 = lists:foldl(fun({K, V}, Acc) -> Acc:header(K, V) end, Response1, Headers),
-            Response2:build_response()
+			SessionExpTime = boss_session:get_session_exp_time(),
+			Response2 = Response1:cookie(SessionKey, SessionId, "/", SessionExpTime),
+			Response3 = lists:foldl(fun({K, V}, Acc) -> Acc:header(K, V) end, Response2, Headers),
+            Response3:build_response()
     end.
 
 process_request(Req) ->
@@ -279,11 +285,12 @@ render_view(Location, Req, Variables) ->
 render_view({Controller, Template, _}, Req, Variables, Headers) ->
     ViewPath = boss_files:web_view_path(Controller, Template),
     LoadResult = boss_load:load_view_if_dev(ViewPath),
+	BossFlash = boss_flash:get_and_clear(Req),
     case LoadResult of
         {ok, Module} ->
             TranslationFun = choose_translation_fun(Module:translatable_strings(), 
                 Req:header(accept_language), proplists:get_value("Content-Language", Headers)),
-            case Module:render(Variables, TranslationFun) of
+            case Module:render(lists:merge(Variables, BossFlash), TranslationFun) of
                 {ok, Payload} ->
                     {ok, Payload, Headers};
                 Err ->

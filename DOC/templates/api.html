@@ -33,7 +33,7 @@
     <strong>BossDB</strong>
     {% else %}
     <a href="api-db.html">BossDB</a>
-    {% endifequal %}
+    {% endifequal %} 
     &nbsp; | &nbsp; 
     {% ifequal this_page "api-record.html" %}
     <strong>Models</strong>
@@ -47,6 +47,18 @@
     <a href="api-controller.html">Web Controllers</a> 
     {% endifequal %}
     &nbsp; | &nbsp;
+    {% ifequal this_page "api-session.html" %}
+    <strong>BossSession</strong>
+    {% else %}
+    <a href="api-session.html">BossSession</a>
+    {% endifequal %}       
+    &nbsp; | &nbsp;
+    {% ifequal this_page "api-flash.html" %}
+    <strong>BossFlash</strong>
+    {% else %}
+    <a href="api-flash.html">BossFlash</a>
+    {% endifequal %}       
+    &nbsp; | &nbsp;    
     {% ifequal this_page "api-mail-controller.html" %}
     <strong>Mail</strong>
     {% else %}
