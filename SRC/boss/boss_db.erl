@@ -203,6 +203,8 @@ data_type(_, _Val) when is_tuple(_Val) ->
     "datetime";
 data_type(_, _Val) when is_boolean(_Val) ->
     "boolean";
+data_type(_, undefined) ->
+    "null";
 data_type('id', _) ->
     "id";
 data_type(Key, Val) when is_list(Val) ->
