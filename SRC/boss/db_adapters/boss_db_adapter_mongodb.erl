@@ -96,24 +96,41 @@ delete(Conn, Id) when is_list(Id) ->
         {error, Reason} -> {error, Reason}
     end.
 
+proplist_to_tuple(PropList) ->
+    ListOfLists = [[K,V]||{K,V} <- PropList],
+    io:format("@@@@ ~p~n", [ListOfLists]),
+    list_to_tuple(lists:foldl(
+            fun([K, V], Acc) ->
+                    [K,V|Acc] 
+            end, [], ListOfLists)).
+
 save_record(Conn, Record) when is_tuple(Record) ->
-    case Record:id() of
+    Type = element(1, Record),
+    Collection = list_to_atom(type_to_table_name(Type)),
+    Attributes = case Record:id() of
         id ->
-            Type = element(1, Record),
-            Query = build_insert_query(Record),
-            Res = pgsql:equery(Conn, Query, []),
-            case Res of
-                {ok, _, _, [{Id}]} ->
-                    {ok, Record:id(lists:concat([Type, "-", integer_to_list(Id)]))};
-                {error, Reason} -> {error, Reason}
-            end;
-        Defined when is_list(Defined) ->
-            Query = build_update_query(Record),
-            Res = pgsql:equery(Conn, Query, []),
-            case Res of
-                {ok, _} -> {ok, Record};
-                {error, Reason} -> {error, Reason}
-            end
+            proplist_to_tuple(proplists:delete(id, Record:attributes()));
+        DefinedId when is_list(DefinedId) ->
+            io:format(">>>> ~p, ~p~n", [Type, DefinedId]),
+            [_, CollectionId] = string:tokens(DefinedId, "-"),
+            PropList = lists:map(fun({K,V}) ->
+                            case K of 
+                                id -> {'_id', {list_to_binary(CollectionId)}};
+                                _ -> {K, V}
+                            end
+                    end, Record:attributes()),
+            proplist_to_tuple(PropList)
+    end,
+    io:format("@@@@ ~p, ~p~n", [Collection,Attributes]),
+    Res = execute(Conn, fun() -> 
+                mongo:save(Collection, Attributes)
+        end),
+    case Res of
+        {ok, ok} -> {ok, Record};
+        {ok, {Id}} -> 
+            {ok, Record:id(lists:concat([Type, "-", binary_to_list(Id)]))};
+        {failure, Reason} -> {error, Reason};
+        {connection_failure, Reason} -> {error, Reason}
     end.
 
 push(Conn, Depth) ->
