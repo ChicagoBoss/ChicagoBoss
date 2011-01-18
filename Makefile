@@ -66,6 +66,9 @@ test_mysql:
 test_pgsql:
 	$(ERL) -pa ebin -run boss_db_test start -config $(DB_CONFIG_DIR)/pgsql -noshell
 
+test_mongodb:
+	$(ERL) -pa ebin -run boss_db_test start -config $(DB_CONFIG_DIR)/mongodb -noshell
+
 test_session_ets:
 	$(ERL) -pa ebin -run boss_session_test start -config $(SESSION_CONFIG_DIR)/ets -noshell
 

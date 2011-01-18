@@ -3,6 +3,7 @@
 -export([start/0, start/1, stop/1, find/2, find/7]).
 -export([count/3, counter/2, incr/3, delete/2, save_record/2]).
 -export([push/2, pop/2, dump/1, execute/2]).
+-define(GREGORIAN_SECONDS_1970, 62167219200). % http://stackoverflow.com/questions/3672287/date-to-megaseconds
 -define(LOG(Name, Value), io:format("@@@ ~s: ~p~n", [Name, Value])).
 
 start() ->
@@ -27,7 +28,6 @@ execute({WriteMode, ReadMode, Connection, Database}, Fun) ->
 
 
 find(Conn, Id) when is_list(Id) ->
-    ?LOG("ID", Id),
     {Type, Collection, MongoId} = infer_type_from_id(Id),
     
     Res = execute(Conn, fun() ->
@@ -43,7 +43,8 @@ find(Conn, Id) when is_list(Id) ->
 
 tuple_to_proplist(Tuple) ->
     List = tuple_to_list(Tuple),
-    lists:reverse(list_to_proplist(List, [])).
+    Ret = lists:reverse(list_to_proplist(List, [])),
+    Ret.
 
 list_to_proplist([], Acc) -> Acc;
 list_to_proplist([K,V|T], Acc) ->
@@ -78,7 +79,6 @@ find(Conn, Type, Conditions, Max, Skip, Sort, SortOrder) when is_atom(Type), is_
                     mongo:find(Collection, proplist_to_tuple(Conditions), [],
                                Skip, Max) 
                 end),
-            ?LOG("Res", Res),
             case Res of
                 {ok, Curs} ->
                     RecordArgs = 
@@ -121,13 +121,11 @@ incr(Conn, Id, Count) ->
     end.
 
 delete(Conn, Id) when is_list(Id) ->
-    ?LOG("ID", Id),
     {_Type, Collection, MongoId} = infer_type_from_id(Id),
     
     Res = execute(Conn, fun() ->
                 mongo:delete(Collection, {'_id', MongoId})
         end),
-    ?LOG("Res", Res),
     case Res of
         {ok, ok} -> ok;
         {failure, Reason} -> {error, Reason};
@@ -135,7 +133,7 @@ delete(Conn, Id) when is_list(Id) ->
     end.
 
 proplist_to_tuple(PropList) ->
-    ListOfLists = [[K,V]||{K,V} <- PropList],
+    ListOfLists = lists:reverse([[K,V]||{K,V} <- PropList]),
     list_to_tuple(lists:foldl(
             fun([K, V], Acc) ->
                     [K,V|Acc] 
@@ -149,13 +147,15 @@ save_record(Conn, Record) when is_tuple(Record) ->
     Collection = type_to_collection(Type),
     Attributes = case Record:id() of
         id ->
-            proplist_to_tuple(proplists:delete(id, Record:attributes()));
+            PropList = lists:map(fun({K,V}) -> {K, pack_value(V)} end, 
+                                 Record:attributes()),
+            Tuple = proplist_to_tuple(proplists:delete(id, PropList)),
+            Tuple;
         DefinedId when is_list(DefinedId) ->
-            io:format(">>>> ~p, ~p~n", [Type, DefinedId]),
             PropList = lists:map(fun({K,V}) ->
                             case K of 
                                 id -> {'_id', boss_to_mongo_id(DefinedId)};
-                                _ -> {K, V}
+                                _ -> {K, pack_value(V)}
                             end
                     end, Record:attributes()),
             proplist_to_tuple(PropList)
@@ -172,11 +172,10 @@ save_record(Conn, Record) when is_tuple(Record) ->
     end.
 
 push(Conn, Depth) ->
-    case Depth of 0 -> pgsql:squery(Conn, "BEGIN"); _ -> ok end,
-    pgsql:squery(Conn, "SAVEPOINT savepoint"++integer_to_list(Depth)).
+    ok.
 
 pop(Conn, Depth) ->
-    pgsql:squery(Conn, "ROLLBACK TO SAVEPOINT savepoint"++integer_to_list(Depth - 1)).
+    ok.
 
 dump(_Conn) -> "".
 
@@ -352,27 +351,14 @@ escape_sql1([$'|Rest], Acc) ->
 escape_sql1([C|Rest], Acc) ->
     escape_sql1(Rest, [C|Acc]).
 
-pack_datetime(DateTime) ->
-    "TIMESTAMP '" ++ erlydtl_filters:date(DateTime, "c") ++ "'".
+datetime_to_now(DateTime) ->
+    GSeconds = calendar:datetime_to_gregorian_seconds(DateTime),
+    ESeconds = GSeconds - ?GREGORIAN_SECONDS_1970,
+    {ESeconds div 1000000, ESeconds rem 1000000, 0}.
 
-pack_now(Now) -> pack_datetime(calendar:now_to_datetime(Now)).
-
-pack_value(V) when is_binary(V) ->
-    pack_value(binary_to_list(V));
-pack_value(V) when is_list(V) ->
-    "'" ++ escape_sql(V) ++ "'";
-pack_value({MegaSec, Sec, MicroSec}) when is_integer(MegaSec) andalso is_integer(Sec) andalso is_integer(MicroSec) ->
-    pack_now({MegaSec, Sec, MicroSec});
 pack_value({{_, _, _}, {_, _, _}} = Val) ->
-    pack_datetime(Val);
-pack_value(Val) when is_integer(Val) ->
-    integer_to_list(Val);
-pack_value(Val) when is_float(Val) ->
-    float_to_list(Val);
-pack_value(true) ->
-    "TRUE";
-pack_value(false) ->
-    "FALSE".
+    datetime_to_now(Val);
+pack_value(V) -> V.
 
 %% Functions below copied from emongo <https://github.com/boorad/emongo>
 %% 
