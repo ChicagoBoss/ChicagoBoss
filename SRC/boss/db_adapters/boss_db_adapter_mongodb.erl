@@ -3,6 +3,7 @@
 -export([start/0, start/1, stop/1, find/2, find/7]).
 -export([count/3, counter/2, incr/3, delete/2, save_record/2]).
 -export([push/2, pop/2, dump/1, execute/2]).
+-define(LOG(Name, Value), io:format("@@@ ~s: ~p~n", [Name, Value])).
 
 start() ->
     start([]).
@@ -26,43 +27,76 @@ execute({WriteMode, ReadMode, Connection, Database}, Fun) ->
 
 
 find(Conn, Id) when is_list(Id) ->
-    {Type, TableName, TableId} = infer_type_from_id(Id),
-    Res = pgsql:equery(Conn, ["SELECT * FROM ", TableName, " WHERE id = $1"], [TableId]),
+    ?LOG("ID", Id),
+    {Type, Collection, MongoId} = infer_type_from_id(Id),
+    
+    Res = execute(Conn, fun() ->
+                mongo:find_one(Collection, {'_id', MongoId})
+        end),
+
     case Res of
-        {ok, _Columns, []} ->
-            undefined;
-        {ok, Columns, [Record]} ->
-            case model_is_loaded(Type) of
-                true -> activate_record(Record, Columns, Type);
-                false -> {error, {module_not_loaded, Type}}
-            end;
-        {error, Reason} ->
-            {error, Reason}
+        {ok, {Doc}} -> mongo_tuple_to_record(Type, Doc);
+        {failure, Reason} -> {error, Reason};
+        {connection_failure, Reason} -> {error, Reason}
     end.
+
+
+tuple_to_proplist(Tuple) ->
+    List = tuple_to_list(Tuple),
+    lists:reverse(list_to_proplist(List, [])).
+
+list_to_proplist([], Acc) -> Acc;
+list_to_proplist([K,V|T], Acc) ->
+    list_to_proplist(T, [{K, V}|Acc]).
+
+mongo_to_boss_id(Type, MongoId) ->
+    lists:concat([Type, "-", binary_to_list(dec2hex(element(1, MongoId)))]).
+
+boss_to_mongo_id(BossId) ->
+    [_, MongoId] = string:tokens(BossId, "-"),
+    {hex2dec(MongoId)}.
+
+mongo_tuple_to_record(Type, Row) ->
+    PropList = tuple_to_proplist(Row),
+    Args = lists:map(fun({K,V}) ->
+                case K of
+                    '_id' -> mongo_to_boss_id(Type, V);
+                    _ -> V
+                end
+        end, PropList),
+    apply(Type, new, Args).
+
+
 
 find(Conn, Type, Conditions, Max, Skip, Sort, SortOrder) when is_atom(Type), is_list(Conditions), 
                                                               is_integer(Max), is_integer(Skip), 
                                                               is_atom(Sort), is_atom(SortOrder) ->
     case model_is_loaded(Type) of
         true ->
-            Query = build_select_query(Type, Conditions, Max, Skip, Sort, SortOrder),
-            Res = pgsql:equery(Conn, Query, []),
+            Collection = type_to_collection(Type),
+            Res = execute(Conn, fun() ->
+                    mongo:find(Collection, proplist_to_tuple(Conditions), [],
+                               Skip, Max) 
+                end),
+            ?LOG("Res", Res),
             case Res of
-                {ok, Columns, Rows} ->
-                    lists:map(fun(Row) ->
-                                activate_record(Row, Columns, Type)
-                        end, Rows);
-                {error, Reason} ->
-                    {error, Reason}
+                {ok, Curs} ->
+                    RecordArgs = 
+                        lists:map(fun(Row) ->
+                                    mongo_tuple_to_record(Type, Row)
+                            end, mongo:rest(Curs));
+                {failure, Reason} -> {error, Reason};
+                {connection_failure, Reason} -> {error, Reason}
             end;
         false -> {error, {module_not_loaded, Type}}
     end.
 
+
 count(Conn, Type, Conditions) ->
-    ConditionClause = build_conditions(Conditions),
-    TableName = type_to_table_name(Type),
-    {ok, _, [{Count}]} = pgsql:equery(Conn, 
-        ["SELECT COUNT(*) AS count FROM ", TableName, " WHERE ", ConditionClause]),
+    Collection = type_to_collection(Type),
+    {ok, Count} = execute(Conn, fun() -> 
+                mongo:count(Collection, proplist_to_tuple(Conditions))
+        end),
     Count.
 
 counter(Conn, Id) when is_list(Id) ->
@@ -87,48 +121,52 @@ incr(Conn, Id, Count) ->
     end.
 
 delete(Conn, Id) when is_list(Id) ->
-    {_, TableName, TableId} = infer_type_from_id(Id),
-    Res = pgsql:equery(Conn, ["DELETE FROM ", TableName, " WHERE id = $1"], [TableId]),
+    ?LOG("ID", Id),
+    {_Type, Collection, MongoId} = infer_type_from_id(Id),
+    
+    Res = execute(Conn, fun() ->
+                mongo:delete(Collection, {'_id', MongoId})
+        end),
+    ?LOG("Res", Res),
     case Res of
-        {ok, _Count} -> 
-            pgsql:equery(Conn, "DELETE FROM counters WHERE name = $1", [Id]),
-            ok;
-        {error, Reason} -> {error, Reason}
+        {ok, ok} -> ok;
+        {failure, Reason} -> {error, Reason};
+        {connection_failure, Reason} -> {error, Reason}
     end.
 
 proplist_to_tuple(PropList) ->
     ListOfLists = [[K,V]||{K,V} <- PropList],
-    io:format("@@@@ ~p~n", [ListOfLists]),
     list_to_tuple(lists:foldl(
             fun([K, V], Acc) ->
                     [K,V|Acc] 
             end, [], ListOfLists)).
 
+type_to_collection(Type) ->
+    list_to_atom(type_to_table_name(Type)).
+
 save_record(Conn, Record) when is_tuple(Record) ->
     Type = element(1, Record),
-    Collection = list_to_atom(type_to_table_name(Type)),
+    Collection = type_to_collection(Type),
     Attributes = case Record:id() of
         id ->
             proplist_to_tuple(proplists:delete(id, Record:attributes()));
         DefinedId when is_list(DefinedId) ->
             io:format(">>>> ~p, ~p~n", [Type, DefinedId]),
-            [_, CollectionId] = string:tokens(DefinedId, "-"),
             PropList = lists:map(fun({K,V}) ->
                             case K of 
-                                id -> {'_id', {list_to_binary(CollectionId)}};
+                                id -> {'_id', boss_to_mongo_id(DefinedId)};
                                 _ -> {K, V}
                             end
                     end, Record:attributes()),
             proplist_to_tuple(PropList)
     end,
-    io:format("@@@@ ~p, ~p~n", [Collection,Attributes]),
     Res = execute(Conn, fun() -> 
                 mongo:save(Collection, Attributes)
         end),
     case Res of
         {ok, ok} -> {ok, Record};
-        {ok, {Id}} -> 
-            {ok, Record:id(lists:concat([Type, "-", binary_to_list(Id)]))};
+        {ok, Id} -> 
+            {ok, Record:id(mongo_to_boss_id(Type, Id))};
         {failure, Reason} -> {error, Reason};
         {connection_failure, Reason} -> {error, Reason}
     end.
@@ -148,8 +186,8 @@ dump(_Conn) -> "".
 % internal
 
 infer_type_from_id(Id) when is_list(Id) ->
-    [Type, TableId] = string:tokens(Id, "-"),
-    {list_to_atom(Type), type_to_table_name(Type), list_to_integer(TableId)}.
+    [Type, BossId] = string:tokens(Id, "-"),
+    {list_to_atom(Type), type_to_collection(Type), boss_to_mongo_id(Id)}.
 
 type_to_table_name(Type) when is_atom(Type) ->
     type_to_table_name(atom_to_list(Type));
@@ -335,3 +373,46 @@ pack_value(true) ->
     "TRUE";
 pack_value(false) ->
     "FALSE".
+
+%% Functions below copied from emongo <https://github.com/boorad/emongo>
+%% 
+%% Copyright (c) 2009 Jacob Vorreuter <jacob.vorreuter@gmail.com> 
+%% Jacob Perkins <japerk@gmail.com> 
+%% Belyaev Dmitry <rumata-estor@nm.ru> 
+%% François de Metz <fdemetz@af83.com>
+
+dec2hex(Dec) ->
+    dec2hex(<<>>, Dec).
+
+dec2hex(N, <<I:8,Rem/binary>>) ->
+    dec2hex(<<N/binary, (hex0((I band 16#f0) bsr 4)):8, (hex0((I band 16#0f))):8>>, Rem);
+dec2hex(N,<<>>) ->
+    N.
+
+hex2dec(Hex) when is_list(Hex) ->
+    hex2dec(list_to_binary(Hex));
+
+hex2dec(Hex) ->
+    hex2dec(<<>>, Hex).
+
+hex2dec(N,<<A:8,B:8,Rem/binary>>) ->
+    hex2dec(<<N/binary, ((dec0(A) bsl 4) + dec0(B)):8>>, Rem);
+hex2dec(N,<<>>) ->
+    N.
+
+dec0($a) -> 10;
+dec0($b) -> 11;
+dec0($c) -> 12;
+dec0($d) -> 13;
+dec0($e) -> 14;
+dec0($f) -> 15;
+dec0(X) -> X - $0.
+
+hex0(10) -> $a;
+hex0(11) -> $b;
+hex0(12) -> $c;
+hex0(13) -> $d;
+hex0(14) -> $e;
+hex0(15) -> $f;
+hex0(I) ->  $0 + I.
+
