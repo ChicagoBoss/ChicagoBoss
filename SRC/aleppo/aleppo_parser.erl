@@ -1,7 +1,7 @@
 -module(aleppo_parser).
 -export([parse/1, parse_and_scan/1, format_error/1]).
 
--file("/usr/local/lib/erlang/lib/parsetools-2.0.2/include/yeccpre.hrl", 0).
+-file("/usr/local/lib/erlang/lib/parsetools-2.0.4/include/yeccpre.hrl", 0).
 %%
 %% %CopyrightBegin%
 %%
@@ -30,8 +30,8 @@
 parse(Tokens) ->
     yeccpars0(Tokens, {no_func, no_line}, 0, [], []).
 
--spec parse_and_scan({function() | {atom(), atom()}, [_]} | {atom(), atom(), [_]}) ->
-            yecc_ret().
+-spec parse_and_scan({function() | {atom(), atom()}, [_]}
+                     | {atom(), atom(), [_]}) -> yecc_ret().
 parse_and_scan({F, A}) -> % Fun or {M, F}
     yeccpars0([], {{F, A}, no_line}, 0, [], []);
 parse_and_scan({M, F, A}) ->
@@ -48,7 +48,7 @@ format_error(Message) ->
 
 %% To be used in grammar files to throw an error message to the parser
 %% toplevel. Doesn't have to be exported!
--compile({nowarn_unused_function,{return_error,2}}).
+-compile({nowarn_unused_function, return_error/2}).
 -spec return_error(integer(), any()) -> no_return().
 return_error(Line, Message) ->
     throw({error, {Line, ?MODULE, Message}}).
@@ -61,10 +61,7 @@ yeccpars0(Tokens, Tzr, State, States, Vstack) ->
         error: Error ->
             Stacktrace = erlang:get_stacktrace(),
             try yecc_error_type(Error, Stacktrace) of
-                {syntax_error, Token} ->
-                    yeccerror(Token);
-                {missing_in_goto_table=Tag, Symbol, State} ->
-                    Desc = {Symbol, State, Tag},
+                Desc ->
                     erlang:raise(error, {yecc_bug, ?CODE_VERSION, Desc},
                                  Stacktrace)
             catch _:_ -> erlang:raise(error, Error, Stacktrace)
@@ -74,13 +71,15 @@ yeccpars0(Tokens, Tzr, State, States, Vstack) ->
             Error
     end.
 
-yecc_error_type(function_clause, [{?MODULE,F,[State,_,_,_,Token,_,_]} | _]) ->
+yecc_error_type(function_clause, [{?MODULE,F,ArityOrArgs} | _]) ->
     case atom_to_list(F) of
-        "yeccpars2" ++ _ ->
-            {syntax_error, Token};
         "yeccgoto_" ++ SymbolL ->
             {ok,[{atom,_,Symbol}],_} = erl_scan:string(SymbolL),
-            {missing_in_goto_table, Symbol, State}
+            State = case ArityOrArgs of
+                        [S,_,_,_,_,_,_] -> S;
+                        _ -> state_is_unknown
+                    end,
+            {Symbol, State, missing_in_goto_table}
     end.
 
 yeccpars1([Token | Tokens], Tzr, State, States, Vstack) ->
@@ -145,11 +144,13 @@ yecctoken_end_location(Token) ->
         yecctoken_location(Token)
     end.
 
+-compile({nowarn_unused_function, yeccerror/1}).
 yeccerror(Token) ->
     Text = yecctoken_to_string(Token),
     Location = yecctoken_location(Token),
     {error, {Location, ?MODULE, ["syntax error before: ", Text]}}.
 
+-compile({nowarn_unused_function, yecctoken_to_string/1}).
 yecctoken_to_string(Token) ->
     case catch erl_scan:token_info(Token, text) of
         {text, Txt} -> Txt;
@@ -162,6 +163,7 @@ yecctoken_location(Token) ->
         _ -> element(2, Token)
     end.
 
+-compile({nowarn_unused_function, yecctoken2string/1}).
 yecctoken2string({atom, _, A}) -> io_lib:write(A);
 yecctoken2string({integer,_,N}) -> io_lib:write(N);
 yecctoken2string({float,_,F}) -> io_lib:write(F);
@@ -182,7 +184,7 @@ yecctoken2string(Other) ->
 
 
 
--file("src/aleppo/aleppo_parser.erl", 185).
+-file("SRC/aleppo/aleppo_parser.erl", 187).
 
 yeccpars2(0=S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_0(S, Cat, Ss, Stack, T, Ts, Tzr);
@@ -547,162 +549,164 @@ yeccpars2(175=S, Cat, Ss, Stack, T, Ts, Tzr) ->
 %% yeccpars2(180=S, Cat, Ss, Stack, T, Ts, Tzr) ->
 %%  yeccpars2_180(S, Cat, Ss, Stack, T, Ts, Tzr);
 yeccpars2(Other, _, _, _, _, _, _) ->
- erlang:error({yecc_bug,"1.3",{missing_state_in_action_table, Other}}).
+ erlang:error({yecc_bug,"1.4",{missing_state_in_action_table, Other}}).
 
 yeccpars2_0(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  NewStack = yeccpars2_0_(Stack),
  yeccpars2_2(2, Cat, [0 | Ss], NewStack, T, Ts, Tzr).
 
-yeccpars2_1(_S, '$end', _Ss, Stack,  _T, _Ts, _Tzr) ->
- {ok, hd(Stack)}.
+yeccpars2_1(_S, '$end', _Ss, Stack, _T, _Ts, _Tzr) ->
+ {ok, hd(Stack)};
+yeccpars2_1(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
+yeccpars2_2(S, '!', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 14, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, '#', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 15, Ss, Stack, T, Ts, Tzr);
 yeccpars2_2(S, '(', Ss, Stack, T, Ts, Tzr) ->
  yeccpars1(S, 16, Ss, Stack, T, Ts, Tzr);
 yeccpars2_2(S, ')', Ss, Stack, T, Ts, Tzr) ->
  yeccpars1(S, 17, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, '*', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 18, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, '+', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 19, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, '++', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 20, Ss, Stack, T, Ts, Tzr);
 yeccpars2_2(S, ',', Ss, Stack, T, Ts, Tzr) ->
  yeccpars1(S, 21, Ss, Stack, T, Ts, Tzr);
 yeccpars2_2(S, '-', Ss, Stack, T, Ts, Tzr) ->
  yeccpars1(S, 22, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, '--', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 23, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, '->', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 24, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, '.', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 25, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, '/', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 26, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, '/=', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 27, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, ':', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 28, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, ':-', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 29, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, '::', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 30, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, ';', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 31, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, '<', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 32, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, '<-', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 33, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, '<<', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 34, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, '<=', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 35, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, '=', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 36, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, '=/=', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 37, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, '=:=', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 38, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, '=<', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 39, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, '==', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 40, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, '>', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 41, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, '>=', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 42, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, '>>', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 43, Ss, Stack, T, Ts, Tzr);
 yeccpars2_2(S, '?', Ss, Stack, T, Ts, Tzr) ->
  yeccpars1(S, 44, Ss, Stack, T, Ts, Tzr);
 yeccpars2_2(S, '[', Ss, Stack, T, Ts, Tzr) ->
  yeccpars1(S, 45, Ss, Stack, T, Ts, Tzr);
 yeccpars2_2(S, ']', Ss, Stack, T, Ts, Tzr) ->
  yeccpars1(S, 46, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, 'after', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 47, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, 'and', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 48, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, 'andalso', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 49, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, atom, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 50, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, 'band', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 51, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, 'begin', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 52, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, 'bnot', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 53, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, 'bor', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 54, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, 'bsl', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 55, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, 'bsr', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 56, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, 'bxor', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 57, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, 'case', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 58, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, 'catch', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 59, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, char, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 60, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, 'div', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 61, Ss, Stack, T, Ts, Tzr);
 yeccpars2_2(S, dot, Ss, Stack, T, Ts, Tzr) ->
  yeccpars1(S, 62, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, 'end', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 63, Ss, Stack, T, Ts, Tzr);
 yeccpars2_2(S, eof, Ss, Stack, T, Ts, Tzr) ->
  yeccpars1(S, 64, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, float, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 65, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, 'fun', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 66, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, 'if', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 67, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, integer, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 68, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, 'not', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 69, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, 'of', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 70, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, 'or', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 71, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, 'orelse', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 72, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, 'query', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 73, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, 'receive', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 74, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, 'rem', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 75, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, spec, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 76, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, string, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 77, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, 'try', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 78, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, var, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 79, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, 'when', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 80, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, 'xor', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 81, Ss, Stack, T, Ts, Tzr);
 yeccpars2_2(S, '{', Ss, Stack, T, Ts, Tzr) ->
  yeccpars1(S, 82, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, '|', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 83, Ss, Stack, T, Ts, Tzr);
+yeccpars2_2(S, '||', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 84, Ss, Stack, T, Ts, Tzr);
 yeccpars2_2(S, '}', Ss, Stack, T, Ts, Tzr) ->
  yeccpars1(S, 85, Ss, Stack, T, Ts, Tzr);
-yeccpars2_2(S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_cont_2(S, Cat, Ss, Stack, T, Ts, Tzr).
-
-yeccpars2_cont_2(S, '!', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 14, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, '#', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 15, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, '*', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 18, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, '+', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 19, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, '++', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 20, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, '--', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 23, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, '->', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 24, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, '.', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 25, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, '/', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 26, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, '/=', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 27, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, ':', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 28, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, ':-', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 29, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, '::', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 30, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, ';', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 31, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, '<', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 32, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, '<-', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 33, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, '<<', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 34, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, '<=', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 35, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, '=', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 36, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, '=/=', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 37, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, '=:=', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 38, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, '=<', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 39, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, '==', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 40, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, '>', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 41, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, '>=', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 42, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, '>>', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 43, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, 'after', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 47, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, 'and', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 48, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, 'andalso', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 49, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, atom, Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 50, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, 'band', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 51, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, 'begin', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 52, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, 'bnot', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 53, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, 'bor', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 54, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, 'bsl', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 55, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, 'bsr', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 56, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, 'bxor', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 57, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, 'case', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 58, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, 'catch', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 59, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, char, Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 60, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, 'div', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 61, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, 'end', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 63, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, float, Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 65, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, 'fun', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 66, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, 'if', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 67, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, integer, Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 68, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, 'not', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 69, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, 'of', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 70, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, 'or', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 71, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, 'orelse', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 72, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, 'query', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 73, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, 'receive', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 74, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, 'rem', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 75, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, 'spec', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 76, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, string, Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 77, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, 'try', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 78, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, var, Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 79, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, 'when', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 80, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, 'xor', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 81, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, '|', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 83, Ss, Stack, T, Ts, Tzr);
-yeccpars2_cont_2(S, '||', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 84, Ss, Stack, T, Ts, Tzr).
+yeccpars2_2(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ NewStack = yeccpars2_2_(Stack),
+ 'yeccgoto_\'File\''(hd(Ss), Cat, Ss, NewStack, T, Ts, Tzr).
 
 yeccpars2_3(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  [_|Nss] = Ss,
@@ -860,7 +864,9 @@ yeccpars2_43(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
 yeccpars2_44(S, atom, Ss, Stack, T, Ts, Tzr) ->
  yeccpars1(S, 87, Ss, Stack, T, Ts, Tzr);
 yeccpars2_44(S, var, Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 88, Ss, Stack, T, Ts, Tzr).
+ yeccpars1(S, 88, Ss, Stack, T, Ts, Tzr);
+yeccpars2_44(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 yeccpars2_45(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  'yeccgoto_\'Token\''(hd(Ss), Cat, Ss, Stack, T, Ts, Tzr).
@@ -1173,9 +1179,9 @@ yeccpars2_89(_S, 'receive', Ss, Stack, T, Ts, Tzr) ->
 yeccpars2_89(_S, 'rem', Ss, Stack, T, Ts, Tzr) ->
  NewStack = yeccpars2_89_rem(Stack),
  yeccpars2_92(92, 'rem', [89 | Ss], NewStack, T, Ts, Tzr);
-yeccpars2_89(_S, 'spec', Ss, Stack, T, Ts, Tzr) ->
+yeccpars2_89(_S, spec, Ss, Stack, T, Ts, Tzr) ->
  NewStack = yeccpars2_89_spec(Stack),
- yeccpars2_92(92, 'spec', [89 | Ss], NewStack, T, Ts, Tzr);
+ yeccpars2_92(92, spec, [89 | Ss], NewStack, T, Ts, Tzr);
 yeccpars2_89(_S, string, Ss, Stack, T, Ts, Tzr) ->
  NewStack = yeccpars2_89_string(Stack),
  yeccpars2_92(92, string, [89 | Ss], NewStack, T, Ts, Tzr);
@@ -1318,8 +1324,8 @@ yeccpars2_90(_S, 'receive', Ss, Stack, T, Ts, Tzr) ->
  'yeccgoto_\'Expression\''(hd(Ss), 'receive', Ss, Stack, T, Ts, Tzr);
 yeccpars2_90(_S, 'rem', Ss, Stack, T, Ts, Tzr) ->
  'yeccgoto_\'Expression\''(hd(Ss), 'rem', Ss, Stack, T, Ts, Tzr);
-yeccpars2_90(_S, 'spec', Ss, Stack, T, Ts, Tzr) ->
- 'yeccgoto_\'Expression\''(hd(Ss), 'spec', Ss, Stack, T, Ts, Tzr);
+yeccpars2_90(_S, spec, Ss, Stack, T, Ts, Tzr) ->
+ 'yeccgoto_\'Expression\''(hd(Ss), spec, Ss, Stack, T, Ts, Tzr);
 yeccpars2_90(_S, string, Ss, Stack, T, Ts, Tzr) ->
  'yeccgoto_\'Expression\''(hd(Ss), string, Ss, Stack, T, Ts, Tzr);
 yeccpars2_90(_S, 'try', Ss, Stack, T, Ts, Tzr) ->
@@ -1356,10 +1362,137 @@ yeccpars2_92(S, '[', Ss, Stack, T, Ts, Tzr) ->
 yeccpars2_92(S, '{', Ss, Stack, T, Ts, Tzr) ->
  yeccpars1(S, 102, Ss, Stack, T, Ts, Tzr);
 yeccpars2_92(S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_cont_2(S, Cat, Ss, Stack, T, Ts, Tzr).
+ yeccpars2_cont_92(S, Cat, Ss, Stack, T, Ts, Tzr).
+
+yeccpars2_cont_92(S, '!', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 14, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, '#', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 15, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, '*', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 18, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, '+', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 19, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, '++', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 20, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, '--', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 23, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, '->', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 24, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, '.', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 25, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, '/', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 26, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, '/=', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 27, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, ':', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 28, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, ':-', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 29, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, '::', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 30, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, ';', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 31, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, '<', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 32, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, '<-', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 33, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, '<<', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 34, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, '<=', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 35, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, '=', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 36, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, '=/=', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 37, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, '=:=', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 38, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, '=<', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 39, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, '==', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 40, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, '>', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 41, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, '>=', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 42, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, '>>', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 43, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, 'after', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 47, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, 'and', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 48, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, 'andalso', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 49, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, atom, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 50, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, 'band', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 51, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, 'begin', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 52, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, 'bnot', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 53, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, 'bor', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 54, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, 'bsl', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 55, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, 'bsr', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 56, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, 'bxor', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 57, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, 'case', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 58, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, 'catch', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 59, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, char, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 60, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, 'div', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 61, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, 'end', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 63, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, float, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 65, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, 'fun', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 66, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, 'if', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 67, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, integer, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 68, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, 'not', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 69, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, 'of', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 70, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, 'or', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 71, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, 'orelse', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 72, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, 'query', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 73, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, 'receive', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 74, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, 'rem', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 75, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, spec, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 76, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, string, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 77, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, 'try', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 78, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, var, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 79, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, 'when', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 80, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, 'xor', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 81, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, '|', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 83, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(S, '||', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 84, Ss, Stack, T, Ts, Tzr);
+yeccpars2_cont_92(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 yeccpars2_93(S, ')', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 94, Ss, Stack, T, Ts, Tzr).
+ yeccpars1(S, 94, Ss, Stack, T, Ts, Tzr);
+yeccpars2_93(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 yeccpars2_94(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  [_,_,_,_|Nss] = Ss,
@@ -1552,9 +1685,9 @@ yeccpars2_98(_S, 'receive', Ss, Stack, T, Ts, Tzr) ->
 yeccpars2_98(_S, 'rem', Ss, Stack, T, Ts, Tzr) ->
  NewStack = yeccpars2_98_rem(Stack),
  yeccpars2_92(92, 'rem', [98 | Ss], NewStack, T, Ts, Tzr);
-yeccpars2_98(_S, 'spec', Ss, Stack, T, Ts, Tzr) ->
+yeccpars2_98(_S, spec, Ss, Stack, T, Ts, Tzr) ->
  NewStack = yeccpars2_98_spec(Stack),
- yeccpars2_92(92, 'spec', [98 | Ss], NewStack, T, Ts, Tzr);
+ yeccpars2_92(92, spec, [98 | Ss], NewStack, T, Ts, Tzr);
 yeccpars2_98(_S, string, Ss, Stack, T, Ts, Tzr) ->
  NewStack = yeccpars2_98_string(Stack),
  yeccpars2_92(92, string, [98 | Ss], NewStack, T, Ts, Tzr);
@@ -1762,9 +1895,9 @@ yeccpars2_101(_S, 'receive', Ss, Stack, T, Ts, Tzr) ->
 yeccpars2_101(_S, 'rem', Ss, Stack, T, Ts, Tzr) ->
  NewStack = yeccpars2_101_rem(Stack),
  yeccpars2_92(92, 'rem', [101 | Ss], NewStack, T, Ts, Tzr);
-yeccpars2_101(_S, 'spec', Ss, Stack, T, Ts, Tzr) ->
+yeccpars2_101(_S, spec, Ss, Stack, T, Ts, Tzr) ->
  NewStack = yeccpars2_101_spec(Stack),
- yeccpars2_92(92, 'spec', [101 | Ss], NewStack, T, Ts, Tzr);
+ yeccpars2_92(92, spec, [101 | Ss], NewStack, T, Ts, Tzr);
 yeccpars2_101(_S, string, Ss, Stack, T, Ts, Tzr) ->
  NewStack = yeccpars2_101_string(Stack),
  yeccpars2_92(92, string, [101 | Ss], NewStack, T, Ts, Tzr);
@@ -1964,9 +2097,9 @@ yeccpars2_102(_S, 'receive', Ss, Stack, T, Ts, Tzr) ->
 yeccpars2_102(_S, 'rem', Ss, Stack, T, Ts, Tzr) ->
  NewStack = yeccpars2_102_rem(Stack),
  yeccpars2_92(92, 'rem', [102 | Ss], NewStack, T, Ts, Tzr);
-yeccpars2_102(_S, 'spec', Ss, Stack, T, Ts, Tzr) ->
+yeccpars2_102(_S, spec, Ss, Stack, T, Ts, Tzr) ->
  NewStack = yeccpars2_102_spec(Stack),
- yeccpars2_92(92, 'spec', [102 | Ss], NewStack, T, Ts, Tzr);
+ yeccpars2_92(92, spec, [102 | Ss], NewStack, T, Ts, Tzr);
 yeccpars2_102(_S, string, Ss, Stack, T, Ts, Tzr) ->
  NewStack = yeccpars2_102_string(Stack),
  yeccpars2_92(92, string, [102 | Ss], NewStack, T, Ts, Tzr);
@@ -2114,8 +2247,8 @@ yeccpars2_104(_S, 'receive', Ss, Stack, T, Ts, Tzr) ->
  'yeccgoto_\'Expression\''(hd(Ss), 'receive', Ss, Stack, T, Ts, Tzr);
 yeccpars2_104(_S, 'rem', Ss, Stack, T, Ts, Tzr) ->
  'yeccgoto_\'Expression\''(hd(Ss), 'rem', Ss, Stack, T, Ts, Tzr);
-yeccpars2_104(_S, 'spec', Ss, Stack, T, Ts, Tzr) ->
- 'yeccgoto_\'Expression\''(hd(Ss), 'spec', Ss, Stack, T, Ts, Tzr);
+yeccpars2_104(_S, spec, Ss, Stack, T, Ts, Tzr) ->
+ 'yeccgoto_\'Expression\''(hd(Ss), spec, Ss, Stack, T, Ts, Tzr);
 yeccpars2_104(_S, string, Ss, Stack, T, Ts, Tzr) ->
  'yeccgoto_\'Expression\''(hd(Ss), string, Ss, Stack, T, Ts, Tzr);
 yeccpars2_104(_S, 'try', Ss, Stack, T, Ts, Tzr) ->
@@ -2136,7 +2269,9 @@ yeccpars2_104(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  'yeccgoto_\'NonEmptyExpressionList\''(hd(Ss), Cat, Ss, Stack, T, Ts, Tzr).
 
 yeccpars2_105(S, '}', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 106, Ss, Stack, T, Ts, Tzr).
+ yeccpars1(S, 106, Ss, Stack, T, Ts, Tzr);
+yeccpars2_105(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 yeccpars2_106(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  [_,_,_|Nss] = Ss,
@@ -2261,8 +2396,8 @@ yeccpars2_108(_S, 'receive', Ss, Stack, T, Ts, Tzr) ->
  'yeccgoto_\'Expression\''(hd(Ss), 'receive', Ss, Stack, T, Ts, Tzr);
 yeccpars2_108(_S, 'rem', Ss, Stack, T, Ts, Tzr) ->
  'yeccgoto_\'Expression\''(hd(Ss), 'rem', Ss, Stack, T, Ts, Tzr);
-yeccpars2_108(_S, 'spec', Ss, Stack, T, Ts, Tzr) ->
- 'yeccgoto_\'Expression\''(hd(Ss), 'spec', Ss, Stack, T, Ts, Tzr);
+yeccpars2_108(_S, spec, Ss, Stack, T, Ts, Tzr) ->
+ 'yeccgoto_\'Expression\''(hd(Ss), spec, Ss, Stack, T, Ts, Tzr);
 yeccpars2_108(_S, string, Ss, Stack, T, Ts, Tzr) ->
  'yeccgoto_\'Expression\''(hd(Ss), string, Ss, Stack, T, Ts, Tzr);
 yeccpars2_108(_S, 'try', Ss, Stack, T, Ts, Tzr) ->
@@ -2285,7 +2420,9 @@ yeccpars2_108(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  'yeccgoto_\'NonEmptyExpressionList\''(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
 
 yeccpars2_109(S, ']', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 110, Ss, Stack, T, Ts, Tzr).
+ yeccpars1(S, 110, Ss, Stack, T, Ts, Tzr);
+yeccpars2_109(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 yeccpars2_110(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  [_,_,_|Nss] = Ss,
@@ -2293,7 +2430,9 @@ yeccpars2_110(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  'yeccgoto_\'NonEmptyExpression\''(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
 
 yeccpars2_111(S, var, Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 112, Ss, Stack, T, Ts, Tzr).
+ yeccpars1(S, 112, Ss, Stack, T, Ts, Tzr);
+yeccpars2_111(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 yeccpars2_112(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  [_,_|Nss] = Ss,
@@ -2301,7 +2440,9 @@ yeccpars2_112(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  'yeccgoto_\'MacroString\''(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
 
 yeccpars2_113(S, ')', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 114, Ss, Stack, T, Ts, Tzr).
+ yeccpars1(S, 114, Ss, Stack, T, Ts, Tzr);
+yeccpars2_113(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 yeccpars2_114(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  [_,_,_|Nss] = Ss,
@@ -2426,8 +2567,8 @@ yeccpars2_116(_S, 'receive', Ss, Stack, T, Ts, Tzr) ->
  'yeccgoto_\'Expression\''(hd(Ss), 'receive', Ss, Stack, T, Ts, Tzr);
 yeccpars2_116(_S, 'rem', Ss, Stack, T, Ts, Tzr) ->
  'yeccgoto_\'Expression\''(hd(Ss), 'rem', Ss, Stack, T, Ts, Tzr);
-yeccpars2_116(_S, 'spec', Ss, Stack, T, Ts, Tzr) ->
- 'yeccgoto_\'Expression\''(hd(Ss), 'spec', Ss, Stack, T, Ts, Tzr);
+yeccpars2_116(_S, spec, Ss, Stack, T, Ts, Tzr) ->
+ 'yeccgoto_\'Expression\''(hd(Ss), spec, Ss, Stack, T, Ts, Tzr);
 yeccpars2_116(_S, string, Ss, Stack, T, Ts, Tzr) ->
  'yeccgoto_\'Expression\''(hd(Ss), string, Ss, Stack, T, Ts, Tzr);
 yeccpars2_116(_S, 'try', Ss, Stack, T, Ts, Tzr) ->
@@ -2450,30 +2591,46 @@ yeccpars2_116(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  'yeccgoto_\'NonEmptyApplyMacroArgs\''(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
 
 yeccpars2_117(S, '(', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 143, Ss, Stack, T, Ts, Tzr).
+ yeccpars1(S, 143, Ss, Stack, T, Ts, Tzr);
+yeccpars2_117(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 yeccpars2_118(S, '(', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 139, Ss, Stack, T, Ts, Tzr).
+ yeccpars1(S, 139, Ss, Stack, T, Ts, Tzr);
+yeccpars2_118(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 yeccpars2_119(S, '(', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 135, Ss, Stack, T, Ts, Tzr).
+ yeccpars1(S, 135, Ss, Stack, T, Ts, Tzr);
+yeccpars2_119(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 yeccpars2_120(S, '(', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 131, Ss, Stack, T, Ts, Tzr).
+ yeccpars1(S, 131, Ss, Stack, T, Ts, Tzr);
+yeccpars2_120(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 yeccpars2_121(S, '(', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 127, Ss, Stack, T, Ts, Tzr).
+ yeccpars1(S, 127, Ss, Stack, T, Ts, Tzr);
+yeccpars2_121(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 yeccpars2_122(S, '(', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 123, Ss, Stack, T, Ts, Tzr).
+ yeccpars1(S, 123, Ss, Stack, T, Ts, Tzr);
+yeccpars2_122(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 %% yeccpars2_123: see yeccpars2_44
 
 yeccpars2_124(S, ')', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 125, Ss, Stack, T, Ts, Tzr).
+ yeccpars1(S, 125, Ss, Stack, T, Ts, Tzr);
+yeccpars2_124(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 yeccpars2_125(S, dot, Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 126, Ss, Stack, T, Ts, Tzr).
+ yeccpars1(S, 126, Ss, Stack, T, Ts, Tzr);
+yeccpars2_125(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 yeccpars2_126(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  [_,_,_,_,_|Nss] = Ss,
@@ -2481,13 +2638,19 @@ yeccpars2_126(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  'yeccgoto_\'Undef\''(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
 
 yeccpars2_127(S, string, Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 128, Ss, Stack, T, Ts, Tzr).
+ yeccpars1(S, 128, Ss, Stack, T, Ts, Tzr);
+yeccpars2_127(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 yeccpars2_128(S, ')', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 129, Ss, Stack, T, Ts, Tzr).
+ yeccpars1(S, 129, Ss, Stack, T, Ts, Tzr);
+yeccpars2_128(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 yeccpars2_129(S, dot, Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 130, Ss, Stack, T, Ts, Tzr).
+ yeccpars1(S, 130, Ss, Stack, T, Ts, Tzr);
+yeccpars2_129(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 yeccpars2_130(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  [_,_,_,_,_|Nss] = Ss,
@@ -2495,13 +2658,19 @@ yeccpars2_130(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  'yeccgoto_\'IncludeLib\''(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
 
 yeccpars2_131(S, string, Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 132, Ss, Stack, T, Ts, Tzr).
+ yeccpars1(S, 132, Ss, Stack, T, Ts, Tzr);
+yeccpars2_131(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 yeccpars2_132(S, ')', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 133, Ss, Stack, T, Ts, Tzr).
+ yeccpars1(S, 133, Ss, Stack, T, Ts, Tzr);
+yeccpars2_132(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 yeccpars2_133(S, dot, Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 134, Ss, Stack, T, Ts, Tzr).
+ yeccpars1(S, 134, Ss, Stack, T, Ts, Tzr);
+yeccpars2_133(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 yeccpars2_134(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  [_,_,_,_,_|Nss] = Ss,
@@ -2511,10 +2680,14 @@ yeccpars2_134(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
 %% yeccpars2_135: see yeccpars2_44
 
 yeccpars2_136(S, ')', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 137, Ss, Stack, T, Ts, Tzr).
+ yeccpars1(S, 137, Ss, Stack, T, Ts, Tzr);
+yeccpars2_136(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 yeccpars2_137(S, dot, Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 138, Ss, Stack, T, Ts, Tzr).
+ yeccpars1(S, 138, Ss, Stack, T, Ts, Tzr);
+yeccpars2_137(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 yeccpars2_138(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  [_,_,_,_,_|Nss] = Ss,
@@ -2524,10 +2697,14 @@ yeccpars2_138(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
 %% yeccpars2_139: see yeccpars2_44
 
 yeccpars2_140(S, ')', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 141, Ss, Stack, T, Ts, Tzr).
+ yeccpars1(S, 141, Ss, Stack, T, Ts, Tzr);
+yeccpars2_140(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 yeccpars2_141(S, dot, Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 142, Ss, Stack, T, Ts, Tzr).
+ yeccpars1(S, 142, Ss, Stack, T, Ts, Tzr);
+yeccpars2_141(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 yeccpars2_142(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  [_,_,_,_,_|Nss] = Ss,
@@ -2541,7 +2718,9 @@ yeccpars2_144(S, '(', Ss, Stack, T, Ts, Tzr) ->
 yeccpars2_144(S, ')', Ss, Stack, T, Ts, Tzr) ->
  yeccpars1(S, 146, Ss, Stack, T, Ts, Tzr);
 yeccpars2_144(S, ',', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 147, Ss, Stack, T, Ts, Tzr).
+ yeccpars1(S, 147, Ss, Stack, T, Ts, Tzr);
+yeccpars2_144(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 yeccpars2_145(S, var, Ss, Stack, T, Ts, Tzr) ->
  yeccpars1(S, 157, Ss, Stack, T, Ts, Tzr);
@@ -2550,7 +2729,9 @@ yeccpars2_145(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_156(156, Cat, [145 | Ss], NewStack, T, Ts, Tzr).
 
 yeccpars2_146(S, dot, Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 154, Ss, Stack, T, Ts, Tzr).
+ yeccpars1(S, 154, Ss, Stack, T, Ts, Tzr);
+yeccpars2_146(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 yeccpars2_147(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  NewStack = yeccpars2_147_(Stack),
@@ -2575,7 +2756,7 @@ yeccpars2_148(S, '{', Ss, Stack, T, Ts, Tzr) ->
 yeccpars2_148(S, '}', Ss, Stack, T, Ts, Tzr) ->
  yeccpars1(S, 85, Ss, Stack, T, Ts, Tzr);
 yeccpars2_148(S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_cont_2(S, Cat, Ss, Stack, T, Ts, Tzr).
+ yeccpars2_cont_92(S, Cat, Ss, Stack, T, Ts, Tzr).
 
 yeccpars2_149(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  [_|Nss] = Ss,
@@ -2613,14 +2794,18 @@ yeccpars2_155(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  'yeccgoto_\'MacroArgs\''(hd(Ss), Cat, Ss, Stack, T, Ts, Tzr).
 
 yeccpars2_156(S, ')', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 158, Ss, Stack, T, Ts, Tzr).
+ yeccpars1(S, 158, Ss, Stack, T, Ts, Tzr);
+yeccpars2_156(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 yeccpars2_157(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  NewStack = yeccpars2_157_(Stack),
  'yeccgoto_\'NonEmptyMacroArgs\''(hd(Ss), Cat, Ss, NewStack, T, Ts, Tzr).
 
 yeccpars2_158(S, ',', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 159, Ss, Stack, T, Ts, Tzr).
+ yeccpars1(S, 159, Ss, Stack, T, Ts, Tzr);
+yeccpars2_158(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 yeccpars2_159(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  NewStack = yeccpars2_159_(Stack),
@@ -2645,7 +2830,7 @@ yeccpars2_160(S, '{', Ss, Stack, T, Ts, Tzr) ->
 yeccpars2_160(S, '}', Ss, Stack, T, Ts, Tzr) ->
  yeccpars1(S, 85, Ss, Stack, T, Ts, Tzr);
 yeccpars2_160(S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_cont_2(S, Cat, Ss, Stack, T, Ts, Tzr).
+ yeccpars2_cont_92(S, Cat, Ss, Stack, T, Ts, Tzr).
 
 yeccpars2_161(S, dot, Ss, Stack, T, Ts, Tzr) ->
  yeccpars1(S, 162, Ss, Stack, T, Ts, Tzr);
@@ -2658,7 +2843,9 @@ yeccpars2_162(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  'yeccgoto_\'Define\''(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
 
 yeccpars2_163(S, var, Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 164, Ss, Stack, T, Ts, Tzr).
+ yeccpars1(S, 164, Ss, Stack, T, Ts, Tzr);
+yeccpars2_163(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 yeccpars2_164(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  [_,_|Nss] = Ss,
@@ -2686,7 +2873,7 @@ yeccpars2_165(S, '{', Ss, Stack, T, Ts, Tzr) ->
 yeccpars2_165(S, '}', Ss, Stack, T, Ts, Tzr) ->
  yeccpars1(S, 85, Ss, Stack, T, Ts, Tzr);
 yeccpars2_165(S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_cont_2(S, Cat, Ss, Stack, T, Ts, Tzr).
+ yeccpars2_cont_92(S, Cat, Ss, Stack, T, Ts, Tzr).
 
 yeccpars2_166(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  [_,_|Nss] = Ss,
@@ -2717,10 +2904,14 @@ yeccpars2_168(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  'yeccgoto_\'ExpressionToken\''(hd(Ss), Cat, Ss, Stack, T, Ts, Tzr).
 
 yeccpars2_169(S, dot, Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 172, Ss, Stack, T, Ts, Tzr).
+ yeccpars1(S, 172, Ss, Stack, T, Ts, Tzr);
+yeccpars2_169(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 yeccpars2_170(S, dot, Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 171, Ss, Stack, T, Ts, Tzr).
+ yeccpars1(S, 171, Ss, Stack, T, Ts, Tzr);
+yeccpars2_170(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 yeccpars2_171(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  [_,_|Nss] = Ss,
@@ -2753,7 +2944,7 @@ yeccpars2_173(S, '{', Ss, Stack, T, Ts, Tzr) ->
 yeccpars2_173(S, '}', Ss, Stack, T, Ts, Tzr) ->
  yeccpars1(S, 85, Ss, Stack, T, Ts, Tzr);
 yeccpars2_173(S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_cont_2(S, Cat, Ss, Stack, T, Ts, Tzr).
+ yeccpars2_cont_92(S, Cat, Ss, Stack, T, Ts, Tzr).
 
 yeccpars2_174(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  [_,_,_,_|Nss] = Ss,
@@ -3038,14 +3229,22 @@ yeccpars2_180(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_3(_S, Cat, Ss, Stack, T, Ts, Tzr).
 
 -compile({inline,yeccpars2_0_/1}).
--file("src/aleppo/aleppo_parser.yrl", 55).
+-file("SRC/aleppo/aleppo_parser.yrl", 56).
 yeccpars2_0_(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
+-compile({inline,yeccpars2_2_/1}).
+-file("SRC/aleppo/aleppo_parser.yrl", 54).
+yeccpars2_2_(__Stack0) ->
+ [__1 | __Stack] = __Stack0,
+ [begin
+   __1 ++ [ { eof , 0 } ]
+  end | __Stack].
+
 -compile({inline,yeccpars2_3_/1}).
--file("src/aleppo/aleppo_parser.yrl", 58).
+-file("SRC/aleppo/aleppo_parser.yrl", 59).
 yeccpars2_3_(__Stack0) ->
  [__2,__1 | __Stack] = __Stack0,
  [begin
@@ -3053,7 +3252,7 @@ yeccpars2_3_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_4_/1}).
--file("src/aleppo/aleppo_parser.yrl", 63).
+-file("SRC/aleppo/aleppo_parser.yrl", 64).
 yeccpars2_4_(__Stack0) ->
  [__2,__1 | __Stack] = __Stack0,
  [begin
@@ -3061,7 +3260,7 @@ yeccpars2_4_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_5_/1}).
--file("src/aleppo/aleppo_parser.yrl", 59).
+-file("SRC/aleppo/aleppo_parser.yrl", 60).
 yeccpars2_5_(__Stack0) ->
  [__2,__1 | __Stack] = __Stack0,
  [begin
@@ -3069,7 +3268,7 @@ yeccpars2_5_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_6_/1}).
--file("src/aleppo/aleppo_parser.yrl", 62).
+-file("SRC/aleppo/aleppo_parser.yrl", 63).
 yeccpars2_6_(__Stack0) ->
  [__2,__1 | __Stack] = __Stack0,
  [begin
@@ -3077,7 +3276,7 @@ yeccpars2_6_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_7_/1}).
--file("src/aleppo/aleppo_parser.yrl", 61).
+-file("SRC/aleppo/aleppo_parser.yrl", 62).
 yeccpars2_7_(__Stack0) ->
  [__2,__1 | __Stack] = __Stack0,
  [begin
@@ -3085,14 +3284,14 @@ yeccpars2_7_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_8_/1}).
--file("src/aleppo/aleppo_parser.yrl", 55).
+-file("SRC/aleppo/aleppo_parser.yrl", 56).
 yeccpars2_8_(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_9_/1}).
--file("src/aleppo/aleppo_parser.yrl", 57).
+-file("SRC/aleppo/aleppo_parser.yrl", 58).
 yeccpars2_9_(__Stack0) ->
  [__2,__1 | __Stack] = __Stack0,
  [begin
@@ -3100,14 +3299,14 @@ yeccpars2_9_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_10_/1}).
--file("src/aleppo/aleppo_parser.yrl", 55).
+-file("SRC/aleppo/aleppo_parser.yrl", 56).
 yeccpars2_10_(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_11_/1}).
--file("src/aleppo/aleppo_parser.yrl", 56).
+-file("SRC/aleppo/aleppo_parser.yrl", 57).
 yeccpars2_11_(__Stack0) ->
  [__2,__1 | __Stack] = __Stack0,
  [begin
@@ -3115,7 +3314,7 @@ yeccpars2_11_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_13_/1}).
--file("src/aleppo/aleppo_parser.yrl", 60).
+-file("SRC/aleppo/aleppo_parser.yrl", 61).
 yeccpars2_13_(__Stack0) ->
  [__2,__1 | __Stack] = __Stack0,
  [begin
@@ -3123,7 +3322,7 @@ yeccpars2_13_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_62_/1}).
--file("src/aleppo/aleppo_parser.yrl", 64).
+-file("SRC/aleppo/aleppo_parser.yrl", 65).
 yeccpars2_62_(__Stack0) ->
  [__2,__1 | __Stack] = __Stack0,
  [begin
@@ -3131,7 +3330,7 @@ yeccpars2_62_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_64_/1}).
--file("src/aleppo/aleppo_parser.yrl", 53).
+-file("SRC/aleppo/aleppo_parser.yrl", 53).
 yeccpars2_64_(__Stack0) ->
  [__2,__1 | __Stack] = __Stack0,
  [begin
@@ -3139,7 +3338,7 @@ yeccpars2_64_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_86_/1}).
--file("src/aleppo/aleppo_parser.yrl", 91).
+-file("SRC/aleppo/aleppo_parser.yrl", 92).
 yeccpars2_86_(__Stack0) ->
  [__2,__1 | __Stack] = __Stack0,
  [begin
@@ -3147,476 +3346,476 @@ yeccpars2_86_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,'yeccpars2_89_!'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_89_!'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_89_#'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_89_#'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_89_('/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_89_('(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_89_*'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_89_*'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_89_+'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_89_+'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_89_++'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_89_++'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_89_-'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_89_-'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_89_--'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_89_--'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_89_->'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_89_->'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_89_.'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_89_.'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_89_/'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_89_/'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_89_/='/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_89_/='(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_89_:'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_89_:'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_89_:-'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_89_:-'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_89_::'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_89_::'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_89_;'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_89_;'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_89_<'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_89_<'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_89_<-'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_89_<-'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_89_<<'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_89_<<'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_89_<='/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_89_<='(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_89_='/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_89_='(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_89_=/='/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_89_=/='(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_89_=:='/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_89_=:='(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_89_=<'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_89_=<'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_89_=='/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_89_=='(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_89_>'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_89_>'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_89_>='/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_89_>='(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_89_>>'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_89_>>'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_89_?'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_89_?'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_89_['/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_89_['(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_89_after/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_89_after(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_89_and/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_89_and(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_89_andalso/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_89_andalso(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_89_atom/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_89_atom(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_89_band/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_89_band(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_89_begin/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_89_begin(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_89_bnot/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_89_bnot(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_89_bor/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_89_bor(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_89_bsl/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_89_bsl(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_89_bsr/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_89_bsr(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_89_bxor/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_89_bxor(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_89_case/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_89_case(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_89_catch/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_89_catch(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_89_char/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_89_char(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_89_div/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_89_div(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_89_end/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_89_end(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_89_float/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_89_float(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_89_fun/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_89_fun(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_89_if/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_89_if(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_89_integer/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_89_integer(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_89_not/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_89_not(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_89_of/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_89_of(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_89_or/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_89_or(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_89_orelse/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_89_orelse(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_89_query/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_89_query(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_89_receive/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_89_receive(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_89_rem/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_89_rem(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_89_spec/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_89_spec(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_89_string/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_89_string(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_89_try/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_89_try(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_89_var/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_89_var(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_89_when/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_89_when(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_89_xor/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_89_xor(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_89_{'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_89_{'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_89_|'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_89_|'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_89_||'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_89_||'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_89_/1}).
--file("src/aleppo/aleppo_parser.yrl", 105).
+-file("SRC/aleppo/aleppo_parser.yrl", 106).
 yeccpars2_89_(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_90_/1}).
--file("src/aleppo/aleppo_parser.yrl", 108).
+-file("SRC/aleppo/aleppo_parser.yrl", 109).
 yeccpars2_90_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
@@ -3624,7 +3823,7 @@ yeccpars2_90_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_94_/1}).
--file("src/aleppo/aleppo_parser.yrl", 92).
+-file("SRC/aleppo/aleppo_parser.yrl", 93).
 yeccpars2_94_(__Stack0) ->
  [__5,__4,__3,__2,__1 | __Stack] = __Stack0,
  [begin
@@ -3632,7 +3831,7 @@ yeccpars2_94_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_95_/1}).
--file("src/aleppo/aleppo_parser.yrl", 113).
+-file("SRC/aleppo/aleppo_parser.yrl", 114).
 yeccpars2_95_(__Stack0) ->
  [__2,__1 | __Stack] = __Stack0,
  [begin
@@ -3640,7 +3839,7 @@ yeccpars2_95_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_96_/1}).
--file("src/aleppo/aleppo_parser.yrl", 112).
+-file("SRC/aleppo/aleppo_parser.yrl", 113).
 yeccpars2_96_(__Stack0) ->
  [__2,__1 | __Stack] = __Stack0,
  [begin
@@ -3648,7 +3847,7 @@ yeccpars2_96_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_97_/1}).
--file("src/aleppo/aleppo_parser.yrl", 111).
+-file("SRC/aleppo/aleppo_parser.yrl", 112).
 yeccpars2_97_(__Stack0) ->
  [__2,__1 | __Stack] = __Stack0,
  [begin
@@ -3656,1414 +3855,1414 @@ yeccpars2_97_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,'yeccpars2_98_!'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_98_!'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_98_#'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_98_#'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_98_('/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_98_('(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_98_*'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_98_*'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_98_+'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_98_+'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_98_++'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_98_++'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_98_-'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_98_-'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_98_--'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_98_--'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_98_->'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_98_->'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_98_.'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_98_.'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_98_/'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_98_/'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_98_/='/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_98_/='(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_98_:'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_98_:'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_98_:-'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_98_:-'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_98_::'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_98_::'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_98_;'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_98_;'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_98_<'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_98_<'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_98_<-'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_98_<-'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_98_<<'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_98_<<'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_98_<='/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_98_<='(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_98_='/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_98_='(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_98_=/='/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_98_=/='(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_98_=:='/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_98_=:='(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_98_=<'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_98_=<'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_98_=='/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_98_=='(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_98_>'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_98_>'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_98_>='/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_98_>='(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_98_>>'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_98_>>'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_98_?'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_98_?'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_98_['/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_98_['(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_98_after/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_98_after(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_98_and/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_98_and(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_98_andalso/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_98_andalso(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_98_atom/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_98_atom(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_98_band/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_98_band(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_98_begin/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_98_begin(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_98_bnot/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_98_bnot(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_98_bor/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_98_bor(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_98_bsl/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_98_bsl(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_98_bsr/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_98_bsr(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_98_bxor/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_98_bxor(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_98_case/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_98_case(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_98_catch/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_98_catch(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_98_char/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_98_char(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_98_div/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_98_div(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_98_end/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_98_end(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_98_float/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_98_float(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_98_fun/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_98_fun(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_98_if/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_98_if(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_98_integer/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_98_integer(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_98_not/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_98_not(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_98_of/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_98_of(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_98_or/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_98_or(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_98_orelse/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_98_orelse(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_98_query/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_98_query(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_98_receive/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_98_receive(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_98_rem/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_98_rem(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_98_spec/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_98_spec(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_98_string/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_98_string(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_98_try/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_98_try(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_98_var/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_98_var(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_98_when/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_98_when(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_98_xor/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_98_xor(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_98_{'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_98_{'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_98_|'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_98_|'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_98_||'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_98_||'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_98_/1}).
--file("src/aleppo/aleppo_parser.yrl", 121).
+-file("SRC/aleppo/aleppo_parser.yrl", 122).
 yeccpars2_98_(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_101_!'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_101_!'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_101_#'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_101_#'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_101_('/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_101_('(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_101_*'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_101_*'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_101_+'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_101_+'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_101_++'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_101_++'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_101_-'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_101_-'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_101_--'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_101_--'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_101_->'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_101_->'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_101_.'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_101_.'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_101_/'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_101_/'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_101_/='/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_101_/='(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_101_:'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_101_:'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_101_:-'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_101_:-'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_101_::'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_101_::'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_101_;'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_101_;'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_101_<'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_101_<'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_101_<-'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_101_<-'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_101_<<'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_101_<<'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_101_<='/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_101_<='(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_101_='/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_101_='(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_101_=/='/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_101_=/='(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_101_=:='/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_101_=:='(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_101_=<'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_101_=<'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_101_=='/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_101_=='(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_101_>'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_101_>'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_101_>='/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_101_>='(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_101_>>'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_101_>>'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_101_?'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_101_?'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_101_['/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_101_['(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_101_after/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_101_after(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_101_and/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_101_and(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_101_andalso/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_101_andalso(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_101_atom/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_101_atom(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_101_band/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_101_band(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_101_begin/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_101_begin(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_101_bnot/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_101_bnot(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_101_bor/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_101_bor(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_101_bsl/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_101_bsl(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_101_bsr/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_101_bsr(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_101_bxor/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_101_bxor(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_101_case/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_101_case(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_101_catch/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_101_catch(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_101_char/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_101_char(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_101_div/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_101_div(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_101_end/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_101_end(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_101_float/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_101_float(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_101_fun/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_101_fun(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_101_if/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_101_if(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_101_integer/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_101_integer(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_101_not/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_101_not(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_101_of/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_101_of(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_101_or/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_101_or(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_101_orelse/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_101_orelse(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_101_query/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_101_query(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_101_receive/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_101_receive(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_101_rem/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_101_rem(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_101_spec/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_101_spec(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_101_string/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_101_string(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_101_try/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_101_try(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_101_var/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_101_var(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_101_when/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_101_when(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_101_xor/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_101_xor(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_101_{'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_101_{'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_101_|'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_101_|'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_101_||'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_101_||'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_101_/1}).
--file("src/aleppo/aleppo_parser.yrl", 121).
+-file("SRC/aleppo/aleppo_parser.yrl", 122).
 yeccpars2_101_(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_102_!'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_102_!'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_102_#'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_102_#'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_102_('/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_102_('(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_102_*'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_102_*'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_102_+'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_102_+'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_102_++'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_102_++'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_102_-'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_102_-'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_102_--'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_102_--'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_102_->'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_102_->'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_102_.'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_102_.'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_102_/'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_102_/'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_102_/='/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_102_/='(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_102_:'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_102_:'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_102_:-'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_102_:-'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_102_::'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_102_::'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_102_;'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_102_;'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_102_<'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_102_<'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_102_<-'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_102_<-'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_102_<<'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_102_<<'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_102_<='/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_102_<='(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_102_='/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_102_='(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_102_=/='/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_102_=/='(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_102_=:='/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_102_=:='(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_102_=<'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_102_=<'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_102_=='/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_102_=='(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_102_>'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_102_>'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_102_>='/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_102_>='(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_102_>>'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_102_>>'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_102_?'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_102_?'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_102_['/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_102_['(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_102_after/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_102_after(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_102_and/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_102_and(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_102_andalso/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_102_andalso(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_102_atom/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_102_atom(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_102_band/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_102_band(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_102_begin/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_102_begin(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_102_bnot/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_102_bnot(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_102_bor/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_102_bor(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_102_bsl/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_102_bsl(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_102_bsr/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_102_bsr(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_102_bxor/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_102_bxor(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_102_case/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_102_case(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_102_catch/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_102_catch(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_102_char/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_102_char(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_102_div/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_102_div(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_102_end/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_102_end(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_102_float/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_102_float(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_102_fun/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_102_fun(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_102_if/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_102_if(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_102_integer/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_102_integer(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_102_not/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_102_not(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_102_of/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_102_of(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_102_or/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_102_or(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_102_orelse/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_102_orelse(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_102_query/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_102_query(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_102_receive/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_102_receive(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_102_rem/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_102_rem(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_102_spec/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_102_spec(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_102_string/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_102_string(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_102_try/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_102_try(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_102_var/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_102_var(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_102_when/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_102_when(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_102_xor/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_102_xor(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_102_{'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_102_{'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_102_|'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_102_|'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,'yeccpars2_102_||'/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 'yeccpars2_102_||'(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_102_/1}).
--file("src/aleppo/aleppo_parser.yrl", 121).
+-file("SRC/aleppo/aleppo_parser.yrl", 122).
 yeccpars2_102_(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_106_/1}).
--file("src/aleppo/aleppo_parser.yrl", 115).
+-file("SRC/aleppo/aleppo_parser.yrl", 116).
 yeccpars2_106_(__Stack0) ->
  [__4,__3,__2,__1 | __Stack] = __Stack0,
  [begin
@@ -5071,14 +5270,14 @@ yeccpars2_106_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_107_/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_107_(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_108_/1}).
--file("src/aleppo/aleppo_parser.yrl", 124).
+-file("SRC/aleppo/aleppo_parser.yrl", 125).
 yeccpars2_108_(__Stack0) ->
  [__3,__2,__1 | __Stack] = __Stack0,
  [begin
@@ -5086,7 +5285,7 @@ yeccpars2_108_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_110_/1}).
--file("src/aleppo/aleppo_parser.yrl", 116).
+-file("SRC/aleppo/aleppo_parser.yrl", 117).
 yeccpars2_110_(__Stack0) ->
  [__4,__3,__2,__1 | __Stack] = __Stack0,
  [begin
@@ -5094,7 +5293,7 @@ yeccpars2_110_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_112_/1}).
--file("src/aleppo/aleppo_parser.yrl", 94).
+-file("SRC/aleppo/aleppo_parser.yrl", 95).
 yeccpars2_112_(__Stack0) ->
  [__3,__2,__1 | __Stack] = __Stack0,
  [begin
@@ -5102,7 +5301,7 @@ yeccpars2_112_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_114_/1}).
--file("src/aleppo/aleppo_parser.yrl", 114).
+-file("SRC/aleppo/aleppo_parser.yrl", 115).
 yeccpars2_114_(__Stack0) ->
  [__4,__3,__2,__1 | __Stack] = __Stack0,
  [begin
@@ -5110,14 +5309,14 @@ yeccpars2_114_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_115_/1}).
--file("src/aleppo/aleppo_parser.yrl", 118).
+-file("SRC/aleppo/aleppo_parser.yrl", 119).
 yeccpars2_115_(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_116_/1}).
--file("src/aleppo/aleppo_parser.yrl", 109).
+-file("SRC/aleppo/aleppo_parser.yrl", 110).
 yeccpars2_116_(__Stack0) ->
  [__3,__2,__1 | __Stack] = __Stack0,
  [begin
@@ -5125,7 +5324,7 @@ yeccpars2_116_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_126_/1}).
--file("src/aleppo/aleppo_parser.yrl", 89).
+-file("SRC/aleppo/aleppo_parser.yrl", 90).
 yeccpars2_126_(__Stack0) ->
  [__6,__5,__4,__3,__2,__1 | __Stack] = __Stack0,
  [begin
@@ -5133,7 +5332,7 @@ yeccpars2_126_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_130_/1}).
--file("src/aleppo/aleppo_parser.yrl", 76).
+-file("SRC/aleppo/aleppo_parser.yrl", 77).
 yeccpars2_130_(__Stack0) ->
  [__6,__5,__4,__3,__2,__1 | __Stack] = __Stack0,
  [begin
@@ -5141,7 +5340,7 @@ yeccpars2_130_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_134_/1}).
--file("src/aleppo/aleppo_parser.yrl", 75).
+-file("SRC/aleppo/aleppo_parser.yrl", 76).
 yeccpars2_134_(__Stack0) ->
  [__6,__5,__4,__3,__2,__1 | __Stack] = __Stack0,
  [begin
@@ -5149,7 +5348,7 @@ yeccpars2_134_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_138_/1}).
--file("src/aleppo/aleppo_parser.yrl", 85).
+-file("SRC/aleppo/aleppo_parser.yrl", 86).
 yeccpars2_138_(__Stack0) ->
  [__6,__5,__4,__3,__2,__1 | __Stack] = __Stack0,
  [begin
@@ -5157,7 +5356,7 @@ yeccpars2_138_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_142_/1}).
--file("src/aleppo/aleppo_parser.yrl", 84).
+-file("SRC/aleppo/aleppo_parser.yrl", 85).
 yeccpars2_142_(__Stack0) ->
  [__6,__5,__4,__3,__2,__1 | __Stack] = __Stack0,
  [begin
@@ -5165,21 +5364,21 @@ yeccpars2_142_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_145_/1}).
--file("src/aleppo/aleppo_parser.yrl", 99).
+-file("SRC/aleppo/aleppo_parser.yrl", 100).
 yeccpars2_145_(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_147_/1}).
--file("src/aleppo/aleppo_parser.yrl", 66).
+-file("SRC/aleppo/aleppo_parser.yrl", 67).
 yeccpars2_147_(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_149_/1}).
--file("src/aleppo/aleppo_parser.yrl", 67).
+-file("SRC/aleppo/aleppo_parser.yrl", 68).
 yeccpars2_149_(__Stack0) ->
  [__2,__1 | __Stack] = __Stack0,
  [begin
@@ -5187,7 +5386,7 @@ yeccpars2_149_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_150_/1}).
--file("src/aleppo/aleppo_parser.yrl", 69).
+-file("SRC/aleppo/aleppo_parser.yrl", 70).
 yeccpars2_150_(__Stack0) ->
  [__2,__1 | __Stack] = __Stack0,
  [begin
@@ -5195,7 +5394,7 @@ yeccpars2_150_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_151_/1}).
--file("src/aleppo/aleppo_parser.yrl", 68).
+-file("SRC/aleppo/aleppo_parser.yrl", 69).
 yeccpars2_151_(__Stack0) ->
  [__2,__1 | __Stack] = __Stack0,
  [begin
@@ -5203,7 +5402,7 @@ yeccpars2_151_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_153_/1}).
--file("src/aleppo/aleppo_parser.yrl", 72).
+-file("SRC/aleppo/aleppo_parser.yrl", 73).
 yeccpars2_153_(__Stack0) ->
  [__8,__7,__6,__5,__4,__3,__2,__1 | __Stack] = __Stack0,
  [begin
@@ -5211,7 +5410,7 @@ yeccpars2_153_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_154_/1}).
--file("src/aleppo/aleppo_parser.yrl", 71).
+-file("SRC/aleppo/aleppo_parser.yrl", 72).
 yeccpars2_154_(__Stack0) ->
  [__6,__5,__4,__3,__2,__1 | __Stack] = __Stack0,
  [begin
@@ -5219,7 +5418,7 @@ yeccpars2_154_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_157_/1}).
--file("src/aleppo/aleppo_parser.yrl", 103).
+-file("SRC/aleppo/aleppo_parser.yrl", 104).
 yeccpars2_157_(__Stack0) ->
  [__1 | __Stack] = __Stack0,
  [begin
@@ -5227,14 +5426,14 @@ yeccpars2_157_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_159_/1}).
--file("src/aleppo/aleppo_parser.yrl", 66).
+-file("SRC/aleppo/aleppo_parser.yrl", 67).
 yeccpars2_159_(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_162_/1}).
--file("src/aleppo/aleppo_parser.yrl", 73).
+-file("SRC/aleppo/aleppo_parser.yrl", 74).
 yeccpars2_162_(__Stack0) ->
  [__11,__10,__9,__8,__7,__6,__5,__4,__3,__2,__1 | __Stack] = __Stack0,
  [begin
@@ -5242,7 +5441,7 @@ yeccpars2_162_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_164_/1}).
--file("src/aleppo/aleppo_parser.yrl", 102).
+-file("SRC/aleppo/aleppo_parser.yrl", 103).
 yeccpars2_164_(__Stack0) ->
  [__3,__2,__1 | __Stack] = __Stack0,
  [begin
@@ -5250,7 +5449,7 @@ yeccpars2_164_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_166_/1}).
--file("src/aleppo/aleppo_parser.yrl", 79).
+-file("SRC/aleppo/aleppo_parser.yrl", 80).
 yeccpars2_166_(__Stack0) ->
  [__3,__2,__1 | __Stack] = __Stack0,
  [begin
@@ -5258,14 +5457,14 @@ yeccpars2_166_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_167_/1}).
--file("src/aleppo/aleppo_parser.yrl", 55).
+-file("SRC/aleppo/aleppo_parser.yrl", 56).
 yeccpars2_167_(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_171_/1}).
--file("src/aleppo/aleppo_parser.yrl", 0).
+-file("SRC/aleppo/aleppo_parser.yrl", 0).
 yeccpars2_171_(__Stack0) ->
  [__3,__2,__1 | __Stack] = __Stack0,
  [begin
@@ -5273,7 +5472,7 @@ yeccpars2_171_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_172_/1}).
--file("src/aleppo/aleppo_parser.yrl", 0).
+-file("SRC/aleppo/aleppo_parser.yrl", 0).
 yeccpars2_172_(__Stack0) ->
  [__3,__2,__1 | __Stack] = __Stack0,
  [begin
@@ -5281,7 +5480,7 @@ yeccpars2_172_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_174_/1}).
--file("src/aleppo/aleppo_parser.yrl", 78).
+-file("SRC/aleppo/aleppo_parser.yrl", 79).
 yeccpars2_174_(__Stack0) ->
  [__5,__4,__3,__2,__1 | __Stack] = __Stack0,
  [begin
@@ -5289,7 +5488,7 @@ yeccpars2_174_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_177_/1}).
--file("src/aleppo/aleppo_parser.yrl", 82).
+-file("SRC/aleppo/aleppo_parser.yrl", 83).
 yeccpars2_177_(__Stack0) ->
  [__3,__2,__1 | __Stack] = __Stack0,
  [begin
@@ -5297,14 +5496,14 @@ yeccpars2_177_(__Stack0) ->
   end | __Stack].
 
 -compile({inline,yeccpars2_178_/1}).
--file("src/aleppo/aleppo_parser.yrl", 55).
+-file("SRC/aleppo/aleppo_parser.yrl", 56).
 yeccpars2_178_(__Stack0) ->
  [begin
    [ ]
   end | __Stack0].
 
 -compile({inline,yeccpars2_180_/1}).
--file("src/aleppo/aleppo_parser.yrl", 81).
+-file("SRC/aleppo/aleppo_parser.yrl", 82).
 yeccpars2_180_(__Stack0) ->
  [__5,__4,__3,__2,__1 | __Stack] = __Stack0,
  [begin

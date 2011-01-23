@@ -55,6 +55,7 @@ Terminals
 Rootsymbol File.
 
 File -> Elements eof : '$1' ++ ['$2'].
+File -> Elements : '$1' ++ [{eof, 0}].
 
 Elements -> '$empty' : [].
 Elements -> Elements IfBlock : '$1' ++ ['$2'].
