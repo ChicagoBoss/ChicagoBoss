@@ -10,6 +10,7 @@ start() ->
 start([Adapter]) ->
     AdapterMod = list_to_atom("boss_db_adapter_"++Adapter),
     boss_db:start([{adapter, AdapterMod}]),
+    boss_session:start(),
     boss_mail:start([{driver, boss_mail_driver_mock}]),
     boss_translator:start(),
     boss_load:load_all_modules(),
