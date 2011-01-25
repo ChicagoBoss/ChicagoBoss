@@ -60,9 +60,14 @@ boss_to_mongo_id(BossId) ->
 mongo_tuple_to_record(Type, Row) ->
     PropList = tuple_to_proplist(Row),
     Args = lists:map(fun({K,V}) ->
-                case K of
-                    '_id' -> mongo_to_boss_id(Type, V);
-                    _ -> V
+                case {K,V} of
+                    {'_id', V} -> mongo_to_boss_id(Type, V);
+                    {K, {_,_,_} = V} -> 
+                        case lists:suffix("_time", atom_to_list(K)) of
+                            true -> calendar:now_to_datetime(V);
+                            false -> V
+                        end;
+                    {_, V} -> V
                 end
         end, PropList),
     apply(Type, new, Args).
