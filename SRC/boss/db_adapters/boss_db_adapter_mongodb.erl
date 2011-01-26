@@ -3,8 +3,16 @@
 -export([start/0, start/1, stop/1, find/2, find/7]).
 -export([count/3, counter/2, incr/3, delete/2, save_record/2]).
 -export([push/2, pop/2, dump/1, execute/2]).
--define(GREGORIAN_SECONDS_1970, 62167219200). % http://stackoverflow.com/questions/3672287/date-to-megaseconds
--define(LOG(Name, Value), io:format("@@@ ~s: ~p~n", [Name, Value])).
+
+-define(LOG(Name, Value), io:format("DEBUG: ~s: ~p~n", [Name, Value])).
+
+% Number of seconds between beginning of gregorian calendar and 1970
+-define(GREGORIAN_SECONDS_1970, 62167219200). 
+
+% JavaScript expression formats to query MongoDB
+-define(CONTAINS_FORMAT, "this.~s.indexOf('~s') != -1").
+-define(NOT_CONTAINS_FORMAT, "this.~s.indexOf('~s') == -1").
+
 
 start() ->
     start([]).
@@ -26,7 +34,6 @@ stop({_, _, Connection, _}) ->
 execute({WriteMode, ReadMode, Connection, Database}, Fun) ->
     mongo:do(WriteMode, ReadMode, Connection, Database, Fun).
 
-
 find(Conn, Id) when is_list(Id) ->
     {Type, Collection, MongoId} = infer_type_from_id(Id),
     
@@ -39,40 +46,6 @@ find(Conn, Id) when is_list(Id) ->
         {failure, Reason} -> {error, Reason};
         {connection_failure, Reason} -> {error, Reason}
     end.
-
-
-tuple_to_proplist(Tuple) ->
-    List = tuple_to_list(Tuple),
-    Ret = lists:reverse(list_to_proplist(List, [])),
-    Ret.
-
-list_to_proplist([], Acc) -> Acc;
-list_to_proplist([K,V|T], Acc) ->
-    list_to_proplist(T, [{K, V}|Acc]).
-
-mongo_to_boss_id(Type, MongoId) ->
-    lists:concat([Type, "-", binary_to_list(dec2hex(element(1, MongoId)))]).
-
-boss_to_mongo_id(BossId) ->
-    [_, MongoId] = string:tokens(BossId, "-"),
-    {hex2dec(MongoId)}.
-
-mongo_tuple_to_record(Type, Row) ->
-    PropList = tuple_to_proplist(Row),
-    Args = lists:map(fun({K,V}) ->
-                case {K,V} of
-                    {'_id', V} -> mongo_to_boss_id(Type, V);
-                    {K, {_,_,_} = V} -> 
-                        case lists:suffix("_time", atom_to_list(K)) of
-                            true -> calendar:now_to_datetime(V);
-                            false -> V
-                        end;
-                    {_, V} -> V
-                end
-        end, PropList),
-    apply(Type, new, Args).
-
-
 
 find(Conn, Type, Conditions, Max, Skip, Sort, SortOrder) when is_atom(Type), is_list(Conditions), 
                                                               is_integer(Max), is_integer(Skip), 
@@ -92,8 +65,7 @@ find(Conn, Type, Conditions, Max, Skip, Sort, SortOrder) when is_atom(Type), is_
                 end),
             case Res of
                 {ok, Curs} ->
-                    RecordArgs = 
-                        lists:map(fun(Row) ->
+                    lists:map(fun(Row) ->
                                     mongo_tuple_to_record(Type, Row)
                             end, mongo:rest(Curs));
                 {failure, Reason} -> {error, Reason};
@@ -146,6 +118,47 @@ delete(Conn, Id) when is_list(Id) ->
         {connection_failure, Reason} -> {error, Reason}
     end.
 
+save_record(Conn, Record) when is_tuple(Record) ->
+    Type = element(1, Record),
+    Collection = type_to_collection(Type),
+    Attributes = case Record:id() of
+        id ->
+            PropList = lists:map(fun({K,V}) -> {K, pack_value(V)} end, 
+                                 Record:attributes()),
+            Tuple = proplist_to_tuple(proplists:delete(id, PropList)),
+            Tuple;
+        DefinedId when is_list(DefinedId) ->
+            PropList = lists:map(fun({K,V}) ->
+                            case K of 
+                                id -> {'_id', boss_to_mongo_id(DefinedId)};
+                                _ -> {K, pack_value(V)}
+                            end
+                    end, Record:attributes()),
+            proplist_to_tuple(PropList)
+    end,
+    Res = execute(Conn, fun() -> 
+                mongo:save(Collection, Attributes)
+        end),
+    case Res of
+        {ok, ok} -> {ok, Record};
+        {ok, Id} -> 
+            {ok, Record:id(mongo_to_boss_id(Type, Id))};
+        {failure, Reason} -> {error, Reason};
+        {connection_failure, Reason} -> {error, Reason}
+    end.
+
+push(_Conn, _Depth) ->
+    ok.
+
+pop(_Conn, _Depth) ->
+    ok.
+
+dump(_Conn) -> "".
+
+%%
+%% Internal functions
+%%
+
 boss_to_mongo_op(BossOperator) ->
     OperatorsMap = [
         {'not_equals', '$ne'},
@@ -171,9 +184,6 @@ multiple_where_clauses_string(Format, Key, ValueList, Operator) ->
 multiple_where_clauses(Format, Key, ValueList, Operator) ->
     erlang:iolist_to_binary(multiple_where_clauses_string(Format, Key,
             ValueList, Operator)).
-
--define(CONTAINS_FORMAT, "this.~s.indexOf('~s') != -1").
--define(NOT_CONTAINS_FORMAT, "this.~s.indexOf('~s') == -1").
 
 build_conditions(Conditions) ->
     proplist_to_tuple(build_conditions1(Conditions, [])).
@@ -244,71 +254,45 @@ proplist_to_tuple(PropList) ->
 type_to_collection(Type) ->
     list_to_atom(type_to_table_name(Type)).
 
-save_record(Conn, Record) when is_tuple(Record) ->
-    Type = element(1, Record),
-    Collection = type_to_collection(Type),
-    Attributes = case Record:id() of
-        id ->
-            PropList = lists:map(fun({K,V}) -> {K, pack_value(V)} end, 
-                                 Record:attributes()),
-            Tuple = proplist_to_tuple(proplists:delete(id, PropList)),
-            Tuple;
-        DefinedId when is_list(DefinedId) ->
-            PropList = lists:map(fun({K,V}) ->
-                            case K of 
-                                id -> {'_id', boss_to_mongo_id(DefinedId)};
-                                _ -> {K, pack_value(V)}
-                            end
-                    end, Record:attributes()),
-            proplist_to_tuple(PropList)
-    end,
-    Res = execute(Conn, fun() -> 
-                mongo:save(Collection, Attributes)
-        end),
-    case Res of
-        {ok, ok} -> {ok, Record};
-        {ok, Id} -> 
-            {ok, Record:id(mongo_to_boss_id(Type, Id))};
-        {failure, Reason} -> {error, Reason};
-        {connection_failure, Reason} -> {error, Reason}
-    end.
+tuple_to_proplist(Tuple) ->
+    List = tuple_to_list(Tuple),
+    Ret = lists:reverse(list_to_proplist(List, [])),
+    Ret.
 
-push(Conn, Depth) ->
-    ok.
+list_to_proplist([], Acc) -> Acc;
+list_to_proplist([K,V|T], Acc) ->
+    list_to_proplist(T, [{K, V}|Acc]).
 
-pop(Conn, Depth) ->
-    ok.
+mongo_to_boss_id(Type, MongoId) ->
+    lists:concat([Type, "-", binary_to_list(dec2hex(element(1, MongoId)))]).
 
-dump(_Conn) -> "".
+boss_to_mongo_id(BossId) ->
+    [_, MongoId] = string:tokens(BossId, "-"),
+    {hex2dec(MongoId)}.
 
-%execute(Conn, Commands) ->
-%    pgsql:squery(Conn, Commands).
-
-% internal
+mongo_tuple_to_record(Type, Row) ->
+    PropList = tuple_to_proplist(Row),
+    Args = lists:map(fun({K,V}) ->
+                case {K,V} of
+                    {'_id', V} -> mongo_to_boss_id(Type, V);
+                    {K, {_,_,_} = V} -> 
+                        case lists:suffix("_time", atom_to_list(K)) of
+                            true -> calendar:now_to_datetime(V);
+                            false -> V
+                        end;
+                    {_, V} -> V
+                end
+        end, PropList),
+    apply(Type, new, Args).
 
 infer_type_from_id(Id) when is_list(Id) ->
-    [Type, BossId] = string:tokens(Id, "-"),
+    [Type, _BossId] = string:tokens(Id, "-"),
     {list_to_atom(Type), type_to_collection(Type), boss_to_mongo_id(Id)}.
 
 type_to_table_name(Type) when is_atom(Type) ->
     type_to_table_name(atom_to_list(Type));
 type_to_table_name(Type) when is_list(Type) ->
     inflector:pluralize(Type).
-
-activate_record(Record, Metadata, Type) ->
-    DummyRecord = apply(Type, new, lists:seq(1, proplists:get_value(new, Type:module_info(exports)))),
-    apply(Type, new, lists:map(fun
-                (id) ->
-                    Index = keyindex(<<"id">>, 2, Metadata),
-                    atom_to_list(Type) ++ "-" ++ integer_to_list(element(Index, Record));
-                (Key) ->
-                    Index = keyindex(list_to_binary(atom_to_list(Key)), 2, Metadata),
-                    case element(Index, Record) of
-                        {Date, {_, _, S} = Time} when is_float(S) ->
-                            {Date, setelement(3, Time, round(S))};
-                        Val -> Val
-                    end
-            end, DummyRecord:attribute_names())).
 
 model_is_loaded(Type) ->
     case code:is_loaded(Type) of
@@ -320,79 +304,6 @@ model_is_loaded(Type) ->
             end;
         false -> false
     end.
-
-keyindex(Key, N, TupleList) ->
-    keyindex(Key, N, TupleList, 1).
-
-keyindex(_Key, _N, [], _Index) ->
-    undefined;
-keyindex(Key, N, [Tuple|Rest], Index) ->
-    case element(N, Tuple) of
-        Key -> Index;
-        _ -> keyindex(Key, N, Rest, Index + 1)
-    end.
-
-sort_order_sql(num_ascending) ->
-    "ASC";
-sort_order_sql(num_descending) ->
-    "DESC";
-sort_order_sql(str_ascending) ->
-    "ASC";
-sort_order_sql(str_descending) ->
-    "DESC".
-
-build_insert_query(Record) ->
-    Type = element(1, Record),
-    TableName = type_to_table_name(Type),
-    {Attributes, Values} = lists:foldl(fun
-            ({id, _}, Acc) -> Acc;
-            ({A, V}, {Attrs, Vals}) ->
-                {[atom_to_list(A)|Attrs], [pack_value(V)|Vals]}
-        end, {[], []}, Record:attributes()),
-    ["INSERT INTO ", TableName, " (", 
-        string:join(Attributes, ", "),
-        ") values (",
-        string:join(Values, ", "),
-        ")",
-        " RETURNING id"
-    ].
-
-build_update_query(Record) ->
-    {_, TableName, Id} = infer_type_from_id(Record:id()),
-    Updates = lists:foldl(fun
-            ({id, _}, Acc) -> Acc;
-            ({A, V}, Acc) -> [atom_to_list(A) ++ " = " ++ pack_value(V)|Acc]
-        end, [], Record:attributes()),
-    ["UPDATE ", TableName, " SET ", string:join(Updates, ", "),
-        " WHERE id = ", pack_value(Id)].
-
-add_cond(Acc, Key, Op, PackedVal) ->
-    [lists:concat([Key, " ", Op, " ", PackedVal, " AND "])|Acc].
-
-pack_tsvector(Key) ->
-    atom_to_list(Key) ++ "::tsvector".
-
-pack_tsquery(Values, Op) ->
-    "'" ++ string:join(lists:map(fun escape_sql/1, Values), " "++Op++" ") ++ "'::tsquery".
-
-pack_tsquery_not(Values, Op) ->
-    "'!(" ++ string:join(lists:map(fun escape_sql/1, Values), " "++Op++" ") ++ ")'::tsquery".
-
-pack_set(Values) ->
-    "(" ++ string:join(lists:map(fun pack_value/1, Values), ", ") ++ ")".
-
-pack_range(Min, Max) ->
-    pack_value(Min) ++ " AND " ++ pack_value(Max).
-
-escape_sql(Value) ->
-    escape_sql1(Value, []).
-
-escape_sql1([], Acc) ->
-    lists:reverse(Acc);
-escape_sql1([$'|Rest], Acc) ->
-    escape_sql1(Rest, [$', $'|Acc]);
-escape_sql1([C|Rest], Acc) ->
-    escape_sql1(Rest, [C|Acc]).
 
 datetime_to_now(DateTime) ->
     GSeconds = calendar:datetime_to_gregorian_seconds(DateTime),
