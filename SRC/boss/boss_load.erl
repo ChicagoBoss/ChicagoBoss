@@ -1,5 +1,6 @@
 -module(boss_load).
 -compile(export_all).
+-define(HELPER_MODULE_NAME, '__boss_helper_module').
 
 load_all_modules() ->
     load_dirs(boss_files:test_path(), fun compile/1),
@@ -7,6 +8,7 @@ load_all_modules() ->
     load_mail_controllers(),
     load_web_controllers(),
     load_models(),
+    load_view_lib(),
     load_views().
 
 load_libraries() ->
@@ -88,9 +90,14 @@ maybe_compile(Dir, File, Compiler) ->
 view_doc_root(ViewPath) ->
     filename:join(lists:reverse(lists:nthtail(2, lists:reverse(filename:split(ViewPath))))).
 
+compile_view_dir_erlydtl(LibPath) ->
+    erlydtl_compiler:compile_dir(LibPath, ?HELPER_MODULE_NAME,
+        [{doc_root, filename:join(lists:reverse(lists:nthtail(1, lists:reverse(filename:split(LibPath)))))},
+            {compiler_options, []}]).
+
 compile_view_erlydtl(ViewPath) ->
     erlydtl_compiler:compile(ViewPath, view_module(ViewPath),
-        [{doc_root, view_doc_root(ViewPath)}, {custom_tags_dir, boss_files:web_view_path("lib")},
+        [{doc_root, view_doc_root(ViewPath)}, {custom_tags_module, ?HELPER_MODULE_NAME},
             {compiler_options, []}]).
 
 compile_model(ModulePath) ->
@@ -99,31 +106,55 @@ compile_model(ModulePath) ->
 compile(ModulePath) ->
     boss_compiler:compile(ModulePath, [{out_dir, "ebin"}]).
 
-load_views() ->
-    lists:map(fun compile_view_erlydtl/1, boss_files:view_file_list()).
+load_view_lib() ->
+    compile_view_dir_erlydtl(boss_files:view_lib_path()).
 
-load_view_if_old(ViewPath, Module) ->
+load_view_lib_if_old(ViewLibPath, Module) ->
     NeedCompile = case module_is_loaded(Module) of
         true ->
             module_older_than(Module, lists:map(fun
-                        ({File, _CheckSum}) -> 
-                            File;
-                        (File) ->
-                            File
-                    end, [Module:source() | Module:dependencies()]));
+                        ({File, _CheckSum}) -> File;
+                        (File) -> File
+                    end, [Module:source_dir() | Module:dependencies()]));
         false ->
             true
     end,
     case NeedCompile of
         true ->
-            case compile_view_erlydtl(ViewPath) of
-                ok ->
-                    {ok, Module};
-                Err ->
-                    Err
+            case compile_view_dir_erlydtl(ViewLibPath) of
+                ok -> {ok, Module};
+                Err -> Err
             end;
         false ->
             {ok, Module}
+    end.
+
+load_views() ->
+    lists:map(fun compile_view_erlydtl/1, boss_files:view_file_list()).
+
+load_view_if_old(ViewPath, Module) ->
+    case load_view_lib_if_old(boss_files:view_lib_path(), ?HELPER_MODULE_NAME) of
+        {ok, _} -> 
+            NeedCompile = case module_is_loaded(Module) of
+                true ->
+                    module_older_than(Module, lists:map(fun
+                                ({File, _CheckSum}) -> File;
+                                (File) -> File
+                            end, [Module:source() | Module:dependencies()]));
+                false ->
+                    true
+            end,
+            case NeedCompile of
+                true ->
+                    case compile_view_erlydtl(ViewPath) of
+                        ok -> {ok, Module};
+                        Err -> Err
+                    end;
+                false ->
+                    {ok, Module}
+            end;
+        Err ->
+            Err
     end.
 
 load_view_if_dev(ViewPath) ->

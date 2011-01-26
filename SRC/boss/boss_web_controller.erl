@@ -290,7 +290,7 @@ render_view(Location, Req, Variables) ->
 render_view({Controller, Template, _}, Req, Variables, Headers) ->
     ViewPath = boss_files:web_view_path(Controller, Template),
     LoadResult = boss_load:load_view_if_dev(ViewPath),
-	BossFlash = boss_flash:get_and_clear(Req),
+    BossFlash = boss_flash:get_and_clear(Req),
     case LoadResult of
         {ok, Module} ->
             TranslationFun = choose_translation_fun(Module:translatable_strings(), 

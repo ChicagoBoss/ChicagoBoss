@@ -89,9 +89,6 @@ Nonterminals
     Variable
     Filter
     
-    LoadTag
-    LoadNames
-    
     CustomTag
     Args
 
@@ -129,7 +126,6 @@ Terminals
     ifnotequal_keyword
     in_keyword
     include_keyword
-    load_keyword
     noop_keyword
     not_keyword
     now_keyword
@@ -163,7 +159,6 @@ Elements -> Elements ValueBraced : '$1' ++ ['$2'].
 Elements -> Elements ExtendsTag : '$1' ++ ['$2'].
 Elements -> Elements IncludeTag : '$1' ++ ['$2'].
 Elements -> Elements NowTag : '$1' ++ ['$2'].
-Elements -> Elements LoadTag : '$1' ++ ['$2'].
 Elements -> Elements CycleTag : '$1' ++ ['$2'].
 Elements -> Elements BlockBlock : '$1' ++ ['$2'].
 Elements -> Elements FirstofTag : '$1' ++ ['$2'].
@@ -194,10 +189,6 @@ TransTag -> open_tag trans_keyword Variable noop_keyword close_tag : '$3'.
 ExtendsTag -> open_tag extends_keyword string_literal close_tag : {extends, '$3'}.
 IncludeTag -> open_tag include_keyword string_literal close_tag : {include, '$3'}.
 NowTag -> open_tag now_keyword string_literal close_tag : {date, now, '$3'}.
-
-LoadTag -> open_tag load_keyword LoadNames close_tag : {load, '$3'}.
-LoadNames -> identifier : ['$1'].
-LoadNames -> LoadNames identifier : '$1' ++ ['$2'].
 
 BlockBlock -> BlockBraced Elements EndBlockBraced : {block, '$1', '$2'}.
 BlockBraced -> open_tag block_keyword identifier close_tag : '$3'.
