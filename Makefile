@@ -67,6 +67,7 @@ test_pgsql:
 	$(ERL) -pa ebin -run boss_db_test start -config $(DB_CONFIG_DIR)/pgsql -noshell
 
 test_mongodb:
+	echo "db.boss_db_test_models.remove();"|mongo boss_test
 	$(ERL) -pa ebin -run boss_db_test start -config $(DB_CONFIG_DIR)/mongodb -noshell
 
 test_session_ets:
