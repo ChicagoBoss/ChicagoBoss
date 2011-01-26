@@ -1,7 +1,7 @@
 -module(boss_db_adapter_mongodb).
 -behaviour(boss_db_adapter).
 -export([start/0, start/1, stop/1, find/2, find/7]).
--export([count/3, counter/2, incr/3, delete/2, save_record/2]).
+-export([count/3, counter/2, incr/2, incr/3, delete/2, save_record/2]).
 -export([push/2, pop/2, dump/1, execute/2]).
 
 -define(LOG(Name, Value), io:format("DEBUG: ~s: ~p~n", [Name, Value])).
@@ -86,24 +86,31 @@ count(Conn, Type, Conditions) ->
     Count.
 
 counter(Conn, Id) when is_list(Id) ->
-    Res = pgsql:equery(Conn, "SELECT value FROM counters WHERE name = $1", [Id]),
+    Res = execute(Conn, fun() ->
+                mongo:find_one(boss_counters, {'name', list_to_binary(Id)})
+        end),
     case Res of
-        {ok, _, [{Value}]} -> Value;
-        {error, _Reason} -> 0
+        {ok, {Doc}} -> 
+            PropList = tuple_to_proplist(Doc),
+            proplists:get_value(value, PropList);
+        {failure, Reason} -> {error, Reason};
+        {connection_failure, Reason} -> {error, Reason}
     end.
 
+incr(Conn, Id) ->
+    incr(Conn, Id, 1).
+
 incr(Conn, Id, Count) ->
-    Res = pgsql:equery(Conn, "UPDATE counters SET value = value + $1 WHERE name = $2 RETURNING value", 
-        [Count, Id]),
+    Res = execute(Conn, fun() -> 
+                 mongo:repsert(boss_counters, 
+                         {'name', list_to_binary(Id)},
+                         {'$inc', {value, Count}}
+                         )
+        end),
     case Res of
-        {ok, _, _, [{Value}]} -> Value;
-        {error, _Reason} -> 
-            Res1 = pgsql:equery(Conn, "INSERT INTO counters (name, value) VALUES ($1, $2) RETURNING value", 
-                [Id, Count]),
-            case Res1 of
-                {ok, _, _, [{Value}]} -> Value;
-                {error, Reason} -> {error, Reason}
-            end
+        {ok, ok} -> counter(Conn, Id);
+        {failure, Reason} -> {error, Reason};
+        {connection_failure, Reason} -> {error, Reason}
     end.
 
 delete(Conn, Id) when is_list(Id) ->
