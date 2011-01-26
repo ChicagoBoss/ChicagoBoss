@@ -81,8 +81,14 @@ find(Conn, Type, Conditions, Max, Skip, Sort, SortOrder) when is_atom(Type), is_
         true ->
             Collection = type_to_collection(Type),
             Res = execute(Conn, fun() ->
-                    mongo:find(Collection, proplist_to_tuple(Conditions), [],
-                               Skip, Max) 
+                    SortOrder1 = case SortOrder of 
+                        str_ascending -> 1;
+                        num_ascending -> 1;
+                        str_descending -> -1;
+                        num_descending -> -1
+                    end,
+                    mongo:find(Collection, build_conditions(Conditions), [],
+                               Skip, Max, {Sort, SortOrder1}) 
                 end),
             case Res of
                 {ok, Curs} ->
@@ -100,8 +106,11 @@ find(Conn, Type, Conditions, Max, Skip, Sort, SortOrder) when is_atom(Type), is_
 count(Conn, Type, Conditions) ->
     Collection = type_to_collection(Type),
     {ok, Count} = execute(Conn, fun() -> 
-                mongo:count(Collection, proplist_to_tuple(Conditions))
+                C = build_conditions(Conditions),
+%                ?LOG("Conditions", C),
+                mongo:count(Collection, C)
         end),
+%    ?LOG("Count", Count),
     Count.
 
 counter(Conn, Id) when is_list(Id) ->
@@ -136,6 +145,94 @@ delete(Conn, Id) when is_list(Id) ->
         {failure, Reason} -> {error, Reason};
         {connection_failure, Reason} -> {error, Reason}
     end.
+
+boss_to_mongo_op(BossOperator) ->
+    OperatorsMap = [
+        {'not_equals', '$ne'},
+        {'gt', '$gt'},
+        {'ge', '$gte'},
+        {'lt', '$lt'},
+        {'le', '$lte'},
+        {'in', '$in'},
+        {'not_in', '$nin'}
+    ],
+    proplists:get_value(BossOperator, OperatorsMap).
+
+where_clause(Format, Params) ->
+    erlang:iolist_to_binary(
+                io_lib:format(Format, Params)).
+
+multiple_where_clauses_string(Format, Key, ValueList, Operator) ->
+    ClauseList = lists:map(fun(Value) ->
+                lists:flatten(io_lib:format(Format, [Key, Value]))
+        end, ValueList),
+        string:join(ClauseList, " " ++ Operator ++ " ").
+
+multiple_where_clauses(Format, Key, ValueList, Operator) ->
+    erlang:iolist_to_binary(multiple_where_clauses_string(Format, Key,
+            ValueList, Operator)).
+
+-define(CONTAINS_FORMAT, "this.~s.indexOf('~s') != -1").
+-define(NOT_CONTAINS_FORMAT, "this.~s.indexOf('~s') == -1").
+
+build_conditions(Conditions) ->
+    proplist_to_tuple(build_conditions1(Conditions, [])).
+
+build_conditions1([], Acc) ->
+    Acc;
+
+build_conditions1([{Key, Operator, Value}|Rest], Acc) ->
+%    ?LOG("Key, Operator, Value", {Key, Operator, Value}),
+
+    Condition = case {Operator, Value} of 
+        {'not_matches', Value} ->
+            [{Key, {'$not', {regex, list_to_binary(Value), <<"">>}}}];
+        {'matches', Value} ->
+            [{Key, {regex, list_to_binary(Value), <<"">>}}];
+        {'contains', Value} ->
+            WhereClause = where_clause(
+                ?CONTAINS_FORMAT, [Key, Value]),
+            [{'$where', WhereClause}];
+        {'not_contains', Value} ->
+            WhereClause = where_clause(
+                ?NOT_CONTAINS_FORMAT, [Key, Value]),
+            [{'$where', WhereClause}];
+        {'contains_all', ValueList} ->
+            WhereClause = multiple_where_clauses(
+                ?CONTAINS_FORMAT, Key, ValueList, "&&"),
+            [{'$where', WhereClause}];
+        {'not_contains_all', ValueList} ->
+            WhereClause = "!(" ++ multiple_where_clauses_string(
+                ?CONTAINS_FORMAT, Key, ValueList, "&&") ++ ")",
+            [{'$where', erlang:iolist_to_binary(WhereClause)}];
+        {'contains_any', ValueList} ->
+            WhereClause = multiple_where_clauses(
+                ?CONTAINS_FORMAT, Key, ValueList, "||"),
+            [{'$where', WhereClause}];
+        {'contains_none', ValueList} ->
+            WhereClause = multiple_where_clauses(
+                ?NOT_CONTAINS_FORMAT, Key, ValueList, "&&"),
+            [{'$where', WhereClause}];
+        {'equals', Value} when is_list(Value) -> 
+            [{Key, list_to_binary(Value)}];
+        {'not_equals', Value} when is_list(Value) -> 
+            [{Key, {'$ne', list_to_binary(Value)}}];
+        {'equals', {{_,_,_},{_,_,_}} = Value} -> 
+            [{Key, datetime_to_now(Value)}];
+        {'equals', Value} -> 
+            [{Key, Value}];
+        {Operator, {{_,_,_},{_,_,_}} = Value} -> 
+            [{Key, {boss_to_mongo_op(Operator), datetime_to_now(Value)}}];
+        {'in', {Min, Max}} -> 
+            [{Key, {'$gte', Min}}, {Key, {'$lte', Max}}];
+        {'not_in', {Min, Max}} -> 
+            [{'$or', [{Key, {'$lt', Min}}, {Key, {'$gt', Max}}]}];
+        {Operator, Value} -> 
+            [{Key, {boss_to_mongo_op(Operator), Value}}]
+    end,
+%    ?LOG("Condition", Condition),
+    build_conditions1(Rest, lists:append(Condition, Acc)).
+
 
 proplist_to_tuple(PropList) ->
     ListOfLists = lists:reverse([[K,V]||{K,V} <- PropList]),
@@ -268,65 +365,6 @@ build_update_query(Record) ->
         end, [], Record:attributes()),
     ["UPDATE ", TableName, " SET ", string:join(Updates, ", "),
         " WHERE id = ", pack_value(Id)].
-
-build_select_query(Type, Conditions, Max, Skip, Sort, SortOrder) ->
-    TableName = type_to_table_name(Type),
-    ["SELECT * FROM ", TableName, 
-        " WHERE ", build_conditions(Conditions),
-        " ORDER BY ", atom_to_list(Sort), " ", sort_order_sql(SortOrder),
-        " LIMIT ", integer_to_list(Max), 
-        " OFFSET ", integer_to_list(Skip)
-    ].
-
-build_conditions(Conditions) ->
-    build_conditions1(Conditions, [" TRUE"]).
-
-build_conditions1([], Acc) ->
-    Acc;
-build_conditions1([{Key, 'equals', Value}|Rest], Acc) ->
-    build_conditions1(Rest, add_cond(Acc, Key, "=", pack_value(Value)));
-build_conditions1([{Key, 'not_equals', Value}|Rest], Acc) ->
-    build_conditions1(Rest, add_cond(Acc, Key, "!=", pack_value(Value)));
-build_conditions1([{Key, 'in', Value}|Rest], Acc) when is_list(Value) ->
-    PackedValues = pack_set(Value),
-    build_conditions1(Rest, add_cond(Acc, Key, "IN", PackedValues));
-build_conditions1([{Key, 'not_in', Value}|Rest], Acc) when is_list(Value) ->
-    PackedValues = pack_set(Value),
-    build_conditions1(Rest, add_cond(Acc, Key, "NOT IN", PackedValues));
-build_conditions1([{Key, 'in', {Min, Max}}|Rest], Acc) when Max >= Min ->
-    PackedValues = pack_range(Min, Max),
-    build_conditions1(Rest, add_cond(Acc, Key, "BETWEEN", PackedValues));
-build_conditions1([{Key, 'not_in', {Min, Max}}|Rest], Acc) when Max >= Min ->
-    PackedValues = pack_range(Min, Max),
-    build_conditions1(Rest, add_cond(Acc, Key, "NOT BETWEEN", PackedValues));
-build_conditions1([{Key, 'gt', Value}|Rest], Acc) ->
-    build_conditions1(Rest, add_cond(Acc, Key, ">", pack_value(Value)));
-build_conditions1([{Key, 'lt', Value}|Rest], Acc) ->
-    build_conditions1(Rest, add_cond(Acc, Key, "<", pack_value(Value)));
-build_conditions1([{Key, 'ge', Value}|Rest], Acc) ->
-    build_conditions1(Rest, add_cond(Acc, Key, ">=", pack_value(Value)));
-build_conditions1([{Key, 'le', Value}|Rest], Acc) ->
-    build_conditions1(Rest, add_cond(Acc, Key, "<=", pack_value(Value)));
-build_conditions1([{Key, 'matches', "*"++Value}|Rest], Acc) ->
-    build_conditions1(Rest, add_cond(Acc, Key, "~*", pack_value(Value)));
-build_conditions1([{Key, 'not_matches', "*"++Value}|Rest], Acc) ->
-    build_conditions1(Rest, add_cond(Acc, Key, "!~*", pack_value(Value)));
-build_conditions1([{Key, 'matches', Value}|Rest], Acc) ->
-    build_conditions1(Rest, add_cond(Acc, Key, "~", pack_value(Value)));
-build_conditions1([{Key, 'not_matches', Value}|Rest], Acc) ->
-    build_conditions1(Rest, add_cond(Acc, Key, "!~", pack_value(Value)));
-build_conditions1([{Key, 'contains', Value}|Rest], Acc) ->
-    build_conditions1(Rest, add_cond(Acc, pack_tsvector(Key), "@@", pack_tsquery([Value], "&")));
-build_conditions1([{Key, 'not_contains', Value}|Rest], Acc) ->
-    build_conditions1(Rest, add_cond(Acc, pack_tsvector(Key), "@@", pack_tsquery_not([Value], "&")));
-build_conditions1([{Key, 'contains_all', Values}|Rest], Acc) when is_list(Values) ->
-    build_conditions1(Rest, add_cond(Acc, pack_tsvector(Key), "@@", pack_tsquery(Values, "&")));
-build_conditions1([{Key, 'not_contains_all', Values}|Rest], Acc) when is_list(Values) ->
-    build_conditions1(Rest, add_cond(Acc, pack_tsvector(Key), "@@", pack_tsquery_not(Values, "&")));
-build_conditions1([{Key, 'contains_any', Values}|Rest], Acc) when is_list(Values) ->
-    build_conditions1(Rest, add_cond(Acc, pack_tsvector(Key), "@@", pack_tsquery(Values, "|")));
-build_conditions1([{Key, 'contains_none', Values}|Rest], Acc) when is_list(Values) ->
-    build_conditions1(Rest, add_cond(Acc, pack_tsvector(Key), "@@", pack_tsquery_not(Values, "|"))).
 
 add_cond(Acc, Key, Op, PackedVal) ->
     [lists:concat([Key, " ", Op, " ", PackedVal, " AND "])|Acc].
