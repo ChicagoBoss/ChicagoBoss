@@ -163,22 +163,27 @@ load_and_execute_dev({"doc", ModelName, _}, Req) ->
             {not_found, "File not found"}
     end;
 load_and_execute_dev({Controller, _, _} = Location, Req) ->
-    case boss_load:load_libraries() of
-        {ok, _} ->
-            case boss_load:load_web_controllers() of
-                {ok, Controllers} ->
-                    case lists:member(Controller ++ "_controller", Controllers) of
-                        true ->
-                            case boss_load:load_models() of
-                                {ok, _} ->
-                                    execute_action(Location, Req);
-                                {error, ErrorList} ->
-                                    render_errors(ErrorList, Req)
+    case boss_load:load_mail_controllers() of
+        {ok, _} -> 
+            case boss_load:load_libraries() of
+                {ok, _} ->
+                    case boss_load:load_web_controllers() of
+                        {ok, Controllers} ->
+                            case lists:member(Controller ++ "_controller", Controllers) of
+                                true ->
+                                    case boss_load:load_models() of
+                                        {ok, _} ->
+                                            execute_action(Location, Req);
+                                        {error, ErrorList} ->
+                                            render_errors(ErrorList, Req)
+                                    end;
+                                false ->
+                                    render_view(Location, Req)
                             end;
-                        false ->
-                            render_view(Location, Req)
+                        {error, ErrorList} when is_list(ErrorList) ->
+                            render_errors(ErrorList, Req)
                     end;
-                {error, ErrorList} when is_list(ErrorList) ->
+                {error, ErrorList} ->
                     render_errors(ErrorList, Req)
             end;
         {error, ErrorList} ->
@@ -285,7 +290,7 @@ render_view(Location, Req, Variables) ->
 render_view({Controller, Template, _}, Req, Variables, Headers) ->
     ViewPath = boss_files:web_view_path(Controller, Template),
     LoadResult = boss_load:load_view_if_dev(ViewPath),
-	BossFlash = boss_flash:get_and_clear(Req),
+    BossFlash = boss_flash:get_and_clear(Req),
     case LoadResult of
         {ok, Module} ->
             TranslationFun = choose_translation_fun(Module:translatable_strings(), 

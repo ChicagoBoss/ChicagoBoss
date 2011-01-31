@@ -27,6 +27,8 @@ admin_static_path() -> filename:join([root_admin_dir(), "static"]).
 
 lib_path() -> [filename:join([root_dir(), "lib"])].
 
+view_lib_path() -> filename:join([root_dir(), "view", "lib"]).
+
 web_controller_path() -> [filename:join([root_dir(), "controller"]), filename:join([root_admin_dir()])].
 
 mail_controller_path() -> [filename:join([root_dir(), "mail"])].
