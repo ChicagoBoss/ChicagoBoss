@@ -2,7 +2,8 @@
 -behaviour(boss_db_adapter).
 -export([start/0, start/1, stop/1, find/2, find/7]).
 -export([count/3, counter/2, incr/2, incr/3, delete/2, save_record/2]).
--export([push/2, pop/2, dump/1, execute/2]).
+-export([execute/2]).
+-export([push/2, pop/2]).
 
 -define(LOG(Name, Value), io:format("DEBUG: ~s: ~p~n", [Name, Value])).
 
@@ -154,13 +155,11 @@ save_record(Conn, Record) when is_tuple(Record) ->
         {connection_failure, Reason} -> {error, Reason}
     end.
 
-push(_Conn, _Depth) ->
-    ok.
+% These 2 functions are not part of the behaviour but are required for
+% tests to pass
+push(_Conn, _Depth) -> ok.
 
-pop(_Conn, _Depth) ->
-    ok.
-
-dump(_Conn) -> "".
+pop(_Conn, _Depth) -> ok.
 
 %%
 %% Internal functions
@@ -277,19 +276,31 @@ boss_to_mongo_id(BossId) ->
     [_, MongoId] = string:tokens(BossId, "-"),
     {hex2dec(MongoId)}.
 
+attr_value(id, MongoDoc) ->
+    proplists:get_value('_id', MongoDoc);
+attr_value(AttrName, MongoDoc) ->
+    proplists:get_value(AttrName, MongoDoc).
+
+mongo_to_boss_value(id, Value, RecordType) ->
+    mongo_to_boss_id(RecordType, Value);
+mongo_to_boss_value(AttrName, {_,_,_} = Value, _) ->
+    case lists:suffix("_time", atom_to_list(AttrName)) of
+        true -> calendar:now_to_datetime(Value);
+        false -> Value
+    end;
+mongo_to_boss_value(_, Value, _) ->
+    Value.
+
+attribute_names(Type) ->
+    DummyRecord = apply(Type, new, lists:seq(1, proplists:get_value(new, Type:module_info(exports)))),
+    DummyRecord:attribute_names().
+
 mongo_tuple_to_record(Type, Row) ->
-    PropList = tuple_to_proplist(Row),
-    Args = lists:map(fun({K,V}) ->
-                case {K,V} of
-                    {'_id', V} -> mongo_to_boss_id(Type, V);
-                    {K, {_,_,_} = V} -> 
-                        case lists:suffix("_time", atom_to_list(K)) of
-                            true -> calendar:now_to_datetime(V);
-                            false -> V
-                        end;
-                    {_, V} -> V
-                end
-        end, PropList),
+    MongoDoc = tuple_to_proplist(Row),
+    Args = lists:map(fun(AttrName) ->
+                MongoValue = attr_value(AttrName, MongoDoc),
+                mongo_to_boss_value(AttrName, MongoValue, Type)
+        end, attribute_names(Type)),
     apply(Type, new, Args).
 
 infer_type_from_id(Id) when is_list(Id) ->
