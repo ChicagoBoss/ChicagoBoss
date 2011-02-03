@@ -51,6 +51,8 @@ find(Conn, Id) when is_list(Id) ->
 find(Conn, Type, Conditions, Max, Skip, Sort, SortOrder) when is_atom(Type), is_list(Conditions), 
                                                               is_integer(Max), is_integer(Skip), 
                                                               is_atom(Sort), is_atom(SortOrder) ->
+%    ?LOG("find Type", Type),
+%    ?LOG("find Conditions", Conditions),
     case model_is_loaded(Type) of
         true ->
             Collection = type_to_collection(Type),
@@ -126,20 +128,32 @@ delete(Conn, Id) when is_list(Id) ->
         {connection_failure, Reason} -> {error, Reason}
     end.
 
+
+is_id_attr(AttrName) ->
+    lists:suffix("_id", atom_to_list(AttrName)).
+
 save_record(Conn, Record) when is_tuple(Record) ->
     Type = element(1, Record),
     Collection = type_to_collection(Type),
     Attributes = case Record:id() of
         id ->
-            PropList = lists:map(fun({K,V}) -> {K, pack_value(V)} end, 
+            PropList = lists:map(fun({K,V}) -> 
+                            case is_id_attr(K) of
+                                true -> {K, boss_to_mongo_id(V)};
+                                false -> {K, pack_value(V)}
+                            end
+                end, 
                                  Record:attributes()),
-            Tuple = proplist_to_tuple(proplists:delete(id, PropList)),
-            Tuple;
+            proplist_to_tuple(proplists:delete(id, PropList));
         DefinedId when is_list(DefinedId) ->
             PropList = lists:map(fun({K,V}) ->
                             case K of 
                                 id -> {'_id', boss_to_mongo_id(DefinedId)};
-                                _ -> {K, pack_value(V)}
+                                _ -> 
+                                    case is_id_attr(K) of
+                                        true -> {K, boss_to_mongo_id(V)};
+                                        false -> {K, pack_value(V)}
+                                    end
                             end
                     end, Record:attributes()),
             proplist_to_tuple(PropList)
@@ -230,7 +244,12 @@ build_conditions1([{Key, Operator, Value}|Rest], Acc) ->
                 ?NOT_CONTAINS_FORMAT, Key, ValueList, "&&"),
             [{'$where', WhereClause}];
         {'equals', Value} when is_list(Value) -> 
-            [{Key, list_to_binary(Value)}];
+            case is_id_attr(Key) of 
+                true -> 
+                    [{Key, boss_to_mongo_id(Value)}];
+                false -> 
+                    [{Key, list_to_binary(Value)}]
+            end;
         {'not_equals', Value} when is_list(Value) -> 
             [{Key, {'$ne', list_to_binary(Value)}}];
         {'equals', {{_,_,_},{_,_,_}} = Value} -> 
@@ -273,8 +292,21 @@ mongo_to_boss_id(Type, MongoId) ->
     lists:concat([Type, "-", binary_to_list(dec2hex(element(1, MongoId)))]).
 
 boss_to_mongo_id(BossId) ->
-    [_, MongoId] = string:tokens(BossId, "-"),
-    {hex2dec(MongoId)}.
+    try
+        [_, MongoId] = string:tokens(BossId, "-"),
+        {hex2dec(MongoId)}
+    catch
+        Error:Reason -> 
+            error_logger:warning_msg("Error parsing Boss record id: ~p:~p~n", 
+                [Error, Reason]),
+            []
+    end.
+
+id_type_from_foreign_key(ForeignKey) ->
+    Tokens = string:tokens(atom_to_list(ForeignKey), "_"),
+    NameTokens = lists:filter(fun(Token) -> Token =/= "id" end, 
+        Tokens),
+    string:join(NameTokens, "-").
 
 attr_value(id, MongoDoc) ->
     proplists:get_value('_id', MongoDoc);
@@ -288,8 +320,14 @@ mongo_to_boss_value(AttrName, {_,_,_} = Value, _) ->
         true -> calendar:now_to_datetime(Value);
         false -> Value
     end;
-mongo_to_boss_value(_, Value, _) ->
-    Value.
+mongo_to_boss_value(AttrName, Value, _RecordType) ->
+    case is_id_attr(AttrName) and (Value =/= "") of 
+        true -> 
+            IdType = id_type_from_foreign_key(AttrName),
+            mongo_to_boss_id(IdType, Value);
+        false -> 
+            Value
+    end.
 
 attribute_names(Type) ->
     DummyRecord = apply(Type, new, lists:seq(1, proplists:get_value(new, Type:module_info(exports)))),
