@@ -63,8 +63,10 @@ find(Conn, Type, Conditions, Max, Skip, Sort, SortOrder) when is_atom(Type), is_
                         str_descending -> -1;
                         num_descending -> -1
                     end,
-                    mongo:find(Collection, build_conditions(Conditions), [],
-                               Skip, Max, {Sort, SortOrder1}) 
+                    Selector = build_conditions(Conditions, 
+                                                {Sort, SortOrder1}),
+                    mongo:find(Collection, Selector, [],
+                               Skip, Max) 
                 end),
             case Res of
                 {ok, Curs} ->
@@ -207,6 +209,9 @@ multiple_where_clauses(Format, Key, ValueList, Operator) ->
 
 build_conditions(Conditions) ->
     proplist_to_tuple(build_conditions1(Conditions, [])).
+
+build_conditions(Conditions, OrderBy) ->
+    {'query', build_conditions(Conditions), orderby, OrderBy}.
 
 build_conditions1([], Acc) ->
     Acc;
