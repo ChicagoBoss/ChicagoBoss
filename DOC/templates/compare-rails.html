@@ -1,0 +1,215 @@
+{% extends "index.html" %}
+{% block header %}
+        <div class="secondary_header">
+            <div class="secondary_logo">
+                <em>Chicago</em> <strong>BOSS</strong>
+            </div>
+            <div class="secondary_quote">
+                <em>&#8220;Consider it done!&#8221;</em>
+            </div>
+        </div>
+{% endblock %}
+{% block title %}Ruby on Rails and Chicago Boss: Side By Side{% endblock %}
+{% block nav %}
+<a href="index.html">F.A.Q.</a> &nbsp; | &nbsp; 
+<strong>COMPARE</strong> &nbsp; | &nbsp; 
+<a href="guide-screencast.html">GUIDES</a> &nbsp; | &nbsp; 
+<a href="api.html">API</a> &nbsp; | &nbsp; 
+<a href="download.html">DOWNLOAD</a> &nbsp; | &nbsp;
+<a href="forum.html">COMMUNITY</a>
+{% endblock %}
+{% block style %}
+<style type="text/css">
+    td {
+        text-align: center;
+        font-family: monospace;
+        padding: 10px;
+    }
+    tr.grouping td {
+        font-style: italic;
+        height: 40px;
+        padding-top: 10px;
+    }
+    td.check {
+        color: #59BD5C;
+    }
+    tbody td {
+        color: white;
+        background-color: black;
+    }
+    tr.multiline td {
+        text-align: left;
+    }
+    div.compnav {
+        font-size: 14px;
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div class="compnav">
+    <a href="compare.html">Compare Erlang Web Frameworks</a> 
+    &nbsp; | &nbsp;
+    <strong>Compare API to Ruby on Rails</strong>
+</div>
+<center>
+<h2>Ruby on Rails and Chicago Boss: Side By Side</h2>
+</center>
+<p>The Chicago Boss API was largely inspired by Rails. The following tables should give you a feel for some of the similarities and differences.</p>
+<p><em>MODEL</em></p>
+<table width="100%">
+    <thead>
+        <tr><th width="50%">RUBY ON RAILS</th>
+            <th>CHICAGO BOSS</th></tr>
+</thead>
+<tbody>
+    <tr>
+        <td>Person.new(:name =&gt; "Joe", :age =&gt; 4)</td>
+        <td>person:new(id, "Joe", 4)</td>
+    <tr>
+        <td>@person.save</td>
+        <td>Person:save()</td>
+    </tr>
+    <tr>
+        <td>@person.valid?</td>
+        <td>Person:validate()</td>
+    </tr>
+    <tr>
+        <td>@person.last_name</td>
+        <td>Person:last_name()</td>
+    </tr>
+    <tr>
+        <td>@person.attribute_names</td>
+        <td>Person:attribute_names()</td>
+    </tr>
+    <tr>
+        <td>@person.attributes</td>
+        <td>Person:attributes()</td>
+    </tr>
+</tbody>
+</table>
+<p><em>ASSOCIATIONS</em></p>
+<table width="100%">
+    <thead>
+        <tr><th width="50%">RUBY ON RAILS</th>
+            <th>CHICAGO BOSS</th></tr>
+</thead>
+<tbody>
+    <tr>
+        <td>belongs_to :manager</td>
+        <td>-belongs_to(manager).</td>
+    </tr>
+    <tr>
+        <td>has_one :partner</td>
+        <td>-has({partner, 1}).</td>
+    </tr>
+    <tr>
+        <td>has_many :pets</td>
+        <td>-has({pets, many}).</td>
+    </tr>
+    <tr>
+        <td>has_many :pets, :foreign_key =&gt; "animal_id"</td>
+        <td>-has({pets, many, [{foreign_key, animal_id}]}).</td>
+    </tr>
+    <tr>
+        <td>has_many :pets, :class_name =&gt; "Animal"</td>
+        <td>-has({pets, many, [{module, animal}]}).</td>
+    </tr>
+    <tr>
+        <td>has_many :pets, :order =&gt; "name ASC"</td>
+        <td>-has({pets, many, [{sort_by, name}, {sort_order, str_ascending}]}).</td>
+    </tr>
+</tbody>
+</table>
+<p><em>DATABASE</em></p>
+<table width="100%">
+    <thead>
+        <tr><th width="50%">RUBY ON RAILS</th>
+            <th>CHICAGO BOSS</th></tr>
+</thead>
+<tbody>
+    <tr>
+        <td>Person.find(:all)</td>
+        <td>boss_db:find(person, [])</td>
+    </tr>
+    <tr>
+        <td>Person.find(42)</td>
+        <td>boss_db:find("person-42")</td>
+    </tr>
+    <tr>
+        <td>Person.where("admin = 1")</td>
+        <td>boss_db:find(person, [admin = 1])</td>
+    </tr>
+    <tr>
+        <td>Person.offset(100).limit(10).all</td>
+       <td>boss_db:find(person, [], 100, 10)</td>
+    </tr>
+</tbody>
+</table>
+<p><em>VIEW</em></p>
+<table width="100%">
+    <thead>
+        <tr><th width="50%">RUBY ON RAILS</th>
+            <th>CHICAGO BOSS</th></tr>
+</thead>
+    <tbody>
+        <tr><td>&lt;%= @person.name %&gt;</td>
+            <td>{{ "{{ person.name }}" }}</td></tr>
+        <tr class="multiline"><td>&lt;% if @person %&gt;<br />
+                &nbsp;&nbsp;&lt;%= @person.name %&gt;<br />
+                &lt;% end %&gt;</td>
+            <td>{{ "{% if person %}" }}<br />
+                &nbsp;&nbsp;{{ "{{ person.name }}" }}<br />
+                {{ "{% endif %}" }}</td></tr>
+        <tr class="multiline"><td>&lt;% for person in @people %&gt;<br />
+                &nbsp;&nbsp;-&lt;%= person.name %&gt;<br />
+                &lt;% end %&gt;</td>
+            <td>{{ "{% for person in people %}" }}<br />
+                &nbsp;&nbsp;-{{ "{{ person.name }}" }}<br />
+                {{ "{% endfor %}" }}</td></tr>
+        <tr class="multiline"><td>&lt;%= render "shared/header", { :title=&gt; "foo", :user =&gt; @person  } %&gt;</td>
+            <td>{{ "{% header title=&quot;foo&quot; user=person %}" }}</td>
+        </tr>
+    </tbody>
+</table>
+<p><em>CONTROLLER</em></p>
+<table width="100%">
+    <thead>
+        <tr><th width="50%">RUBY ON RAILS</th>
+            <th>CHICAGO BOSS</th></tr>
+</thead>
+    <tbody>
+    <tr class="multiline">
+        <td>def edit<br />
+            &nbsp;&nbsp;case request.request_method<br />
+            &nbsp;&nbsp;when "GET"<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;...<br />
+            &nbsp;&nbsp;when "POST"<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;...<br />
+            &nbsp;&nbsp;end<br />
+        end</td>
+    <td>
+        edit('GET', []) -&gt;<br />
+        &nbsp;&nbsp;...;<br />
+        edit('POST', []) -&gt;<br />
+        &nbsp;&nbsp;....
+    </td>
+    </tr>
+    <tr>
+        <td>redirect_to :action =&gt; 'show', :id =&gt; @entry.id</td>
+        <td>{redirect, "/show/"++Entry:id()}</td>
+    </tr>
+    <tr>
+        <td>render :action =&gt; "elsewhere"</td>
+        <td>{render_other, "/elsewhere"}</td>
+    </tr>
+    <tr>
+        <td>render :text =&gt; "Hello"</td>
+        <td>{output, "Hello"}</td>
+    </tr>
+    <tr>
+        <td>render :json =&gt; { :user =&gt; @user }</td>
+        <td>{json, [{user, User}]}</td>
+    </tr>
+</tbody>
+</table>
+{% endblock %}
