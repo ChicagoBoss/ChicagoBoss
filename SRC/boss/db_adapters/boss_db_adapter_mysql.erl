@@ -250,8 +250,12 @@ build_conditions(Conditions) ->
 
 build_conditions1([], Acc) ->
     Acc;
+build_conditions1([{Key, 'equals', Value}|Rest], Acc) when Value == undefined ->
+    build_conditions1(Rest, add_cond(Acc, Key, "is", pack_value(Value)));
 build_conditions1([{Key, 'equals', Value}|Rest], Acc) ->
     build_conditions1(Rest, add_cond(Acc, Key, "=", pack_value(Value)));
+build_conditions1([{Key, 'not_equals', Value}|Rest], Acc) when Value == undefined ->
+    build_conditions1(Rest, add_cond(Acc, Key, "is not", pack_value(Value)));
 build_conditions1([{Key, 'not_equals', Value}|Rest], Acc) ->
     build_conditions1(Rest, add_cond(Acc, Key, "!=", pack_value(Value)));
 build_conditions1([{Key, 'in', Value}|Rest], Acc) when is_list(Value) ->
@@ -328,8 +332,10 @@ pack_datetime(DateTime) ->
 
 pack_now(Now) -> pack_datetime(calendar:now_to_datetime(Now)).
 
-pack_value(undefined) ->
+pack_value(false) ->
 	"''";
+pack_value(undefined) ->
+	"null";
 pack_value(V) when is_binary(V) ->
     pack_value(binary_to_list(V));
 pack_value(V) when is_list(V) ->

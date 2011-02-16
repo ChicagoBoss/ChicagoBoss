@@ -12,13 +12,11 @@ start(Config) ->
     %ok = error_logger:tty(false),
     ok = make_log_file_symlink(LogFile),
 
-    case boss_load:module_is_loaded(reloader) of
-        true -> put(boss_environment, development);
-        false -> put(boss_environment, production)
-    end,
+    Env = boss_load:setup_boss_env(),
+    error_logger:info_msg("Starting Boss in ~p mode....~n", [Env]),
 
     boss_db:start(),
-	boss_session:start(),
+    boss_session:start(),
 	
     MailDriver = get_env(mail_driver, boss_mail_driver_smtp),
     boss_mail:start([{driver, MailDriver}]),
@@ -57,8 +55,8 @@ handle_request(Req, RequestMod, ResponseMod) ->
             (Response:file([$/|File])):build_response();
         _ -> 
             SessionKey = boss_session:get_session_key(),
-			SessionId = boss_session:new_session(Request:cookie(SessionKey)),			
-			{StatusCode, Headers, Payload} = process_request(Request),
+            SessionId = boss_session:new_session(Request:cookie(SessionKey)),			
+            {StatusCode, Headers, Payload} = process_request(Request),
             ErrorFormat = "~s ~s ~p~n", 
             ErrorArgs = [Request:request_method(), Request:path(), StatusCode],
             case StatusCode of
@@ -135,13 +133,14 @@ trap_load_and_execute(Arg1, Arg2) ->
     end.
 
 load_and_execute(Location, Req) ->
-    case get(boss_environment) of
+    case boss_load:boss_env() of
         production -> load_and_execute_prod(Location, Req);
-        testing -> load_and_execute_prod(Location, Req);
+        testing -> load_and_execute_dev(Location, Req);
         _ -> load_and_execute_dev(Location, Req)
     end.
 
 load_and_execute_prod({Controller, _, _} = Location, Req) ->
+    io:format("Hmmm", []),
     case lists:member(Controller ++ "_controller", boss_files:web_controller_list()) of
         true -> execute_action(Location, Req);
         false -> render_view(Location, Req)

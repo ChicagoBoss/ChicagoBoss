@@ -14,7 +14,6 @@ start([Adapter]) ->
     boss_mail:start([{driver, boss_mail_driver_mock}]),
     boss_translator:start(),
     boss_load:load_all_modules(),
-    put(boss_environment, testing),
     run_tests(),
     erlang:halt().
 
@@ -258,6 +257,7 @@ find_selected_value([{<<"option">>, Attrs, [Label]}|Rest]) when is_binary(Label)
     end.
 
 get_request_loop() ->
+    put(boss_environment, testing),
     receive
         {From, Uri, Headers} ->
             Req = make_request('GET', Uri, Headers),
@@ -267,6 +267,7 @@ get_request_loop() ->
     end.
 
 post_request_loop() ->
+    put(boss_environment, testing),
     receive
         {From, Uri, Headers, Body} ->
             erlang:put(mochiweb_request_body, Body),
