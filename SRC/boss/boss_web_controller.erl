@@ -211,8 +211,8 @@ execute_action({Controller, Action, Tokens} = Location, Req, LocationTrail) ->
             ExportStrings = lists:map(
                 fun({Function, Arity}) -> {atom_to_list(Function), Arity} end,
                 Module:module_info(exports)),
-            AuthInfo = case lists:member({"_auth", 2}, ExportStrings) of
-                true -> ControllerInstance:'_auth'(Action);
+            AuthInfo = case lists:member({"_before", 2}, ExportStrings) of
+                true -> ControllerInstance:'_before'(Action);
                 false -> {ok, undefined}
             end,
             case AuthInfo of
@@ -229,15 +229,15 @@ execute_action({Controller, Action, Tokens} = Location, Req, LocationTrail) ->
                     end,
                     Result = case ActionResult of
                         undefined ->
-                            render_view(Location, Req, [{"_auth", Info}]);
+                            render_view(Location, Req, [{"_before", Info}]);
                         ActionResult ->
                             process_action_result({Location, Req, LocationTrail}, ActionResult, Info)
                     end,
-                    case proplists:get_value("_filter", ExportStrings) of
+                    case proplists:get_value("_after", ExportStrings) of
                         3 ->
-                            ControllerInstance:'_filter'(Action, Result);
+                            ControllerInstance:'_after'(Action, Result);
                         4 ->
-                            ControllerInstance:'_filter'(Action, Result, Info);
+                            ControllerInstance:'_after'(Action, Result, Info);
                         _ ->
                             Result
                     end;
@@ -251,7 +251,7 @@ process_action_result(Info, ok, AuthInfo) ->
 process_action_result(Info, {ok, Data}, AuthInfo) ->
     process_action_result(Info, {ok, Data, []}, AuthInfo);
 process_action_result({Location, Req, _}, {ok, Data, Headers}, AuthInfo) ->
-    render_view(Location, Req, [{"_auth", AuthInfo}|Data], Headers);
+    render_view(Location, Req, [{"_before", AuthInfo}|Data], Headers);
 
 process_action_result(Info, {render_other, OtherLocation}, AuthInfo) ->
     process_action_result(Info, {render_other, OtherLocation, []}, AuthInfo);
@@ -260,7 +260,7 @@ process_action_result(Info, {render_other, OtherLocation, Data}, AuthInfo) ->
 process_action_result(Info, {render_other, {Controller, Action}, Data, Headers}, AuthInfo) ->
     process_action_result(Info, {render_other, {Controller, Action, []}, Data, Headers}, AuthInfo);
 process_action_result({_, Req, _}, {render_other, {_, _, _} = OtherLocation, Data, Headers}, AuthInfo) ->
-    render_view(OtherLocation, Req, [{"_auth", AuthInfo}|Data], Headers);
+    render_view(OtherLocation, Req, [{"_before", AuthInfo}|Data], Headers);
 
 process_action_result({_, Req, LocationTrail}, {action_other, OtherLocation}, _) ->
     execute_action(OtherLocation, Req, [OtherLocation | LocationTrail]);

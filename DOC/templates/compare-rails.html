@@ -210,6 +210,18 @@
         <td>render :json =&gt; { :user =&gt; @user }</td>
         <td>{json, [{user, User}]}</td>
     </tr>
+    <tr class="multiline">
+        <td>before_filter :require_login, <br />
+             &nbsp;&nbsp;:except =&gt; [:show]</td>
+        <td>'_before'("show") -&gt; ok;<br />
+            '_before'(_) -&gt; require_login().</td>
+    </tr>
+    <tr class="multiline">
+        <td>after_filter :cache, <br />
+            &nbsp;&nbsp;:except =&gt; [:login]</td>
+        <td>'_after'("login", Res) -&gt; Res;<br />
+            '_after'(_, Res) -&gt; cache(Res).</td>
+    </tr>
 </tbody>
 </table>
 {% endblock %}
