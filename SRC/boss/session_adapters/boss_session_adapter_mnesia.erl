@@ -82,9 +82,9 @@ remove_session_data(_, Sid, Key) ->
 %%--------------------------------------------------------------------
 create_session_storage()->
 	Nodes = mnesia_nodes(),
-	error_logger:info_msg("Creating mnesia table for nodes ~p~n",  Nodes),
+	error_logger:info_msg("Creating mnesia table for nodes ~p~n",  [Nodes]),
 	case mnesia:create_table(?TABLE,[{disc_copies,  Nodes}, {attributes, record_info(fields, boss_session)}]) of
-		{aborted, Reason} -> error_logger:error_msg("Error creating mnesia table for sessions: ~p~n", Reason);
+		{aborted, Reason} -> error_logger:error_msg("Error creating mnesia table for sessions: ~p~n", [Reason]);
 		{atomic, ok} -> ok
 	end.
 
@@ -108,7 +108,7 @@ make_session() ->
     Session = #boss_session{sid=Id,data=[],ttl=0},
     Insert = fun() -> mnesia:write(Session) end,
 	case mnesia:transaction(Insert) of
-		{aborted, Reason} -> error_logger:error_msg("Error inserting session data in mnesia: ~p~n", Reason);
+		{aborted, Reason} -> error_logger:error_msg("Error inserting session data in mnesia: ~p~n", [Reason]);
 		{atomic, ok} -> ok
 	end,
     Id.

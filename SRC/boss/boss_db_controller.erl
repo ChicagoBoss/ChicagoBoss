@@ -15,7 +15,7 @@ start_link(Args) ->
     gen_server:start_link({local, boss_db}, ?MODULE, Args, []).
 
 init(Options) ->
-    Adapter = proplists:get_value(adapter, Options, boss_db_adapter_tyrant),
+    Adapter = proplists:get_value(adapter, Options, boss_db_adapter_mock),
     {ok, Conn} = Adapter:start(Options),
     {ok, #state{adapter = Adapter, connection = Conn}}.
 

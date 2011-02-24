@@ -13,6 +13,7 @@ start(_Options) ->
     {ok, undefined}.
 
 stop(_) ->
+    boss_db_mock ! {self(), stop},
     ok.
 
 loop({[], IdCounter}) ->
@@ -84,7 +85,9 @@ loop([{Dict, IdCounter}|OldState] = State) ->
             loop(OldState);
         {From, dump} ->
             From ! {boss_db_mock, dict:to_list(Dict)},
-            loop(State)
+            loop(State);
+        {_From, stop} ->
+            ok
     end.
 
 find(_, Id) ->

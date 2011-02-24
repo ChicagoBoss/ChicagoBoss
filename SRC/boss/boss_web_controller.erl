@@ -17,6 +17,7 @@ start(Config) ->
 
     boss_db:start(),
     boss_session:start(),
+    boss_mq:start(),
 	
     MailDriver = get_env(mail_driver, boss_mail_driver_smtp),
     boss_mail:start([{driver, MailDriver}]),
@@ -35,8 +36,9 @@ start(Config) ->
 
 stop() ->
     error_logger:logfile(close),
+    boss_mq:stop(),
+    boss_session:stop(),
     boss_db:stop(),
-	boss_session:stop(),
     mochiweb_http:stop(),
     misultin:stop().
 
@@ -211,8 +213,8 @@ execute_action({Controller, Action, Tokens} = Location, Req, LocationTrail) ->
             ExportStrings = lists:map(
                 fun({Function, Arity}) -> {atom_to_list(Function), Arity} end,
                 Module:module_info(exports)),
-            AuthInfo = case lists:member({"_before", 2}, ExportStrings) of
-                true -> ControllerInstance:'_before'(Action);
+            AuthInfo = case lists:member({"before_", 2}, ExportStrings) of
+                true -> ControllerInstance:before_(Action);
                 false -> {ok, undefined}
             end,
             case AuthInfo of
@@ -229,15 +231,15 @@ execute_action({Controller, Action, Tokens} = Location, Req, LocationTrail) ->
                     end,
                     Result = case ActionResult of
                         undefined ->
-                            render_view(Location, Req, [{"_before", Info}]);
+                            render_view(Location, Req, [{"before_", Info}]);
                         ActionResult ->
                             process_action_result({Location, Req, LocationTrail}, ActionResult, Info)
                     end,
-                    case proplists:get_value("_after", ExportStrings) of
+                    case proplists:get_value("after_", ExportStrings) of
                         3 ->
-                            ControllerInstance:'_after'(Action, Result);
+                            ControllerInstance:after_(Action, Result);
                         4 ->
-                            ControllerInstance:'_after'(Action, Result, Info);
+                            ControllerInstance:after_(Action, Result, Info);
                         _ ->
                             Result
                     end;
@@ -251,7 +253,7 @@ process_action_result(Info, ok, AuthInfo) ->
 process_action_result(Info, {ok, Data}, AuthInfo) ->
     process_action_result(Info, {ok, Data, []}, AuthInfo);
 process_action_result({Location, Req, _}, {ok, Data, Headers}, AuthInfo) ->
-    render_view(Location, Req, [{"_before", AuthInfo}|Data], Headers);
+    render_view(Location, Req, [{"before_", AuthInfo}|Data], Headers);
 
 process_action_result(Info, {render_other, OtherLocation}, AuthInfo) ->
     process_action_result(Info, {render_other, OtherLocation, []}, AuthInfo);
@@ -260,7 +262,7 @@ process_action_result(Info, {render_other, OtherLocation, Data}, AuthInfo) ->
 process_action_result(Info, {render_other, {Controller, Action}, Data, Headers}, AuthInfo) ->
     process_action_result(Info, {render_other, {Controller, Action, []}, Data, Headers}, AuthInfo);
 process_action_result({_, Req, _}, {render_other, {_, _, _} = OtherLocation, Data, Headers}, AuthInfo) ->
-    render_view(OtherLocation, Req, [{"_before", AuthInfo}|Data], Headers);
+    render_view(OtherLocation, Req, [{"before_", AuthInfo}|Data], Headers);
 
 process_action_result({_, Req, LocationTrail}, {action_other, OtherLocation}, _) ->
     execute_action(OtherLocation, Req, [OtherLocation | LocationTrail]);

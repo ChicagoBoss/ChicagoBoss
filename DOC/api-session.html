@@ -10,10 +10,6 @@
 </div>
 <div class="subnav">
     
-    <a href="api-config.html">Config</a>
-    
-    &nbsp; | &nbsp; 
-    
     <a href="api-db.html">BossDB</a>
      
     &nbsp; | &nbsp; 
@@ -26,13 +22,13 @@
     
     &nbsp; | &nbsp;
     
-    <strong>BossSession</strong>
+    <a href="api-mq.html">BossMQ (Comet)</a>
+    
+    &nbsp; | &nbsp; 
+    
+    <strong>Sessions</strong>
            
     &nbsp; | &nbsp;
-    
-    <a href="api-flash.html">BossFlash</a>
-           
-    &nbsp; | &nbsp;    
     
     <a href="api-mail-controller.html">Mail</a> 
     
@@ -47,10 +43,13 @@
 </div>
 <div style="padding-top: 20px;">
 
-<p>BossSession is a multiadapter session management. Currently ets and Mnesia (for distributed setups) are supported. For distributed setups, is necessary start Boss with a node name.</p>
+<p>BossSession is a multiadapter session management. Currently ets and Mnesia (for distributed setups) are supported. For distributed setups, it is necessary to start Boss with a node name.</p>
+
 <p>BossSession is automatically started, so, by default an ets based session support is provided</p>
 
-<h2>Operations</h2>
+<p>BossFlash is a utility on top of boss_session, you can store messages between requests, automatically populated to the view as {{ boss_flash }} and deleted from session after used.</p>
+
+<h2>boss_session</h2>
 
 <h3>get_session_data/1</h3>
 <div class="code">
@@ -82,6 +81,31 @@ delete_session(Req) -&gt; ok | {error, Reason}
 remove_session_data(Sid, Key) -&gt; ok | {error, Reason}
 </div>
 <p>Remove the Key from session data for the Request.</p>
+
+
+
+<h2>boss_flash</h2>
+
+<p>Add flash messages in the controller like:</p>
+
+<div class="code">
+boss_flash:add(Req, notice, "Flash Title", "Flash Message")
+</div>
+
+<p>Use the boss_flash var in the view, should render "notice - Flash Title - Flash Message":</p>
+<div class="code">
+{% if boss_flash %}
+{{ boss_flash.method }} - {{ boss_flash.title }} - {{ boss_flash.message }}
+{% endif %}
+</div>
+
+<h2>Functions</h2>
+
+<h3>boss_flash:add/3</h3>
+<p>add(Req, Type, Title)</p>
+
+<h3>boss_flash:add/4</h3>
+<p>add(Req, Type, Title, Message)</p>
 
 
 </div>

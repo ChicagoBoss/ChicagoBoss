@@ -1,0 +1,113 @@
+<html>
+    <head>
+        <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    </head>
+    <body>
+        <link rel="stylesheet" type="text/css" href="/boss.css" />
+
+<div style="text-align: center; font-style: italic;">
+<p>The Chicago Boss API is mostly stable, but still might change before 1.0.</p>
+</div>
+<div class="subnav">
+    
+    <a href="api-db.html">BossDB</a>
+     
+    &nbsp; | &nbsp; 
+    
+    <a href="api-record.html">Models</a> 
+    
+    &nbsp; | &nbsp;
+    
+    <a href="api-controller.html">Web Controllers</a> 
+    
+    &nbsp; | &nbsp;
+    
+    <strong>BossMQ (Comet)</strong>
+    
+    &nbsp; | &nbsp; 
+    
+    <a href="api-session.html">Sessions</a>
+           
+    &nbsp; | &nbsp;
+    
+    <a href="api-mail-controller.html">Mail</a> 
+    
+    &nbsp; | &nbsp;
+    
+    <a href="api-view.html">Templates</a>
+    
+    &nbsp; | &nbsp;
+    
+    <a href="api-test.html">Tests</a>
+    
+</div>
+<div style="padding-top: 20px;">
+
+<p>BossMQ is an abstraction layer for channel-based messaging that can be used to implement real-time notifications (i.e. Comet). With BossMQ, any controller action can function as a long-polling endpoint simply by calling <code>boss_mq:pull/2</code>:</p>
+
+<div class="code">
+receive_chat('GET', []) -&gt;<br />
+&nbsp;&nbsp;{ok, Timestamp, Messages} = boss_mq:pull("my-channel", now)<br />
+&nbsp;&nbsp;{output, Messages}.
+</div>
+
+<p>The call to <code>pull/2</code> blocks until a message arrives on "my-channel". Because of Erlang's lightweight process model, you usually don't need to worry if <code>pull/2</code> takes a long time to complete.</p>
+
+<p>To send a message to a channel, you call <code>boss_mq:push/2</code>:</p>
+
+<div class="code">
+    boss_mq:push("my-channel", &lt;&lt;"Secret Message"&gt;&gt;)
+</div>
+
+<p>Currently, only an in-memory message queue is supported, so all messaging must occur on the same CB server. Additional adapters will be added in the future to support more complex installations.</p>
+
+<h2>boss_mq API</h2>
+
+
+
+
+
+
+
+
+
+<div class="code">
+    pull(Channel<span class="typevar">::string()</span>) -> {ok, Timestamp, [Message]} | {error, Reason}
+</div>
+<p>Pull messages from the specified <code>Channel</code>. If none are in the queue, blocks
+  until a message is pushed to the queue.</p>
+
+
+
+<div class="code">
+    pull(Channel<span class="typevar">::string()</span>, Since<span class="typevar">::tuple()</span> | now) -> {ok, Timestamp, [Message]} | {error, Reason}
+</div>
+<p>Pull messages from the specified <code>Channel</code> after <code>Since</code> (an <code>erlang:now/0</code> tuple). If no such messages
+  are in the queue, blocks until a message is pushed to the queue.</p>
+
+
+
+<div class="code">
+    poll(Channel<span class="typevar">::string()</span>) -> {ok, Timestamp, [Message]} | {error, Reason}
+</div>
+<p>Like <code>pull/1</code>, but returns immediately if no messages are in the queue.</p>
+
+
+
+<div class="code">
+    poll(Channel<span class="typevar">::string()</span>, Since<span class="typevar">::tuple()</span>) -> {ok, Timestamp, [Message]} | {error, Reason}
+</div>
+<p>Like <code>pull/2</code>, but returns immediately if no matching messages are in the queue.</p>
+
+
+
+<div class="code">
+    push(Channel<span class="typevar">::string()</span>, Message) -> {ok, Timestamp}
+</div>
+<p>Pushes a message to the specified <code>Channel</code>.</p>
+
+
+
+</div>
+</body>
+</html>
