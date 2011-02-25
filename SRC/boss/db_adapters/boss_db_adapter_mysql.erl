@@ -123,13 +123,13 @@ save_record(Pid, Record) when is_tuple(Record) ->
                     end;
                 {error, MysqlRes} -> {error, mysql:get_result_reason(MysqlRes)}
             end;
-		Identifier when is_integer(Identifier) ->
+        Identifier when is_integer(Identifier) ->
             Type = element(1, Record),
             Query = build_insert_query(Record),
             Res = mysql:fetch(Pid, Query),
             case Res of
                 {updated, _} ->
-					{ok, Record:id(lists:concat([Type, "-", integer_to_list(Identifier)]))};
+                    {ok, Record:id(lists:concat([Type, "-", integer_to_list(Identifier)]))};
                 {error, MysqlRes} -> {error, mysql:get_result_reason(MysqlRes)}
             end;			
         Defined when is_list(Defined) ->
@@ -165,6 +165,10 @@ type_to_table_name(Type) when is_atom(Type) ->
 type_to_table_name(Type) when is_list(Type) ->
     inflector:pluralize(Type).
 
+integer_to_id(Val, KeyString) ->
+    ModelName = string:substr(KeyString, 1, string:len(KeyString) - string:len("_id")),
+    ModelName ++ "-" ++ integer_to_list(Val).
+
 activate_record(Record, Metadata, Type) ->
     DummyRecord = apply(Type, new, lists:seq(1, proplists:get_value(new, Type:module_info(exports)))),
     apply(Type, new, lists:map(fun
@@ -172,10 +176,15 @@ activate_record(Record, Metadata, Type) ->
                     Index = keyindex(<<"id">>, 2, Metadata),
                     atom_to_list(Type) ++ "-" ++ integer_to_list(lists:nth(Index, Record));
                 (Key) ->
-                    Index = keyindex(list_to_binary(atom_to_list(Key)), 2, Metadata),
+                    KeyString = atom_to_list(Key),
+                    Index = keyindex(list_to_binary(KeyString), 2, Metadata),
                     case lists:nth(Index, Record) of
                         {datetime, DateTime} -> DateTime;
-                        Val -> Val
+                        Val -> 
+                            case lists:suffix("_id", KeyString) of
+                                true -> integer_to_id(Val, KeyString);
+                                false -> Val
+                            end
                     end
             end, DummyRecord:attribute_names())).
 
@@ -214,11 +223,19 @@ build_insert_query(Record) ->
     Type = element(1, Record),
     TableName = type_to_table_name(Type),
     {Attributes, Values} = lists:foldl(fun
-			({id, V}, {Attrs, Vals}) when is_integer(V) -> {[atom_to_list(id)|Attrs], [pack_value(V)|Vals]};
-			({id, _}, Acc) -> Acc;
+            ({id, V}, {Attrs, Vals}) when is_integer(V) -> {[atom_to_list(id)|Attrs], [pack_value(V)|Vals]};
+            ({id, _}, Acc) -> Acc;
             ({_, undefined}, Acc) -> Acc;
             ({A, V}, {Attrs, Vals}) ->
-                {[atom_to_list(A)|Attrs], [pack_value(V)|Vals]}
+                AString = atom_to_list(A),
+                Value = case lists:suffix("_id", AString) of
+                    true ->
+                        {_, _, ForeignId} = infer_type_from_id(V),
+                        ForeignId;
+                    false ->
+                        V
+                end,
+                {[AString|Attrs], [pack_value(Value)|Vals]}
         end, {[], []}, Record:attributes()),
     ["INSERT INTO ", TableName, " (", 
         string:join(Attributes, ", "),
@@ -231,7 +248,16 @@ build_update_query(Record) ->
     {_, TableName, Id} = infer_type_from_id(Record:id()),
     Updates = lists:foldl(fun
             ({id, _}, Acc) -> Acc;
-            ({A, V}, Acc) -> [atom_to_list(A) ++ " = " ++ pack_value(V)|Acc]
+            ({A, V}, Acc) -> 
+                AString = atom_to_list(A),
+                Value = case lists:suffix("_id", AString) of
+                    true ->
+                        {_, _, ForeignId} = infer_type_from_id(V),
+                        ForeignId;
+                    false ->
+                        V
+                end,
+                [AString ++ " = " ++ pack_value(Value)|Acc]
         end, [], Record:attributes()),
     ["UPDATE ", TableName, " SET ", string:join(Updates, ", "),
         " WHERE id = ", pack_value(Id)].

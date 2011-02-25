@@ -71,6 +71,8 @@ loop([{Dict, IdCounter}|OldState] = State) ->
                         {id, Id};
                     ({Attr, {_, _, _} = Val}) ->
                         {Attr, calendar:now_to_datetime(Val)};
+%                    ({Attr, Val}) when is_binary(Val) ->
+%                        {Attr, binary_to_list(Val)};
                     (Other) ->
                         Other
                 end, Record:attributes()),

@@ -1,0 +1,2 @@
+-module(boss_db_test_parent_model, [Id, SomeText]).
+-compile(export_all).
