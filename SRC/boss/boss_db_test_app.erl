@@ -32,40 +32,44 @@ run_setup() ->
 
 run_tests() ->
   io:format("~-60s", ["Root test"]),
-  ModelText = "Economists do it with models",
+  ModelText = <<"Economists do it with models">>,
   do(
     fun() ->
-        ParentModel = boss_db_test_parent_model:new(id, "foo"),
+        ParentModel = boss_db_test_parent_model:new(id, <<"foo">>),
         {ok, SavedParentModel} = ParentModel:save(),
         Model = boss_db_test_model:new(id, ModelText, 
           {{1776, 7, 4}, {0, 0, 0}}, true, 42, 3.14159, SavedParentModel:id()),
         {ok, SavedModel} = Model:save(),
-        SavedModel
+        {SavedModel, SavedParentModel}
     end, 
     [
-      fun(SavedModel) ->
+      fun({SavedModel, _}) ->
           {SavedModel:id() =/= id,
             "ID field not generated"}
       end,
-      fun(SavedModel) ->
+      fun({SavedModel, _}) ->
           {SavedModel:some_text() =:= ModelText,
             "Text field not saved correctly"}
       end,
-      fun(SavedModel) ->
+      fun({SavedModel, _}) ->
           {SavedModel:some_integer() =:= 42,
             "Integer field not saved correctly"}
       end,
-      fun(SavedModel) ->
+      fun({SavedModel, _}) ->
           {SavedModel:some_float() =:= 3.14159,
             "Float field not saved correctly"}
       end,
-      fun(SavedModel) ->
-          {(SavedModel:boss_db_test_parent_model()):some_text() =:= "foo",
-            "Association doesn't work"}
+      fun({SavedModel, SavedParentModel}) ->
+          {(SavedModel:boss_db_test_parent_model()):id() =:= SavedParentModel:id(),
+            "Association doesn't have expected ID"}
+      end,
+      fun({SavedModel, SavedParentModel}) ->
+          {(SavedModel:boss_db_test_parent_model()):some_text() =:= SavedParentModel:some_text(),
+              "Association doesn't have expected Text"}
       end
     ], 
     [ "Check for record in the database",
-      fun(SavedModel) ->
+      fun({SavedModel, _}) ->
           do(
             fun() ->
                 boss_db:find(SavedModel:id())
@@ -99,7 +103,7 @@ run_tests() ->
       end,
 
       "Create more records",
-      fun(Model1) ->
+      fun({Model1, _}) ->
           do(
             fun() ->
                 % boss_db_test_model:new(id, <<"Economists do it with models">>, 

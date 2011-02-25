@@ -587,7 +587,7 @@ new_var() ->
 counter(Name) ->
     Ix =
 	case get(Name) of
-	    N when integer(N) ->
+	    N when is_integer(N) ->
 		N;
 	    undefined ->
 		0
@@ -648,11 +648,11 @@ mapform0(F, {match, Lc, P, E}) ->
     F({match, Lc, P, mapform0(F, E)});
 mapform0(F, {lc, Llc, E, GQs}) ->
     F({lc, Llc, mapform0(F, E), [ mapform1(F, GQ) || GQ <- GQs ]});
-mapform0(F, T) when tuple(T) ->
+mapform0(F, T) when is_tuple(T) ->
     F(list_to_tuple([ mapform0(F, Tsub) || Tsub <- tuple_to_list(T) ]));
-mapform0(F, Xs) when list(Xs) ->
+mapform0(F, Xs) when is_list(Xs) ->
     [ mapform0(F, X) || X <- Xs ];
-mapform0(F, C) when atom(C) ; number(C) ->
+mapform0(F, C) when is_atom(C) ; is_number(C) ->
     C.
 
 %% detect + elide pattern in qualifier
@@ -683,7 +683,7 @@ vars_of({var, _, '_'}, Vs) ->
     Vs;
 vars_of({var, _, X}=V, Vs) ->
     [V|Vs];
-vars_of(T, Vs0) when tuple(T) ->
+vars_of(T, Vs0) when is_tuple(T) ->
     lists:foldl(
       fun(Term, Vs) ->
 	      vars_of(Term, Vs)

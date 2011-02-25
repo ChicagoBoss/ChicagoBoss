@@ -59,9 +59,9 @@ map(F, {clause, Lc, H, G, B}) ->
     F({clause, Lc, H, G, map(F, B)});
 map(F, {match, Lc, P, E}) ->
     F({match, Lc, P, map(F, E)});
-map(F, T) when tuple(T) ->
+map(F, T) when is_tuple(T) ->
     F(list_to_tuple([ map(F, Tsub) || Tsub <- tuple_to_list(T) ]));
-map(F, Xs) when list(Xs) ->
+map(F, Xs) when is_list(Xs) ->
     [ map(F, X) || X <- Xs ];
-map(F, C) when atom(C) ; number(C) ->
+map(F, C) when is_atom(C) ; is_number(C) ->
     C.

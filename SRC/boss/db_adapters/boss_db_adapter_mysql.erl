@@ -13,7 +13,7 @@ start(Options) ->
     DBUsername = proplists:get_value(db_username, Options, "guest"),
     DBPassword = proplists:get_value(db_password, Options, ""),
     DBDatabase = proplists:get_value(db_database, Options, "test"),
-    mysql:start(boss_pool, DBHost, DBPort, DBUsername, DBPassword, DBDatabase),
+    mysql:start(boss_pool, DBHost, DBPort, DBUsername, DBPassword, DBDatabase, fun(_, _, _, _) -> ok end),
     {ok, boss_pool}.
 
 stop(_Pid) -> ok.
@@ -180,6 +180,7 @@ activate_record(Record, Metadata, Type) ->
                     Index = keyindex(list_to_binary(KeyString), 2, Metadata),
                     case lists:nth(Index, Record) of
                         {datetime, DateTime} -> DateTime;
+                        undefined -> undefined;
                         Val -> 
                             case lists:suffix("_id", KeyString) of
                                 true -> integer_to_id(Val, KeyString);
