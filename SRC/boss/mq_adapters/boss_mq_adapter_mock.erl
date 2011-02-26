@@ -101,8 +101,8 @@ poll(_, Channel, Timestamp) ->
 push(_, Channel, Message) ->
     boss_mq_mock ! {self(), push, Channel, Message},
     receive
-        {_From, Timestamp} ->
-            {ok, Timestamp}
+        {_From, _Timestamp} ->
+            ok
     end.
 
 

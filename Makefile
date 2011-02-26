@@ -57,13 +57,13 @@ edoc:
 test:
 	$(ERL) -pa ebin -run boss_web_test -noshell
 
-test_mock:
+test_db_mock:
 	$(ERL) -pa ebin -run boss_db_test start -config $(DB_CONFIG_DIR)/mock -noshell
 
-test_mysql:
+test_db_mysql:
 	$(ERL) -pa ebin -run boss_db_test start -config $(DB_CONFIG_DIR)/mysql -noshell
 
-test_pgsql:
+test_db_pgsql:
 	$(ERL) -pa ebin -run boss_db_test start -config $(DB_CONFIG_DIR)/pgsql -noshell
 
 test_session_ets:

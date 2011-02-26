@@ -65,7 +65,7 @@ poll(Channel, Timestamp) when is_list(Channel) ->
 poll(_, _) ->
     {error, invalid_channel}.
 
-%% @spec push( Channel::string(), Message ) -> {ok, Timestamp}
+%% @spec push( Channel::string(), Message ) -> ok
 %% @doc Pushes a message to the specified `Channel'.
 push(Channel, Message) when is_list(Channel) ->
     gen_server:call(boss_mq, {push, Channel, Message});
