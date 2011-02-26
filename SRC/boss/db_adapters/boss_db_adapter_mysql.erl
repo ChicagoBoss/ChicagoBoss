@@ -263,7 +263,7 @@ build_update_query(Record) ->
     ["UPDATE ", TableName, " SET ", string:join(Updates, ", "),
         " WHERE id = ", pack_value(Id)].
 
-build_select_query(Type, Conditions, Max, Skip, Sort, SortOrder) ->
+build_select_query(Type, Conditions, Max, Skip, Sort, SortOrder) ->	
     TableName = type_to_table_name(Type),
     ["SELECT * FROM ", TableName, 
         " WHERE ", build_conditions(Conditions),
@@ -271,6 +271,24 @@ build_select_query(Type, Conditions, Max, Skip, Sort, SortOrder) ->
         " LIMIT ", integer_to_list(Max), 
         " OFFSET ", integer_to_list(Skip)
     ].
+
+join([], _) -> [];
+join([List|Lists], Separator) ->
+     lists:flatten([List | [[Separator,Next] || Next <- Lists]]).
+
+is_foreign_key(Key) when is_atom(Key) ->
+	KeyTokens = string:tokens(atom_to_list(Key), "_"),
+	LastToken = hd(lists:reverse(KeyTokens)),
+	case (length(KeyTokens) > 1 andalso LastToken == "id") of
+		true -> 
+			Module = join(lists:reverse(tl(lists:reverse(KeyTokens))), "_"),
+    		case code:is_loaded(list_to_atom(Module)) of
+        		{file, _Loaded} -> true;
+        		false -> false
+    		end;
+		false -> false
+	end;
+is_foreign_key(_Key) -> false.
 
 build_conditions(Conditions) ->
     build_conditions1(Conditions, [" TRUE"]).
@@ -280,7 +298,12 @@ build_conditions1([], Acc) ->
 build_conditions1([{Key, 'equals', Value}|Rest], Acc) when Value == undefined ->
     build_conditions1(Rest, add_cond(Acc, Key, "is", pack_value(Value)));
 build_conditions1([{Key, 'equals', Value}|Rest], Acc) ->
-    build_conditions1(Rest, add_cond(Acc, Key, "=", pack_value(Value)));
+	case is_foreign_key(Key) of
+		true -> 
+			{_Type, _TableName, TableId} = infer_type_from_id(Value),
+			build_conditions1(Rest, add_cond(Acc, Key, "=", pack_value(TableId)));
+		false -> build_conditions1(Rest, add_cond(Acc, Key, "=", pack_value(Value)))
+	end;
 build_conditions1([{Key, 'not_equals', Value}|Rest], Acc) when Value == undefined ->
     build_conditions1(Rest, add_cond(Acc, Key, "is not", pack_value(Value)));
 build_conditions1([{Key, 'not_equals', Value}|Rest], Acc) ->
