@@ -8,7 +8,7 @@ start() ->
     start([]).
 
 start(Options) ->
-    MaxAgeSeconds = proplists:get_value(mq_max_age, Options, 5),
+    MaxAgeSeconds = proplists:get_value(mq_max_age, Options, 60),
     register(boss_mq_mock, spawn(fun() -> loop({dict:new(), dict:new()}, MaxAgeSeconds * 1000) end)),
     {ok, undefined}.
 

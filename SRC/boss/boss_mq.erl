@@ -17,7 +17,7 @@ start() ->
                     {ok, Val} -> [{OptName, Val}|Acc];
                     _ -> Acc
                 end
-        end, [], [mq_port, mq_host]),
+        end, [], [mq_port, mq_host, mq_max_age]),
     MQAdapter = case application:get_env(mq_adapter) of
         {ok, Val} -> Val;
         _ -> mock
