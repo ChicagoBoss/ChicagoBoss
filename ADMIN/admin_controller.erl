@@ -2,7 +2,7 @@
 -compile(export_all).
 -define(RECORDS_PER_PAGE, 100).
 
-'_auth'(_) ->
+before_(_) ->
     case Req:peer_ip() of
         {192, 168, _, _} ->
             {ok, local};
