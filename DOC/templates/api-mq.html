@@ -1,0 +1,31 @@
+{% extends "api.html" %}
+{% block api_content %}
+<p>BossMQ is an abstraction layer for channel-based messaging that can be used to implement real-time notifications (i.e. Comet). With BossMQ, any controller action can function as a long-polling endpoint simply by calling <code>boss_mq:pull/2</code>:</p>
+
+<div class="code">
+receive_chat('GET', []) -&gt;<br />
+&nbsp;&nbsp;{ok, Timestamp, Messages} = boss_mq:pull("my-channel", now)<br />
+&nbsp;&nbsp;{output, Messages}.
+</div>
+
+<p>The call to <code>pull/2</code> blocks until a message arrives on "my-channel". Because of Erlang's lightweight process model, you usually don't need to worry if <code>pull/2</code> takes a long time to complete.</p>
+
+<p>To send a message to a channel, you call <code>boss_mq:push/2</code>:</p>
+
+<div class="code">
+    boss_mq:push("my-channel", &lt;&lt;"Secret Message"&gt;&gt;)
+</div>
+
+<p>Currently, only an in-memory message queue is supported, so all messaging must occur on the same CB server. Additional adapters will be added in the future to support more complex installations.</p>
+
+<h2>boss_mq API</h2>
+
+{% for function in functions %}
+{% if function.description_long %}
+<div class="code">
+    {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
+</div>
+<p>{{ function.description_long }}</p>
+{% endif %}
+{% endfor %}
+{% endblock %}

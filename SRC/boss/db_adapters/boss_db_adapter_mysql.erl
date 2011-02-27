@@ -13,7 +13,7 @@ start(Options) ->
     DBUsername = proplists:get_value(db_username, Options, "guest"),
     DBPassword = proplists:get_value(db_password, Options, ""),
     DBDatabase = proplists:get_value(db_database, Options, "test"),
-    mysql:start(boss_pool, DBHost, DBPort, DBUsername, DBPassword, DBDatabase),
+    mysql:start(boss_pool, DBHost, DBPort, DBUsername, DBPassword, DBDatabase, fun(_, _, _, _) -> ok end),
     {ok, boss_pool}.
 
 stop(_Pid) -> ok.
@@ -123,13 +123,13 @@ save_record(Pid, Record) when is_tuple(Record) ->
                     end;
                 {error, MysqlRes} -> {error, mysql:get_result_reason(MysqlRes)}
             end;
-		Identifier when is_integer(Identifier) ->
+        Identifier when is_integer(Identifier) ->
             Type = element(1, Record),
             Query = build_insert_query(Record),
             Res = mysql:fetch(Pid, Query),
             case Res of
                 {updated, _} ->
-					{ok, Record:id(lists:concat([Type, "-", integer_to_list(Identifier)]))};
+                    {ok, Record:id(lists:concat([Type, "-", integer_to_list(Identifier)]))};
                 {error, MysqlRes} -> {error, mysql:get_result_reason(MysqlRes)}
             end;			
         Defined when is_list(Defined) ->
@@ -165,6 +165,10 @@ type_to_table_name(Type) when is_atom(Type) ->
 type_to_table_name(Type) when is_list(Type) ->
     inflector:pluralize(Type).
 
+integer_to_id(Val, KeyString) ->
+    ModelName = string:substr(KeyString, 1, string:len(KeyString) - string:len("_id")),
+    ModelName ++ "-" ++ integer_to_list(Val).
+
 activate_record(Record, Metadata, Type) ->
     DummyRecord = apply(Type, new, lists:seq(1, proplists:get_value(new, Type:module_info(exports)))),
     apply(Type, new, lists:map(fun
@@ -172,10 +176,16 @@ activate_record(Record, Metadata, Type) ->
                     Index = keyindex(<<"id">>, 2, Metadata),
                     atom_to_list(Type) ++ "-" ++ integer_to_list(lists:nth(Index, Record));
                 (Key) ->
-                    Index = keyindex(list_to_binary(atom_to_list(Key)), 2, Metadata),
+                    KeyString = atom_to_list(Key),
+                    Index = keyindex(list_to_binary(KeyString), 2, Metadata),
                     case lists:nth(Index, Record) of
                         {datetime, DateTime} -> DateTime;
-                        Val -> Val
+                        undefined -> undefined;
+                        Val -> 
+                            case lists:suffix("_id", KeyString) of
+                                true -> integer_to_id(Val, KeyString);
+                                false -> Val
+                            end
                     end
             end, DummyRecord:attribute_names())).
 
@@ -214,11 +224,19 @@ build_insert_query(Record) ->
     Type = element(1, Record),
     TableName = type_to_table_name(Type),
     {Attributes, Values} = lists:foldl(fun
-			({id, V}, {Attrs, Vals}) when is_integer(V) -> {[atom_to_list(id)|Attrs], [pack_value(V)|Vals]};
-			({id, _}, Acc) -> Acc;
+            ({id, V}, {Attrs, Vals}) when is_integer(V) -> {[atom_to_list(id)|Attrs], [pack_value(V)|Vals]};
+            ({id, _}, Acc) -> Acc;
             ({_, undefined}, Acc) -> Acc;
             ({A, V}, {Attrs, Vals}) ->
-                {[atom_to_list(A)|Attrs], [pack_value(V)|Vals]}
+                AString = atom_to_list(A),
+                Value = case lists:suffix("_id", AString) of
+                    true ->
+                        {_, _, ForeignId} = infer_type_from_id(V),
+                        ForeignId;
+                    false ->
+                        V
+                end,
+                {[AString|Attrs], [pack_value(Value)|Vals]}
         end, {[], []}, Record:attributes()),
     ["INSERT INTO ", TableName, " (", 
         string:join(Attributes, ", "),
@@ -231,12 +249,21 @@ build_update_query(Record) ->
     {_, TableName, Id} = infer_type_from_id(Record:id()),
     Updates = lists:foldl(fun
             ({id, _}, Acc) -> Acc;
-            ({A, V}, Acc) -> [atom_to_list(A) ++ " = " ++ pack_value(V)|Acc]
+            ({A, V}, Acc) -> 
+                AString = atom_to_list(A),
+                Value = case lists:suffix("_id", AString) of
+                    true ->
+                        {_, _, ForeignId} = infer_type_from_id(V),
+                        ForeignId;
+                    false ->
+                        V
+                end,
+                [AString ++ " = " ++ pack_value(Value)|Acc]
         end, [], Record:attributes()),
     ["UPDATE ", TableName, " SET ", string:join(Updates, ", "),
         " WHERE id = ", pack_value(Id)].
 
-build_select_query(Type, Conditions, Max, Skip, Sort, SortOrder) ->
+build_select_query(Type, Conditions, Max, Skip, Sort, SortOrder) ->	
     TableName = type_to_table_name(Type),
     ["SELECT * FROM ", TableName, 
         " WHERE ", build_conditions(Conditions),
@@ -245,13 +272,40 @@ build_select_query(Type, Conditions, Max, Skip, Sort, SortOrder) ->
         " OFFSET ", integer_to_list(Skip)
     ].
 
+join([], _) -> [];
+join([List|Lists], Separator) ->
+     lists:flatten([List | [[Separator,Next] || Next <- Lists]]).
+
+is_foreign_key(Key) when is_atom(Key) ->
+	KeyTokens = string:tokens(atom_to_list(Key), "_"),
+	LastToken = hd(lists:reverse(KeyTokens)),
+	case (length(KeyTokens) > 1 andalso LastToken == "id") of
+		true -> 
+			Module = join(lists:reverse(tl(lists:reverse(KeyTokens))), "_"),
+    		case code:is_loaded(list_to_atom(Module)) of
+        		{file, _Loaded} -> true;
+        		false -> false
+    		end;
+		false -> false
+	end;
+is_foreign_key(_Key) -> false.
+
 build_conditions(Conditions) ->
     build_conditions1(Conditions, [" TRUE"]).
 
 build_conditions1([], Acc) ->
     Acc;
+build_conditions1([{Key, 'equals', Value}|Rest], Acc) when Value == undefined ->
+    build_conditions1(Rest, add_cond(Acc, Key, "is", pack_value(Value)));
 build_conditions1([{Key, 'equals', Value}|Rest], Acc) ->
-    build_conditions1(Rest, add_cond(Acc, Key, "=", pack_value(Value)));
+	case is_foreign_key(Key) of
+		true -> 
+			{_Type, _TableName, TableId} = infer_type_from_id(Value),
+			build_conditions1(Rest, add_cond(Acc, Key, "=", pack_value(TableId)));
+		false -> build_conditions1(Rest, add_cond(Acc, Key, "=", pack_value(Value)))
+	end;
+build_conditions1([{Key, 'not_equals', Value}|Rest], Acc) when Value == undefined ->
+    build_conditions1(Rest, add_cond(Acc, Key, "is not", pack_value(Value)));
 build_conditions1([{Key, 'not_equals', Value}|Rest], Acc) ->
     build_conditions1(Rest, add_cond(Acc, Key, "!=", pack_value(Value)));
 build_conditions1([{Key, 'in', Value}|Rest], Acc) when is_list(Value) ->
@@ -328,8 +382,10 @@ pack_datetime(DateTime) ->
 
 pack_now(Now) -> pack_datetime(calendar:now_to_datetime(Now)).
 
-pack_value(undefined) ->
+pack_value(false) ->
 	"''";
+pack_value(undefined) ->
+	"null";
 pack_value(V) when is_binary(V) ->
     pack_value(binary_to_list(V));
 pack_value(V) when is_list(V) ->

@@ -12,7 +12,7 @@ process_assertions_and_continuations(Assertions, Continuations, ParsedResponse) 
             io:format("~c[01;31m~3B failed~c[00m~n", [16#1B, N, 16#1B]),
             lists:map(fun(Msg) ->
                         io:format("~s* ~c[01m~p~c[00m~n", 
-                            [lists:duplicate(boss_db:depth() - 1, $\ ), 
+                            [lists:duplicate(boss_db:depth(), $\ ), 
                                 16#1B, Msg, 16#1B])
                 end, FailureMessages),
             io:format("Last response: ~p~n~n", [ParsedResponse]),

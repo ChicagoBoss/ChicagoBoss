@@ -1,49 +1,14 @@
 <html>
     <head>
         <meta http-equiv="content-type" content="text/html; charset=UTF-8">
-        <title>Chicago Boss - the MVC that packs a punch (chicagoboss.org)</title>
-        <link rel="stylesheet" type="text/css" href="boss.css" />
-            
-        <style type="text/css">
-        </style>
-            
     </head>
     <body>
-        
-        <div class="secondary_header">
-            <div class="secondary_logo">
-                <em>Chicago</em> <strong>BOSS</strong>
-            </div>
-            <div class="secondary_quote">
-                <em>&#8220;Consider it done!&#8221;</em>
-            </div>
-        </div>
+        <link rel="stylesheet" type="text/css" href="/stylesheets/boss.css" />
 
-        <div class="nav">
-            
-<a href="index.html">F.A.Q.</a> &nbsp; | &nbsp; 
-<a href="compare.html">COMPARE</a> &nbsp; | &nbsp; 
-<a href="guide-screencast.html">GUIDES</a> &nbsp; | &nbsp; 
-<strong>API</strong> &nbsp; | &nbsp; 
-<a href="download.html">DOWNLOAD</a> &nbsp; | &nbsp;
-<a href="forum.html">COMMUNITY</a>
-
-        </div>
-        <div style="position: relative;">
-            <div class="content">
-                <div class="top_left">
-                </div>
-                <div class="top_right">
-                </div>
-                
 <div style="text-align: center; font-style: italic;">
 <p>The Chicago Boss API is mostly stable, but still might change before 1.0.</p>
 </div>
 <div class="subnav">
-    
-    <a href="api-config.html">Config</a>
-    
-    &nbsp; | &nbsp; 
     
     <a href="api-db.html">BossDB</a>
      
@@ -57,13 +22,13 @@
     
     &nbsp; | &nbsp;
     
-    <a href="api-session.html">BossSession</a>
+    <a href="api-mq.html">BossMQ (Comet)</a>
+    
+    &nbsp; | &nbsp; 
+    
+    <a href="api-session.html">Sessions</a>
            
     &nbsp; | &nbsp;
-    
-    <a href="api-flash.html">BossFlash</a>
-           
-    &nbsp; | &nbsp;    
     
     <a href="api-mail-controller.html">Mail</a> 
     
@@ -95,7 +60,7 @@ Controllers should take one parameter, the <a href="#simplebridge">SimpleBridge 
 <ul>
     <li>First argument: the HTTP request method as an atom, e.g. <code>'GET'</code> or <code>'POST'</code></li>
     <li>Second argument: the list of slash-separated tokens after the action name in the URL.</li>
-    <li>Third argument (optional): the result of a function named <code>'_auth'</code> in the controller</li>
+    <li>Third argument (optional): the result of a function named <code>before_</code> in the controller</li>
 </ul>
 
 <p>Example function clauses:</p>
@@ -121,13 +86,13 @@ view(<span class="atom">'GET'</span>, [Year, Month]) -&gt;<br />
 <a name="auth"></a>
 <h3>Authorization</h3>
 
-<p>If an action takes three arguments, then the function <code>'_auth'/1</code> in your controller will be passed the action name as a string and should return one of:</P>
+<p>If an action takes three arguments, then the function <code>before_/1</code> in your controller will be passed the action name as a string and should return one of:</P>
 
 <div class="code">
     {ok, ExtraInfo}
 </div>
 
-<p><code>ExtraInfo</code> will be passed as the third argument to the action, and as a variable called "_auth" to the templates.</p>
+<p><code>ExtraInfo</code> will be passed as the third argument to the action, and as a variable called "before_" to the templates.</p>
 
 <div class="code">
     {redirect, Location<span class="typevar">::string()</span>}
@@ -135,10 +100,10 @@ view(<span class="atom">'GET'</span>, [Year, Month]) -&gt;<br />
 
 <p>Do not execute the action. Instead, perform a 302 redirect to <code>Location</code>.</p>
 
-<p>Probably most common _auth looks like:</p>
+<p>Probably most common before_ looks like:</p>
 
 <div class="code">
-'_auth'(_) -&gt;<br />
+before_(_) -&gt;<br />
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="function">my_user_lib</span>:<span class="function">require_login</span>(Req).
 </div>
 
@@ -224,13 +189,13 @@ view(<span class="atom">'GET'</span>, [Year, Month]) -&gt;<br />
 <br />
 <a name="filter"></a>
 <h3>Post-processing</h3>
-<p>If it exists, a function called <code>'_filter'</code> in your controller will be passed the result that is about to be returned to the client. The '_filter' function takes two or three arguments:</p>
+<p>If it exists, a function called <code>after_</code> in your controller will be passed the result that is about to be returned to the client. The 'after_' function takes two or three arguments:</p>
 <ol>
     <li>The action name, as a string</li>
     <li>The HTTP result tuple</li>
-    <li>The result of the '_auth' function, provided one exists</li>
+    <li>The result of the before_ function, provided one exists</li>
 </ol>
-<p>The _filter function should return a (possibly) modified HTTP result tuple. Result tuples may be one of:</p>
+<p>The <code>after_</code> function should return a (possibly) modified HTTP result tuple. Result tuples may be one of:</p>
 <div class="code">
     {redirect, Location<span class="typevar">::string()</span>, Headers<span class="typevar">::proplist()</span>}
 </div>
@@ -284,8 +249,5 @@ This function parses parameters that have numerical or labeled indices, such as 
 <p>Get the value of a given cookie.</p>
 
 </div>
-
-            </div>
-        </div>
-    </body>
+</body>
 </html>

@@ -13,6 +13,7 @@ start(_Options) ->
     {ok, undefined}.
 
 stop(_) ->
+    boss_db_mock ! {self(), stop},
     ok.
 
 loop({[], IdCounter}) ->
@@ -70,6 +71,8 @@ loop([{Dict, IdCounter}|OldState] = State) ->
                         {id, Id};
                     ({Attr, {_, _, _} = Val}) ->
                         {Attr, calendar:now_to_datetime(Val)};
+%                    ({Attr, Val}) when is_binary(Val) ->
+%                        {Attr, binary_to_list(Val)};
                     (Other) ->
                         Other
                 end, Record:attributes()),
@@ -84,7 +87,9 @@ loop([{Dict, IdCounter}|OldState] = State) ->
             loop(OldState);
         {From, dump} ->
             From ! {boss_db_mock, dict:to_list(Dict)},
-            loop(State)
+            loop(State);
+        {_From, stop} ->
+            ok
     end.
 
 find(_, Id) ->

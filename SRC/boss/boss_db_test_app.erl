@@ -14,6 +14,7 @@ stop(_State) ->
 
 run_setup() ->
   ok = boss_record_compiler:compile("SRC/boss/db_adapters/test_models/boss_db_test_model.erl"),
+  ok = boss_record_compiler:compile("SRC/boss/db_adapters/test_models/boss_db_test_parent_model.erl"),
   DBAdapter = case application:get_env(db_adapter) of
     {ok, Val} -> Val;
     _ -> mock
@@ -34,31 +35,41 @@ run_tests() ->
   ModelText = <<"Economists do it with models">>,
   do(
     fun() ->
+        ParentModel = boss_db_test_parent_model:new(id, <<"foo">>),
+        {ok, SavedParentModel} = ParentModel:save(),
         Model = boss_db_test_model:new(id, ModelText, 
-          {{1776, 7, 4}, {0, 0, 0}}, true, 42, 3.14159),
+          {{1776, 7, 4}, {0, 0, 0}}, true, 42, 3.14159, SavedParentModel:id()),
         {ok, SavedModel} = Model:save(),
-        SavedModel
+        {SavedModel, SavedParentModel}
     end, 
     [
-      fun(SavedModel) ->
+      fun({SavedModel, _}) ->
           {SavedModel:id() =/= id,
             "ID field not generated"}
       end,
-      fun(SavedModel) ->
+      fun({SavedModel, _}) ->
           {SavedModel:some_text() =:= ModelText,
             "Text field not saved correctly"}
       end,
-      fun(SavedModel) ->
+      fun({SavedModel, _}) ->
           {SavedModel:some_integer() =:= 42,
             "Integer field not saved correctly"}
       end,
-      fun(SavedModel) ->
+      fun({SavedModel, _}) ->
           {SavedModel:some_float() =:= 3.14159,
             "Float field not saved correctly"}
+      end,
+      fun({SavedModel, SavedParentModel}) ->
+          {(SavedModel:boss_db_test_parent_model()):id() =:= SavedParentModel:id(),
+            "Association doesn't have expected ID"}
+      end,
+      fun({SavedModel, SavedParentModel}) ->
+          {(SavedModel:boss_db_test_parent_model()):some_text() =:= SavedParentModel:some_text(),
+              "Association doesn't have expected Text"}
       end
     ], 
     [ "Check for record in the database",
-      fun(SavedModel) ->
+      fun({SavedModel, _}) ->
           do(
             fun() ->
                 boss_db:find(SavedModel:id())
@@ -92,15 +103,15 @@ run_tests() ->
       end,
 
       "Create more records",
-      fun(Model1) ->
+      fun({Model1, _}) ->
           do(
             fun() ->
                 % boss_db_test_model:new(id, <<"Economists do it with models">>, 
                 % {{1776, 7, 4}, {0, 0, 0}}, true, 42, 3.14159),
-                {ok, Model2} = (boss_db_test_model:new(id, <<"Bold coffee">>, 
-                    {{1969, 7, 20}, {0, 0, 0}}, false, 100, 5.5)):save(),
-                {ok, Model3} = (boss_db_test_model:new(id, <<"A Bold Society">>, 
-                    {{1984, 1, 1}, {0, 0, 0}}, true, 200, 28.8)):save(),
+                {ok, Model2} = (boss_db_test_model:new(id, "Bold coffee", 
+                    {{1969, 7, 20}, {0, 0, 0}}, false, 100, 5.5, undefined)):save(),
+                {ok, Model3} = (boss_db_test_model:new(id, "A Bold Society", 
+                    {{1984, 1, 1}, {0, 0, 0}}, true, 200, 28.8, undefined)):save(),
                 [Model1:id(), Model2:id(), Model3:id()]
             end, 
             [

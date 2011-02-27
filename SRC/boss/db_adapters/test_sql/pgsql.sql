@@ -5,7 +5,14 @@ CREATE TABLE boss_db_test_models (
     some_time           TIMESTAMP,
     some_boolean        BOOLEAN,
     some_integer        INTEGER,
-    some_float          FLOAT
+    some_float          FLOAT,
+    boss_db_test_parent_model_id INTEGER
+);
+
+DROP TABLE IF EXISTS boss_db_test_parent_models;
+CREATE TABLE boss_db_test_models (
+    id                  SERIAL PRIMARY KEY,
+    some_text           TEXT
 );
 
 DROP TABLE IF EXISTS counters;
