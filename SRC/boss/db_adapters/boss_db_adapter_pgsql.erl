@@ -149,6 +149,7 @@ activate_record(Record, Metadata, Type) ->
                     case element(Index, Record) of
                         {Date, {_, _, S} = Time} when is_float(S) ->
                             {Date, setelement(3, Time, round(S))};
+                        undefined -> undefined;
                         Val -> 
                             case lists:suffix("_id", KeyString) of
                                 true -> integer_to_id(Val, KeyString);
@@ -192,7 +193,9 @@ build_insert_query(Record) ->
     Type = element(1, Record),
     TableName = type_to_table_name(Type),
     {Attributes, Values} = lists:foldl(fun
+            ({id, V}, {Attrs, Vals}) when is_integer(V) -> {[atom_to_list(id)|Attrs], [pack_value(V)|Vals]};
             ({id, _}, Acc) -> Acc;
+            ({_, undefined}, Acc) -> Acc;
             ({A, V}, {Attrs, Vals}) ->
                 AString = atom_to_list(A),
                 Value = case lists:suffix("_id", AString) of
@@ -239,13 +242,40 @@ build_select_query(Type, Conditions, Max, Skip, Sort, SortOrder) ->
         " OFFSET ", integer_to_list(Skip)
     ].
 
+join([], _) -> [];
+join([List|Lists], Separator) ->
+     lists:flatten([List | [[Separator,Next] || Next <- Lists]]).
+
+is_foreign_key(Key) when is_atom(Key) ->
+	KeyTokens = string:tokens(atom_to_list(Key), "_"),
+	LastToken = hd(lists:reverse(KeyTokens)),
+	case (length(KeyTokens) > 1 andalso LastToken == "id") of
+		true -> 
+			Module = join(lists:reverse(tl(lists:reverse(KeyTokens))), "_"),
+    		case code:is_loaded(list_to_atom(Module)) of
+        		{file, _Loaded} -> true;
+        		false -> false
+    		end;
+		false -> false
+	end;
+is_foreign_key(_Key) -> false.
+
 build_conditions(Conditions) ->
     build_conditions1(Conditions, [" TRUE"]).
 
 build_conditions1([], Acc) ->
     Acc;
+build_conditions1([{Key, 'equals', Value}|Rest], Acc) when Value == undefined ->
+    build_conditions1(Rest, add_cond(Acc, Key, "is", pack_value(Value)));
 build_conditions1([{Key, 'equals', Value}|Rest], Acc) ->
-    build_conditions1(Rest, add_cond(Acc, Key, "=", pack_value(Value)));
+    case is_foreign_key(Key) of
+        true -> 
+            {_Type, _TableName, TableId} = infer_type_from_id(Value),
+            build_conditions1(Rest, add_cond(Acc, Key, "=", pack_value(TableId)));
+        false -> build_conditions1(Rest, add_cond(Acc, Key, "=", pack_value(Value)))
+    end;
+build_conditions1([{Key, 'not_equals', Value}|Rest], Acc) when Value == undefined ->
+    build_conditions1(Rest, add_cond(Acc, Key, "is not", pack_value(Value)));
 build_conditions1([{Key, 'not_equals', Value}|Rest], Acc) ->
     build_conditions1(Rest, add_cond(Acc, Key, "!=", pack_value(Value)));
 build_conditions1([{Key, 'in', Value}|Rest], Acc) when is_list(Value) ->
@@ -322,6 +352,10 @@ pack_datetime(DateTime) ->
 
 pack_now(Now) -> pack_datetime(calendar:now_to_datetime(Now)).
 
+pack_value(false) ->
+	"''";
+pack_value(undefined) ->
+	"null";
 pack_value(V) when is_binary(V) ->
     pack_value(binary_to_list(V));
 pack_value(V) when is_list(V) ->
