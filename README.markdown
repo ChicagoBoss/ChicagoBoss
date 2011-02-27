@@ -19,11 +19,11 @@ Build Chicago Boss with `make`.
     1. you need install win openSSl (http://www.slproweb.com/products/Win32OpenSSL.html)
     2. make mochiweb with msys or cygwin
 
-When you're start the server, run `./START-DEV.SH` (or start-dev.bat) in this
-directory (admin privileges needed).  There will be a lot of PROGRESS REPORTs
-which look scary but hopefully everything is running smoothly. With this
-console you can interact directly with the running server. Next, point your
-browser to:
+When you're ready to start the server, run `./START-DEV.SH` (or start-dev.bat)
+in this directory (admin privileges needed).  There will be a lot of PROGRESS
+REPORTs which look scary but hopefully everything is running smoothly. With
+this console you can interact directly with the running server. Next, point
+your browser to:
 
     http://localhost:8001/
 
