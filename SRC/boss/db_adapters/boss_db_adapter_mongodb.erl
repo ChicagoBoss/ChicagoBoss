@@ -43,6 +43,7 @@ find(Conn, Id) when is_list(Id) ->
         end),
 
     case Res of
+        {ok, {}} -> undefined;
         {ok, {Doc}} -> mongo_tuple_to_record(Type, Doc);
         {failure, Reason} -> {error, Reason};
         {connection_failure, Reason} -> {error, Reason}
@@ -325,6 +326,8 @@ mongo_to_boss_value(AttrName, {_,_,_} = Value, _) ->
         true -> calendar:now_to_datetime(Value);
         false -> Value
     end;
+mongo_to_boss_value(_AttrName, [H|T], _) when is_integer(H) ->
+    {integers, [H|T]};
 mongo_to_boss_value(AttrName, Value, _RecordType) ->
     case is_id_attr(AttrName) and (Value =/= "") of 
         true -> 
@@ -373,6 +376,9 @@ datetime_to_now(DateTime) ->
 
 pack_value({{_, _, _}, {_, _, _}} = Val) ->
     datetime_to_now(Val);
+pack_value(V) when is_binary(V) -> pack_value(binary_to_list(V));
+pack_value([H|T]) when is_integer(H) -> list_to_binary([H|T]);
+pack_value({integers, List}) -> List;
 pack_value(V) -> V.
 
 %% Functions below copied from emongo <https://github.com/boorad/emongo>
