@@ -1,7 +1,7 @@
 -module(aleppo_parser).
 -export([parse/1, parse_and_scan/1, format_error/1]).
 
--file("/usr/local/lib/erlang/lib/parsetools-2.0.5/include/yeccpre.hrl", 0).
+-file("/usr/local/lib/erlang/lib/parsetools-2.0.4/include/yeccpre.hrl", 0).
 %%
 %% %CopyrightBegin%
 %%
@@ -171,7 +171,7 @@ yecctoken2string({char,_,C}) -> io_lib:write_char(C);
 yecctoken2string({var,_,V}) -> io_lib:format("~s", [V]);
 yecctoken2string({string,_,S}) -> io_lib:write_unicode_string(S);
 yecctoken2string({reserved_symbol, _, A}) -> io_lib:write(A);
-yecctoken2string({_Cat, _, Val}) -> io_lib:format("~p",[Val]);
+yecctoken2string({_Cat, _, Val}) -> io_lib:write(Val);
 yecctoken2string({dot, _}) -> "'.'";
 yecctoken2string({'$end', _}) ->
     [];
