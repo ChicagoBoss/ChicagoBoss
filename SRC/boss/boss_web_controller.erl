@@ -68,9 +68,9 @@ handle_request(Req, RequestMod, ResponseMod) ->
             end,
             Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
             Response1 = (Response:status_code(StatusCode)):data(Payload),
-			SessionExpTime = boss_session:get_session_exp_time(),
-			Response2 = Response1:cookie(SessionKey, SessionId, "/", SessionExpTime),
-			Response3 = lists:foldl(fun({K, V}, Acc) -> Acc:header(K, V) end, Response2, Headers),
+            SessionExpTime = boss_session:get_session_exp_time(),
+            Response2 = Response1:cookie(SessionKey, SessionId, "/", SessionExpTime),
+            Response3 = lists:foldl(fun({K, V}, Acc) -> Acc:header(K, V) end, Response2, Headers),
             Response3:build_response()
     end.
 
