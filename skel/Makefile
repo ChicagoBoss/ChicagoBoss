@@ -9,4 +9,4 @@ clean:
 
 .PHONY: test
 test:
-	$(ERL) -pa ebin -run boss_web_test -noshell
+	$(ERL) -pa {{src}}/ebin -run boss_web_test -noshell

@@ -35,7 +35,6 @@
 {file, "skel/test/mail_test.erl", "{{dest}}/test/mail_test.erl"}.
 {file, "skel/view/hello/world.html", "{{dest}}/view/hello/world.html"}.
 {file, "skel/boss.config", "{{dest}}/boss.config"}.
-{file, "skel/rebar.config", "{{dest}}/rebar.config"}.
 {file, "rebar", "{{dest}}/rebar"}.
 {chmod, 8#755, "{{dest}}/rebar"}.
 {chmod, 8#755, "{{dest}}/start-dev.sh"}.
