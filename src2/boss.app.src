@@ -1,0 +1,15 @@
+{application, boss,
+    [
+    {description, "Chicago Boss web framework"},
+    {vsn, "0.5.0"},
+    {registered, []},
+    {modules, []},
+    {applications, [
+        kernel,
+        stdlib,
+        crypto
+            ]},
+    {mod, {boss_app, []}},
+    {env, []},
+    {applications, [kernel, stdlib, crypto]}
+    ]}.
