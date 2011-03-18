@@ -1,3 +1,36 @@
+Upgrade: From 0.5.x
+-------------------
+
+Starting with Chicago Boss 0.5, the framework source is kept separate from your
+project source. After downloading and building a new copy of CB, you need to update
+your server scripts to point to the new source. Open "start-dev.sh" and "start.sh"
+and make sure there is an argument like this:
+
+    -pa /path/to/new/ChicagoBoss/ebin
+
+You might also want to update your /admin interface by copying the "skel/admin"
+directory from the new CB over to your project directory.
+
+
+Upgrade: From 0.4 to 0.5
+------------------------
+
+The easiest way to upgrade from 0.4 is to create a new CB app and copy your source
+into it. In the CB source directory, type:
+
+    make
+    make app PROJECT=mynewproject
+    cd ../mynewproject
+    cp -a /path/to/existing/project/view \
+          /path/to/existing/project/model \
+          /path/to/existing/project/controller \
+          /path/to/existing/project/static \
+          /path/to/existing/project/boss.config \
+          .
+
+Then start the server with ./start-dev.sh
+
+
 Upgrade: From 0.4.x to 0.4.y
 ----------------------------
 
