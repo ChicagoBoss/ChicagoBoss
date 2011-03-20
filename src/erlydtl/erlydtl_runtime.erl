@@ -189,3 +189,21 @@ increment_counter_stats([{counter, Counter}, {counter0, Counter0}, {revcounter, 
 
 cycle(NamesTuple, Counters) when is_tuple(NamesTuple) ->
     element(fetch_value(counter0, Counters) rem size(NamesTuple) + 1, NamesTuple).
+
+widthratio(Numerator, Denominator, Scale) ->
+    round(Numerator / Denominator * Scale).
+
+spaceless(Contents) ->
+    Contents1 = lists:flatten(Contents),
+    Contents2 = re:replace(Contents1, "^\s+<", "<", [{return,list}]),
+    Contents3 = re:replace(Contents2, ">\s+$", ">", [{return,list}]),
+    Contents4 = re:replace(Contents3, ">\s+<", "><", [global, {return,list}]),
+    Contents4.
+
+read_file(Module, Function, DocRoot, FileName) ->
+    AbsName = case filename:absname(FileName) of
+        FileName -> FileName;
+        _ -> filename:join([DocRoot, FileName])
+    end,
+    {ok, Binary} = Module:Function(AbsName),
+    binary_to_list(Binary).

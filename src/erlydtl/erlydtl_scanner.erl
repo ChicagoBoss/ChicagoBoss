@@ -57,12 +57,53 @@ scan([], Scanned, _, in_text) ->
                 fun
                     ({identifier, Pos, String}) ->
                         RevString = lists:reverse(String),
-                        Keywords = ["for", "empty", "endfor", "in", "include", "block", "endblock",
-                            "extends", "autoescape", "endautoescape", "if", "else", "endif",
-                            "not", "or", "and", "comment", "endcomment", "cycle", "firstof",
-                            "ifchanged", "ifequal", "endifequal", "ifnotequal", "endifnotequal",
-                            "now", "regroup", "spaceless", "endspaceless", "ssi", "templatetag",
-                            "load", "call", "with", "trans", "noop"], 
+                        Keywords = [
+                            "autoescape", "endautoescape", 
+
+                            "block", "endblock", 
+
+                            "comment", "endcomment", 
+
+                            %TODO "csrf_token",
+                            
+                            "cycle", 
+                            
+                            "extends", 
+
+                            "filter", "endfilter",
+
+                            "firstof",
+
+                            "for", "in", "empty", "endfor", 
+
+                            "if", "else", "endif", "not", "or", "and", 
+
+                            %TODO "ifchanged", 
+                            
+                            "ifequal", "endifequal", 
+
+                            "ifnotequal", "endifnotequal",
+
+                            "include", 
+
+                            "now", 
+
+                            %TODO "regroup", 
+                            
+                            "spaceless", "endspaceless", 
+                            
+                            "ssi", "parsed",
+                            
+                            "templatetag", "openblock", "closeblock", "openvariable", "closevariable", "openbrace", "closebrace", "opencomment", "closecomment",
+
+                            % "url", - implemented as custom tag
+
+                            "widthratio",
+
+                            "call", "with", "endwith",
+                            
+                            "trans", "noop"
+                        ], 
                         Type = case lists:member(RevString, Keywords) of
                             true ->
                                 list_to_atom(RevString ++ "_keyword");
