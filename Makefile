@@ -19,6 +19,9 @@ edoc:
 app:
 	@$(REBAR) create template=skel dest=$(DEST) src=$(PWD) appid=$(PROJECT)
 
+mongodb:
+	$(ERL) -make
+
 test_db_mock:
 	$(ERL) -pa ebin -run boss_db_test start -config $(DB_CONFIG_DIR)/mock -noshell
 
