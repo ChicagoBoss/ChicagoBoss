@@ -48,7 +48,7 @@
 -export([send/2, send_blocking/2, send_it/2]).
 -endif.
 
--spec send(Email :: {string(), [string(), ...], string()}, Options :: list()) -> {'ok', pid()} | {'error', any()}.
+-spec send(Email :: {string() | binary(), [string() | binary(), ...], string() | binary() | function()}, Options :: list()) -> {'ok', pid()} | {'error', any()}.
 send(Email, Options) ->
 	NewOptions = lists:ukeymerge(1, lists:sort(Options),
 		lists:sort(?DEFAULT_OPTIONS)),
@@ -63,7 +63,7 @@ send(Email, Options) ->
 			{error, Reason}
 	end.
 
--spec send_blocking(Email :: {string() | binary(), [string() | binary(), ...], string() | binary()}, Options :: list()) -> binary() | {'error', atom(), any()}.
+-spec send_blocking(Email :: {string() | binary(), [string() | binary(), ...], string() | binary() | function()}, Options :: list()) -> binary() | {'error', atom(), any()}.
 send_blocking(Email, Options) ->
 	NewOptions = lists:ukeymerge(1, lists:sort(Options),
 		lists:sort(?DEFAULT_OPTIONS)),
@@ -82,7 +82,7 @@ send_it_nonblock(Email, Options) ->
 			ok
 	end.
 
--spec send_it(Email :: {string(), [string(), ...], string()}, Options :: list()) -> 'ok'.
+-spec send_it(Email :: {string() | binary(), [string() | binary(), ...], string() | binary() | function()}, Options :: list()) -> 'ok'.
 send_it(Email, Options) ->
 	RelayDomain = proplists:get_value(relay, Options),
 	MXRecords = case proplists:get_value(no_mx_lookups, Options) of
@@ -198,6 +198,8 @@ try_RCPT_TO([To | Tail], Socket, Extensions) ->
 	% someone was bad and didn't put in the angle brackets
 	try_RCPT_TO(["<"++To++">" | Tail], Socket, Extensions).
 
+try_DATA(Body, Socket, Extensions) when is_function(Body) ->
+    try_DATA(Body(), Socket, Extensions);
 try_DATA(Body, Socket, _Extensions) ->
 	socket:send(Socket, "DATA\r\n"),
 	case read_possible_multiline_reply(Socket) of

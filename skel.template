@@ -9,7 +9,7 @@
 {dir, "{{dest}}/ebin"}.
 {template, "skel/start-dev.sh", "{{dest}}/start-dev.sh"}.
 {template, "skel/start.sh", "{{dest}}/start.sh"}.
-{template, "skel/start-server.bat", "{{dest}}/start-server.sh"}.
+{template, "skel/start-server.bat", "{{dest}}/start-server.bat"}.
 {template, "skel/Makefile", "{{dest}}/Makefile"}.
 {file, "skel/admin/admin_controller.erl", "{{dest}}/admin/admin_controller.erl"}.
 {file, "skel/admin/static/lang.js", "{{dest}}/admin/static/lang.js"}.
@@ -35,7 +35,5 @@
 {file, "skel/test/mail_test.erl", "{{dest}}/test/mail_test.erl"}.
 {file, "skel/view/hello/world.html", "{{dest}}/view/hello/world.html"}.
 {file, "skel/boss.config", "{{dest}}/boss.config"}.
-{file, "rebar", "{{dest}}/rebar"}.
-{chmod, 8#755, "{{dest}}/rebar"}.
 {chmod, 8#755, "{{dest}}/start-dev.sh"}.
 {chmod, 8#755, "{{dest}}/start.sh"}.

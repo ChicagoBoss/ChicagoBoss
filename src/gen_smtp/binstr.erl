@@ -111,10 +111,10 @@ strpos(Bin, C, I, S) ->
 	end.
 
 
+-spec strrpos(Bin :: binary(), C :: binary() | list()) -> non_neg_integer().
 strrpos(Bin, C) ->
 	strrpos(Bin, C, byte_size(Bin), byte_size(C)).
 
--spec strrpos(Bin :: binary(), C :: binary() | list()) -> non_neg_integer().
 strrpos(Bin, C, I, S) ->
 	case Bin of
 		<<_X:I/binary, C:S/binary, _Rest/binary>> ->

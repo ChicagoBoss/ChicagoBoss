@@ -1,5 +1,4 @@
 ERL=erl
-REBAR=./rebar
 
 all:
 	$(ERL) -pa {{src}}/ebin -run 'boss_load:load_all_modules("ebin")' -s init stop
