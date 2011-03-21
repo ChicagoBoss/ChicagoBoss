@@ -1,5 +1,5 @@
 -module(boss_web_controller).
--export([start/0, start/1, stop/0, process_request/1]).
+-export([start/0, start/1, stop/0, handle_request/3, process_request/1]).
 -define(DEBUGPRINT(A), error_logger:info_report("~~o)> " ++ A)).
 
 start() ->
@@ -23,12 +23,11 @@ start(Config) ->
     boss_mail:start([{driver, MailDriver}]),
 
     boss_translator:start(),
-    % boss_load:load_all_modules(),
     {ServerMod, RequestMod, ResponseMod} = case application:get_env(server) of
         {ok, mochiweb} -> {mochiweb_http, mochiweb_request_bridge, mochiweb_response_bridge};
         _ -> {misultin, misultin_request_bridge, misultin_response_bridge}
     end,
-    ServerConfig = [{loop, fun(Req) -> handle_request(Req, RequestMod, ResponseMod) end} | Config],
+    ServerConfig = [{loop, fun(Req) -> ?MODULE:handle_request(Req, RequestMod, ResponseMod) end} | Config],
     case ServerMod of
         mochiweb_http -> mochiweb_http:start(ServerConfig);
         misultin -> misultin:start_link(ServerConfig)

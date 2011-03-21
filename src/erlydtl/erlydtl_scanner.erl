@@ -84,7 +84,7 @@ scan([], Scanned, _, in_text) ->
 
                             "ifnotequal", "endifnotequal",
 
-                            "include", 
+                            "include", "only",
 
                             "now", 
 

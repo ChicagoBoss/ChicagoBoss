@@ -12,7 +12,6 @@
 {template, "skel/start-server.bat", "{{dest}}/start-server.sh"}.
 {template, "skel/Makefile", "{{dest}}/Makefile"}.
 {file, "skel/admin/admin_controller.erl", "{{dest}}/admin/admin_controller.erl"}.
-{file, "skel/admin/model/boss_mail_failure.erl", "{{dest}}/admin/model/boss_mail_failure.erl"}.
 {file, "skel/admin/static/lang.js", "{{dest}}/admin/static/lang.js"}.
 {file, "skel/admin/test/admin_test.erl", "{{dest}}/admin/test/admin_test.erl"}.
 {file, "skel/admin/view/access_denied.html", "{{dest}}/admin/view/access_denied.html"}.
@@ -25,6 +24,7 @@
 {file, "skel/admin/view/lang.html", "{{dest}}/admin/view/lang.html"}.
 {file, "skel/admin/view/model.html", "{{dest}}/admin/view/model.html"}.
 {file, "skel/admin/view/record.html", "{{dest}}/admin/view/record.html"}.
+{file, "skel/admin/view/upgrade.html", "{{dest}}/admin/view/upgrade.html"}.
 {file, "skel/controller/hello_controller.erl", "{{dest}}/controller/hello_controller.erl"}.
 {file, "skel/mail/mail_controller.erl", "{{dest}}/mail/mail_controller.erl"}.
 {file, "skel/mail/view/test_message.html", "{{dest}}/mail/view/test_message.html"}.

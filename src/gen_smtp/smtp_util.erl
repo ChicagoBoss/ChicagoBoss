@@ -57,10 +57,14 @@ guess_FQDN() ->
 	FQDN.
 
 %% @doc Compute the CRAM digest of `Key' and `Data'
--spec(compute_cram_digest/2 :: (Key :: binary(), Data :: string()) -> string()).
+-spec(compute_cram_digest/2 :: (Key :: binary(), Data :: string()) -> binary()).
 compute_cram_digest(Key, Data) ->
 	Bin = crypto:md5_mac(Key, Data),
-	lists:flatten([io_lib:format("~2.16.0b", [X]) || <<X>> <= Bin]).
+	list_to_binary([io_lib:format("~2.16.0b", [X]) || <<X>> <= Bin]).
+
+-spec(get_cram_string/1 :: (Hostname :: string()) -> string()).
+get_cram_string(Hostname) ->
+	binary_to_list(base64:encode(lists:flatten(io_lib:format("<~B.~B@~s>", [crypto:rand_uniform(0, 4294967295), crypto:rand_uniform(0, 4294967295), Hostname])))).
 
 %% @doc Trim \r\n from `String'
 -spec(trim_crlf/1 :: (String :: string()) -> string()).
@@ -95,9 +99,12 @@ zone(Val) when Val >= 0 ->
 
 generate_message_id() ->
 	FQDN = guess_FQDN(),
-        Md5 = [io_lib:format("~2.16.0b", [X]) || <<X>> <= erlang:md5(term_to_binary([erlang:now(), FQDN, self()]))],
+	Md5 = [io_lib:format("~2.16.0b", [X]) || <<X>> <= erlang:md5(term_to_binary([erlang:now(), FQDN]))],
 	io_lib:format("<~s@~s>", [Md5, FQDN]).
 
 generate_message_boundary() ->
 	FQDN = guess_FQDN(),
 	["_=", [io_lib:format("~2.36.0b", [X]) || <<X>> <= erlang:md5(term_to_binary([erlang:now(), FQDN]))], "=_"].
+
+
+

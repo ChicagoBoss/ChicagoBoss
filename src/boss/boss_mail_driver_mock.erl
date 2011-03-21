@@ -1,11 +1,11 @@
 -module(boss_mail_driver_mock).
--export([start/0, stop/0, deliver/3, read/2, push/0, pop/0]).
+-export([start/0, stop/1, deliver/4, read/2, push/0, pop/0]).
 
 start() ->
     register(boss_mock_inbox, spawn(fun() -> loop([]) end)),
-    ok.
+    {ok, undefined}.
 
-stop() ->
+stop(_) ->
     ok.
 
 loop([]) ->
@@ -43,7 +43,7 @@ loop([InboxDict|OldState] = State) ->
             loop(OldState)
     end.
 
-deliver(FromAddress, ToAddress, BodyFun) ->
+deliver(_, FromAddress, ToAddress, BodyFun) ->
     boss_mock_inbox ! {self(), {deliver, FromAddress, ToAddress, BodyFun()}},
     receive
         {boss_mock_inbox, ok} ->

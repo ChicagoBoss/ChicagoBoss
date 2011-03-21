@@ -512,13 +512,15 @@ body_ast(DjangoParseTree, Context, TreeWalker) ->
                 {ElseAstInfo, TreeWalker2} = body_ast(ElseContents, Context, TreeWalker1),
                 ifelse_ast({'expr', "ne", Arg1, Arg2}, IfAstInfo, ElseAstInfo, Context, TreeWalker2);                    
             ({'include', {string_literal, _, File}, Args}, TreeWalkerAcc) ->
-                include_ast(unescape_string_literal(File), Args, Context, TreeWalkerAcc);
+                include_ast(unescape_string_literal(File), Args, Context#dtl_context.local_scopes, Context, TreeWalkerAcc);
+            ({'include_only', {string_literal, _, File}, Args}, TreeWalkerAcc) ->
+                include_ast(unescape_string_literal(File), Args, [], Context, TreeWalkerAcc);
             ({'spaceless', Contents}, TreeWalkerAcc) ->
                 spaceless_ast(Contents, Context, TreeWalkerAcc);
             ({'ssi', Arg}, TreeWalkerAcc) ->
                 ssi_ast(Arg, Context, TreeWalkerAcc);
             ({'ssi_parsed', {string_literal, _, FileName}}, TreeWalkerAcc) ->
-                ssi_parsed_ast(unescape_string_literal(FileName), Context, TreeWalkerAcc);
+                include_ast(unescape_string_literal(FileName), [], Context#dtl_context.local_scopes, Context, TreeWalkerAcc);
             ({'string', _Pos, String}, TreeWalkerAcc) -> 
                 string_ast(String, TreeWalkerAcc);
             ({'tag', {'identifier', _, Name}, Args}, TreeWalkerAcc) ->
@@ -687,7 +689,7 @@ string_ast(String, TreeWalker) ->
     % {{erl_syntax:binary([erl_syntax:binary_field(erl_syntax:integer(X)) || X <- String]), #ast_info{}}, TreeWalker}.       
 
 
-include_ast(File, ArgList, Context, TreeWalker) ->
+include_ast(File, ArgList, Scopes, Context, TreeWalker) ->
     FilePath = full_path(File, Context#dtl_context.doc_root),
     case parse(FilePath, Context) of
         {ok, InclusionParseTree, CheckSum} ->
@@ -700,7 +702,7 @@ include_ast(File, ArgList, Context, TreeWalker) ->
             {{BodyAst, BodyInfo}, TreeWalker2} = with_dependency({FilePath, CheckSum}, 
                 body_ast(InclusionParseTree, Context#dtl_context{
                         parse_trail = [FilePath | Context#dtl_context.parse_trail],
-                        local_scopes = [NewScope]
+                        local_scopes = [NewScope|Scopes]
                     }, TreeWalker1)),
 
             {{BodyAst, merge_info(BodyInfo, ArgInfo)}, TreeWalker2};
@@ -708,17 +710,6 @@ include_ast(File, ArgList, Context, TreeWalker) ->
             throw(Err)
     end.
     
-% include at compile-time
-ssi_parsed_ast(File, Context, TreeWalker) ->
-    FilePath = full_path(File, Context#dtl_context.doc_root),
-    case parse(FilePath, Context) of
-        {ok, InclusionParseTree, CheckSum} ->
-            with_dependency({FilePath, CheckSum}, body_ast(InclusionParseTree, Context#dtl_context{
-                parse_trail = [FilePath | Context#dtl_context.parse_trail]}, TreeWalker));
-        Err ->
-            throw(Err)
-    end.
-
 % include at run-time
 ssi_ast(FileName, Context, TreeWalker) ->
     {{Ast, Info}, TreeWalker1} = value_ast(FileName, true, Context, TreeWalker),

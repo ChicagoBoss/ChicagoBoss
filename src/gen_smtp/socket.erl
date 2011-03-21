@@ -25,6 +25,7 @@
 
 -define(TCP_LISTEN_OPTIONS,[  {active, false},
                               {backlog, 30},
+                              {ip,{0,0,0,0}},
                               {keepalive, true},
                               {packet, line},
                               {reuseaddr, true}]).
@@ -60,33 +61,56 @@
 -export([setopts/2]).
 -export([get_proto/1]).
 -export([begin_inet_async/1]).
--export([handle_inet_async/1, handle_inet_async/2]).
+-export([handle_inet_async/1, handle_inet_async/2, handle_inet_async/3]).
 -export([extract_port_from_socket/1]).
 -export([to_ssl_server/1,to_ssl_server/2,to_ssl_server/3]).
 -export([to_ssl_client/1,to_ssl_client/2,to_ssl_client/3]).
 -export([type/1]).
 
+-type protocol() :: 'tcp' | 'ssl'.
+-type address() :: inet:ip_address() | string() | binary().
+-type socket() :: ssl:sslsocket() | gen_tcp:socket().
+
 %%%-----------------------------------------------------------------
 %%% API
 %%%-----------------------------------------------------------------
+-spec connect(Protocol :: protocol(), Address :: address(), Port :: pos_integer()) -> socket().
 connect(Protocol, Address, Port) ->
 	connect(Protocol, Address, Port, [], infinity).
+
+-spec connect(Protocol :: protocol(), Address :: address(), Port :: pos_integer(), Options :: list()) -> socket().
 connect(Protocol, Address, Port, Opts) ->
 	connect(Protocol, Address, Port, Opts, infinity).
+
+-spec connect(Protocol :: protocol(), Address :: address(), Port :: pos_integer(), Options :: list(), Time :: non_neg_integer() | 'infinity') -> socket().
 connect(tcp, Address, Port, Opts, Time) ->
 	gen_tcp:connect(Address, Port, tcp_connect_options(Opts), Time);
 connect(ssl, Address, Port, Opts, Time) ->
+	application:start(crypto),
+	application:start(public_key),
+	application:start(ssl),
 	ssl:connect(Address, Port, ssl_connect_options(Opts), Time).
 
+
+-spec listen(Protocol :: protocol(), Port :: pos_integer()) -> socket().
 listen(Protocol, Port) ->
 	listen(Protocol, Port, []).
+
+-spec listen(Protocol :: protocol(), Port :: pos_integer(), Options :: list()) -> socket().
 listen(ssl, Port, Options) ->
+	application:start(crypto),
+	application:start(public_key),
+	application:start(ssl),
 	ssl:listen(Port, ssl_listen_options(Options));
 listen(tcp, Port, Options) ->
 	gen_tcp:listen(Port, tcp_listen_options(Options)).
 
+
+-spec accept(Socket :: socket()) -> {'ok', socket()} | {'error', any()}.
 accept(Socket) ->
 	accept(Socket, infinity).
+
+-spec accept(Socket :: socket(), Timeout :: pos_integer() | 'infinity') -> {'ok', socket()} | {'error', any()}.
 accept(Socket, Timeout) when is_port(Socket) ->
 	case gen_tcp:accept(Socket, Timeout) of
 		{ok, NewSocket} ->
@@ -104,43 +128,53 @@ accept(Socket, Timeout) ->
 		Error -> Error
 	end.
 
+-spec send(Socket :: socket(), Data :: binary() | string()) -> 'ok' | {'error', any()}.
 send(Socket, Data) when is_port(Socket) ->
 	gen_tcp:send(Socket, Data);
 send(Socket, Data) ->
 	ssl:send(Socket, Data).
 
+-spec recv(Socket :: socket(), Length :: non_neg_integer()) -> {'ok', any()} | {'error', any()}.
 recv(Socket, Length) ->
 	recv(Socket, Length, infinity).
+
+-spec recv(Socket :: socket(), Length :: non_neg_integer(), Timeout :: non_neg_integer() | 'infinity') -> {'ok', any()} | {'error', any()}.
 recv(Socket, Length, Timeout) when is_port(Socket) ->
 	gen_tcp:recv(Socket, Length, Timeout);
 recv(Socket, Length, Timeout) ->
 	ssl:recv(Socket, Length, Timeout).
 
+-spec controlling_process(Socket :: socket(), NewOwner :: pid()) -> 'ok' | {'error', any()}.
 controlling_process(Socket, NewOwner) when is_port(Socket) ->
 	gen_tcp:controlling_process(Socket, NewOwner);
 controlling_process(Socket, NewOwner) ->
 	ssl:controlling_process(Socket, NewOwner).
 
+-spec peername(Socket :: socket()) -> {ok, {inet:ip_address(), non_neg_integer()}} | {'error', any()}.
 peername(Socket) when is_port(Socket) ->
 	inet:peername(Socket);
 peername(Socket) ->
 	ssl:peername(Socket).
 
+-spec close(Socket :: socket()) -> 'ok'.
 close(Socket) when is_port(Socket) ->
 	gen_tcp:close(Socket);
 close(Socket) ->
 	ssl:close(Socket).
 
+-spec shutdown(Socket :: socket(), How :: 'read' | 'write' | 'read_write') -> 'ok' | {'error', any()}.
 shutdown(Socket, How) when is_port(Socket) ->
 	gen_tcp:shutdown(Socket, How);
 shutdown(Socket, How) ->
 	ssl:shutdown(Socket, How).
 
+-spec active_once(Socket :: socket()) -> 'ok' | {'error', any()}.
 active_once(Socket) when is_port(Socket) ->
 	inet:setopts(Socket, [{active, once}]);
 active_once(Socket) ->
 	ssl:setopts(Socket, [{active, once}]).
 
+-spec setopts(Socket :: socket(), Options :: list()) -> 'ok' | {'error', any()}.
 setopts(Socket, Options) when is_port(Socket) ->
 	inet:setopts(Socket, Options);
 setopts(Socket, Options) ->
@@ -153,6 +187,7 @@ get_proto(_Socket) ->
 	ssl.
 
 %% @doc {inet_async,...} will be sent to current process when a client connects
+-spec begin_inet_async(Socket :: socket()) -> any().
 begin_inet_async(Socket) when is_port(Socket) ->
 	prim_inet:async_accept(Socket, -1);
 begin_inet_async(Socket) ->
@@ -160,10 +195,16 @@ begin_inet_async(Socket) ->
 	begin_inet_async(Port).
 
 %% @doc handle the {inet_async,...} message
+-spec handle_inet_async(Message :: {'inet_async', socket(), any(), {'ok', socket()}}) -> {'ok', socket()}.
 handle_inet_async({inet_async, ListenSocket, _, {ok,ClientSocket}}) ->
-	handle_inet_async(ListenSocket, ClientSocket).
+	handle_inet_async(ListenSocket, ClientSocket, []).
 
+-spec handle_inet_async(ListenSocket :: socket(), ClientSocket :: socket()) -> {'ok', socket()}.
 handle_inet_async(ListenObject, ClientSocket) ->
+	handle_inet_async(ListenObject, ClientSocket, []).
+
+-spec handle_inet_async(ListenSocket :: socket(), ClientSocket :: socket(), Options :: list()) -> {'ok', socket()}.
+handle_inet_async(ListenObject, ClientSocket, Options) ->
 	ListenSocket = extract_port_from_socket(ListenObject),
 	case set_sockopt(ListenSocket, ClientSocket) of
 		ok -> ok;
@@ -176,29 +217,40 @@ handle_inet_async(ListenObject, ClientSocket) ->
 		true ->
 			{ok, ClientSocket};
 		false ->
-			{ok, UpgradedClientSocket} = to_ssl_server(ClientSocket),
+			{ok, UpgradedClientSocket} = to_ssl_server(ClientSocket, Options),
 			{ok, UpgradedClientSocket}
 	end.
 
 %% @doc Upgrade a TCP connection to SSL
+-spec to_ssl_server(Socket :: socket()) -> {'ok', ssl:socket()} | {'error', any()}.
 to_ssl_server(Socket) ->
 	to_ssl_server(Socket, []).
+
+-spec to_ssl_server(Socket :: socket(), Options :: list()) -> {'ok', ssl:socket()} | {'error', any()}.
 to_ssl_server(Socket, Options) ->
 	to_ssl_server(Socket, Options, infinity).
+
+-spec to_ssl_server(Socket :: socket(), Options :: list(), Timeout :: non_neg_integer() | 'infinity') -> {'ok', ssl:socket()} | {'error', any()}.
 to_ssl_server(Socket, Options, Timeout) when is_port(Socket) ->
 	ssl:ssl_accept(Socket, ssl_listen_options(Options), Timeout);
 to_ssl_server(_Socket, _Options, _Timeout) ->
 	erlang:error(ssl_connected, "Socket is already using SSL").
 
+-spec to_ssl_client(Socket :: socket()) -> {'ok', ssl:sslsocket()} | {'error', any()}.
 to_ssl_client(Socket) ->
 	to_ssl_client(Socket, []).
+
+-spec to_ssl_client(Socket :: socket(), Options :: list()) -> {'ok', ssl:sslsocket()} | {'error', any()}.
 to_ssl_client(Socket, Options) ->
 	to_ssl_client(Socket, Options, infinity).
+
+-spec to_ssl_client(Socket :: socket(), Options :: list(), Timeout :: non_neg_integer() | 'infinity') -> {'ok', ssl:sslsocket()} | {'error', any()}.
 to_ssl_client(Socket, Options, Timeout) when is_port(Socket) ->
 	ssl:connect(Socket, ssl_connect_options(Options), Timeout);
 to_ssl_client(_Socket, _Options, _Timeout) ->
 	erlang:error(ssl_connected, "Socket is already using SSL").
 
+-spec type(Socket :: socket()) -> protocol().
 type(Socket) when is_port(Socket) ->
 	tcp;
 type(_Socket) ->
@@ -213,37 +265,57 @@ tcp_listen_options([Format|Options]) when Format =:= list; Format =:= binary ->
 tcp_listen_options(Options) ->
 	tcp_listen_options(Options, list).
 tcp_listen_options(Options, Format) ->
-	[Format|proplist_merge(Options, ?TCP_LISTEN_OPTIONS)].
+	parse_address([Format|proplist_merge(Options, ?TCP_LISTEN_OPTIONS)]).
 
 ssl_listen_options([Format|Options]) when Format =:= list; Format =:= binary ->
 	ssl_listen_options(Options, Format);
 ssl_listen_options(Options) ->
 	ssl_listen_options(Options, list).
 ssl_listen_options(Options, Format) ->
-	[Format|proplist_merge(Options, ?SSL_LISTEN_OPTIONS)].
+	parse_address([Format|proplist_merge(Options, ?SSL_LISTEN_OPTIONS)]).
 
 tcp_connect_options([Format|Options]) when Format =:= list; Format =:= binary ->
 	tcp_connect_options(Options, Format);
 tcp_connect_options(Options) ->
 	tcp_connect_options(Options, list).
 tcp_connect_options(Options, Format) ->
-	[Format|proplist_merge(Options, ?TCP_CONNECT_OPTIONS)].
+	parse_address([Format|proplist_merge(Options, ?TCP_CONNECT_OPTIONS)]).
 
 ssl_connect_options([Format|Options]) when Format =:= list; Format =:= binary ->
 	ssl_connect_options(Options, Format);
 ssl_connect_options(Options) ->
 	ssl_connect_options(Options, list).
 ssl_connect_options(Options, Format) ->
-	[Format|proplist_merge(Options, ?SSL_CONNECT_OPTIONS)].
+	parse_address([Format|proplist_merge(Options, ?SSL_CONNECT_OPTIONS)]).
 
 proplist_merge(PrimaryList, DefaultList) ->
-	Merged = lists:ukeymerge(1,
-		lists:keysort(1, PrimaryList),
-		lists:keysort(1, DefaultList)
+	{PrimaryTuples, PrimaryOther} = lists:partition(fun(X) -> is_tuple(X) end, PrimaryList),
+	{DefaultTuples, DefaultOther} = lists:partition(fun(X) -> is_tuple(X) end, DefaultList),
+	MergedTuples = lists:ukeymerge(1,
+		lists:keysort(1, PrimaryTuples),
+		lists:keysort(1, DefaultTuples)
 	),
-	%% remove all the values that don't belong here
-	[Option  || Option = {Key, _} <- Merged,  proplists:is_defined(Key, DefaultList)].
+	MergedOther = lists:merge(lists:sort(PrimaryOther), lists:sort(DefaultOther)),
 
+	%% remove all the values that don't belong here
+	[Option  || Option = {Key, _} <- MergedTuples, proplists:is_defined(Key, DefaultList)] ++ [Option || Option <- MergedOther, Option == inet6 ].
+
+parse_address(Options) ->
+	case proplists:get_value(ip, Options) of
+		X when is_tuple(X) ->
+			Options;
+		X when is_list(X) ->
+			case inet_parse:address(X) of
+				{error, _} = Error ->
+					erlang:error(Error);
+				{ok, IP} ->
+					proplists:delete(ip, Options) ++ [{ip, IP}]
+			end;
+		_ ->
+			Options
+	end.
+
+-spec extract_port_from_socket(Socket :: socket()) -> port().
 extract_port_from_socket({sslsocket,_,{SSLPort,_}}) ->
 	SSLPort;
 extract_port_from_socket(Socket) ->
@@ -287,9 +359,10 @@ connect_test_() ->
 		fun() ->
 			Self = self(),
 			application:start(crypto),
+			application:start(public_key),
 			application:start(ssl),
 			spawn(fun() ->
-						{ok, ListenSocket} = listen(ssl, ?TEST_PORT),
+						{ok, ListenSocket} = listen(ssl, ?TEST_PORT, [{keyfile, "../testdata/server.key"}, {certfile, "../testdata/server.crt"}]),
 						?assertMatch([sslsocket|_], tuple_to_list(ListenSocket)),
 						{ok, ServerSocket} = accept(ListenSocket),
 						controlling_process(ServerSocket, Self),
@@ -327,22 +400,24 @@ evented_connections_test_() ->
 		{"current process receives connection to SSL listen sockets",
 		fun() ->
 			application:start(crypto),
+			application:start(public_key),
 			application:start(ssl),
-			{ok, ListenSocket} = listen(ssl, ?TEST_PORT),
+			{ok, ListenSocket} = listen(ssl, ?TEST_PORT, [{keyfile, "../testdata/server.key"}, {certfile, "../testdata/server.crt"}]),
 			begin_inet_async(ListenSocket),
 			spawn(fun()-> connect(ssl, "localhost", ?TEST_PORT) end),
 			receive
-				{inet_async, ListenPort, _, {ok,ServerSocket}} -> ok
+				{inet_async, _ListenPort, _, {ok,ServerSocket}} -> ok
 			end,
-			{ok, NewServerSocket} = handle_inet_async(ListenSocket, ServerSocket),
+			{ok, NewServerSocket} = handle_inet_async(ListenSocket, ServerSocket, [{keyfile, "../testdata/server.key"}, {certfile, "../testdata/server.crt"}]),
 			?assert(is_port(ServerSocket)),
 			?assertMatch([sslsocket|_], tuple_to_list(NewServerSocket)),
 			?assertMatch([sslsocket|_], tuple_to_list(ListenSocket)),
-			% Stop the async
+			 %Stop the async
 			spawn(fun()-> connect(ssl, "localhost", ?TEST_PORT) end),
 			receive _Ignored -> ok end,
 			close(ListenSocket),
-			close(NewServerSocket)
+			close(NewServerSocket),
+			ok
 		end
 		},
 		%% TODO: figure out if the following passes because
@@ -352,17 +427,18 @@ evented_connections_test_() ->
 		{"current TCP listener receives SSL connection",
 		fun() ->
 			application:start(crypto),
+			application:start(public_key),
 			application:start(ssl),
 			{ok, ListenSocket} = listen(tcp, ?TEST_PORT),
 			begin_inet_async(ListenSocket),
 			spawn(fun()-> connect(ssl, "localhost", ?TEST_PORT) end),
 			receive
-				{inet_async, ListenPort, _, {ok,ServerSocket}} -> ok
+				{inet_async, _ListenPort, _, {ok,ServerSocket}} -> ok
 			end,
 			{ok, ServerSocket} = handle_inet_async(ListenSocket, ServerSocket),
 			?assert(is_port(ListenSocket)),
 			?assert(is_port(ServerSocket)),
-			{ok, NewServerSocket} = to_ssl_server(ServerSocket),
+			{ok, NewServerSocket} = to_ssl_server(ServerSocket, [{certfile, "../testdata/server.crt"}, {keyfile, "../testdata/server.key"}]),
 			?assertMatch([sslsocket|_], tuple_to_list(NewServerSocket)),
 			% Stop the async
 			spawn(fun()-> connect(ssl, "localhost", ?TEST_PORT) end),
@@ -389,8 +465,9 @@ accept_test_() ->
 		{"Accept via ssl",
 		fun() ->
 			application:start(crypto),
+			application:start(public_key),
 			application:start(ssl),
-			{ok, ListenSocket} = listen(ssl, ?TEST_PORT),
+			{ok, ListenSocket} = listen(ssl, ?TEST_PORT, [{keyfile, "../testdata/server.key"}, {certfile, "../testdata/server.crt"}]),
 			?assertMatch([sslsocket|_], tuple_to_list(ListenSocket)),
 			spawn(fun()->connect(ssl, "localhost", ?TEST_PORT) end),
 			accept(ListenSocket),
@@ -411,8 +488,9 @@ type_test_() ->
 		{"an ssl socket returns 'ssl'",
 		fun() ->
 			application:start(crypto),
+			application:start(public_key),
 			application:start(ssl),
-			{ok, ListenSocket} = listen(ssl, ?TEST_PORT),
+			{ok, ListenSocket} = listen(ssl, ?TEST_PORT, [{keyfile, "../testdata/server.key"}, {certfile, "../testdata/server.crt"}]),
 			?assertMatch(ssl, type(ListenSocket)),
 			close(ListenSocket)
 		end
@@ -432,7 +510,7 @@ active_once_test_() ->
 		},
 		{"socket is set to active:once on ssl",
 		fun() ->
-			{ok, ListenSocket} = listen(ssl, ?TEST_PORT, ssl_listen_options([])),
+			{ok, ListenSocket} = listen(ssl, ?TEST_PORT, ssl_listen_options([{keyfile, "../testdata/server.key"}, {certfile, "../testdata/server.crt"}])),
 			?assertEqual({ok, [{active,false}]}, ssl:getopts(ListenSocket, [active])),
 			active_once(ListenSocket),
 			?assertEqual({ok, [{active,once}]}, ssl:getopts(ListenSocket, [active])),
@@ -496,6 +574,7 @@ option_test_() ->
 		fun() ->
 			?assertMatch([list,{active, true},
 			                   {backlog, 30},
+			                   {ip,{0,0,0,0}},
 			                   {keepalive, true},
 			                   {packet, 2},
 			                   {reuseaddr, true}],
@@ -521,7 +600,18 @@ option_test_() ->
 			                   {reuse_sessions, false},
 			                   {reuseaddr, true},
 			                   {ssl_imp, new}],
-			             ssl_listen_options([{active, true},{packet,2}]))
+			             ssl_listen_options([{active, true},{packet,2}])),
+			?assertMatch([list,{active, false},
+			                   {backlog, 30},
+			                   {certfile, "../server.crt"},
+			                   {depth, 0},
+			                   {keepalive, true},
+			                   {keyfile, "../server.key"},
+			                   {packet, line},
+			                   {reuse_sessions, false},
+			                   {reuseaddr, true},
+			                   {ssl_imp, new}],
+			             ssl_listen_options([{certfile, "../server.crt"}, {keyfile, "../server.key"}]))
 		end
 		},
 		{"ssl_connect_options merges provided proplist",
@@ -541,11 +631,12 @@ ssl_upgrade_test_() ->
 		fun() ->
 			Self = self(),
 			application:start(crypto),
+			application:start(public_key),
 			application:start(ssl),
 			spawn(fun() ->
 			      	{ok, ListenSocket} = listen(tcp, ?TEST_PORT),
 			      	{ok, ServerSocket} = accept(ListenSocket),
-			      	{ok, NewServerSocket} = socket:to_ssl_server(ServerSocket),
+							{ok, NewServerSocket} = socket:to_ssl_server(ServerSocket, [{keyfile, "../testdata/server.key"}, {certfile, "../testdata/server.crt"}]),
 			      	Self ! NewServerSocket
 			      end),
 			{ok, ClientSocket} = connect(tcp, "localhost", ?TEST_PORT),
@@ -553,22 +644,22 @@ ssl_upgrade_test_() ->
 			{ok, NewClientSocket} = to_ssl_client(ClientSocket),
 			?assertMatch([sslsocket|_], tuple_to_list(NewClientSocket)),
 			receive NewServerSocket -> ok end,
-			?assertMatch([sslsocket|_], tuple_to_list(NewServerSocket)),
-			close(NewServerSocket),
-			close(NewClientSocket)
+			?assertMatch({sslsocket, _, _}, NewServerSocket),
+			close(NewClientSocket),
+			close(NewServerSocket)
 		end
 		},
 		{"SSL server connection can't be upgraded again",
 		fun() ->
-			Self = self(),
 			application:start(crypto),
+			application:start(public_key),
 			application:start(ssl),
 			spawn(fun() ->
-			      	{ok, ListenSocket} = listen(ssl, ?TEST_PORT),
-			      	{ok, ServerSocket} = accept(ListenSocket),
-			      	?assertException(error, ssl_connected, to_ssl_server(ServerSocket)),
-			      	close(ServerSocket)
-			      end),
+						{ok, ListenSocket} = listen(ssl, ?TEST_PORT, [{keyfile, "../testdata/server.key"}, {certfile, "../testdata/server.crt"}]),
+						{ok, ServerSocket} = accept(ListenSocket),
+						?assertException(error, ssl_connected, to_ssl_server(ServerSocket)),
+						close(ServerSocket)
+				end),
 			{ok, ClientSocket} = connect(tcp, "localhost", ?TEST_PORT),
 			close(ClientSocket)
 		end
@@ -577,17 +668,18 @@ ssl_upgrade_test_() ->
 		fun() ->
 			Self = self(),
 			application:start(crypto),
+			application:start(public_key),
 			application:start(ssl),
 			spawn(fun() ->
-			      	{ok, ListenSocket} = listen(ssl, ?TEST_PORT),
-			      	{ok, ServerSocket} = accept(ListenSocket),
-			      	Self ! ServerSocket
-			      end),
+						{ok, ListenSocket} = listen(ssl, ?TEST_PORT, [{keyfile, "../testdata/server.key"}, {certfile, "../testdata/server.crt"}]),
+						{ok, ServerSocket} = accept(ListenSocket),
+						Self ! ServerSocket
+				end),
 			{ok, ClientSocket} = connect(ssl, "localhost", ?TEST_PORT),
 			receive ServerSocket -> ok end,
 			?assertException(error, ssl_connected, to_ssl_client(ClientSocket)),
-			close(ServerSocket),
-			close(ClientSocket)
+			close(ClientSocket),
+			close(ServerSocket)
 		end
 		}
 	].

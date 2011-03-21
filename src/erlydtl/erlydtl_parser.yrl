@@ -151,6 +151,7 @@ Terminals
     not_keyword
     now_keyword
     number_literal
+    only_keyword
     or_keyword
     open_tag
     open_var
@@ -236,6 +237,8 @@ ExtendsTag -> open_tag extends_keyword string_literal close_tag : {extends, '$3'
 
 IncludeTag -> open_tag include_keyword string_literal close_tag : {include, '$3', []}.
 IncludeTag -> open_tag include_keyword string_literal with_keyword Args close_tag : {include, '$3', '$5'}.
+IncludeTag -> open_tag include_keyword string_literal only_keyword close_tag : {include_only, '$3', []}.
+IncludeTag -> open_tag include_keyword string_literal with_keyword Args only_keyword close_tag : {include_only, '$3', '$5'}.
 
 NowTag -> open_tag now_keyword string_literal close_tag : {date, now, '$3'}.
 

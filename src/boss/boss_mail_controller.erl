@@ -6,7 +6,7 @@
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
--record(state, {driver}).
+-record(state, {driver, connection}).
 
 start_link() ->
     start_link([]).
@@ -16,19 +16,19 @@ start_link(Args) ->
 
 init(Options) ->
     MailDriver = proplists:get_value(driver, Options, boss_mail_driver_smtp),
-    ok = MailDriver:start(),
-    {ok, #state{driver = MailDriver}}.
+    {ok, Conn} = MailDriver:start(),
+    {ok, #state{driver = MailDriver, connection = Conn}}.
 
 handle_call({deliver, FromAddress, ToAddress, BodyFun}, _From, State) ->
     Driver = State#state.driver,
-    {reply, Driver:deliver(FromAddress, ToAddress, BodyFun), State}.
+    {reply, Driver:deliver(State#state.connection, FromAddress, ToAddress, BodyFun), State}.
 
 handle_cast(_Request, State) ->
     {noreply, State}.
 
 terminate(_Reason, State) ->
     Driver = State#state.driver,
-    Driver:stop().
+    Driver:stop(State#state.connection).
 
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.

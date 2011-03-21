@@ -1,0 +1,12 @@
+{% extends "view/model.html" %}
+{% block title %}
+Chicago Boss Hot Code Upgrade
+{% endblock %}
+
+{% block body %}
+<h1><em>&#8220;Say Boss... what does this button do?&#8221;</em></h1>
+<p><form action="/admin/upgrade" method="post">
+    <input type="submit" value="Upgrade BEAM code" />
+</form>
+</p>
+{% endblock %}

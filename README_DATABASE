@@ -56,3 +56,9 @@ Notes:
 3. Open up boss.config and set db_adapter to mnesia
 
 
+Using MongoDB (EXPERIMENTAL)
+----------------------------
+
+The driver requires Erlang R14B or later. To build it, type
+
+    make mongodb

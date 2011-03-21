@@ -45,8 +45,18 @@
 		join/2
 ]).
 
+-spec strchr(Bin :: binary(), C :: char()) -> non_neg_integer().
 strchr(Bin, C) when is_binary(Bin) ->
-	strchr(Bin, C, 0).
+	% try to use the R14B binary module
+	try binary:match(Bin, <<C>>) of
+		{Index, _Length} ->
+			Index + 1;
+		nomatch ->
+			0
+	catch
+		_:_ ->
+			strchr(Bin, C, 0)
+	end.
 
 strchr(Bin, C, I) ->
 	case Bin of
@@ -59,6 +69,7 @@ strchr(Bin, C, I) ->
 	end.
 
 
+-spec strrchr(Bin :: binary(), C :: char()) -> non_neg_integer().
 strrchr(Bin, C) ->
 	strrchr(Bin, C, byte_size(Bin)).
 
@@ -73,10 +84,21 @@ strrchr(Bin, C, I) ->
 	end.
 
 
+-spec strpos(Bin :: binary(), C :: binary() | list()) -> non_neg_integer().
 strpos(Bin, C) when is_binary(Bin), is_list(C) ->
 	strpos(Bin, list_to_binary(C));
 strpos(Bin, C) when is_binary(Bin) ->
-	strpos(Bin, C, 0, byte_size(C)).
+	% try to use the R14B binary module
+	try binary:match(Bin, C) of
+			{Index, _Length} ->
+				Index+1;
+			nomatch ->
+				0
+	catch
+		_:_ ->
+			strpos(Bin, C, 0, byte_size(C))
+	end.
+
 
 strpos(Bin, C, I, S) ->
 	case Bin of
@@ -92,6 +114,7 @@ strpos(Bin, C, I, S) ->
 strrpos(Bin, C) ->
 	strrpos(Bin, C, byte_size(Bin), byte_size(C)).
 
+-spec strrpos(Bin :: binary(), C :: binary() | list()) -> non_neg_integer().
 strrpos(Bin, C, I, S) ->
 	case Bin of
 		<<_X:I/binary, C:S/binary, _Rest/binary>> ->
@@ -103,6 +126,7 @@ strrpos(Bin, C, I, S) ->
 	end.
 
 
+-spec substr(Bin :: binary(), Start :: pos_integer() | neg_integer()) -> binary().
 substr(<<>>, _) ->
 	<<>>;
 substr(Bin, Start) when Start > 0 ->
@@ -114,6 +138,7 @@ substr(Bin, Start) when Start < 0 ->
 	B2.
 
 
+-spec substr(Bin :: binary(), Start :: pos_integer() | neg_integer(), Length :: pos_integer()) -> binary().
 substr(<<>>, _, _) ->
 	<<>>;
 substr(Bin, Start, Length) when Start > 0 ->
@@ -127,6 +152,7 @@ substr(Bin, Start, Length) when Start < 0 ->
 	B3.
 
 
+-spec split(Bin :: binary(), Separator :: binary(), SplitCount :: pos_integer()) -> [binary()].
 split(Bin, Separator, SplitCount) ->
 	split_(Bin, Separator, SplitCount, []).
 
@@ -149,8 +175,21 @@ split_(Bin, Separator, SplitCount, Acc) ->
 	end.
 
 
+-spec split(Bin :: binary(), Separator :: binary()) -> [binary()].
 split(Bin, Separator) ->
-	split_(Bin, Separator, []).
+	% try to use the R14B binary module
+	try binary:split(Bin, Separator, [global]) of
+		Result ->
+			case lists:last(Result) of
+				<<>> ->
+					lists:sublist(Result, length(Result) - 1);
+				_ ->
+					Result
+			end
+	catch
+		_:_ ->
+			split_(Bin, Separator, [])
+	end.
 
 split_(<<>>, _Separator, Acc) ->
 	lists:reverse(Acc);
@@ -165,6 +204,7 @@ split_(Bin, Separator, Acc) ->
 	end.
 
 
+-spec chomp(Bin :: binary()) -> binary().
 chomp(Bin) ->
 	L = byte_size(Bin),
 	L2 = L - 1,
@@ -186,12 +226,15 @@ chomp(Bin) ->
 	end.
 
 
+-spec strip(Bin :: binary()) -> binary().
 strip(Bin) ->
 	strip(Bin, both, $\s).
 
+-spec strip(Bin :: binary(), Dir :: 'left' | 'right' | 'both') -> binary().
 strip(Bin, Dir) ->
 	strip(Bin, Dir, $\s).
 
+-spec strip(Bin :: binary(), Dir :: 'left' | 'right' | 'both', C :: non_neg_integer()) -> binary().
 strip(<<>>, _, _) ->
 	<<>>;
 strip(Bin, both, C) ->
@@ -209,6 +252,7 @@ strip(Bin, right, C) ->
 			Bin
 	end.
 
+-spec to_lower(Bin :: binary()) -> binary().
 to_lower(Bin) ->
 	to_lower(Bin, <<>>).
 
@@ -221,6 +265,7 @@ to_lower(<<H, T/binary>>, Acc) ->
 	to_lower(T, <<Acc/binary, H>>).
 
 
+-spec to_upper(Bin :: binary()) -> binary().
 to_upper(Bin) ->
 	to_upper(Bin, <<>>).
 
@@ -232,12 +277,17 @@ to_upper(<<H, T/binary>>, Acc) when H >= $a, H =< $z ->
 to_upper(<<H, T/binary>>, Acc) ->
 	to_upper(T, <<Acc/binary, H>>).
 
+-spec all(Fun :: function(), Binary :: binary()) -> boolean().
 all(_Fun, <<>>) ->
 	true;
-all(Fun, <<H, Tail/binary>>) ->
-	Fun(H) =:= true andalso all(Fun, Tail).
+all(Fun, Binary) ->
+	Res = << <<X/integer>> || <<X>> <= Binary, Fun(X) >>,
+	Binary == Res.
+%all(Fun, <<H, Tail/binary>>) ->
+%	Fun(H) =:= true andalso all(Fun, Tail).
 
 %% this is a cool hack to very quickly reverse a binary
+-spec reverse(Bin :: binary()) -> binary().
 reverse(Bin) ->
 	Size = byte_size(Bin)*8,
 	<<T:Size/integer-little>> = Bin,
@@ -246,9 +296,11 @@ reverse(Bin) ->
 %% reverse a string into a binary - can be faster than lists:reverse on large
 %% lists, even if you run binary_to_string on the result. For smaller strings
 %% it's probably slower (but still not that bad).
+-spec reverse_str_to_bin(String :: string()) -> binary().
 reverse_str_to_bin(String) ->
 	reverse(list_to_binary(String)).
 
+-spec join(Binaries :: [binary()|list()], Glue :: binary() | list()) -> binary().
 join(Binaries, Glue) ->
 	join(Binaries, Glue, []).
 

@@ -146,3 +146,11 @@ big_red_button('GET', [], Auth) ->
                 [{code, Lang}, {untranslated_strings, Untranslated}]
         end, boss_files:language_list()),
     {ok, [{languages, Languages}, {strings, boss_lang:extract_strings()}]}.
+
+upgrade('GET', [], Auth) ->
+    ok;
+upgrade('POST', [], Auth) ->
+    Modules = [M || {M, F} <- code:all_loaded(), is_list(F), not code:is_sticky(M)],
+    error_logger:info_msg("Reloading ~p modules...~n", [erlang:length(Modules)]),
+    [begin code:purge(M), code:load_file(M) end || M <- Modules],
+    {redirect, "/admin/upgrade"}.

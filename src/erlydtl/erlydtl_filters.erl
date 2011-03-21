@@ -51,6 +51,7 @@
         capfirst/1,
         center/2,
         cut/2,
+        date/1,
         date/2,
         default/2,
         default_if_none/2,
@@ -186,11 +187,13 @@ cut(Input, Arg) when is_binary(Input) ->
 cut(Input, [Char]) when is_list(Input) ->
     cut(Input, Char, []).
  
+%% @doc Formats a date according to the default format.
+date(Input) ->
+    date(Input, "F j, Y").
+
 %% @doc Formats a date according to the given format.
 date(Input, FormatStr) when is_binary(Input) ->
     list_to_binary(date(binary_to_list(Input), FormatStr));
-date(Input, "") ->
-    date(Input, "F j, Y");
 date({{_,_,_} = Date,{_,_,_} = Time}, FormatStr) ->
     erlydtl_dateformat:format({Date, Time}, FormatStr);
 date({_,_,_} = Date, FormatStr) ->
@@ -362,16 +365,26 @@ length_is(Input, Number) when is_list(Input), is_list(Number) ->
 
 %% @doc Replaces line breaks in plain text with appropriate HTML
 linebreaks(Input) when is_binary(Input) ->
-    linebreaks(binary_to_list(Input));
-% a bit of a hack; unlikely, but could replace "</p>\z\z<p>" literal by mistake 
+    linebreaks(binary_to_list(Input),[]);
 linebreaks(Input) ->
-    Input1 = re:replace(Input,"\r\n"       ,"<br />", [global,{return,list}]),
-    Input2 = re:replace(Input1, "\n[\n\r]+"  ,"</p>\z\z<p>", [global,{return,list}]),
-    Input3 = re:replace(Input2,"\r[\n\r]+"  ,"</p>\z\z<p>", [global,{return,list}]),
-    Input4 = re:replace(Input3,"\n"         ,"<br />", [global,{return,list}]),
-    Input5 = re:replace(Input4,"\r"         ,"<br />", [global,{return,list}]),
-    Input6 = re:replace(Input5,"</p>\z\z<p>","</p>\n\n<p>", [global,{return,list}]),
-    lists:flatten(["<p>", Input6,"</p>"]).
+    linebreaks(Input,[]).
+
+linebreaks([],Acc) ->
+    "<p>" ++ lists:reverse(Acc) ++ "</p>";
+linebreaks([$\n|T], ">p<"++_ = Acc) ->
+    linebreaks(T, Acc);
+linebreaks([$\r|T], ">p<"++_ = Acc) ->
+    linebreaks(T, Acc);
+linebreaks([$\n, $\n|T],Acc) ->
+    linebreaks(T, lists:reverse("</p><p>", Acc));
+linebreaks([$\r, $\n, $\r, $\n|T],Acc) ->
+    linebreaks(T, lists:reverse("</p><p>", Acc));
+linebreaks([$\r, $\n|T], Acc) ->
+    linebreaks(T, lists:reverse("<br />", Acc));
+linebreaks([$\n|T], Acc) ->
+    linebreaks(T, lists:reverse("<br />", Acc));
+linebreaks([C|T], Acc) ->
+    linebreaks(T, [C|Acc]).
 
 %% @doc Converts all newlines to HTML line breaks.
 linebreaksbr(Input) when is_binary(Input) ->
