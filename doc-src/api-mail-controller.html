@@ -1,6 +1,26 @@
 {% extends "api.html" %}
 {% block api_content %}
-<p>Chicago Boss provides an API for sending emails using Django templates and custom controller logic. No SMTP configuration or server is necessary. Mail controller logic should go into <code>mail/mail_controller.erl</code> in your project directory, and templates should go into <code>mail/view/</code>. To send an email from a web controller, call:</p>
+<p>Chicago Boss provides three API functions for sending emails. No SMTP configuration or server is necessary.</p>
+
+<h2>Sending a simple email</h2>
+
+<p>The easiest way to send a message is:</p>
+
+<div class="code">
+    boss_mail:send(FromAddress, ToAddress, Subject, Body)
+</div>
+
+<p>If you want to treat Body as an io_lib format string and pass in arguments, use this format:</p>
+
+<div class="code">
+    boss_mail:send(FromAddress, ToAddress, Subject, BodyFmt, [BodyArgs])
+</div>
+
+<p>If you need to customize the email headers or wish to generate emails from Django templates, read on.</p>
+
+<h2>Sending email with templates</h2>
+<p>If the simple method doesn't meet your needs, Chicago Boss provides a way to send email using controllers and views.</p>
+<p>Mail controller logic should go into <code>mail/mail_controller.erl</code> in your project directory, and templates should go into <code>mail/view/</code>. To send an email from a web controller, call:</p>
 <div class="code">
     boss_mail:send(foo_message, [Arg1, Arg2, ...])
 </div>

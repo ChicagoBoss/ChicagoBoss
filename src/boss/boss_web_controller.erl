@@ -229,7 +229,7 @@ execute_action({Controller, Action, Tokens} = Location, Req, LocationTrail) ->
                     end,
                     Result = case ActionResult of
                         undefined ->
-                            render_view(Location, Req, [{"before_", Info}]);
+                            render_view(Location, Req, [{"_before", Info}]);
                         ActionResult ->
                             process_action_result({Location, Req, LocationTrail}, ActionResult, Info)
                     end,
@@ -251,7 +251,7 @@ process_action_result(Info, ok, AuthInfo) ->
 process_action_result(Info, {ok, Data}, AuthInfo) ->
     process_action_result(Info, {ok, Data, []}, AuthInfo);
 process_action_result({Location, Req, _}, {ok, Data, Headers}, AuthInfo) ->
-    render_view(Location, Req, [{"before_", AuthInfo}|Data], Headers);
+    render_view(Location, Req, [{"_before", AuthInfo}|Data], Headers);
 
 process_action_result(Info, {render_other, OtherLocation}, AuthInfo) ->
     process_action_result(Info, {render_other, OtherLocation, []}, AuthInfo);
@@ -260,7 +260,7 @@ process_action_result(Info, {render_other, OtherLocation, Data}, AuthInfo) ->
 process_action_result(Info, {render_other, {Controller, Action}, Data, Headers}, AuthInfo) ->
     process_action_result(Info, {render_other, {Controller, Action, []}, Data, Headers}, AuthInfo);
 process_action_result({_, Req, _}, {render_other, {_, _, _} = OtherLocation, Data, Headers}, AuthInfo) ->
-    render_view(OtherLocation, Req, [{"before_", AuthInfo}|Data], Headers);
+    render_view(OtherLocation, Req, [{"_before", AuthInfo}|Data], Headers);
 
 process_action_result({_, Req, LocationTrail}, {action_other, OtherLocation}, _) ->
     execute_action(OtherLocation, Req, [OtherLocation | LocationTrail]);
@@ -292,9 +292,9 @@ render_view({Controller, Template, _}, Req, Variables, Headers) ->
     BossFlash = boss_flash:get_and_clear(Req),
     case LoadResult of
         {ok, Module} ->
-            TranslationFun = choose_translation_fun(Module:translatable_strings(), 
+            {Lang, TranslationFun} = choose_translation_fun(Module:translatable_strings(), 
                 Req:header(accept_language), proplists:get_value("Content-Language", Headers)),
-            case Module:render(lists:merge(Variables, BossFlash), TranslationFun) of
+            case Module:render(lists:merge([{"_lang", Lang}|Variables], BossFlash), TranslationFun) of
                 {ok, Payload} ->
                     {ok, Payload, Headers};
                 Err ->
@@ -305,22 +305,24 @@ render_view({Controller, Template, _}, Req, Variables, Headers) ->
     end.
 
 choose_translation_fun(_, undefined, undefined) ->
-    none;
+    DefaultLang = get_env(assume_locale, "en"),
+    {DefaultLang, none};
 choose_translation_fun(Strings, AcceptLanguages, undefined) ->
+    DefaultLang = get_env(assume_locale, "en"),
     case mochiweb_util:parse_qvalues(AcceptLanguages) of
         invalid_qvalue_string ->
-            none;
+            {DefaultLang, none};
         [{Lang, _}] ->
-            translation_fun_for(Lang);
+            {Lang, translation_fun_for(Lang)};
         QValues when length(QValues) > 1 ->
             {BestLang, BestNetQValue} = choose_language_from_qvalues(Strings, QValues),
             case BestNetQValue of
-                0.0 -> none;
-                _ -> translation_fun_for(BestLang)
+                0.0 -> {DefaultLang, none};
+                _ -> {BestLang, translation_fun_for(BestLang)}
             end
     end;
 choose_translation_fun(_, _, ContentLanguage) ->
-    boss_translator:fun_for(ContentLanguage).
+    {ContentLanguage, boss_translator:fun_for(ContentLanguage)}.
 
 choose_language_from_qvalues(Strings, QValues) ->
     % calculating translation coverage is costly so we start with the most preferred

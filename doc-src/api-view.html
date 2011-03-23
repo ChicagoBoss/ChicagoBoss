@@ -6,22 +6,18 @@
 
 <p>Chicago Boss has support for the most common features of the Django Template Language, so many existing Django templates should work out of the box. Your templates will be compiled down to Erlang BEAM code using <a href="http://code.google.com/p/erlydtl/">ErlyDTL</a> to give you the fastest Erlang templates this side of Stockholm.</p>
 
-<p>The following Django filters are supported in Chicago Boss. Hopefully this list will grow over time.</p>
+<p>As of CB 0.5.0, 100% of Django filters are supported. The only unsupported tags are csrf_token, url, ifchanged, and regroup.</p>
 
-<table style="margin-left: 80px; margin-top: 30px;">
-    {% for filter in filters %}
-    {% if filter.description %}
-    <tr><td>
-            <a href="http://docs.djangoproject.com/en/dev/ref/templates/builtins/#{{ filter.function }}">{{ filter.function }}</a></td>
-        <td>{{ filter.description }}</td>
-    </tr>
-    {% endif %}
-    {% endfor %}
-</table>
 <h2>Custom tags</h2>
 <p>If you repeated logic or template snippets, you can put helper templates into your project's view/lib/ directory. The variables appearing in helper templates must be supplied by the caller. For example, if you have a file called "view/lib/my_custom_tag.html" which uses a variable called "foo", you can invoke it from other templates like:</p>
 <div class="code">
     {{ "{% " }}my_custom_tag foo="bar"{{ " %}" }}
 </div>
 <p>String literals or variables may be passed as arguments to custom tags. Another option for factoring out repeated logic is to use ErlyDTL's "include" tag. The difference between using an "include" tag and custom tags is that "include" will have access to all variables currently in the caller's scope, whereas custom tags only have access to the variables explicitly passed in. (In addition, custom tags are compiled only once for the entire project, but included files are compiled for each template that includes it.)</p>
+<h2>Implicit variables</h2>
+<p>The following variables are automatically passed to your views without you doing any work:</p>
+<ul>
+    <li><code>_lang</code> - The content language of the rendered view</li>
+    <li><code>_before</code> - The result of the authorization filter, if present</li>
+</ul>
 {% endblock %}

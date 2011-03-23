@@ -269,7 +269,7 @@ fix_ampersands(Input) when is_list(Input) ->
     fix_ampersands(Input, []).
 
 %% @doc When used without an argument, rounds a floating-point number to one decimal place
-%% @doc -- but only if there's a decimal part to be displayed
+%% -- but only if there's a decimal part to be displayed
 floatformat(Number, Place) when is_binary(Number) ->
     floatformat(binary_to_list(Number), Place);
 floatformat(Number, Place) ->
@@ -420,7 +420,7 @@ lower(Input) ->
     string:to_lower(Input).
 
 %% @doc Returns the value turned into a list. For an integer, it's a list of digits. 
-%% @doc For a string, it's a list of characters.
+%% For a string, it's a list of characters.
 %% Added this for DTL compatibility, but since strings are lists in Erlang, no need for this.
 make_list(Input) when is_binary(Input) ->
     make_list(binary_to_list(Input));
@@ -750,7 +750,7 @@ truncatewords_html(Input, Max) when is_binary(Input) ->
 truncatewords_html(Input, Max) ->
     truncatewords_html(Input, Max, [], [], text).
 
-%% @doc Recursively takes a self-nested list and returns an HTML unordered list -- WITHOUT opening and closing <ul> tags. 
+%% @doc Recursively takes a self-nested list and returns an HTML unordered list -- WITHOUT opening and closing `<ul>' tags. 
 unordered_list(List) ->
     String = lists:flatten(unordered_list(List, [])),
     string:substr(String, 5, erlang:length(String) - 9).
@@ -759,6 +759,10 @@ unordered_list([], Acc) ->
     ["<ul>", lists:reverse(Acc), "</ul>"];
 unordered_list([First|_] = List, []) when is_integer(First) ->
     "<li>"++List;
+unordered_list([First|Rest], Acc) when is_list(First), Rest == [] ->
+    unordered_list(Rest, ["</li>"] ++ [unordered_list(First, []) |  Acc ])  ;
+unordered_list([First|Rest], Acc) when is_list(First), is_integer(hd(hd(Rest))) ->
+    unordered_list(Rest, [unordered_list(First, []) ++ "</li>" |Acc]);
 unordered_list([First|Rest], Acc) when is_list(First) ->
     unordered_list(Rest, [unordered_list(First, [])|Acc]).
 
@@ -780,7 +784,7 @@ wordcount(Input) when is_binary(Input) ->
 wordcount(Input) when is_list(Input) ->
     wordcount(Input, 0).
 
-%% @doc Wraps words at specified line length, uses <BR/> html tag to delimit lines
+%% @doc Wraps words at specified line length, uses `<BR/>' html tag to delimit lines
 wordwrap(Input, Number) when is_binary(Input) ->
     wordwrap(binary_to_list(Input), Number);
 wordwrap(Input, Number) when is_list(Input) ->

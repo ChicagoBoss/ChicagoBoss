@@ -1,5 +1,5 @@
 -module(boss_mail).
--export([start/1, stop/0, send/2]).
+-export([start/1, stop/0, send/2, send/4]).
 
 start(Options) ->
     boss_mail_sup:start_link(Options).
@@ -18,6 +18,21 @@ send(Action, Args) ->
         nevermind ->
             ok
     end.
+
+send(FromAddress, ToAddress, Subject, Body) ->
+    MessageHeader = build_message_header([
+            {"Subject", Subject},
+            {"To", ToAddress},
+            {"From", FromAddress}], "text/plain"), 
+    gen_server:call(boss_mail, {deliver, FromAddress, ToAddress, fun() -> [MessageHeader, "\r\n", Body] end}).
+
+send(FromAddress, ToAddress, Subject, Body, BodyArgs) ->
+    MessageHeader = build_message_header([
+            {"Subject", Subject},
+            {"To", ToAddress},
+            {"From", FromAddress}], "text/plain"), 
+    gen_server:call(boss_mail, {deliver, FromAddress, ToAddress, fun() -> [MessageHeader, "\r\n", 
+                        io_lib:format(Body, BodyArgs)] end}).
 
 send_message(FromAddress, ToAddress, Action, HeaderFields, Variables) ->
     BodyFun = fun() -> build_message(Action, HeaderFields, Variables) end,
