@@ -21,6 +21,12 @@
     <a href="api-record.html">Models</a> 
     {% endifequal %}
     &nbsp; | &nbsp;
+    {% ifequal this_page "api-news.html" %}
+    <strong>Events</strong>
+    {% else %}
+    <a href="api-news.html">Events</a>
+    {% endifequal %}
+    &nbsp; | &nbsp;
     {% ifequal this_page "api-controller.html" %}
     <strong>Web Controllers</strong>
     {% else %}

@@ -23,5 +23,5 @@ deliver(Options, FromAddress, ToAddress, BodyFun) ->
         _ ->
             Options
     end,
-    Email = {FromAddress, [ToAddress], BodyFun()}, %TODO eval at send-time
-    gen_smtp_client:send_blocking(Email, MailOptions).
+    Email = {FromAddress, [ToAddress], BodyFun},
+    gen_smtp_client:send(Email, MailOptions).

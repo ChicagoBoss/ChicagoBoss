@@ -18,6 +18,10 @@ start(Config) ->
     boss_db:start(),
     boss_session:start(),
     boss_mq:start(),
+
+    ok = boss_compiler:compile("news.erl", []),
+
+    boss_news:start(),
 	
     MailDriver = get_env(mail_driver, boss_mail_driver_smtp),
     boss_mail:start([{driver, MailDriver}]),
@@ -35,6 +39,7 @@ start(Config) ->
 
 stop() ->
     error_logger:logfile(close),
+    boss_news:stop(),
     boss_mq:stop(),
     boss_session:stop(),
     boss_db:stop(),

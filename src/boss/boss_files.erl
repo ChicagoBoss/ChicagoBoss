@@ -16,7 +16,7 @@ mail_view_path(Template) -> mail_view_path(Template, "txt").
 mail_view_path(Template, Extension) -> 
     filename:join([root_dir(), "mail", "view", lists:concat([Template, ".", Extension])]).
 
-model_path() -> [filename:join([root_dir(), "model"]), filename:join([root_admin_dir(), "model"])].
+model_path() -> [filename:join([root_dir(), "model"])].
 model_path(Model) -> filename:join([hd(model_path()), Model]).
 
 lang_path() -> filename:join([root_dir(), "lang"]).

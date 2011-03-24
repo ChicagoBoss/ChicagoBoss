@@ -4,9 +4,15 @@ Chicago Boss Hot Code Upgrade
 {% endblock %}
 
 {% block body %}
-<h1><em>&#8220;Say Boss... what does this button do?&#8221;</em></h1>
+<h1><em>&#8220;Say Boss... what's this button do?&#8221;</em></h1>
+<div style="float: left; padding: 5px;">
 <p><form action="/admin/upgrade" method="post">
     <input type="submit" value="Upgrade BEAM code" />
-</form>
-</p>
+</form></p>
+</div>
+<div style="float: left; padding: 5px;">
+<p><form action="/admin/reread_news_script" method="post">
+    <input type="submit" value="Reload news.erl" />
+</form></p>
+</div>
 {% endblock %}

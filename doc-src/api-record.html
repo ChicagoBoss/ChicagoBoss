@@ -101,14 +101,15 @@ BossRecords are <em>specially compiled parameterized modules</em> that follow th
 <p>SPECIAL NOTE: Everything in the Model directory will be compiled as a BossRecord rather than as a regular Erlang module; you don't need to do or declare anything special.</p>
 
 <a name="hooks"></a>
-<h2>Save hooks</h2>
+<h2>Save/delete hooks</h2>
 
-<p>You can specify logic to be run anytime a BossRecord is saved. Just define one or more of these functions in your module:</p>
+<p>You can specify logic to be run anytime a BossRecord is saved, or before it is deleted. Just define one or more of these functions in your module:</p>
 <ul>
     <li><code>before_create()</code> - executed just before a new BossRecord is saved to the database.</li>
     <li><code>before_update()</code> - executed just before an existing BossRecord is saved to the database.</li>
     <li><code>after_create()</code> - executed just after a new BossRecord is saved to the database.</li>
     <li><code>after_update()</code> - executed just after an existing BossRecord is saved to the database.</li>
+    <li><code>before_delete()</code> - executed just before a BossRecord is removed from the database.</li>
 </ul>
 
 <p>Return values are ignored.</p>

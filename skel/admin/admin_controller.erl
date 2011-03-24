@@ -154,3 +154,19 @@ upgrade('POST', [], Auth) ->
     error_logger:info_msg("Reloading ~p modules...~n", [erlang:length(Modules)]),
     [begin code:purge(M), code:load_file(M) end || M <- Modules],
     {redirect, "/admin/upgrade"}.
+
+reread_news_script('POST', [], Auth) ->
+    ok = boss_record_compiler:compile("news.erl", []),
+    boss_news:reset(),
+    {redirect, "/admin/upgrade"}.
+
+
+news_api('POST', ["created", Id], Auth) ->
+    ok = boss_news:created(Id, Req:post_params("new")),
+    {output, "ok"};
+news_api('POST', ["updated", Id], Auth) ->
+    ok = boss_news:updated(Id, Req:post_params("old"), Req:post_params("new")),
+    {output, "ok"};
+news_api('POST', ["deleted", Id], Auth) ->
+    ok = boss_news:deleted(Id, Req:post_params("old")),
+    {output, "ok"}.

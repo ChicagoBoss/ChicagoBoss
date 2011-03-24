@@ -132,7 +132,15 @@ incr(Key, Count) ->
 %% @spec delete( Id::string() ) -> ok | {error, Reason}
 %% @doc Delete the BossRecord with the given `Id'.
 delete(Key) ->
-    gen_server:call(boss_db, {delete, Key}, ?DEFAULT_TIMEOUT).
+    AboutToDelete = boss_db:find(Key),
+    boss_record_lib:run_before_delete_hooks(AboutToDelete),
+    case gen_server:call(boss_db, {delete, Key}, ?DEFAULT_TIMEOUT) of
+        ok -> 
+            boss_news:deleted(Key, AboutToDelete:attributes()),
+            ok;
+        RetVal -> 
+            RetVal
+    end.
 
 push() ->
     gen_server:call(boss_db, push, ?DEFAULT_TIMEOUT).
@@ -158,10 +166,11 @@ save_record(Record) ->
     case validate_record(Record) of
         ok -> 
             IsNew = ( (Record:id() =:= 'id') or (is_integer(Record:id())) ),
+            OldRecord = find(Record:id()),
             boss_record_lib:run_before_hooks(Record, IsNew),
             case gen_server:call(boss_db, {save_record, Record}, ?DEFAULT_TIMEOUT) of
                 {ok, SavedRecord} ->
-                    boss_record_lib:run_after_hooks(SavedRecord, IsNew),
+                    boss_record_lib:run_after_hooks(OldRecord, SavedRecord, IsNew),
                     {ok, SavedRecord};
                 Err -> Err
             end;
