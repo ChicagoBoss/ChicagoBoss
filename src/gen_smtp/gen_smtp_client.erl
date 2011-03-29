@@ -45,17 +45,43 @@
 -include_lib("eunit/include/eunit.hrl").
 -compile(export_all).
 -else.
--export([send/2, send_blocking/2, send_it/2]).
+-export([send/2, send/3, send_blocking/2]).
 -endif.
 
 -spec send(Email :: {string() | binary(), [string() | binary(), ...], string() | binary() | function()}, Options :: list()) -> {'ok', pid()} | {'error', any()}.
+%% @doc Send an email in a non-blocking fashion via a spawned_linked process.
+%% The process will exit abnormally on a send failure.
 send(Email, Options) ->
+	send(Email, Options, undefined).
+
+%% @doc Send an email nonblocking and invoke a callback with the result of the send.
+%% The callback will receive either `ok',  `{error, Type, Message}' or `{exit, ExitReason}'
+%% as the single argument.
+-spec send(Email :: {string() | binary(), [string() | binary(), ...], string() | binary() | function()}, Options :: list(), Callback :: function() | 'undefined') -> {'ok', pid()} | {'error', any()}.
+send(Email, Options, Callback) ->
 	NewOptions = lists:ukeymerge(1, lists:sort(Options),
 		lists:sort(?DEFAULT_OPTIONS)),
 	case check_options(NewOptions) of
+		ok when is_function(Callback) ->
+			spawn(fun() ->
+						process_flag(trap_exit, true),
+						Pid = spawn_link(fun() ->
+									send_it_nonblock(Email, NewOptions, Callback)
+							end
+						),
+						receive
+							{'EXIT', Pid, Reason} ->
+								case Reason of
+									X when X == normal; X == shutdown ->
+										ok;
+									Error ->
+										Callback({exit, Error})
+								end
+						end
+				end);
 		ok ->
 			Pid = spawn_link(fun () ->
-						send_it_nonblock(Email, NewOptions)
+						send_it_nonblock(Email, NewOptions, Callback)
 				end
 			),
 			{ok, Pid};
@@ -64,6 +90,7 @@ send(Email, Options) ->
 	end.
 
 -spec send_blocking(Email :: {string() | binary(), [string() | binary(), ...], string() | binary() | function()}, Options :: list()) -> binary() | {'error', atom(), any()}.
+%% @doc Send an email and block waiting for the reply.
 send_blocking(Email, Options) ->
 	NewOptions = lists:ukeymerge(1, lists:sort(Options),
 		lists:sort(?DEFAULT_OPTIONS)),
@@ -74,10 +101,14 @@ send_blocking(Email, Options) ->
 			{error, Reason}
 	end.
 
-send_it_nonblock(Email, Options) ->
-	case (?MODULE):send_it(Email, Options) of
+send_it_nonblock(Email, Options, Callback) ->
+	case send_it(Email, Options) of
+		{error, Type, Message} when is_function(Callback) ->
+			Callback({error, Type, Message});
 		{error, Type, Message} ->
 			erlang:exit({error, Type, Message});
+		_ when is_function(Callback) ->
+			Callback(ok);
 		_ ->
 			ok
 	end.

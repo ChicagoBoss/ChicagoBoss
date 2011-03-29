@@ -59,8 +59,8 @@ headers({Req, _DocRoot}) ->
     ],
     [{K, V} || {K, V} <- Headers1, V /= undefined].
 
-cookies({Req, _DocRoot}) ->
-    Headers = headers(Req),
+cookies({Req, DocRoot}) ->
+    Headers = headers({Req, DocRoot}),
     CookieData = proplists:get_value(cookie, Headers, ""),
     F = fun(Cookie) ->
         case string:tokens(Cookie, "=") of
