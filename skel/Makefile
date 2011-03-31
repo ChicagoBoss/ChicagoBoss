@@ -1,7 +1,7 @@
 ERL=erl
 
 all:
-	$(ERL) -pa {{src}}/ebin -run 'boss_load:load_all_modules("ebin")' -s init stop
+	$(ERL) -pa {{src}}/ebin -eval 'boss_load:load_all_modules("ebin")' -s init stop -noshell
 
 clean:
 	rm -fv ebin/*.beam
