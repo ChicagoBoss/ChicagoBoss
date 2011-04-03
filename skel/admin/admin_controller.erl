@@ -94,10 +94,15 @@ lang('GET', [], Auth) ->
     Languages = boss_files:language_list(),
     {ok, [{languages, Languages}]};
 lang('GET', [Lang], Auth) ->
+    OriginalLang = case application:get_env(assume_locale) of
+        {ok, Val} -> Val;
+        _ -> "en"
+    end,
     Languages = boss_files:language_list(),
     {Untranslated, Translated} = boss_lang:extract_strings(Lang),
     LastModified = filelib:last_modified(boss_files:lang_path(Lang)),
     {ok, [{this_lang, Lang}, {languages, Languages},
+            {original_lang, OriginalLang},
             {untranslated_messages, Untranslated},
             {translated_messages, Translated},
             {last_modified, LastModified}],

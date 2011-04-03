@@ -20,7 +20,7 @@ Chicago Boss International Command Center
             var span_id = span.id;
             var textbox = document.getElementById("trans_"+span_id);
             if (textbox && textbox.value == "") {
-                google.language.translate(span.innerHTML, "en", "{{ this_lang }}", function(result) {
+                google.language.translate(span.innerHTML, "{{ original_lang }}", "{{ this_lang }}", function(result) {
                         if (!result.error) {
                             if (result.translation) {
                                 textbox.value = result.translation;
