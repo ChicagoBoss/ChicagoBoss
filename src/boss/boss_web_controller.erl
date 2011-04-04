@@ -1,5 +1,5 @@
 -module(boss_web_controller).
--export([start/0, start/1, stop/0, handle_request/3, process_request/1]).
+-export([start/0, start/1, stop/0, handle_request/3, process_request/1, get_env/2]).
 -define(DEBUGPRINT(A), error_logger:info_report("~~o)> " ++ A)).
 
 start() ->
@@ -79,7 +79,7 @@ handle_request(Req, RequestMod, ResponseMod) ->
     end.
 
 process_request(Req) ->
-    Result = case parse_path(Req:path()) of
+    Result = case boss_router:parse_path(Req:path()) of
         {ok, {Controller, Action, Tokens}} ->
             trap_load_and_execute({Controller, Action, Tokens}, Req);
         Else ->
@@ -92,28 +92,6 @@ get_env(Key, Default) when is_atom(Key) ->
         {ok, Val} -> Val;
         _ -> Default
     end.
-
-parse_path("/") ->
-    {Controller, Action} = get_env(front_page, {"hello", "world"}), 
-    {ok, {Controller, Action, []}};
-parse_path("/" ++ Url) ->
-    Tokens = string:tokens(Url, "/"),
-    case length(Tokens) of
-        1 ->
-            Controller = hd(Tokens),
-            DefaultAction = get_env(default_action, "index"),
-            AllDefaultActions = get_env(default_actions, [{"admin", "model"}]),
-            ThisAction = proplists:get_value(Controller, AllDefaultActions, DefaultAction),
-            {ok, {Controller, ThisAction, []}};
-        N when N >= 2 ->
-            {ok, {lists:nth(1, Tokens), 
-                    lists:nth(2, Tokens),
-                    lists:nthtail(2, Tokens)}};
-        _ ->
-            {not_found, "File not found"}
-    end;
-parse_path(_) ->
-    {not_found, "File not found"}.
 
 process_result({error, Payload}) ->
     error_logger:error_report(Payload),
