@@ -47,10 +47,12 @@ web_controller_list() ->
     module_list(web_controller_path()).
 
 view_file_list() ->
-    Pattern = filename:join([root_dir(), "view", "*", "*.{html,txt}"]),
+    BasePattern = filename:join([root_dir(), "view", "*.{html,txt}"]),
+    SubdirPattern = filename:join([root_dir(), "view", "*", "*.{html,txt}"]),
     MailPattern = filename:join([root_dir(), "mail", "view", "*.{html,txt}"]),
     AdminPattern = filename:join([root_admin_dir(), "view", "*.{html,txt}"]),
-    filelib:wildcard(Pattern) ++ filelib:wildcard(MailPattern) ++ filelib:wildcard(AdminPattern).
+    filelib:wildcard(BasePattern) ++ filelib:wildcard(SubdirPattern) 
+        ++ filelib:wildcard(MailPattern) ++ filelib:wildcard(AdminPattern).
 
 language_list() ->
     {ok, Files} = file:list_dir(lang_path()),
