@@ -223,7 +223,6 @@ module_older_than(Module, Files) when is_list(Module) ->
 module_older_than(_Date, []) ->
     false;
 module_older_than(CompileDate, [File|Rest]) ->
-	error_logger:error_msg("---->module_older_than/2 ~n~p for ~n~p", [CompileDate, File]),
     CompileSeconds = calendar:datetime_to_gregorian_seconds(CompileDate),
     ModificationSeconds = calendar:datetime_to_gregorian_seconds(
         filelib:last_modified(File)),
