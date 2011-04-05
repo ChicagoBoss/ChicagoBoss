@@ -1,5 +1,5 @@
 -module(boss_web_controller).
--export([start/0, start/1, stop/0, handle_request/3, process_request/1, get_env/2]).
+-export([start/0, start/1, stop/0, handle_request/3, process_request/1]).
 -define(DEBUGPRINT(A), error_logger:info_report("~~o)> " ++ A)).
 
 start() ->
@@ -14,6 +14,8 @@ start(Config) ->
 
     Env = boss_load:setup_boss_env(),
     error_logger:info_msg("Starting Boss in ~p mode....~n", [Env]),
+	
+	boss_router:initialize(),
 
     boss_db:start(),
     boss_session:start(),

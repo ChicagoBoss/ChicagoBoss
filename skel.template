@@ -35,6 +35,7 @@
 {file, "skel/test/mail_test.erl", "{{dest}}/test/mail_test.erl"}.
 {file, "skel/view/hello/world.html", "{{dest}}/view/hello/world.html"}.
 {file, "skel/boss.config", "{{dest}}/boss.config"}.
+{file, "skel/boss.routes", "{{dest}}/boss.routes"}.
 {file, "skel/news.erl", "{{dest}}/news.erl"}.
 {chmod, 8#755, "{{dest}}/start-dev.sh"}.
 {chmod, 8#755, "{{dest}}/start.sh"}.

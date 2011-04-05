@@ -74,3 +74,6 @@ module_list1([Dir|Rest], ModuleAcc) ->
                 (File) -> lists:suffix(".erl", File)
             end, Files)),
     module_list1(Rest, Modules ++ ModuleAcc).
+
+routes_file() ->
+	filename:join([root_dir(), "boss.routes"]).

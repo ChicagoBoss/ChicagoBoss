@@ -158,6 +158,8 @@ upgrade('POST', [], Auth) ->
     Modules = [M || {M, F} <- code:all_loaded(), is_list(F), not code:is_sticky(M)],
     error_logger:info_msg("Reloading ~p modules...~n", [erlang:length(Modules)]),
     [begin code:purge(M), code:load_file(M) end || M <- Modules],
+    error_logger:info_msg("Reloading routes...~n"),
+	boss_router:reload(),
     {redirect, "/admin/upgrade"}.
 
 reread_news_script('POST', [], Auth) ->

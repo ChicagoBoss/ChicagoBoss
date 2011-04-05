@@ -1,0 +1,20 @@
+%% Route to frontpage, "/"
+%% Format {Controller, Action}
+{front_page, {"hello", "world"}}.
+%%
+%% Default action for controllers, ex: "/posts"
+%% Format {Action} 
+{default_action, "index"}.
+%%
+%% Define the defaults actions for each controller
+%% Format[ {Controller1, Action}, {Controller2, Action}]
+{default_actions, [{"admin", "model"}]}.
+%%
+%% Route for not-found actions, you can make a gateway
+%% Format {Controller, Action, Params}
+{not_found_route, {"hello", "world", []}}.
+%%
+%% Named routes, will take precedence over the previous
+%% Format {Controller, Action, Params}
+%%{"/login", {"account", "login", []}}.
+%%{"/signup", {"accounts", "signup", []}}.
