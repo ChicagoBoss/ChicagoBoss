@@ -160,6 +160,8 @@ upgrade('POST', [], Auth) ->
     [begin code:purge(M), code:load_file(M) end || M <- Modules],
     error_logger:info_msg("Reloading routes...~n"),
 	boss_router:reload(),
+	error_logger:info_msg("Reloading translation...~n"),
+	boss_translator:reload_all(),
     {redirect, "/admin/upgrade"}.
 
 reread_news_script('POST', [], Auth) ->
