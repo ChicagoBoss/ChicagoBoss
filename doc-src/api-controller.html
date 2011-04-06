@@ -1,6 +1,7 @@
 {% extends "api.html" %}
 {% block api_content %}
 <p style="font-size: 14px;"><em>Jump to:</em> 
+&nbsp; <a href="#routes">Routes</a> 
 &nbsp; <a href="#auth">Authorization</a> 
 &nbsp; <a href="#return_values">Return values</a> 
 &nbsp; <a href="#filter">Post-processing</a> 
@@ -38,6 +39,39 @@ view(<span class="atom">'GET'</span>, [<span class="string">"tag"</span>, Tag, <
 <span class="comment">% GET /blog/view/2009/08</span><br />
 view(<span class="atom">'GET'</span>, [Year, Month]) -&gt;<br />
 &nbsp;&nbsp;&nbsp;&nbsp;...<br />
+</div>
+
+<a name="routes"></a>
+<h3>Routes</h3>
+
+<p>The routing system is simple, in the file boss.routes you have some special routes and free-hand named routes, the routes are loaded at startup in memory (ets table) and reloaded on /admin/upgrade.</p> 
+
+<p>The file contains a list of erlang terms, one per line finished with a dot.</p>
+
+<p>A few examples:</p>
+
+<div class="code">
+<span class="Comment">%% The {Controller, Action} pair to be used on the home page. Defaults to {"hello", "world"} </span> 
+<span class="Comment">%% Format: {"Controller", "Action"}</span> 
+{<span class="Constant">front_page</span>, {<span class="String"><span class="String">&quot;</span>hello<span class="String">&quot;</span></span>, <span class="String"><span class="String">&quot;</span>world<span class="String">&quot;</span></span>}}.
+<span class="Comment">%%</span> 
+<span class="Comment">%% The action to call if none is specified. Defaults to "index" </span> 
+<span class="Comment">%% Format: "Action" </span> 
+{<span class="Constant">default_action</span>, <span class="String"><span class="String">&quot;</span>index<span class="String">&quot;</span></span>}.
+<span class="Comment">%%</span>
+<span class="Comment">%% A proplist of default actions to call if none is specified, keyed by controller name</span> 
+<span class="Comment">%% Format: [ {"Controller1", "Action"}, {"Controller2", "Action"}]</span> 
+{<span class="Constant">default_actions</span>, [{<span class="String"><span class="String">&quot;</span>admin<span class="String">&quot;</span></span>, <span class="String"><span class="String">&quot;</span>model<span class="String">&quot;</span></span>}]}.
+<span class="Comment">%%</span>
+<span class="Comment">%% Route for not-found actions, is called if not named route is found a the first url token</span>
+<span class="Comment">%% don't pertain to a controller</span>  
+<span class="Comment">%% Format: {"Controller", "Action", ["Param1", "ParamN"]}</span> 
+{<span class="Constant">not_found_route</span>, {<span class="String"><span class="String">&quot;</span>hello<span class="String">&quot;</span></span>, <span class="String"><span class="String">&quot;</span>world<span class="String">&quot;</span></span>, []}}.
+<span class="Comment">%%</span>
+<span class="Comment">%% Named routes, will take precedence over the previous</span> 
+<span class="Comment">%% Format: {"Full Url", {"Controller", "Action", ["Param1", "ParamN"]}}</span> 
+{<span class="String"><span class="String">&quot;</span>/login<span class="String">&quot;</span></span>, {<span class="String"><span class="String">&quot;</span>account<span class="String">&quot;</span></span>, <span class="String"><span class="String">&quot;</span>login<span class="String">&quot;</span></span>, []}}.
+{<span class="String"><span class="String">&quot;</span>/signup<span class="String">&quot;</span></span>, {<span class="String"><span class="String">&quot;</span>accounts<span class="String">&quot;</span></span>, <span class="String"><span class="String">&quot;</span>signup<span class="String">&quot;</span></span>, []}}.
 </div>
 
 <a name="auth"></a>

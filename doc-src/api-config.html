@@ -16,9 +16,6 @@
         <li><code>pgsql</code> - PostgreSQL</li>
         <li><code>tyrant</code> - Tokyo Tyrant</li>
     </ul></li>
-    <li><code>default_action</code> - The action to call if none is specified. Defaults to "index"</li>
-    <li><code>default_actions</code> - A proplist of default actions to call if none is specified, keyed by controller name.</li>
-    <li><code>front_page</code> - The {Controller, Action} pair to be used on the home page. Defaults to <code>{"hello", "world"}</code>.</li>
     <li><code>log_dir</code> - Directory in which to keep log files. Location is relative to the project directory. Defaults to "log".</li>
     <li><code>mail_driver</code> - The email delivery driver to use. Valid values are:
     <ul>
@@ -41,4 +38,5 @@
     <li><code>session_exp_time</code>: Expiration time for the session cookie. Defaults to 525600</li>	
     <li><code>session_mnesia_nodes</code>: (optional, Mnesia sessions only) - List of Mnesia nodes, defaults to node()</li>
 </ul>
+<p><b>Warning:</b> From 0.5.2, the frontpage, default_action and default_actions configuration options has been moved to the <a href="api-controller.html#routes">new routing system</a></p>
 {% endblock %}
