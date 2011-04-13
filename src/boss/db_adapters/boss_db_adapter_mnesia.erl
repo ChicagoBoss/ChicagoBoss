@@ -165,13 +165,13 @@ count(Conn, Type, Conditions) ->
 counter(Conn, Id) when is_list(Id) ->
     counter(Conn, list_to_binary(Id));
 counter(_, Id) when is_binary(Id) ->
-    mnesia:dirty_update_counter(Id, '_ids_', 0).
+    mnesia:dirty_update_counter(ids, Id, 0).
 
 % -----
 incr(Conn, Id, Count) when is_list(Id) ->
     incr(Conn, list_to_binary(Id), Count);
 incr(_, Id, Count) ->
-    mnesia:dirty_update_counter(Id, '_ids_', Count).
+    mnesia:dirty_update_counter(ids, Id, Count).
 
 % -----
 delete(Conn, Id) when is_binary(Id) ->
@@ -211,7 +211,7 @@ save_record(_, Record) when is_tuple(Record) ->
 % -----
 
 gen_uid(Tab) ->
-    mnesia:dirty_update_counter(Tab, '_ids_', 1).
+    mnesia:dirty_update_counter(ids, Tab, 1).
 
 %-----
 infer_type_from_id(Id) when is_binary(Id) ->
