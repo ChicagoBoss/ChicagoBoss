@@ -1,8 +1,15 @@
-{% extends "view/model.html" %}
-{% block title %}
-Chicago Boss International Command Center
+{% extends "view/layouts/admin.html" %}
+{% block title %}{% trans "International Command Center" %}{% endblock %}
+
+{% block left_submenu %}
+	{% include "view/shared/_lang_left_submenu.html" with index="true" %}
 {% endblock %}
-{% block scripts %}
+
+{% block right_submenu %}
+	{% include "view/shared/_lang_right_submenu.html" %}
+{% endblock %}
+
+{% block meta_scripts %}
 <script type="text/javascript" src="http://www.google.com/jsapi">
 </script>
 <script type="text/javascript">
@@ -37,7 +44,7 @@ Chicago Boss International Command Center
 </script>
 {% endblock %}
 {% block body %}
-<h1><em>&#8220;Languages? I likes &#8217;em all!&#8221;</em></h1>
+<h1>{% trans "International Command Center" %}</h1>
 <p>
 <form action="/admin/create_lang">
     <p>
@@ -99,8 +106,5 @@ Chicago Boss International Command Center
 {% if this_lang %}
 <p><a href="/admin/delete_lang/{{ this_lang }}">{% trans "Delete this language file" %}...</a></p>
 {% endif %}
-<form action="/admin/big_red_button">
-    <input style="background-color: #94060D; color: white;" type="submit" value="The big red button..." />
-</form>
 
 {% endblock %}

@@ -1,13 +1,8 @@
-<html>
-    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
-    <head>
-        <title>{% block title %}Chicago Boss Admin Interface{% endblock %}</title>
-        {% block scripts %}
-        {% endblock %}
-    </head>
-    <body>
-        {% block body %}
-        <h1><em>&#8220;What&#8217;ll it be, Boss?&#8221;</em></h1>
+{% extends "view/layouts/admin.html" %}
+{% block title %}{% trans "Models data management" %}{% endblock %}
+
+{% block body %}
+<h1>{% trans "Models data management" %}</h1>
         <p>
         {% for model in models %}
         {% ifequal model this_model %}
@@ -75,5 +70,3 @@
         {% endifnotequal %}
         {% endif %}
         {% endblock %}
-    </body>
-</html>

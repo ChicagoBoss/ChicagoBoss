@@ -1,0 +1,39 @@
+{% extends "view/layouts/admin.html" %}
+{% block title %}{% trans "Loaded Routes" %}{% endblock %}
+
+{% block left_submenu %}
+<ul>
+	<li><a href="{{ _base_url }}/admin/routes/reload">{% trans "Reload routes" %}</a></li>
+</ul>
+{% endblock %}
+
+{% block right_submenu %}
+<ul>
+	<li><a href="http://chicagoboss.org/embedded/chicagoboss/api-controller.html">{% trans "API Doc" %}</a></li>
+</ul>
+{% endblock %}
+
+{% block body %}
+<h1>{% trans "Loaded Routes: file boss.routes" %}</h1>
+
+<table class="list files">
+	<thead>
+		<tr>
+			<th>{% trans "Url/Special" %}</th>
+			<th>{% trans "Controller" %}</th>
+			<th>{% trans "Action" %}</th>
+			<th>{% trans "Params" %}</th>
+		</tr>
+	</thead>
+	<tbody>
+	{% for route in routes %}
+		<tr class="{% cycle 'odd' 'even' %}">
+			<td class="filename">{{ route.url }}</td>
+			<td class="filename">{{ route.controller }}</td>
+			<td class="filename">{{ route.action }}</td>
+			<td class="filename">{{ route.params }}</td>
+		</tr>		
+	{% endfor %}	
+  </tbody>
+</table>
+{% endblock %}
