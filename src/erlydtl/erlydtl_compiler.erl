@@ -111,14 +111,11 @@ compile_dir(Dir, Module) ->
 
 compile_dir(Dir, Module, Options) ->
     Context = init_dtl_context_dir(Dir, Module, Options),
-    Files = case file:list_dir(Dir) of
-        {ok, FileList} -> FileList;
-        _ -> []
-    end,
+	Files = filelib:fold_files(Dir, ".*", true, fun(F1,Acc1) -> [F1 | Acc1] end, []),
     {ParserResults, ParserErrors} = lists:foldl(fun
             ("."++_, Acc) -> Acc;
-            (File, {ResultAcc, ErrorAcc}) ->
-                FilePath = filename:join([Dir, File]),
+            (FilePath, {ResultAcc, ErrorAcc}) ->
+				File = filename:basename(FilePath),
                 case parse(FilePath, Context) of
                     ok -> {ResultAcc, ErrorAcc};
                     {ok, DjangoParseTree, CheckSum} -> {[{File, DjangoParseTree, CheckSum}|ResultAcc], ErrorAcc};
