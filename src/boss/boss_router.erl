@@ -6,7 +6,7 @@
 %%
 %% Exported Functions
 %%
--export([initialize/0, reload/0, parse_path/1]).
+-export([initialize/0, reload/0, parse_path/1, base_url/0, get_all/0]).
 
 -define(BOSS_ROUTER_TABLE, boss_routes).
 -record(boss_routes, {url, controller, action, params}).
@@ -37,6 +37,18 @@ parse_path("/" ++ Url) ->
 	end;
 parse_path(_) ->
     {not_found, "File not found"}.
+
+base_url() ->
+    case application:get_env(base_url) of
+        {ok, Val} -> Val;
+        _ -> ""
+    end.
+
+get_all() ->
+	lists:map(fun(X) -> 
+					[{url, X#boss_routes.url}, {controller, X#boss_routes.controller}, 
+					 {action, X#boss_routes.action}, {params, X#boss_routes.params}]
+			  end, lists:flatten(ets:match(?BOSS_ROUTER_TABLE, '$1'))).
 
 %%
 %% Local Functions

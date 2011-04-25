@@ -8,7 +8,7 @@
 %%
 %% A proplist of default actions to call if none is specified, keyed by controller name
 %% Format: [ {"Controller1", "Action"}, {"Controller2", "Action"}]
-{default_actions, [{"admin", "model"}]}.
+{default_actions, [{"admin", "index"}]}.
 %%
 %% Route for not-found actions, is called if not named route is found a the first url token
 %% don't pertain to a controller

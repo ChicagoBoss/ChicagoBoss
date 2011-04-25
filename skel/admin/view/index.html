@@ -1,0 +1,35 @@
+{% extends "view/layouts/admin.html" %}
+{% block title %}{% trans "General Info" %}{% endblock %}
+
+{% block right_submenu %}
+	<ul>
+		<li><a href="http://www.chicagoboss.org">{% trans "ChicagoBoss Community Home" %}</a></li>
+	</ul>
+{% endblock %}
+
+{% block body %}
+<h1>{% trans "Welcome to the Admin Interface" %}</h1>
+
+<h2>{% trans "System Info" %}</h2>
+<ul>
+	<li><b>Erlang OTP Release:</b> {{ system_env.otp_release }}</li>
+	<li><b>Processors:</b> {{ system_env.processors }}</li>
+</ul>
+
+<h2>{% trans "Applications loaded" %}</h2>
+<ul>
+{% for module in modules_loaded %}
+	<li>{{ module }}</li>
+{% endfor %}
+</ul>
+
+<h2>{% trans "Application configuration Info" %}</h2>
+<ul>
+{% for envs in config_env %}
+	<li>{{ envs }}</li>
+{% endfor %}
+</ul>
+
+<p>{% trans "See the loaded routes" %} <a class="routes" href="{{ _base_url }}/admin/routes">{% trans "here" %}</a>
+
+{% endblock %}

@@ -1,6 +1,15 @@
-{% extends "view/model.html" %}
-{% block title %}Create a language file?{% endblock %}
-{% block scripts %}
+{% extends "view/layouts/admin.html" %}
+{% block title %}{% trans "Create a language file" %}{% endblock %}
+
+{% block left_submenu %}
+	{% include "view/shared/_lang_left_submenu.html" with new_language="true" %}
+{% endblock %}
+
+{% block right_submenu %}
+	{% include "view/shared/_lang_right_submenu.html" %}
+{% endblock %}
+
+{% block meta_scripts %}
 <script type="text/javascript" src="http://www.google.com/jsapi">
 </script>
 <script type="text/javascript">
@@ -28,7 +37,11 @@
             var code = google.language.Languages[lang];
             var option = document.createElement('option');
             option.value = code;
-            option.innerText = lang + ' ('+code.toLowerCase()+')';
+			if(document.all){
+				option.innerText = lang + ' ('+code.toLowerCase()+')';
+			} else {
+				option.textContent = lang + ' ('+code.toLowerCase()+')';
+			}                        
             selectbox.appendChild(option);
         }
     }
@@ -36,13 +49,17 @@
 </script>
 {% endblock %}
 {% block body %}
-<div style="text-align: center; padding: 100px">
-    <h1>Choose a new language!</h1>
-    <form method="post">
-        <select id="select_language" name="language" style="width: 120px;">
-        </select>
-        <input type="submit" value="Create language file" />
-    </form>
-</div>
+<h1>{% trans "Create a new language" %}</h1>
+<form method="post" class="tabular">
+	<div class="box">
+		<div id="issue_descr_fields">
+		<p>
+			<label for="issue_tracker_id">{% trans "Select the language" %}<span class="required"> *</span></label>
+			<select id="select_language" name="language" style="width: 120px;"></select>
+		</p>
+		</div>
+    </div>
+    <input type="submit" value="Create language file" />
+</form>
 {% endblock %}
 

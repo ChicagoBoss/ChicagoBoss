@@ -1,18 +1,27 @@
-{% extends "view/model.html" %}
-{% block title %}
-Chicago Boss Hot Code Upgrade
-{% endblock %}
+{% extends "view/layouts/admin.html" %}
+{% block title %}{% trans "Chicago Boss Hot Code Upgrade" %}{% endblock %}
 
 {% block body %}
-<h1><em>&#8220;Say Boss... what's this button do?&#8221;</em></h1>
-<div style="float: left; padding: 5px;">
-<p><form action="/admin/upgrade" method="post">
-    <input type="submit" value="Upgrade BEAM code" />
-</form></p>
+<h1>{% trans "Chicago Boss Hot Code Upgrade" %}</h1>
+<form method="post" action="{{ _base_url }}/admin/upgrade" class="tabular">
+<div class="box">
+	<div id="issue_descr_fields">
+	<p>
+		<label for="issue_tracker_id">{% trans "Upgrade BEAM code" %}</label>
+		<input type="submit" value="{% trans "Now" %}" />
+	</p>
+	</div>
 </div>
-<div style="float: left; padding: 5px;">
-<p><form action="/admin/reread_news_script" method="post">
-    <input type="submit" value="Reload news.erl" />
-</form></p>
+</form>
+
+<form method="post" action="{{ _base_url }}/admin/reread_news_script" class="tabular">
+<div class="box">
+	<div id="issue_descr_fields">
+	<p>
+		<label for="issue_tracker_id">{% trans "Reload news.erl" %}</label>
+		<input type="submit" value="{% trans "Now" %}" />
+	</p>
+	</div>
 </div>
+</form>
 {% endblock %}

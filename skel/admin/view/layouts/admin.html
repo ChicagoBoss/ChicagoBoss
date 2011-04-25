@@ -1,0 +1,58 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+	<title>Chicago Boss Admin - {% block title %}{% endblock %}</title>
+	<link href="/admin/static/stylesheets/application.css?1298394796" media="all" rel="stylesheet" type="text/css" />
+	{% block meta_scripts %}{% endblock %}
+</head>
+<body>
+	<div id="wrapper">
+		<div id="wrapper2">
+			<div id="top-menu">
+	    		<div id="account">
+	    			{% block right_submenu %}{% endblock %}
+	    		</div>
+	    		{% block left_submenu %}{% endblock %}
+			</div>
+	      
+			<div id="header">
+			    <div id="quick-search">
+			        Quick Search
+			    </div>
+	    
+	    		<h1>Chicago Boss Admin - {% block title %}{% endblock %}</h1>
+	    
+			    <div id="main-menu">
+			        {% include "view/layouts/shared/_main_menu.html" %}
+			    </div>
+			</div>
+			<div id="main" class="">
+				<div id="sidebar">
+					{% include "view/layouts/shared/_sidebar.html" %}
+				</div>		    
+			    <div id="content">
+			    	{% include "view/layouts/shared/_alerts.html" %}
+			    	<div class="contextual">{% block contextual %}{% endblock %}</div>
+			    	<div class="wiki">
+			        	{% block body %}{% endblock %}
+			        </div>
+					<div style="clear:both;"></div>
+			    </div>
+			</div>
+	
+			<div id="ajax-indicator" style="display:none;">
+				<span>{% trans "Loading" %}...</span>
+			</div>
+			
+			<div id="footer">
+			  <div class="bgl">
+			  	<div class="bgr">
+			    	{% trans "Powered by" %} <a href="http://www.chicagoboss.org">Chicago Boss</a>
+			  	</div>
+			  </div>
+			</div>
+		</div>
+	</div>
+</body>
+</html>
