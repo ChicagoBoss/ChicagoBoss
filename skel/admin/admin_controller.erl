@@ -3,7 +3,11 @@
 -define(RECORDS_PER_PAGE, 100).
 
 before_(_) ->
-    case Req:peer_ip() of
+	ClientIp = case Req:header(x_forwarded_for) of
+				   undefined -> Req:peer_ip();
+				   IP -> IP
+			   end,
+    case ClientIp of
         {192, 168, _, _} ->
             {ok, local};
         {127, 0, 0, 1} ->
@@ -14,8 +18,22 @@ before_(_) ->
             {redirect, "/admin/access_denied"}
     end.
 
+index('GET', [], Authorization) ->
+	[{loaded, ModulesLoaded}, _, _, _, _, _] = application:info(),
+	ConfigValues = [ [{Key, Value}] || {Key, Value} <- application:get_all_env()],
+	SystemValues = [ {otp_release, erlang:system_info(system_version)},
+					 {processors, erlang:system_info(logical_processors_online)} ],
+    {ok, [ {index_section, true}, {modules_loaded, ModulesLoaded}, {config_env, ConfigValues}, {system_env, SystemValues}] }.
+
+routes('GET', [], Authorization) ->
+	{ok, [ {routes_section, true}, {routes, boss_router:get_all()} ]};
+routes('GET', ["reload"], Authorization) ->
+	boss_router:reload(),
+	boss_flash:add(Req, notice, "Routes reloaded"),
+	{redirect, boss_router:base_url() ++ "/admin/routes"}.
+
 model('GET', [], Authorization) ->
-    {ok, [{records, []}, {models, boss_files:model_list()}, {this_model, ""}]};
+    {ok, [{model_section, true}, {records, []}, {models, boss_files:model_list()}, {this_model, ""}]};
 model('GET', [ModelName], Authorization) ->
     model('GET', [ModelName, "1"], Authorization);
 model('GET', [ModelName, PageName], Authorization) ->
@@ -36,7 +54,7 @@ model('GET', [ModelName, PageName], Authorization) ->
     {ok, 
         [{records, AttributesWithDataTypes}, {attribute_names, AttributeNames}, 
             {models, boss_files:model_list()}, {this_model, ModelName}, 
-            {pages, Pages}, {this_page, Page}], 
+            {pages, Pages}, {this_page, Page}, {model_section, true}], 
         [{"Cache-Control", "no-cache"}]}.
 
 record('GET', [RecordId], Authorization) ->
@@ -92,7 +110,7 @@ create(Method, [RecordType], Authorization) ->
 
 lang('GET', [], Auth) ->
     Languages = boss_files:language_list(),
-    {ok, [{languages, Languages}]};
+    {ok, [{lang_section, true}, {languages, Languages}]};
 lang('GET', [Lang], Auth) ->
     OriginalLang = case application:get_env(assume_locale) of
         {ok, Val} -> Val;
@@ -105,7 +123,8 @@ lang('GET', [Lang], Auth) ->
             {original_lang, OriginalLang},
             {untranslated_messages, Untranslated},
             {translated_messages, Translated},
-            {last_modified, LastModified}],
+            {last_modified, LastModified},
+		  	{lang_section, true}],
         [{"Cache-Control", "no-cache"}]};
 lang('POST', [Lang|Fmt], Auth) ->
     LangFile = boss_files:lang_path(Lang),
@@ -130,7 +149,7 @@ lang('POST', [Lang|Fmt], Auth) ->
     end.
 
 create_lang('GET', [], Auth) ->
-    {ok, [{languages, boss_files:language_list()}]};
+    {ok, [{lang_section, true}, {languages, boss_files:language_list()}]};
 create_lang('POST', [], Auth) ->
     % TODO sanitize
     NewLang = Req:post_param("language"),
@@ -140,7 +159,7 @@ create_lang('POST', [], Auth) ->
     {redirect, "/admin/lang/"++NewLang}.
 
 delete_lang('GET', [Lang], Auth) ->
-    {ok, [{this_lang, Lang}]};
+    {ok, [{lang_section, true}, {this_lang, Lang}]};
 delete_lang('POST', [Lang], Auth) ->
     ok = file:delete(boss_files:lang_path(Lang)),
     {redirect, "/admin/lang"}.
@@ -150,10 +169,10 @@ big_red_button('GET', [], Auth) ->
                 {Untranslated, Translated} = boss_lang:extract_strings(Lang),
                 [{code, Lang}, {untranslated_strings, Untranslated}]
         end, boss_files:language_list()),
-    {ok, [{languages, Languages}, {strings, boss_lang:extract_strings()}]}.
+    {ok, [{lang_section, true}, {languages, Languages}, {strings, boss_lang:extract_strings()}]}.
 
 upgrade('GET', [], Auth) ->
-    ok;
+    {ok, [ {upgrade_section, true} ]};
 upgrade('POST', [], Auth) ->
     Modules = [M || {M, F} <- code:all_loaded(), is_list(F), not code:is_sticky(M)],
     error_logger:info_msg("Reloading ~p modules...~n", [erlang:length(Modules)]),

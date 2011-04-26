@@ -1,0 +1,5 @@
+<ul>
+	<li>{% if index %}* {% endif %}<a href="{{ _base_url }}/admin/lang">{% trans "Language list" %}</a></li>
+	<li>{% if automatic_translator %}* {% endif %}<a href="{{ _base_url }}/admin/big_red_button">{% trans "Automatic Translator" %}</a></li>
+	<li>{% if new_language %}* {% endif %}<a href="{{ _base_url }}/admin/create_lang">{% trans "New language file" %}</a></li>
+</ul>
