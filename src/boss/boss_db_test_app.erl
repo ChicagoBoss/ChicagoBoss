@@ -5,6 +5,11 @@
 
 start(_Type, _StartArgs) ->
   boss_db:start(),
+
+  boss_mq:start(),
+  ok = boss_compiler:compile("news.erl", []),
+  boss_news:start(),
+
   run_setup(),
   run_tests(),
   erlang:halt().
