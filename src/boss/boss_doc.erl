@@ -52,7 +52,7 @@ module_name_from_template(File) ->
 
 %% @spec get_vars( Template::string() ) -> [{Key::atom(), Value}]
 get_vars("api-view.html", _InDir) ->
-    {erlydtl_filters, EDoc} = edoc:get_doc("SRC/erlydtl/erlydtl_filters.erl", []),
+    {erlydtl_filters, EDoc} = edoc:get_doc("src/erlydtl/erlydtl_filters.erl", []),
     Functions = extract_function_docs(EDoc),
     [{filters, Functions}];
 get_vars("api-record.html", InDir) ->
@@ -60,14 +60,14 @@ get_vars("api-record.html", InDir) ->
         [{private, true}, {hidden, true}]),
     [{functions, extract_function_docs(EDoc)}];
 get_vars("api-db.html", _InDir) ->
-    {boss_db, EDoc} = edoc:get_doc("SRC/boss/boss_db.erl", []),
+    {boss_db, EDoc} = edoc:get_doc("src/boss/boss_db.erl", []),
     [{functions, extract_function_docs(EDoc)}];
 get_vars("api-mq.html", _InDir) ->
-    {boss_mq, EDoc} = edoc:get_doc("SRC/boss/boss_mq.erl", []),
+    {boss_mq, EDoc} = edoc:get_doc("src/boss/boss_mq.erl", []),
     [{functions, extract_function_docs(EDoc)}];
 get_vars("api-test.html", _InDir) ->
-    {boss_web_test, EDoc1} = edoc:get_doc("SRC/boss/boss_web_test.erl", []),
-    {boss_assert, EDoc2} = edoc:get_doc("SRC/boss/boss_assert.erl", []),
+    {boss_web_test, EDoc1} = edoc:get_doc("src/boss/boss_web_test.erl", []),
+    {boss_assert, EDoc2} = edoc:get_doc("src/boss/boss_assert.erl", []),
     [{test_functions, extract_function_docs(EDoc1)},
         {assert_functions, extract_function_docs(EDoc2)}];
 get_vars(_, _InDir) ->
