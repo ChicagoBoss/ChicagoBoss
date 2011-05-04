@@ -66,14 +66,18 @@ module_list(Dirs) ->
 module_list1([], ModuleAcc) ->
     lists:sort(ModuleAcc);
 module_list1([Dir|Rest], ModuleAcc) ->
-    {ok, Files} = file:list_dir(Dir),
-    Modules = lists:map(fun(X) -> filename:basename(X, ".erl") end,
-        lists:filter(fun
-                ("."++_) ->
-                    false;
-                (File) -> lists:suffix(".erl", File)
-            end, Files)),
-    module_list1(Rest, Modules ++ ModuleAcc).
+    case file:list_dir(Dir) of
+        {ok, Files} ->
+            Modules = lists:map(fun(X) -> filename:basename(X, ".erl") end,
+                lists:filter(fun
+                        ("."++_) ->
+                            false;
+                        (File) -> lists:suffix(".erl", File)
+                    end, Files)),
+            module_list1(Rest, Modules ++ ModuleAcc);
+        _ ->
+            module_list1(Rest, ModuleAcc)
+    end.
 
 routes_file() ->
 	filename:join([root_dir(), "boss.routes"]).
