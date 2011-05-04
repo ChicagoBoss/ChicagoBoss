@@ -15,7 +15,7 @@ start(Config) ->
     Env = boss_load:setup_boss_env(),
     error_logger:info_msg("Starting Boss in ~p mode....~n", [Env]),
 	
-	boss_router:initialize(),
+    boss_router:initialize(),
 
     boss_db:start(),
     boss_session:start(),

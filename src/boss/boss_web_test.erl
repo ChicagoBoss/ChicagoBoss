@@ -9,6 +9,7 @@ start() ->
 
 start([Adapter]) ->
     AdapterMod = list_to_atom("boss_db_adapter_"++Adapter),
+    boss_router:initialize(),
     boss_db:start([{adapter, AdapterMod}]),
     boss_session:start(),
     boss_mq:start(),
