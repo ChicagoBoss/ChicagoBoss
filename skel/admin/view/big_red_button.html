@@ -1,6 +1,15 @@
-{% extends "view/model.html" %} 
-{% block title %}The Big Red Button{% endblock %}
-{% block scripts %}
+{% extends "view/layouts/admin.html" %}
+{% block title %}{% trans "International Command Center: Big Red Button" %}{% endblock %}
+
+{% block left_submenu %}
+	{% include "view/shared/_lang_left_submenu.html" with automatic_translator="true" %}
+{% endblock %}
+
+{% block right_submenu %}
+	{% include "view/shared/_lang_right_submenu.html" %}
+{% endblock %}
+
+{% block meta_scripts %}
 <script type="text/javascript" src="http://www.google.com/jsapi">
 </script>
 <script type="text/javascript" src="/admin/static/lang.js"></script>
@@ -27,8 +36,8 @@
 google.setOnLoadCallback(initialize);
 </script>
 {% endblock %}
+
 {% block body %}
-<p><a href="/admin/lang">Back</a></p>
 <p>The Big Red Button fills in all the blanks in your language files with the Google Translate API.</p>
 <div style="text-align: center;">
 <button style="width: 400px; height: 60px; font-size: 18px; background-color: #94060D; color: white;" >PUSH ME</button>

@@ -135,21 +135,24 @@ match_cond(Record, [{Key, 'not_matches', "*"++Value}|Rest]) ->
 match_cond(Record, [{Key, 'not_matches', Value}|Rest]) ->
     re:run(Record:Key(), Value, []) =:= nomatch andalso match_cond(Record, Rest);
 match_cond(Record, [{Key, 'contains', Value}|Rest]) ->
-    lists:member(Value, string:tokens(Record:Key(), " ")) andalso match_cond(Record, Rest);
+    lists:member(Value, string:tokens(to_string(Record:Key()), " ")) andalso match_cond(Record, Rest);
 match_cond(Record, [{Key, 'not_contains', Value}|Rest]) ->
-    (not lists:member(Value, string:tokens(Record:Key(), " "))) andalso match_cond(Record, Rest);
+    (not lists:member(Value, string:tokens(to_string(Record:Key()), " "))) andalso match_cond(Record, Rest);
 match_cond(Record, [{Key, 'contains_all', Value}|Rest]) ->
-    Tokens = string:tokens(Record:Key(), " "),
+    Tokens = string:tokens(to_string(Record:Key()), " "),
     lists:all(fun(Token) -> lists:member(Token, Tokens) end, Value) andalso match_cond(Record, Rest);
 match_cond(Record, [{Key, 'not_contains_all', Value}|Rest]) ->
-    Tokens = string:tokens(Record:Key(), " "),
+    Tokens = string:tokens(to_string(Record:Key()), " "),
     (not lists:all(fun(Token) -> lists:member(Token, Tokens) end, Value)) andalso match_cond(Record, Rest);
 match_cond(Record, [{Key, 'contains_any', Value}|Rest]) ->
-    Tokens = string:tokens(Record:Key(), " "),
+    Tokens = string:tokens(to_string(Record:Key()), " "),
     lists:any(fun(Token) -> lists:member(Token, Tokens) end, Value) andalso match_cond(Record, Rest);
 match_cond(Record, [{Key, 'contains_none', Value}|Rest]) ->
-    Tokens = string:tokens(Record:Key(), " "),
+    Tokens = string:tokens(to_string(Record:Key()), " "),
     (not lists:any(fun(Token) -> lists:member(Token, Tokens) end, Value)) andalso match_cond(Record, Rest).
+
+to_string(Val) when is_binary(Val) -> binary_to_list(Val);
+to_string(Val) -> Val.
 
 sortable_attribute(Record, Attr) ->
     case Record:Attr() of

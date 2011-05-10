@@ -47,12 +47,10 @@ web_controller_list() ->
     module_list(web_controller_path()).
 
 view_file_list() ->
-    BasePattern = filename:join([root_dir(), "view", "*.{html,txt}"]),
-    SubdirPattern = filename:join([root_dir(), "view", "*", "*.{html,txt}"]),
+	ViewFiles = filelib:fold_files(filename:join([root_dir(), "view"]), ".*\\.(html|txt)$", true, fun(F1,Acc1) -> [F1 | Acc1] end, []),
     MailPattern = filename:join([root_dir(), "mail", "view", "*.{html,txt}"]),
-    AdminPattern = filename:join([root_admin_dir(), "view", "*.{html,txt}"]),
-    filelib:wildcard(BasePattern) ++ filelib:wildcard(SubdirPattern) 
-        ++ filelib:wildcard(MailPattern) ++ filelib:wildcard(AdminPattern).
+    AdminPattern = filename:join([root_admin_dir(), "view", "*.{html,txt}"]),	
+    ViewFiles ++ filelib:wildcard(MailPattern) ++ filelib:wildcard(AdminPattern).
 
 language_list() ->
     {ok, Files} = file:list_dir(lang_path()),
@@ -68,11 +66,18 @@ module_list(Dirs) ->
 module_list1([], ModuleAcc) ->
     lists:sort(ModuleAcc);
 module_list1([Dir|Rest], ModuleAcc) ->
-    {ok, Files} = file:list_dir(Dir),
-    Modules = lists:map(fun(X) -> filename:basename(X, ".erl") end,
-        lists:filter(fun
-                ("."++_) ->
-                    false;
-                (File) -> lists:suffix(".erl", File)
-            end, Files)),
-    module_list1(Rest, Modules ++ ModuleAcc).
+    case file:list_dir(Dir) of
+        {ok, Files} ->
+            Modules = lists:map(fun(X) -> filename:basename(X, ".erl") end,
+                lists:filter(fun
+                        ("."++_) ->
+                            false;
+                        (File) -> lists:suffix(".erl", File)
+                    end, Files)),
+            module_list1(Rest, Modules ++ ModuleAcc);
+        _ ->
+            module_list1(Rest, ModuleAcc)
+    end.
+
+routes_file() ->
+	filename:join([root_dir(), "boss.routes"]).

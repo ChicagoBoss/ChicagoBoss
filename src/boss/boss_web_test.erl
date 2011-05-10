@@ -9,8 +9,12 @@ start() ->
 
 start([Adapter]) ->
     AdapterMod = list_to_atom("boss_db_adapter_"++Adapter),
+    boss_router:initialize(),
     boss_db:start([{adapter, AdapterMod}]),
     boss_session:start(),
+    boss_mq:start(),
+    ok = boss_compiler:compile("news.erl", []),
+    boss_news:start(),
     boss_mail:start([{driver, boss_mail_driver_mock}]),
     boss_translator:start(),
     boss_load:load_all_modules(),

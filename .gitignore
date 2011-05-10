@@ -1,0 +1,4 @@
+ebin/*.beam
+ebin/boss.app
+src/aleppo/aleppo_parser.erl
+src/erlydtl/erlydtl_parser.erl

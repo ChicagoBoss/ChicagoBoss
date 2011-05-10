@@ -5,6 +5,10 @@
 
 start(_Type, _StartArgs) ->
   boss_db:start(),
+
+  boss_mq:start(),
+  boss_news:start(),
+
   run_setup(),
   run_tests(),
   erlang:halt().
@@ -13,13 +17,13 @@ stop(_State) ->
   ok.
 
 run_setup() ->
-  ok = boss_record_compiler:compile("SRC/boss/db_adapters/test_models/boss_db_test_model.erl"),
-  ok = boss_record_compiler:compile("SRC/boss/db_adapters/test_models/boss_db_test_parent_model.erl"),
+  ok = boss_record_compiler:compile("src/boss/db_adapters/test_models/boss_db_test_model.erl"),
+  ok = boss_record_compiler:compile("src/boss/db_adapters/test_models/boss_db_test_parent_model.erl"),
   DBAdapter = case application:get_env(db_adapter) of
     {ok, Val} -> Val;
     _ -> mock
   end,
-  case file:read_file(lists:concat(["SRC/boss/db_adapters/test_sql/", DBAdapter, ".sql"])) of
+  case file:read_file(lists:concat(["src/boss/db_adapters/test_sql/", DBAdapter, ".sql"])) of
     {ok, FileContents} ->
       io:format("Running setup SQL...~n", []),
       lists:map(fun(Cmd) ->

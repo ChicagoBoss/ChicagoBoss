@@ -3,8 +3,8 @@ PREFIX:=../
 DEST:=$(PREFIX)$(PROJECT)
 ERL=erl
 REBAR=./rebar
-DB_CONFIG_DIR=SRC/boss/db_adapters/test_config
-SESSION_CONFIG_DIR=SRC/boss/session_adapters/test_config
+DB_CONFIG_DIR=src/boss/db_adapters/test_config
+SESSION_CONFIG_DIR=src/boss/session_adapters/test_config
 
 all:
 	@$(REBAR) compile

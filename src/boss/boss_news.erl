@@ -15,7 +15,10 @@ start() ->
 
 start(Options) ->
     boss_news_sup:start_link(Options),
-    news:init().
+    case boss_load:module_is_loaded(news) of
+        true -> news:init();
+        false -> ok
+    end.
 
 stop() ->
     ok.
@@ -37,4 +40,7 @@ created(Id, NewAttrs) ->
 
 reset() ->
     gen_server:call(boss_news, reset),
-    news:init().
+    case boss_load:module_is_loaded(news) of
+        true -> news:init();
+        false -> ok
+    end.

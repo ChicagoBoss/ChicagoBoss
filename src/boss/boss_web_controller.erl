@@ -14,6 +14,8 @@ start(Config) ->
 
     Env = boss_load:setup_boss_env(),
     error_logger:info_msg("Starting Boss in ~p mode....~n", [Env]),
+	
+    boss_router:initialize(),
 
     boss_db:start(),
     boss_session:start(),
@@ -79,7 +81,7 @@ handle_request(Req, RequestMod, ResponseMod) ->
     end.
 
 process_request(Req) ->
-    Result = case parse_path(Req:path()) of
+    Result = case boss_router:parse_path(Req:path()) of
         {ok, {Controller, Action, Tokens}} ->
             trap_load_and_execute({Controller, Action, Tokens}, Req);
         Else ->
@@ -92,28 +94,6 @@ get_env(Key, Default) when is_atom(Key) ->
         {ok, Val} -> Val;
         _ -> Default
     end.
-
-parse_path("/") ->
-    {Controller, Action} = get_env(front_page, {"hello", "world"}), 
-    {ok, {Controller, Action, []}};
-parse_path("/" ++ Url) ->
-    Tokens = string:tokens(Url, "/"),
-    case length(Tokens) of
-        1 ->
-            Controller = hd(Tokens),
-            DefaultAction = get_env(default_action, "index"),
-            AllDefaultActions = get_env(default_actions, [{"admin", "model"}]),
-            ThisAction = proplists:get_value(Controller, AllDefaultActions, DefaultAction),
-            {ok, {Controller, ThisAction, []}};
-        N when N >= 2 ->
-            {ok, {lists:nth(1, Tokens), 
-                    lists:nth(2, Tokens),
-                    lists:nthtail(2, Tokens)}};
-        _ ->
-            {not_found, "File not found"}
-    end;
-parse_path(_) ->
-    {not_found, "File not found"}.
 
 process_result({error, Payload}) ->
     error_logger:error_report(Payload),
@@ -299,7 +279,7 @@ render_view({Controller, Template, _}, Req, Variables, Headers) ->
         {ok, Module} ->
             {Lang, TranslationFun} = choose_translation_fun(Module:translatable_strings(), 
                 Req:header(accept_language), proplists:get_value("Content-Language", Headers)),
-            case Module:render(lists:merge([{"_lang", Lang}|Variables], BossFlash), TranslationFun) of
+            case Module:render(lists:merge([{"_lang", Lang}, {"_base_url", boss_router:base_url()}|Variables], BossFlash), TranslationFun) of
                 {ok, Payload} ->
                     {ok, Payload, Headers};
                 Err ->
