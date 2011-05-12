@@ -62,3 +62,18 @@ Using MongoDB (EXPERIMENTAL)
 The driver requires Erlang R14B or later. To build it, type
 
     make mongodb
+
+Using Riak (EXPERIMENTAL)
+-------------------------
+
+Riak is a NoSQL database developed by Basho Technologies.
+
+1. Install Riak as described at http://wiki.basho.com/Installation-and-Setup.html
+
+2. Start a Riak node with `sudo riak start`
+
+3. Open up boss.config and set db_adapter to riak.
+
+The current implementation of the Riak adapter supports only simple CRUD
+operations: Type:new, BossRecord:save/0, boss_db:delete/1, boss_db:find/1.
+Queries with predicates have not been implemented yet as well as associations.
