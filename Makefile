@@ -40,3 +40,6 @@ test_session_ets:
 
 test_session_mnesia:
 	$(ERL) -pa ebin -run boss_session_test start -config $(SESSION_CONFIG_DIR)/mnesia -noshell
+
+test_db_riak:
+	$(ERL) -pa ebin -run boss_db_test start -config $(DB_CONFIG_DIR)/riak -noshell
