@@ -123,7 +123,7 @@ execute(Conn, Commands) ->
     pgsql:squery(Conn, Commands).
 
 transaction(Conn, TransactionFun) ->
-    case pgsql:with_transaction(Conn, fun(C) -> TransactionFun() end) of
+    case pgsql:with_transaction(Conn, fun(_C) -> TransactionFun() end) of
         {rollback, Reason} -> {aborted, Reason};
         Other -> {atomic, Other}
     end.

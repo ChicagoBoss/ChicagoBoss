@@ -64,10 +64,8 @@ handle_call(push, _From, [{Dict, IdCounter}|_] = State) ->
     {reply, ok, [{Dict, IdCounter}|State]};
 handle_call(pop, _From, [_|OldState]) ->
     {reply, ok, OldState};
-handle_call(get_state, _From, State) ->
-    {reply, State, State};
-handle_call({set_state, NewState}, _From, _State) ->
-    {reply, ok, NewState};
+handle_call(commit, _From, [NewState, _OldState|State]) ->
+    {reply, ok, [NewState|State]};
 handle_call(dump, _From, [{Dict, _IdCounter}|_]=State) ->
     {reply, dict:to_list(Dict), State}.
 

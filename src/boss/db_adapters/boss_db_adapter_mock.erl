@@ -48,11 +48,13 @@ dump(_) ->
     gen_server:call(boss_db_mock, dump).
 
 transaction(_, TransactionFun) ->
-    State = gen_server:call(boss_db_mock, get_state),
+    gen_server:call(boss_db_mock, push),
     try
-        {atomic, TransactionFun()}
+        R = TransactionFun(),
+        gen_server:call(boss_db_mock, commit),
+        {atomic, R}
     catch
         _:Why ->
-            gen_server:call(boss_db_mock, {set_state, State}),
+            gen_server:call(boss_db_mock, pop),
             {aborted, Why}
     end.
