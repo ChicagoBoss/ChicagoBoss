@@ -1,6 +1,6 @@
 % web-centric functional tests
 -module(boss_web_test).
--export([start/0, start/1, run_tests/0, get_request/4, post_request/5, read_email/4]).
+-export([start/0, start/1, run_tests/1, get_request/4, post_request/5, read_email/4]).
 -export([follow_link/4, follow_redirect/3, submit_form/5]).
 -export([find_link_with_text/2]).
 
@@ -8,6 +8,9 @@ start() ->
     start(["mock"]).
 
 start([Adapter]) ->
+    run_tests([Adapter|boss_files:test_list()]).
+
+bootstrap_test_env(Adapter) ->
     AdapterMod = list_to_atom("boss_db_adapter_"++Adapter),
     boss_router:initialize(),
     boss_db:start([{adapter, AdapterMod}]),
@@ -17,11 +20,11 @@ start([Adapter]) ->
     boss_news:start(),
     boss_mail:start([{driver, boss_mail_driver_mock}]),
     boss_translator:start(),
-    boss_load:load_all_modules(),
-    run_tests(),
-    erlang:halt().
+    boss_load:load_all_modules().
 
-run_tests() ->
+run_tests([Adapter|TestList]) ->
+    bootstrap_test_env(Adapter),
+    io:format("~p~n", [TestList]),
     lists:map(fun(TestModule) ->
                 TestModuleAtom = list_to_atom(TestModule),
                 io:format("~nRunning: ~p~n", [TestModule]),
@@ -30,7 +33,8 @@ run_tests() ->
                 io:format("~70c~n", [$=]),
                 io:format("Passed: ~p~n", [NumSuccesses]),
                 io:format("Failed: ~p~n", [length(FailureMessages)])
-        end, boss_files:test_list()).
+        end, TestList),
+    erlang:halt().
 
 %% @spec get_request(Url, Headers, Assertions, Continuations) -> [{NumPassed, ErrorMessages}]
 %% @doc This test issues an HTTP GET request to `Url' (a path such as "/"
