@@ -149,6 +149,8 @@ link_with_text1(Text, Response) ->
     {boss_web_test:find_link_with_text(Text, Response) =/= undefined,
         "No link to \""++Text++"\""}.
 
+has_tag_with_text(Tag, Text, [{comment, _}|Rest]) ->
+    has_tag_with_text(Tag, Text, Rest);
 has_tag_with_text(Tag, Text, ParseTree) when is_list(Tag) ->
     has_tag_with_text(list_to_binary(Tag), Text, ParseTree);
 has_tag_with_text(Tag, Text, ParseTree) when is_list(Text) ->
