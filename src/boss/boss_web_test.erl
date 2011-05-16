@@ -191,6 +191,8 @@ flatten_html1([Text|Rest], Acc) when is_binary(Text) ->
 flatten_html1([{_, _, Children}|Rest], Acc) ->
     [flatten_html(Rest), flatten_html(Children) | Acc].
 
+find_form_named(FormName, [{comment, _}|Rest]) ->
+    find_form_named(FormName, Rest);
 find_form_named(FormName, ParseTree) when is_list(FormName) ->
     find_form_named(list_to_binary(FormName), ParseTree);
 find_form_named(FormName, ParseTree) when not is_list(ParseTree) ->
