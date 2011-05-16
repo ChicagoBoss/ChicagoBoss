@@ -3,7 +3,7 @@
 -behaviour(boss_db_adapter).
 -export([start/0, start/1, stop/1]).
 -export([find/2, find/7, count/3, counter/2, incr/3, delete/2, save_record/2]).
--export([push/2, pop/2, dump/1]).
+-export([push/2, pop/2, dump/1, transaction/2]).
 
 start() ->
     start([]).
@@ -46,3 +46,13 @@ pop(_, _Depth) ->
 
 dump(_) ->
     gen_server:call(boss_db_mock, dump).
+
+transaction(_, TransactionFun) ->
+    State = gen_server:call(boss_db_mock, get_state),
+    try
+        {atomic, TransactionFun()}
+    catch
+        _:Why ->
+            gen_server:call(boss_db_mock, {set_state, State}),
+            {aborted, Why}
+    end.
