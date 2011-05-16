@@ -2,7 +2,7 @@
 -behaviour(boss_db_adapter).
 -export([start/0, start/1, stop/1, find/2, find/7]).
 -export([count/3, counter/2, incr/3, delete/2, save_record/2]).
--export([push/2, pop/2, dump/1, execute/2]).
+-export([push/2, pop/2, dump/1, execute/2, transaction/2]).
 
 start() ->
     start([]).
@@ -153,6 +153,9 @@ dump(_Conn) -> "".
 
 execute(Pid, Commands) ->
     mysql:fetch(Pid, Commands).
+
+transaction(Pid, TransactionFun) when is_function(TransactionFun) ->
+    mysql:transaction(Pid, TransactionFun).
 
 % internal
 
@@ -387,7 +390,7 @@ pack_value(false) ->
 pack_value(undefined) ->
 	"null";
 pack_value(V) when is_binary(V) ->
-    pack_value(binary_to_list(V));
+    pack_value(unicode:characters_to_list(V));
 pack_value(V) when is_list(V) ->
     "'" ++ escape_sql(V) ++ "'";
 pack_value({MegaSec, Sec, MicroSec}) when is_integer(MegaSec) andalso is_integer(Sec) andalso is_integer(MicroSec) ->

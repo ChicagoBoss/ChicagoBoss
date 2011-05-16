@@ -23,6 +23,7 @@
         depth/0,
         dump/0,
         execute/1,
+        transaction/1,
         validate_record/1,
         type/1,
         data_type/2]).
@@ -158,6 +159,11 @@ dump() ->
 %% @doc Execute raw database commands on SQL databases
 execute(Commands) ->
     gen_server:call(boss_db, {execute, Commands}, ?DEFAULT_TIMEOUT).
+
+%% @spec transaction( TransactionFun::function() ) -> {atomic, Result} | {aborted, Reason}
+%% @doc Execute a fun inside a transaction.
+transaction(TransactionFun) ->
+    gen_server:call(boss_db, {transaction, TransactionFun}, ?DEFAULT_TIMEOUT).
 
 %% @spec save_record( BossRecord ) -> {ok, SavedBossRecord} | {error, [ErrorMessages]}
 %% @doc Save (that is, create or update) the given BossRecord in the database.

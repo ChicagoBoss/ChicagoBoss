@@ -107,7 +107,12 @@ handle_call(dump, _From, State) ->
 handle_call({execute, Commands}, _From, State) ->
     Adapter = State#state.adapter,
     Conn = State#state.connection,
-    {reply, Adapter:execute(Conn, Commands), State}.
+    {reply, Adapter:execute(Conn, Commands), State};
+
+handle_call({transaction, TransactionFun}, _From, State) ->
+    Adapter = State#state.adapter,
+    Conn = State#state.connection,
+    {reply, Adapter:transaction(Conn, TransactionFun), State}.
 
 handle_cast(_Request, State) ->
     {noreply, State}.

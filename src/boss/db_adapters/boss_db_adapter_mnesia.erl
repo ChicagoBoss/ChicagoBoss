@@ -2,6 +2,7 @@
 -behaviour(boss_db_adapter).
 -export([start/0, start/1, stop/1, find/2, find/7]).
 -export([count/3, counter/2, incr/3, delete/2, save_record/2]).
+-export([transaction/2]).
 
 %-define(TRILLION, (1000 * 1000 * 1000 * 1000)).
 
@@ -207,6 +208,9 @@ save_record(_, Record) when is_tuple(Record) ->
 	    {aborted, Reason} ->
 	        {error, Reason}
     end.
+
+transaction(_, TransactionFun) when is_function(TransactionFun) ->
+    mnesia:transaction(TransactionFun).
 
 % -----
 

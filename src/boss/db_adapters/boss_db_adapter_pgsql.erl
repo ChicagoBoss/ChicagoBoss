@@ -2,7 +2,7 @@
 -behaviour(boss_db_adapter).
 -export([start/0, start/1, stop/1, find/2, find/7]).
 -export([count/3, counter/2, incr/3, delete/2, save_record/2]).
--export([push/2, pop/2, dump/1, execute/2]).
+-export([push/2, pop/2, dump/1, execute/2, transaction/2]).
 
 start() ->
     start([]).
@@ -121,6 +121,12 @@ dump(_Conn) -> "".
 
 execute(Conn, Commands) ->
     pgsql:squery(Conn, Commands).
+
+transaction(Conn, TransactionFun) ->
+    case pgsql:with_transaction(Conn, TransactionFun) of
+        {rollback, Reason} -> {aborted, Reason};
+        Other -> {atomic, Other}
+    end.
 
 % internal
 
