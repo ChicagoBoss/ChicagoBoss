@@ -1,6 +1,6 @@
 % web-centric functional tests
 -module(boss_web_test).
--export([start/0, start/1, run_tests/2, get_request/4, post_request/5, read_email/4]).
+-export([start/0, start/1, run_tests/1, get_request/4, post_request/5, read_email/4]).
 -export([follow_link/4, follow_redirect/3, submit_form/5]).
 -export([find_link_with_text/2]).
 
@@ -8,7 +8,7 @@ start() ->
     start(["mock"]).
 
 start([Adapter]) ->
-    run_tests(Adapter, boss_files:test_list()).
+    run_tests([Adapter|boss_files:test_list()]).
 
 bootstrap_test_env(Adapter) ->
     AdapterMod = list_to_atom("boss_db_adapter_"++Adapter),
@@ -22,7 +22,8 @@ bootstrap_test_env(Adapter) ->
     boss_translator:start(),
     boss_load:load_all_modules().
 
-run_tests(Adapter, TestList) ->
+% This function deliberately takes one argument so it can be invoked from the command-line.
+run_tests([Adapter|TestList]) ->
     bootstrap_test_env(Adapter),
     io:format("~p~n", [TestList]),
     lists:map(fun(TestModule) ->
