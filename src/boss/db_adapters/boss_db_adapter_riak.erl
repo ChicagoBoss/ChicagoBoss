@@ -161,7 +161,7 @@ integer_to_list0(I, Base)
 integer_to_list0(I, Base) ->
     erlang:error(badarg, [I, Base]).
 
-%% @spec integer_to_list(integer(), integer(), string()) -> string()
+%% @spec integer_to_list0(integer(), integer(), string()) -> string()
 integer_to_list0(I0, Base, R0) ->
     D = I0 rem Base,
     I1 = I0 div Base,
