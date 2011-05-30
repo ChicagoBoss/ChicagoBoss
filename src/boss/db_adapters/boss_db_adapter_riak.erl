@@ -41,7 +41,7 @@ find_acc(_, _, [], Acc) ->
     lists:reverse(Acc);
 find_acc(Conn, Prefix, [Id | Rest], Acc) ->
     case find(Conn, Prefix ++ binary_to_list(Id)) of
-        {error, Reason} ->
+        {error, _Reason} ->
             find_acc(Conn, Prefix, Rest, Acc);
 
         Value ->
@@ -79,17 +79,17 @@ find(Conn, Type, Conditions, Max, Skip, Sort, SortOrder) ->
 count(Conn, Type, Conditions) ->
     length(find(Conn, Type, Conditions, 0, 0, 0, 0)).
 
-counter(Conn, Id) ->
+counter(_Conn, _Id) ->
     {error, notimplemented}.
 
 incr(Conn, Id) ->
     incr(Conn, Id, 1).
-incr(Conn, Id, Count) ->
+incr(_Conn, _Id, _Count) ->
     {error, notimplemented}.
 
 
 delete(Conn, Id) ->
-    {Type, Bucket, Key} = infer_type_from_id(Id),
+    {_Type, Bucket, Key} = infer_type_from_id(Id),
     riakc_pb_socket:delete(Conn, Bucket, Key).
 
 save_record(Conn, Record) ->
@@ -145,24 +145,24 @@ type_to_bucket_name(Type) when is_list(Type) ->
 % TODO: Get rid of this code when server-side ID generating is available
 %       in Riak.
 
-%% @spec integer_to_list(Integer :: integer(), Base :: integer()) ->
+%% @spec integer_to_list0(Integer :: integer(), Base :: integer()) ->
 %% string()
 %% @doc Convert an integer to its string representation in the given
 %% base. Bases 2-62 are supported.
-integer_to_list(I, 10) ->
+integer_to_list0(I, 10) ->
     erlang:integer_to_list(I);
-integer_to_list(I, Base)
+integer_to_list0(I, Base)
   when is_integer(I), is_integer(Base),Base >= 2, Base =< 1+$Z-$A+10+1+$z-$a ->
     if I < 0 ->
-            [$-|integer_to_list(-I, Base, [])];
+            [$-|integer_to_list0(-I, Base, [])];
        true ->
-            integer_to_list(I, Base, [])
+            integer_to_list0(I, Base, [])
     end;
-integer_to_list(I, Base) ->
+integer_to_list0(I, Base) ->
     erlang:error(badarg, [I, Base]).
 
 %% @spec integer_to_list(integer(), integer(), string()) -> string()
-integer_to_list(I0, Base, R0) ->
+integer_to_list0(I0, Base, R0) ->
     D = I0 rem Base,
     I1 = I0 div Base,
     R1 = if D >= 36 ->
@@ -175,7 +175,7 @@ integer_to_list(I0, Base, R0) ->
     if I1 =:= 0 ->
             R1;
        true ->
-            integer_to_list(I1, Base, R1)
+            integer_to_list0(I1, Base, R1)
     end.
 
 %% @spec unique_id_62() -> string()
@@ -184,4 +184,4 @@ integer_to_list(I0, Base, R0) ->
 unique_id_62() ->
     Rand = crypto:sha(term_to_binary({make_ref(), now()})),
     <<I:160/integer>> = Rand,
-    integer_to_list(I, 62).
+    integer_to_list0(I, 62).
