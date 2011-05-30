@@ -13,19 +13,20 @@ start(Options) ->
     % TODO: crypto is needed for unique_id_62/0. Remove it when
     %       unique_id_62/0 is not needed.
     crypto:start(),
+    application:start(riakpool),
     Host = proplists:get_value(db_host, Options, "localhost"),
     Port = proplists:get_value(db_port, Options, 8087),
-    riakc_pb_socket:start_link(Host, Port).
+    riakpool:start_pool(Host, Port),
+    {ok, undefined}.
 
-stop(Conn) ->
-    riakc_pb_socket:stop(Conn),
+stop(_) ->
+    riakpool:stop(),
     ok.
 
-find(Conn, Id) ->
+find(_, Id) ->
     {Type, Bucket, Key} = infer_type_from_id(Id),
-    case riakc_pb_socket:get(Conn, Bucket, Key) of
-        {ok, RiakDoc} ->
-            [Value|_] = riakc_obj:get_values(RiakDoc),
+    case riakpool_client:get(Bucket, Key) of
+        {ok, Value} ->
             Data = binary_to_term(Value),
             DummyRecord = apply(Type, new, lists:seq(1, proplists:get_value(new,
                                  Type:module_info(exports)))),
@@ -37,21 +38,21 @@ find(Conn, Id) ->
             {error, Reason}
     end.
 
-find_acc(_, _, [], Acc) ->
+find_acc(_, [], Acc) ->
     lists:reverse(Acc);
-find_acc(Conn, Prefix, [Id | Rest], Acc) ->
-    case find(Conn, Prefix ++ binary_to_list(Id)) of
+find_acc(Prefix, [Id | Rest], Acc) ->
+    case find(undefined, Prefix ++ binary_to_list(Id)) of
         {error, _Reason} ->
-            find_acc(Conn, Prefix, Rest, Acc);
+            find_acc(Prefix, Rest, Acc);
 
         Value ->
-            find_acc(Conn, Prefix, Rest, [Value | Acc])
+            find_acc(Prefix, Rest, [Value | Acc])
     end.
 
 % this is a stub just to make the tests runable
-find(Conn, Type, Conditions, Max, Skip, Sort, SortOrder) ->
-    {ok, Keys} = riakc_pb_socket:list_keys(Conn, type_to_bucket_name(Type)),
-    AllRecords = find_acc(Conn, atom_to_list(Type) ++ "-", Keys, []),
+find(_, Type, Conditions, Max, Skip, Sort, SortOrder) ->
+    {ok, Keys} = riakpool_client:list_keys(type_to_bucket_name(Type)),
+    AllRecords = find_acc(atom_to_list(Type) ++ "-", Keys, []),
     Records = case Conditions of
         [{Key, 'gt', Value}] -> [Record || Record <- AllRecords,
                                  Record:Key() > Value];
@@ -88,34 +89,25 @@ incr(_Conn, _Id, _Count) ->
     {error, notimplemented}.
 
 
-delete(Conn, Id) ->
+delete(_, Id) ->
     {_Type, Bucket, Key} = infer_type_from_id(Id),
-    riakc_pb_socket:delete(Conn, Bucket, Key).
+    ok = riakpool_client:delete(Bucket, Key).
 
-save_record(Conn, Record) ->
+save_record(_, Record) ->
     Type = element(1, Record),
     Bucket = type_to_bucket_name(Type),
     PropList = [{K, V} || {K, V} <- Record:attributes(), K =/= id],
-    {Key, Object} = case Record:id() of
+    Key = case Record:id() of
         id ->
             % TODO: The next release of Riak will support server-side ID
             %       generating. Get rid of unique_id_62/0.
-            NewKey = unique_id_62(),
-            {NewKey, riakc_obj:new(list_to_binary(Bucket), list_to_binary(NewKey),
-                                   term_to_binary(PropList))};
+            unique_id_62();
         DefinedId when is_list(DefinedId) ->
             [_, DefinedKey] = string:tokens(DefinedId, "-"),
-            case riakc_pb_socket:get(Conn, Bucket, DefinedKey) of
-                {ok, ExistingObj} ->
-                    UpdatedObj = riakc_obj:update_value(ExistingObj,
-                                                      term_to_binary(PropList)),
-                    {DefinedKey, UpdatedObj};
-                {error, notfound} ->
-                    {DefinedKey, riakc_obj:new(list_to_binary(Bucket),
-                              list_to_binary(DefinedKey), term_to_binary(PropList))}
-            end
+            DefinedKey
     end,
-    riakc_pb_socket:put(Conn, Object),
+    ok = riakpool_client:put(list_to_binary(Bucket), list_to_binary(Key),
+                             term_to_binary(PropList)),
     {ok, Record:id(atom_to_list(Type) ++ "-" ++ Key)}.
 
 % These 2 functions are not part of the behaviour but are required for
