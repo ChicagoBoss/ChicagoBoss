@@ -2,11 +2,11 @@
 PREFIX:=../
 DEST:=$(PREFIX)$(PROJECT)
 ERL=erl
-REBAR=./rebar
+REBAR=./rebar -v
 DB_CONFIG_DIR=src/boss/db_adapters/test_config
 SESSION_CONFIG_DIR=src/boss/session_adapters/test_config
 
-all: deps
+all:
 	@$(REBAR) compile
 
 clean:
@@ -18,9 +18,6 @@ edoc:
 
 app:
 	@$(REBAR) create template=skel dest=$(DEST) src=$(PWD) appid=$(PROJECT)
-
-deps:
-	@$(REBAR) get-deps
 
 mongodb:
 	$(ERL) -make
@@ -45,4 +42,4 @@ test_session_mnesia:
 	$(ERL) -pa ebin -run boss_session_test start -config $(SESSION_CONFIG_DIR)/mnesia -noshell
 
 test_db_riak:
-	$(ERL) -pa ebin -pa deps/*/ebin -run boss_db_test start -config $(DB_CONFIG_DIR)/riak -noshell
+	$(ERL) -pa ebin -run boss_db_test start -config $(DB_CONFIG_DIR)/riak -noshell

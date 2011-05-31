@@ -2,3 +2,5 @@ ebin/*.beam
 ebin/boss.app
 src/aleppo/aleppo_parser.erl
 src/erlydtl/erlydtl_parser.erl
+src/protobuffs/protobuffs_parser.erl
+src/protobuffs/protobuffs_scanner.erl
