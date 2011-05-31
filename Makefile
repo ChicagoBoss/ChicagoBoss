@@ -2,7 +2,7 @@
 PREFIX:=../
 DEST:=$(PREFIX)$(PROJECT)
 ERL=erl
-REBAR=./rebar -v
+REBAR=./rebar
 DB_CONFIG_DIR=src/boss/db_adapters/test_config
 SESSION_CONFIG_DIR=src/boss/session_adapters/test_config
 
