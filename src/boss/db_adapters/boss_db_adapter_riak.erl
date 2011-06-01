@@ -103,8 +103,8 @@ save_record(_, Record) ->
             %       generating. Get rid of unique_id_62/0.
             unique_id_62();
         DefinedId when is_list(DefinedId) ->
-            [_, DefinedKey] = string:tokens(DefinedId, "-"),
-            DefinedKey
+            [_ | Tail] = string:tokens(DefinedId, "-"),
+            string:join(Tail, "-")
     end,
     ok = riakpool_client:put(list_to_binary(Bucket), list_to_binary(Key),
                              term_to_binary(PropList)),
@@ -119,7 +119,8 @@ pop(_Conn, _Depth) -> ok.
 % Internal functions
 
 infer_type_from_id(Id) when is_list(Id) ->
-    [Type, BossId] = string:tokens(Id, "-"),
+    [Type | Tail] = string:tokens(Id, "-"),
+    BossId = string:join(Tail, "-"),
     {list_to_atom(Type), type_to_bucket(Type), list_to_binary(BossId)}.
 
 % Find bucket name from Boss type
