@@ -35,9 +35,18 @@
         <li><code>ets</code> (default)</li>
         <li><code>mnesia</code></li>
     </ul>
-    <li><code>session_key</code>: Cookie key for sessions. Defaults to "_boss_session"</li>
-    <li><code>session_exp_time</code>: Expiration time for the session cookie. Defaults to 525600</li>	
-    <li><code>session_mnesia_nodes</code>: (optional, Mnesia sessions only) - List of Mnesia nodes, defaults to node()</li>
+    <li><code>session_key</code> - Cookie key for sessions. Defaults to "_boss_session"</li>
+    <li><code>session_exp_time</code> - Expiration time for the session cookie. Defaults to 525600</li>	
+    <li><code>session_mnesia_nodes</code> (optional, Mnesia sessions only) - List of Mnesia nodes, defaults to node()</li>
+    <li><code>smtp_server_enable</code> - Enable the SMTP server for incoming mail</li>
+    <li><code>smtp_server_address</code> - The address that the SMTP server should bind to. Defaults to <code>{0, 0, 0, 0}</code> (all interfaces).</li>
+    <li><code>smtp_server_domain</code> - The domain name of the SMTP server</li>
+    <li><code>smtp_server_port</code> - The port that the SMTP server should listen on. Defaults to 25.</li>
+    <li><code>smtp_server_protocol</code> - The protocol that the SMTP server should use. Valid values are:</li>
+    <ul>
+        <li><code>tcp</code> (default)</li>
+        <li><code>ssl</code> (default)</li>
+    </ul>
 </ul>
 <p><b>Warning:</b> From 0.5.2, the frontpage, default_action and default_actions configuration options has been moved to the <a href="api-controller.html#routes">new routing system</a></p>
 {% endblock %}

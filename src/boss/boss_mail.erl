@@ -12,9 +12,11 @@ send(Action, Args) ->
     Result = apply(mail_controller, Action, Args),
     case Result of
         {ok, FromAddress, ToAddress, HeaderFields} ->
-            send_message(FromAddress, ToAddress, Action, HeaderFields, []);
+            send_message(FromAddress, ToAddress, Action, HeaderFields, [], []);
         {ok, FromAddress, ToAddress, HeaderFields, Variables} -> 
-            send_message(FromAddress, ToAddress, Action, HeaderFields, Variables);
+            send_message(FromAddress, ToAddress, Action, HeaderFields, Variables, []);
+        {ok, FromAddress, ToAddress, HeaderFields, Variables, Attachments} -> 
+            send_message(FromAddress, ToAddress, Action, HeaderFields, Variables, Attachments);
         nevermind ->
             ok
     end.
@@ -29,13 +31,13 @@ send(FromAddress, ToAddress, Subject, Body) ->
             {"From", FromAddress}], "text/plain"), 
     gen_server:call(boss_mail, {deliver, FromAddress, ToAddress, fun() -> [MessageHeader, "\r\n", Body] end}).
 
-send_message(FromAddress, ToAddress, Action, HeaderFields, Variables) ->
-    BodyFun = fun() -> build_message(Action, HeaderFields, Variables) end,
+send_message(FromAddress, ToAddress, Action, HeaderFields, Variables, Attachments) ->
+    BodyFun = fun() -> build_message(Action, HeaderFields, Variables, Attachments) end,
     gen_server:call(boss_mail, {deliver, FromAddress, ToAddress, BodyFun}).
 
-build_message(Action, HeaderFields, Variables) ->
+build_message(Action, HeaderFields, Variables, Attachments) ->
     ContentLanguage = proplists:get_value("Content-Language", HeaderFields),
-    {MimeType, MessageBody} = build_message_body(Action, Variables, ContentLanguage),
+    {MimeType, MessageBody} = build_message_body_attachments(Action, Variables, Attachments, ContentLanguage),
     MessageHeader = build_message_header(HeaderFields, MimeType),
     [MessageHeader, "\r\n", MessageBody].
 
@@ -61,6 +63,14 @@ add_fields([Field|Rest], HeaderFields, Acc) ->
         Value ->
             add_fields(Rest, HeaderFields, [Field, ": ", Value, "\r\n" | Acc])
     end.
+
+build_message_body_attachments(Action, Variables, [], ContentLanguage) ->
+    build_message_body(Action, Variables, ContentLanguage);
+build_message_body_attachments(Action, Variables, Attachments, ContentLanguage) ->
+    Boundary = smtp_util:generate_message_boundary(),
+    {MimeType, MessageBody} = build_message_body(Action, Variables, ContentLanguage),
+    {"multipart/mixed; boundary=\""++Boundary++"\"",
+        render_multipart_view([{MimeType, MessageBody}|Attachments], Boundary)}.
 
 build_message_body(Action, Variables, ContentLanguage) ->
     HtmlResult = render_view({Action, "html"}, Variables, ContentLanguage),
@@ -90,7 +100,7 @@ render_view({Action, Extension}, Variables, ContentLanguage) ->
         true ->
             {ok, ViewModule} = boss_load:load_view_if_dev(ViewPath),
             TranslationFun = boss_translator:fun_for(ContentLanguage),
-            ViewModule:render(Variables, TranslationFun);
+            ViewModule:render([{"_lang", ContentLanguage}|Variables], TranslationFun);
         _ ->
             undefined
     end.
@@ -101,6 +111,25 @@ render_multipart_view(Parts, Boundary) ->
 
 render_multipart_view1([], Boundary) ->
     ["--", Boundary, "--"];
+render_multipart_view1([{FileName, MimeType, Body}|Rest], Boundary) ->
+    ["--", Boundary, 
+        "\r\n", "Content-Type: ", MimeType, 
+        "\r\n", "Content-Disposition: attachment; filename=", FileName, 
+        "\r\n", "Content-Transfer-Encoding: base64",
+        "\r\n\r\n",
+        wrap_to_76(base64:encode(erlang:iolist_to_binary(Body))), "\r\n", render_multipart_view1(Rest, Boundary)];
 render_multipart_view1([{MimeType, Body}|Rest], Boundary) ->
     ["--", Boundary, "\r\n", "Content-Type: ", MimeType, "\r\n\r\n",
         Body, "\r\n", render_multipart_view1(Rest, Boundary)].
+
+
+wrap_to_76(String) ->
+    [wrap_to_76(String, [])].
+
+wrap_to_76(<<>>, Acc) ->
+    list_to_binary(lists:reverse(Acc));
+wrap_to_76(<<Head:76/binary, Tail/binary>>, Acc) ->
+    wrap_to_76(Tail, [<<"\r\n">>, Head | Acc]);
+wrap_to_76(Head, Acc) ->
+    list_to_binary(lists:reverse([<<"\r\n">>, Head | Acc])).
+

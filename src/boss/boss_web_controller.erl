@@ -33,6 +33,18 @@ start(Config) ->
         {ok, mochiweb} -> {mochiweb_http, mochiweb_request_bridge, mochiweb_response_bridge};
         _ -> {misultin, misultin_request_bridge, misultin_response_bridge}
     end,
+    case application:get_env(smtp_server_enable) of
+        {ok, true} ->
+            Options = [
+                {domain, get_env(smtp_server_domain, "localhost")},
+                {address, get_env(smtp_server_address, {0, 0, 0, 0})},
+                {port, get_env(smtp_server_port, 25)},
+                {protocol, get_env(smtp_server_protocol, tcp)},
+                {sessionoptions, [{boss_env, Env}]}],
+            gen_smtp_server:start({global, boss_smtp_server}, boss_smtp_server, [Options]);
+        _ ->
+            ok
+    end,
     ServerConfig = [{loop, fun(Req) -> ?MODULE:handle_request(Req, RequestMod, ResponseMod) end} | Config],
     case ServerMod of
         mochiweb_http -> mochiweb_http:start(ServerConfig);
@@ -44,6 +56,7 @@ stop() ->
     boss_news:stop(),
     boss_mq:stop(),
     boss_session:stop(),
+    gen_smtp_server:stop({global, boss_smtp_server}),
     boss_db:stop(),
     mochiweb_http:stop(),
     misultin:stop().
