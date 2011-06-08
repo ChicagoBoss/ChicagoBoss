@@ -16,7 +16,7 @@ add(Req, Type, Title, Message) ->
 	Msg = [{method, atom_to_list(Type)}, {title, Title}, {message, Message}],
     Flash = case boss_session:get_session_data(Req, boss_flash) of
 		undefined ->
-		    Msg;
+		    [Msg];
 		ExistingFlash ->
 		    [Msg|ExistingFlash]
 	    end,
