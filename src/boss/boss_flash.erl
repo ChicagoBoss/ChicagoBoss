@@ -6,7 +6,7 @@ get_and_clear(Req) ->
 		undefined -> [];
 		BossFlash ->
 			boss_session:remove_session_data(Req, boss_flash),
-			[{boss_flash, BossFlash}]
+			[{boss_flash, lists:reverse(BossFlash)}]
 	end.
 
 add(Req, Type, Title) ->
