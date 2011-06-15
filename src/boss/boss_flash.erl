@@ -6,7 +6,7 @@ get_and_clear(Req) ->
 		undefined -> [];
 		BossFlash ->
 			boss_session:remove_session_data(Req, boss_flash),
-			[{boss_flash, BossFlash}]
+			[{boss_flash, lists:reverse(BossFlash)}]
 	end.
 
 add(Req, Type, Title) ->
@@ -16,7 +16,7 @@ add(Req, Type, Title, Message) ->
 	Msg = [{method, atom_to_list(Type)}, {title, Title}, {message, Message}],
     Flash = case boss_session:get_session_data(Req, boss_flash) of
 		undefined ->
-		    Msg;
+		    [Msg];
 		ExistingFlash ->
 		    [Msg|ExistingFlash]
 	    end,
