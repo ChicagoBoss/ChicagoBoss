@@ -36,7 +36,7 @@
 {file, "skel/admin/view/routes.html", "{{dest}}/admin/view/routes.html"}.
 {file, "skel/admin/view/upgrade.html", "{{dest}}/admin/view/upgrade.html"}.
 {file, "skel/controller/hello_controller.erl", "{{dest}}/controller/hello_controller.erl"}.
-{file, "skel/mail/mail_controller.erl", "{{dest}}/mail/mail_controller.erl"}.
+{file, "skel/mail/outgoing_mail_controller.erl", "{{dest}}/mail/outgoing_mail_controller.erl"}.
 {file, "skel/mail/incoming_mail_controller.erl", "{{dest}}/mail/incoming_mail_controller.erl"}.
 {file, "skel/mail/view/test_message.html", "{{dest}}/mail/view/test_message.html"}.
 {file, "skel/mail/view/test_message.txt", "{{dest}}/mail/view/test_message.txt"}.

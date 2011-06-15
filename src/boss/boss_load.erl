@@ -184,10 +184,21 @@ load_view_if_old(ViewPath, Module) ->
 
 load_view_if_dev(ViewPath) ->
     Module = view_module(ViewPath),
-    case boss_env() of
+    Result = case boss_env() of
         production -> {ok, Module};
         testing -> {ok, Module};
         _ -> load_view_if_old(ViewPath, Module)
+    end,
+    case Result of
+        {ok, Module} ->
+            case module_is_loaded(Module) of
+                true ->
+                    {ok, Module};
+                false ->
+                    {error, not_found}
+            end;
+        Other ->
+            Other
     end.
 
 module_is_loaded(Module) ->

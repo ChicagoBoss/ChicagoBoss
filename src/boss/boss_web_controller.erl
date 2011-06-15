@@ -112,7 +112,7 @@ process_result({error, Payload}) ->
     error_logger:error_report(Payload),
     {500, [{"Content-Type", "text/html"}], "Error: <pre>" ++ io_lib:print(Payload) ++ "</pre>"};
 process_result({not_found, Payload}) ->
-    {404, [{"Content-Type", "text/html"}], Payload};
+    {404, [{"Content-Type", "text/html"}], unicode:characters_to_binary(Payload)};
 process_result({redirect, Where}) ->
     process_result({redirect, Where, []});
 process_result({redirect, "http://"++Where, Headers}) ->
@@ -121,7 +121,7 @@ process_result({redirect, Where, Headers}) ->
     {302, [{"Location", Where}, {"Cache-Control", "no-cache"}|Headers], ""};
 process_result({ok, Payload, Headers}) ->
     {200, [{"Content-Type", proplists:get_value("Content-Type", Headers, "text/html")}
-            |proplists:delete("Content-Type", Headers)], Payload}.
+            |proplists:delete("Content-Type", Headers)], unicode:characters_to_binary(Payload)}.
 
 trap_load_and_execute(Arg1, Arg2) ->
     case catch load_and_execute(Arg1, Arg2) of
@@ -298,6 +298,10 @@ render_view({Controller, Template, _}, Req, Variables, Headers) ->
                 Err ->
                     Err
             end;
+        {error, not_found} ->
+            {not_found, "The requested template was not found."};
+        {error, {_File, [{0, _Module, "Failed to read file"}]}} ->
+            {not_found, "The requested template was not found."};
         {error, Error}-> 
             render_errors([Error], Req)
     end.

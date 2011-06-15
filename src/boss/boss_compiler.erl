@@ -168,6 +168,8 @@ transform_char(8869) -> % ⊥
     {ok, ",'contains_none',"};
 transform_char(10178) -> % ⊥ look-alike
     {ok, ",'contains_none',"};
+transform_char(Char) when Char > 127 ->
+    {ok, lists:flatten(io_lib:format("\\x{~.16B}", [Char]))};
 transform_char(_) ->
     error.
 

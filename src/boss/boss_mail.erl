@@ -9,7 +9,7 @@ stop() ->
 
 send(Action, Args) ->
     boss_load:load_mail_controllers(),
-    Result = apply(mail_controller, Action, Args),
+    Result = apply(outgoing_mail_controller, Action, Args),
     case Result of
         {ok, FromAddress, ToAddress, HeaderFields} ->
             send_message(FromAddress, ToAddress, Action, HeaderFields, [], []);

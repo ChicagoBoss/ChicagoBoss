@@ -111,11 +111,11 @@ compile_dir(Dir, Module) ->
 
 compile_dir(Dir, Module, Options) ->
     Context = init_dtl_context_dir(Dir, Module, Options),
-	Files = filelib:fold_files(Dir, ".*", true, fun(F1,Acc1) -> [F1 | Acc1] end, []),
+    Files = filelib:fold_files(Dir, ".*", true, fun(F1,Acc1) -> [F1 | Acc1] end, []),
     {ParserResults, ParserErrors} = lists:foldl(fun
             ("."++_, Acc) -> Acc;
             (FilePath, {ResultAcc, ErrorAcc}) ->
-				File = filename:basename(FilePath),
+                File = filename:basename(FilePath),
                 case parse(FilePath, Context) of
                     ok -> {ResultAcc, ErrorAcc};
                     {ok, DjangoParseTree, CheckSum} -> {[{File, DjangoParseTree, CheckSum}|ResultAcc], ErrorAcc};
@@ -296,7 +296,7 @@ parse(CheckSum, Data, Context) ->
     end.
 
 parse(Data) ->
-    case erlydtl_scanner:scan(binary_to_list(Data)) of
+    case erlydtl_scanner:scan(unicode:characters_to_list(Data)) of
         {ok, Tokens} ->
             erlydtl_parser:parse(Tokens);
         Err ->
@@ -366,7 +366,7 @@ custom_forms(Dir, Module, Functions, AstInfo) ->
     FunctionAsts = lists:foldl(fun({_, Function1, Function2}, Acc) -> [Function1, Function2 | Acc] end, [], Functions),
 
     [erl_syntax:revert(X) || X <- [ModuleAst, ExportAst, SourceFunctionAst, DependenciesFunctionAst, TranslatableStringsFunctionAst
-            | FunctionAsts]].
+            | FunctionAsts] ++ AstInfo#ast_info.pre_render_asts].
 
 forms(File, Module, {BodyAst, BodyInfo}, {CustomTagsFunctionAst, CustomTagsInfo}, CheckSum) ->
     MergedInfo = merge_info(BodyInfo, CustomTagsInfo),

@@ -20,11 +20,11 @@
 
 <h2>Sending email with templates</h2>
 <p>If the simple method doesn't meet your needs, Chicago Boss provides a way to send email using controllers and views.</p>
-<p>Mail controller logic should go into <code>mail/mail_controller.erl</code> in your project directory, and templates should go into <code>mail/view/</code>. To send an email from a web controller, call:</p>
+<p>Mail controller logic should go into <code>mail/outgoing_mail_controller.erl</code> in your project directory, and templates should go into <code>mail/view/</code>. To send an email from a web controller, call:</p>
 <div class="code">
     boss_mail:send(foo_message, [Arg1, Arg2, ...])
 </div>
-<p>That will invoke <code>mail_controller:foo_message(Arg1, Arg2, ...)</code> and use the return value to populate the templates <code>mail/view/foo_message.txt</code> and <code>mail/view/foo_message.html</code>, then send the email in a background process. Your mail controller function should return:</div>
+<p>That will invoke <code>outgoing_mail_controller:foo_message(Arg1, Arg2, ...)</code> and use the return value to populate the templates <code>mail/view/foo_message.txt</code> and <code>mail/view/foo_message.html</code>, then send the email in a background process. Your mail controller function should return:</div>
 <div class="code">
     {ok, FromAddress, ToAddress, HeaderFields} | <br />
     {ok, FromAddress, ToAddress, HeaderFields, Variables} | <br />
