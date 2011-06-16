@@ -7,7 +7,7 @@ DB_CONFIG_DIR=src/boss/db_adapters/test_config
 SESSION_CONFIG_DIR=src/boss/session_adapters/test_config
 
 all:
-	@$(REBAR) compile
+	@$(REBAR) compile skip_deps=true
 
 clean:
 	@$(REBAR) clean
@@ -17,10 +17,16 @@ edoc:
 #$(ERL) -pa ebin -noshell -eval "boss_doc:run()" -s init stop
 
 app:
-	@$(REBAR) create template=skel dest=$(DEST) src=$(PWD) appid=$(PROJECT)
+	@$(REBAR) create template=skel dest=$(DEST) src=$(PWD) appid=$(PROJECT) skip_deps=true
+
+deps:
+	@$(REBAR) get-deps
 
 mongodb:
 	$(ERL) -make
+
+riak:
+	@$(REBAR) compile
 
 test_db_mock:
 	$(ERL) -pa ebin -run boss_db_test start -config $(DB_CONFIG_DIR)/mock -noshell
@@ -42,4 +48,4 @@ test_session_mnesia:
 	$(ERL) -pa ebin -run boss_session_test start -config $(SESSION_CONFIG_DIR)/mnesia -noshell
 
 test_db_riak:
-	$(ERL) -pa ebin -run boss_db_test start -config $(DB_CONFIG_DIR)/riak -noshell
+	$(ERL) -pa ebin -pa deps/*/ebin -run boss_db_test start -config $(DB_CONFIG_DIR)/riak -noshell

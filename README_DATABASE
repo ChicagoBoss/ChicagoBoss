@@ -72,7 +72,11 @@ Riak is a NoSQL database developed by Basho Technologies.
 
 2. Start a Riak node with `sudo riak start`
 
-3. Open up boss.config and set db_adapter to riak.
+3. In this directory, type
+
+   make riak
+
+4. Open up boss.config and set db_adapter to riak.
 
 The current implementation of the Riak adapter supports only simple CRUD
 operations: Type:new, BossRecord:save/0, boss_db:delete/1, boss_db:find/1.
