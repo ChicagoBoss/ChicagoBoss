@@ -65,7 +65,7 @@ handle_call({watch_set, TopicString, CallBack}, _From, State) ->
     end,
     {reply, RetVal, NewState};
 handle_call({created, Id, Attrs}, _From, State) ->
-    [Module, _IdNum] = re:split(Id, "-", [{return, list}]),
+    [Module | _IdNum] = re:split(Id, "-", [{return, list}]),
     Models = boss_files:model_list(),
     RetVal = case lists:member(Module, Models) of
         false ->
@@ -81,7 +81,7 @@ handle_call({created, Id, Attrs}, _From, State) ->
     end,
     {reply, RetVal, State};
 handle_call({deleted, Id, OldAttrs}, _From, State) ->
-    [Module, _IdNum] = re:split(Id, "-", [{return, list}]),
+    [Module | _IdNum] = re:split(Id, "-", [{return, list}]),
     Models = boss_files:model_list(),
     RetVal = case lists:member(Module, Models) of
         false ->
@@ -96,7 +96,7 @@ handle_call({deleted, Id, OldAttrs}, _From, State) ->
     end,
     {reply, RetVal, State};
 handle_call({updated, Id, OldAttrs, NewAttrs}, _From, State) ->
-    [Module, _IdNum] = re:split(Id, "-", [{return, list}]),
+    [Module | _IdNum] = re:split(Id, "-", [{return, list}]),
     Models = boss_files:model_list(),
     RetVal = case lists:member(Module, Models) of
         false ->
@@ -149,7 +149,7 @@ handle_info(_Info, State) ->
 
 
 activate_record(Id, Attrs) ->
-    [Module, _IdNum] = re:split(Id, "-", [{return, list}]),
+    [Module | _IdNum] = re:split(Id, "-", [{return, list}]),
     Type = list_to_atom(Module),
     DummyRecord = apply(Type, new, lists:seq(1, proplists:get_value(new, Type:module_info(exports)))),
     apply(Type, new, lists:map(fun
