@@ -74,6 +74,7 @@ Riak is a NoSQL database developed by Basho Technologies.
 
 3. In this directory, type
 
+   make deps
    make riak
 
 4. Open up boss.config and set db_adapter to riak.

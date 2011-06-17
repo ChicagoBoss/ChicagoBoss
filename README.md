@@ -1,17 +1,26 @@
-Getting Started With Chicago Boss
+Chicago Boss: Build Something Big
 =================================
 
-Quickstart
-----------
+Chicago Boss is a server framework inspired by Rails and written in Erlang. It
+offers all the conveniences of modern web development, including Comet. What sets
+Chicago Boss apart from other non-Erlang frameworks is that it can handle large
+amounts of traffic without any drop in performance. What sets Chicago Boss apart
+from other Erlang frameworks is that it doesn't suck.
+
+
+60-second Quickstart
+--------------------
+
+After downloading and extracting, type
 
     make
     make app PROJECT=mynewproject
     cd ../mynewproject
     ./start-dev.sh
 
-Then visit http://localhost:8001/ in your browser.
-
-There will be a lot of PROGRESS REPORTs but everything should be running smoothly.
+Then visit http://localhost:8001/ in your browser. Congratulations, you have
+a web server. There will be a lot of PROGRESS REPORTs on your console but
+everything should be running smoothly.
 
 
 Dependencies
@@ -33,13 +42,14 @@ Dependencies
 Upgrades
 --------
 
-See README_UPGRADE
+Uprading used to be a pain but now it is easy. See README_UPGRADE
 
 
 Database Setup
 --------------
 
-See README_DATABASE
+By default CB uses an in-memory database that needs no configuration. To start
+working with an actual database, See README_DATABASE
 
 
 Developer Documentation
