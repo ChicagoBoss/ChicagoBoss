@@ -184,7 +184,7 @@ load_view_if_old(ViewPath, Module) ->
 
 load_view_if_dev(ViewPath) ->
     Module = view_module(ViewPath),
-    Result = case boss_env() of
+    Result = case boss_env:boss_env() of
         production -> {ok, Module};
         testing -> {ok, Module};
         _ -> load_view_if_old(ViewPath, Module)
@@ -245,14 +245,3 @@ view_module(ViewPath) ->
     ModuleIOList = re:replace(Lc, "\\.", "_", [global]),
     list_to_atom(binary_to_list(iolist_to_binary(ModuleIOList))).
 
-boss_env() ->
-    case get(boss_environment) of
-        undefined -> setup_boss_env();
-        Val -> Val
-    end.
-
-setup_boss_env() ->	
-    case boss_load:module_is_loaded(reloader) of
-        true -> put(boss_environment, development), development;
-        false -> put(boss_environment, production), production
-    end.			

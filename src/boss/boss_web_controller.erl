@@ -6,13 +6,13 @@ start() ->
     start([]).
 
 start(Config) ->
-    LogDir = get_env(log_dir, "log"),
+    LogDir = boss_env:get_env(log_dir, "log"),
     LogFile = make_log_file_name(LogDir),
     ok = error_logger:logfile({open, LogFile}),
     %ok = error_logger:tty(false),
     ok = make_log_file_symlink(LogFile),
 
-    Env = boss_load:setup_boss_env(),
+    Env = boss_env:setup_boss_env(),
     error_logger:info_msg("Starting Boss in ~p mode....~n", [Env]),
 	
     boss_router:initialize(),
@@ -25,7 +25,7 @@ start(Config) ->
 
     boss_news:start(),
 	
-    MailDriver = get_env(mail_driver, boss_mail_driver_smtp),
+    MailDriver = boss_env:get_env(mail_driver, boss_mail_driver_smtp),
     boss_mail:start([{driver, MailDriver}]),
 
     boss_translator:start(),
@@ -36,10 +36,10 @@ start(Config) ->
     case application:get_env(smtp_server_enable) of
         {ok, true} ->
             Options = [
-                {domain, get_env(smtp_server_domain, "localhost")},
-                {address, get_env(smtp_server_address, {0, 0, 0, 0})},
-                {port, get_env(smtp_server_port, 25)},
-                {protocol, get_env(smtp_server_protocol, tcp)},
+                {domain, boss_env:get_env(smtp_server_domain, "localhost")},
+                {address, boss_env:get_env(smtp_server_address, {0, 0, 0, 0})},
+                {port, boss_env:get_env(smtp_server_port, 25)},
+                {protocol, boss_env:get_env(smtp_server_protocol, tcp)},
                 {sessionoptions, [{boss_env, Env}]}],
             gen_smtp_server:start({global, boss_smtp_server}, boss_smtp_server, [Options]);
         _ ->
@@ -101,12 +101,6 @@ process_request(Req) ->
             Else
     end,
     process_result(Result).
-
-get_env(Key, Default) when is_atom(Key) ->
-    case application:get_env(Key) of
-        {ok, Val} -> Val;
-        _ -> Default
-    end.
 
 process_result({error, Payload}) ->
     error_logger:error_report(Payload),
@@ -307,10 +301,10 @@ render_view({Controller, Template, _}, Req, Variables, Headers) ->
     end.
 
 choose_translation_fun(_, undefined, undefined) ->
-    DefaultLang = get_env(assume_locale, "en"),
+    DefaultLang = boss_env:get_env(assume_locale, "en"),
     {DefaultLang, none};
 choose_translation_fun(Strings, AcceptLanguages, undefined) ->
-    DefaultLang = get_env(assume_locale, "en"),
+    DefaultLang = boss_env:get_env(assume_locale, "en"),
     case mochiweb_util:parse_qvalues(AcceptLanguages) of
         invalid_qvalue_string ->
             {DefaultLang, none};
@@ -330,7 +324,7 @@ choose_language_from_qvalues(Strings, QValues) ->
     % calculating translation coverage is costly so we start with the most preferred
     % languages and work our way down
     SortedQValues = lists:reverse(lists:keysort(2, QValues)),
-    AssumedLocale = get_env(assume_locale, "en"),
+    AssumedLocale = boss_env:get_env(assume_locale, "en"),
     AssumedLocaleQValue = proplists:get_value(AssumedLocale, SortedQValues, 0.0),
     lists:foldl(
         fun
