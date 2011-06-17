@@ -13,7 +13,7 @@ start(Options) ->
     DBUsername = proplists:get_value(db_username, Options, "guest"),
     DBPassword = proplists:get_value(db_password, Options, ""),
     DBDatabase = proplists:get_value(db_database, Options, "test"),
-    mysql:start(boss_pool, DBHost, DBPort, DBUsername, DBPassword, DBDatabase, undefined, utf8),
+    mysql:start(boss_pool, DBHost, DBPort, DBUsername, DBPassword, DBDatabase, fun(_, _, _, _) -> ok end, utf8),
     {ok, boss_pool}.
 
 stop(_Pid) -> ok.
