@@ -126,7 +126,7 @@ trap_load_and_execute(Arg1, Arg2) ->
     end.
 
 load_and_execute(Location, Req) ->
-    case boss_load:boss_env() of
+    case boss_env:boss_env() of
         production -> load_and_execute_prod(Location, Req);
         testing -> load_and_execute_dev(Location, Req);
         _ -> load_and_execute_dev(Location, Req)
