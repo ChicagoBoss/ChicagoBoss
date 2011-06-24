@@ -483,8 +483,8 @@ body_ast(DjangoParseTree, Context, TreeWalker) ->
                     _ -> Contents
                 end,
                 body_ast(Block, Context, TreeWalkerAcc);
-            ({'blocktrans', {identifier, _, Name}, Contents}, TreeWalkerAcc) ->
-                blocktrans_ast(Name, Contents, Context, TreeWalkerAcc);
+            ({'blocktrans', {identifier, _, Name}, Args, Contents}, TreeWalkerAcc) ->
+                blocktrans_ast(Name, Args, Contents, Context, TreeWalkerAcc);
             ({'call', {'identifier', _, Name}}, TreeWalkerAcc) ->
             	call_ast(Name, TreeWalkerAcc);
             ({'call', {'identifier', _, Name}, With}, TreeWalkerAcc) ->
@@ -654,23 +654,30 @@ with_dependency(FilePath, {{Ast, Info}, TreeWalker}) ->
 empty_ast(TreeWalker) ->
     {{erl_syntax:list([]), #ast_info{}}, TreeWalker}.
 
-blocktrans_ast(Name, Contents, Context, TreeWalker) ->
+blocktrans_ast(Name, ArgList, Contents, Context, TreeWalker) ->
+    {NewScope, {ArgInfo, TreeWalker1}} = lists:mapfoldl(fun
+            ({{identifier, _, LocalVarName}, Value}, {AstInfo1, TreeWalker1}) ->
+                {{Ast, Info}, TreeWalker2} = value_ast(Value, false, Context, TreeWalker1),
+                {{LocalVarName, Ast}, {merge_info(AstInfo1, Info), TreeWalker2}}
+        end, {#ast_info{}, TreeWalker}, ArgList),
+    NewContext = Context#dtl_context{ local_scopes = [NewScope|Context#dtl_context.local_scopes] },
+    {{DefaultAst, AstInfo}, TreeWalker2} = body_ast(Contents, NewContext, TreeWalker1),
+    MergedInfo = merge_info(AstInfo, ArgInfo),
     case Context#dtl_context.blocktrans_fun of
         none ->
-            body_ast(Contents, Context, TreeWalker);
+            {{DefaultAst, MergedInfo}, TreeWalker2};
         BlockTransFun when is_function(BlockTransFun) ->
-            {{DefaultAst, AstInfo}, TreeWalker1} = body_ast(Contents, Context, TreeWalker),
             {FinalAstInfo, FinalTreeWalker, Clauses} = lists:foldr(fun(Locale, {AstInfoAcc, ThisTreeWalker, ClauseAcc}) ->
                         case BlockTransFun(Name, Locale) of
                             default ->
                                 {AstInfoAcc, ThisTreeWalker, ClauseAcc};
                             Body ->
                                 {ok, DjangoParseTree} = parse(Body),
-                                {{ThisAst, ThisAstInfo}, TreeWalker2} = body_ast(DjangoParseTree, Context, ThisTreeWalker),
-                                {merge_info(ThisAstInfo, AstInfoAcc), TreeWalker2, 
+                                {{ThisAst, ThisAstInfo}, TreeWalker3} = body_ast(DjangoParseTree, NewContext, ThisTreeWalker),
+                                {merge_info(ThisAstInfo, AstInfoAcc), TreeWalker3, 
                                     [erl_syntax:clause([erl_syntax:string(Locale)], none, [ThisAst])|ClauseAcc]}
                         end
-                end, {AstInfo, TreeWalker1, []}, Context#dtl_context.blocktrans_locales),
+                end, {MergedInfo, TreeWalker2, []}, Context#dtl_context.blocktrans_locales),
             Ast = erl_syntax:case_expr(erl_syntax:variable("CurrentLocale"),
                 Clauses ++ [erl_syntax:clause([erl_syntax:underscore()], none, [DefaultAst])]),
             {{Ast, FinalAstInfo}, FinalTreeWalker}

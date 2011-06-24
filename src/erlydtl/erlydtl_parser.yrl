@@ -318,7 +318,8 @@ SpacelessBlock -> open_tag spaceless_keyword close_tag Elements open_tag endspac
 SSITag -> open_tag ssi_keyword Value close_tag : {ssi, '$3'}.
 SSITag -> open_tag ssi_keyword string_literal parsed_keyword close_tag : {ssi_parsed, '$3'}.
 
-BlockTransBlock -> open_tag blocktrans_keyword identifier close_tag Elements open_tag endblocktrans_keyword close_tag : {blocktrans, '$3', '$5'}.
+BlockTransBlock -> open_tag blocktrans_keyword identifier close_tag Elements open_tag endblocktrans_keyword close_tag : {blocktrans, '$3', [], '$5'}.
+BlockTransBlock -> open_tag blocktrans_keyword identifier with_keyword Args close_tag Elements open_tag endblocktrans_keyword close_tag : {blocktrans, '$3', '$5', '$7'}.
 
 TemplatetagTag -> open_tag templatetag_keyword Templatetag close_tag : {templatetag, '$3'}.
 
