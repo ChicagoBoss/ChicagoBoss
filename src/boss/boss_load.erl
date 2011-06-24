@@ -126,7 +126,7 @@ compile_view_erlydtl(ViewPath, OutDir) ->
                         undefined -> default;
                         Body -> list_to_binary(Body)
                     end
-            end}, {blocktrans_locales, boss_lang:language_list()}]).
+            end}, {blocktrans_locales, boss_files:language_list()}]).
 
 compile_model(ModulePath, OutDir) ->
     boss_record_compiler:compile(ModulePath, [{out_dir, OutDir}]).
