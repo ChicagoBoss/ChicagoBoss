@@ -50,7 +50,7 @@ extract_view_strings() ->
 
 process_view_file(ViewFile) ->
     {ok, Contents} = file:read_file(ViewFile),
-    {ok, Tokens} = erlydtl_scanner:scan(binary_to_list(Contents)),
+    {ok, Tokens} = erlydtl_scanner:scan(unicode:characters_to_list(Contents)),
     process_view_file_tokens(Tokens, []).
 
 process_view_file_tokens([], Acc) ->

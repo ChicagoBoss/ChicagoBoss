@@ -127,18 +127,19 @@ lang('GET', [Lang], Auth) ->
 		  	{lang_section, true}],
         [{"Cache-Control", "no-cache"}]};
 lang('POST', [Lang|Fmt], Auth) ->
+	WithBlanks = Req:post_param("trans_all_with_blanks"),
     LangFile = boss_files:lang_path(Lang),
     {ok, IODevice} = file:open(LangFile, [write, append]),
     lists:map(fun(Message) ->
                 Original = proplists:get_value("orig", Message),
                 Translation = proplists:get_value("trans", Message),
                 case Translation of
-                    "" -> ok;
-                    _ -> 
-                        file:write(IODevice, 
-                            "\nmsgid \""++boss_lang:escape_quotes(Original)++"\"\n"),
-                        file:write(IODevice, 
-                            "msgstr \""++boss_lang:escape_quotes(Translation)++"\"\n")
+                    "" -> 
+						case WithBlanks of
+							undefined -> ok;
+							_ -> lang_write_to_file(IODevice, Original, Translation)
+						end;
+                    _ -> lang_write_to_file(IODevice, Original, Translation)
                 end
         end, Req:deep_post_param(["messages"])),
     file:close(IODevice),
@@ -147,6 +148,12 @@ lang('POST', [Lang|Fmt], Auth) ->
         ["json"] -> {json, [{success, true}]};
         [] -> {redirect, "/admin/lang/"++Lang}
     end.
+
+lang_write_to_file(IODevice, Original, Translation) ->
+	OriginalEncoded = unicode:characters_to_list(boss_lang:escape_quotes(Original)),
+	TranslationEncoded = unicode:characters_to_list(boss_lang:escape_quotes(Translation)),
+    file:write(IODevice, io_lib:format("\nmsgid \"~ts\"\n",[list_to_binary(OriginalEncoded)])),	   
+	file:write(IODevice, io_lib:format("\msgstr \"~ts\"\n",[list_to_binary(TranslationEncoded)])).
 
 create_lang('GET', [], Auth) ->
     {ok, [{lang_section, true}, {languages, boss_files:language_list()}]};
