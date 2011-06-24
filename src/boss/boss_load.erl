@@ -191,11 +191,9 @@ load_view_if_dev(ViewPath) ->
     end,
     case Result of
         {ok, Module} ->
-            case module_is_loaded(Module) of
-                true ->
-                    {ok, Module};
-                false ->
-                    {error, not_found}
+            case code:ensure_loaded(Module) of
+                {module, Module} -> {ok, Module};
+                _ -> {error, not_found}
             end;
         Other ->
             Other
