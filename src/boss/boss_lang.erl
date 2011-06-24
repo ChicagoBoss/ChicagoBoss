@@ -16,7 +16,12 @@ extract_strings(Lang) ->
     {UntranslatedStrings, PoStrings}.
 
 extract_po_strings(Lang) ->
-    LangFile = boss_files:lang_path(Lang),
+    LangFile = boss_files:lang_strings_path(Lang),
+    Tokens = po_scanner:scan(LangFile),
+    process_po_tokens(Tokens, []).
+
+extract_po_blocks(Lang) ->
+    LangFile = boss_files:lang_blocks_path(Lang),
     Tokens = po_scanner:scan(LangFile),
     process_po_tokens(Tokens, []).
 

@@ -119,7 +119,13 @@ compile_view_dir_erlydtl(LibPath, OutDir) ->
 compile_view_erlydtl(ViewPath, OutDir) ->
     erlydtl_compiler:compile(ViewPath, view_module(ViewPath),
         [{doc_root, view_doc_root(ViewPath)}, {custom_tags_module, ?HELPER_MODULE_NAME},
-            {compiler_options, []}, {out_dir, OutDir}]).
+            {compiler_options, []}, {out_dir, OutDir}, {blocktrans_fun,
+            fun(BlockName, Locale) ->
+                    case boss_translator:lookup(BlockName, Locale) of
+                        undefined -> default;
+                        Body -> list_to_binary(Body)
+                    end
+            end}, {blocktrans_locales, boss_lang:language_list()}]).
 
 compile_model(ModulePath, OutDir) ->
     boss_record_compiler:compile(ModulePath, [{out_dir, OutDir}]).

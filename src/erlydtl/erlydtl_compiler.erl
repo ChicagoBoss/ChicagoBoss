@@ -43,6 +43,8 @@
 -record(dtl_context, {
     local_scopes = [], 
     block_dict = dict:new(), 
+    blocktrans_fun = none,
+    blocktrans_locales = [],
     auto_escape = off, 
     doc_root = "", 
     parse_trail = [],
@@ -58,6 +60,7 @@
 -record(ast_info, {
     dependencies = [],
     translatable_strings = [],
+    translatable_blocks= [],
     custom_tags = [],
     var_names = [],
     pre_render_asts = []}).
@@ -114,12 +117,17 @@ compile_dir(Dir, Module, Options) ->
     Files = filelib:fold_files(Dir, ".*", true, fun(F1,Acc1) -> [F1 | Acc1] end, []),
     {ParserResults, ParserErrors} = lists:foldl(fun
             ("."++_, Acc) -> Acc;
-            (FilePath, {ResultAcc, ErrorAcc}) ->
-                File = filename:basename(FilePath),
-                case parse(FilePath, Context) of
-                    ok -> {ResultAcc, ErrorAcc};
-                    {ok, DjangoParseTree, CheckSum} -> {[{File, DjangoParseTree, CheckSum}|ResultAcc], ErrorAcc};
-                    Err -> {ResultAcc, [Err|ErrorAcc]}
+            (File, {ResultAcc, ErrorAcc}) ->
+                FilePath = filename:join([Dir, File]),
+                case filelib:is_dir(FilePath) of
+                    true ->
+                        {ResultAcc, ErrorAcc};
+                    false ->
+                        case parse(FilePath, Context) of
+                            ok -> {ResultAcc, ErrorAcc};
+                            {ok, DjangoParseTree, CheckSum} -> {[{File, DjangoParseTree, CheckSum}|ResultAcc], ErrorAcc};
+                            Err -> {ResultAcc, [Err|ErrorAcc]}
+                        end
                 end
         end, {[], []}, Files),
     case ParserErrors of
@@ -207,6 +215,8 @@ init_dtl_context(File, Module, Options) ->
         doc_root = proplists:get_value(doc_root, Options, filename:dirname(File)),
         custom_tags_dir = proplists:get_value(custom_tags_dir, Options, filename:join([erlydtl_deps:get_base_dir(), "priv", "custom_tags"])),
         custom_tags_module = proplists:get_value(custom_tags_module, Options, Ctx#dtl_context.custom_tags_module),
+        blocktrans_fun = proplists:get_value(blocktrans_fun, Options, Ctx#dtl_context.blocktrans_fun),
+        blocktrans_locales = proplists:get_value(blocktrans_locales, Options, Ctx#dtl_context.blocktrans_locales),
         vars = proplists:get_value(vars, Options, Ctx#dtl_context.vars), 
         reader = proplists:get_value(reader, Options, Ctx#dtl_context.reader),
         compiler_options = proplists:get_value(compiler_options, Options, Ctx#dtl_context.compiler_options),
@@ -223,6 +233,8 @@ init_dtl_context_dir(Dir, Module, Options) ->
         doc_root = proplists:get_value(doc_root, Options, Dir),
         custom_tags_dir = proplists:get_value(custom_tags_dir, Options, filename:join([erlydtl_deps:get_base_dir(), "priv", "custom_tags"])),
         custom_tags_module = proplists:get_value(custom_tags_module, Options, Module),
+        blocktrans_fun = proplists:get_value(blocktrans_fun, Options, Ctx#dtl_context.blocktrans_fun),
+        blocktrans_locales = proplists:get_value(blocktrans_locales, Options, Ctx#dtl_context.blocktrans_locales),
         vars = proplists:get_value(vars, Options, Ctx#dtl_context.vars), 
         reader = proplists:get_value(reader, Options, Ctx#dtl_context.reader),
         compiler_options = proplists:get_value(compiler_options, Options, Ctx#dtl_context.compiler_options),
@@ -377,16 +389,25 @@ forms(File, Module, {BodyAst, BodyInfo}, {CustomTagsFunctionAst, CustomTagsInfo}
         [erl_syntax:clause([erl_syntax:variable("Variables")], none, 
                 [erl_syntax:application(none,
                         erl_syntax:atom(render),
-                        [erl_syntax:variable("Variables"), erl_syntax:atom(none)])])]),
+                        [erl_syntax:variable("Variables"), erl_syntax:list([])])])]),
     Function2 = erl_syntax:application(none, erl_syntax:atom(render_internal), 
-        [erl_syntax:variable("Variables"), erl_syntax:variable("TranslationFun")]),
+        [erl_syntax:variable("Variables"), 
+            erl_syntax:application(
+                erl_syntax:atom(proplists),
+                erl_syntax:atom(get_value),
+                [erl_syntax:atom(translation_fun), erl_syntax:variable("Options"), erl_syntax:atom(none)]),
+            erl_syntax:application(
+                erl_syntax:atom(proplists),
+                erl_syntax:atom(get_value),
+                [erl_syntax:atom(locale), erl_syntax:variable("Options"), erl_syntax:atom(none)])
+        ]),
     ClauseOk = erl_syntax:clause([erl_syntax:variable("Val")], none,
         [erl_syntax:tuple([erl_syntax:atom(ok), erl_syntax:variable("Val")])]),     
     ClauseCatch = erl_syntax:clause([erl_syntax:variable("Err")], none,
         [erl_syntax:tuple([erl_syntax:atom(error), erl_syntax:variable("Err")])]),            
     Render2FunctionAst = erl_syntax:function(erl_syntax:atom(render),
         [erl_syntax:clause([erl_syntax:variable("Variables"), 
-                    erl_syntax:variable("TranslationFun")], none, 
+                    erl_syntax:variable("Options")], none, 
             [erl_syntax:try_expr([Function2], [ClauseOk], [ClauseCatch])])]),  
      
     SourceFunctionTuple = erl_syntax:tuple(
@@ -406,7 +427,7 @@ forms(File, Module, {BodyAst, BodyInfo}, {CustomTagsFunctionAst, CustomTagsInfo}
 
     RenderInternalFunctionAst = erl_syntax:function(
         erl_syntax:atom(render_internal), 
-        [erl_syntax:clause([erl_syntax:variable("Variables"), erl_syntax:variable("TranslationFun")], none, 
+        [erl_syntax:clause([erl_syntax:variable("Variables"), erl_syntax:variable("TranslationFun"), erl_syntax:variable("CurrentLocale")], none, 
                 [BodyAstTmp])]),   
     
     ModuleAst  = erl_syntax:attribute(erl_syntax:atom(module), [erl_syntax:atom(Module)]),
@@ -462,6 +483,8 @@ body_ast(DjangoParseTree, Context, TreeWalker) ->
                     _ -> Contents
                 end,
                 body_ast(Block, Context, TreeWalkerAcc);
+            ({'blocktrans', {identifier, _, Name}, Contents}, TreeWalkerAcc) ->
+                blocktrans_ast(Name, Contents, Context, TreeWalkerAcc);
             ({'call', {'identifier', _, Name}}, TreeWalkerAcc) ->
             	call_ast(Name, TreeWalkerAcc);
             ({'call', {'identifier', _, Name}, With}, TreeWalkerAcc) ->
@@ -631,6 +654,27 @@ with_dependency(FilePath, {{Ast, Info}, TreeWalker}) ->
 empty_ast(TreeWalker) ->
     {{erl_syntax:list([]), #ast_info{}}, TreeWalker}.
 
+blocktrans_ast(Name, Contents, Context, TreeWalker) ->
+    case Context#dtl_context.blocktrans_fun of
+        none ->
+            body_ast(Contents, Context, TreeWalker);
+        BlockTransFun when is_function(BlockTransFun) ->
+            {{DefaultAst, AstInfo}, TreeWalker1} = body_ast(Contents, Context, TreeWalker),
+            {FinalAstInfo, FinalTreeWalker, Clauses} = lists:foldr(fun(Locale, {AstInfoAcc, ThisTreeWalker, ClauseAcc}) ->
+                        case BlockTransFun(Name, Locale) of
+                            default ->
+                                {AstInfoAcc, ThisTreeWalker, ClauseAcc};
+                            Body ->
+                                {ok, DjangoParseTree} = parse(Body),
+                                {{ThisAst, ThisAstInfo}, TreeWalker2} = body_ast(DjangoParseTree, Context, ThisTreeWalker),
+                                {merge_info(ThisAstInfo, AstInfoAcc), TreeWalker2, 
+                                    [erl_syntax:clause([erl_syntax:string(Locale)], none, [ThisAst])|ClauseAcc]}
+                        end
+                end, {AstInfo, TreeWalker1, []}, Context#dtl_context.blocktrans_locales),
+            Ast = erl_syntax:case_expr(erl_syntax:variable("CurrentLocale"),
+                Clauses ++ [erl_syntax:clause([erl_syntax:underscore()], none, [DefaultAst])]),
+            {{Ast, FinalAstInfo}, FinalTreeWalker}
+    end.
 
 translated_ast({string_literal, _, String}, Context, TreeWalker) ->
     NewStr = unescape_string_literal(String),
@@ -1057,7 +1101,10 @@ call_ast(Module, Variable, AstInfo, TreeWalker) ->
      AppAst = erl_syntax:application(
 		erl_syntax:atom(Module),
 		erl_syntax:atom(render),
-                [Variable, erl_syntax:variable("TranslationFun")]),
+                [Variable, erl_syntax:list([
+                            erl_syntax:tuple([erl_syntax:atom(translation_fun), erl_syntax:variable("TranslationFun")]),
+                            erl_syntax:tuple([erl_syntax:atom(locale), erl_syntax:variable("CurrentLocale")])
+                        ])]),
     RenderedAst = erl_syntax:variable("Rendered"),
     OkAst = erl_syntax:clause(
 	      [erl_syntax:tuple([erl_syntax:atom(ok), RenderedAst])], 

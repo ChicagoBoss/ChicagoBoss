@@ -100,6 +100,7 @@ Nonterminals
 
     SSITag
 
+    BlockTransBlock
     TransTag    
 
     TemplatetagTag
@@ -120,6 +121,7 @@ Terminals
     and_keyword
     autoescape_keyword
     block_keyword
+    blocktrans_keyword
     call_keyword
     close_tag
     close_var
@@ -129,6 +131,7 @@ Terminals
     empty_keyword
     endautoescape_keyword
     endblock_keyword
+    endblocktrans_keyword
     endcomment_keyword
     endfilter_keyword
     endfor_keyword
@@ -161,14 +164,14 @@ Terminals
     string_literal
     string
     templatetag_keyword
-        openblock_keyword
-        closeblock_keyword
-        openvariable_keyword
-        closevariable_keyword
-        openbrace_keyword
-        closebrace_keyword
-        opencomment_keyword
-        closecomment_keyword
+    openblock_keyword
+    closeblock_keyword
+    openvariable_keyword
+    closevariable_keyword
+    openbrace_keyword
+    closebrace_keyword
+    opencomment_keyword
+    closecomment_keyword
     trans_keyword
     widthratio_keyword
     with_keyword
@@ -176,7 +179,8 @@ Terminals
     '==' '!='
     '>=' '<='
     '>' '<'
-    '(' ')'.
+    '(' ')'
+    '_'.
 
 Rootsymbol
     Elements.
@@ -191,6 +195,7 @@ Elements -> '$empty' : [].
 Elements -> Elements string : '$1' ++ ['$2'].
 Elements -> Elements AutoEscapeBlock : '$1' ++ ['$2'].
 Elements -> Elements BlockBlock : '$1' ++ ['$2'].
+Elements -> Elements BlockTransBlock : '$1' ++ ['$2'].
 Elements -> Elements CallTag : '$1' ++ ['$2'].
 Elements -> Elements CallWithTag : '$1' ++ ['$2'].
 Elements -> Elements CommentBlock : '$1' ++ ['$2'].
@@ -313,6 +318,8 @@ SpacelessBlock -> open_tag spaceless_keyword close_tag Elements open_tag endspac
 SSITag -> open_tag ssi_keyword Value close_tag : {ssi, '$3'}.
 SSITag -> open_tag ssi_keyword string_literal parsed_keyword close_tag : {ssi_parsed, '$3'}.
 
+BlockTransBlock -> open_tag blocktrans_keyword identifier close_tag Elements open_tag endblocktrans_keyword close_tag : {blocktrans, '$3', '$5'}.
+
 TemplatetagTag -> open_tag templatetag_keyword Templatetag close_tag : {templatetag, '$3'}.
 
 Templatetag -> openblock_keyword : '$1'.
@@ -339,6 +346,7 @@ Filter -> identifier : ['$1'].
 Filter -> identifier ':' Literal : ['$1', '$3'].
 Filter -> identifier ':' Variable : ['$1', '$3'].
 
+Literal -> '_' '(' string_literal ')' : {trans, '$3'}.
 Literal -> string_literal : '$1'.
 Literal -> number_literal : '$1'.
 
