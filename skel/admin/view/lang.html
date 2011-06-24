@@ -26,8 +26,8 @@
     function startTranslation(span) {
             var span_id = span.id;
             var textbox = document.getElementById("trans_"+span_id);
-            if (textbox && textbox.value == "") {
-                google.language.translate(span.innerHTML, "{{ original_lang }}", "{{ this_lang }}", function(result) {
+            if (textbox && textbox.value == "" && span.firstChild.value != undefined) {
+                google.language.translate(span.firstChild.value, "{{ original_lang }}", "{{ this_lang }}", function(result) {
                         if (!result.error) {
                             if (result.translation) {
                                 textbox.value = result.translation;
@@ -68,23 +68,36 @@
 {% if untranslated_messages %}
 <p><em>{{ untranslated_messages|length }} untranslated messages:</em> (<a href="#" onclick="javascript:startTranslations()">{% trans "Fill in the blanks with Google!" %}</a> <span style="font-size: 11px; font-family: Courier New; font-weight: bold;">{% trans "EXPERIMENTAL FEATURE" %}</span>)</p>
 <form method="post">
-<table>
+<table class="list files">
     <thead>
-        <tr><th>{% trans "Original" %}</th><th>{% trans "Translation" %}</th></tr>
+        <tr><th>{% trans "Original" %}/{% trans "Translation" %}</th></tr>
     </thead>
     <tbody>
         {% for message in untranslated_messages %}
-        <tr><td>
-        	<span class="message" id="message{{ forloop.counter0 }}"><input type="text" size="50" value='{{ message }}'></span>
+        <tr class="{% cycle 'odd' 'even' %}">
+        	<td>
+        		<span class="message" id="message{{ forloop.counter0 }}"><input type="text" style="width: 100%;" value='{{ message }}' readonly="readonly"></span>
                 <input type="hidden" name="messages[{{ forloop.counter0 }}][orig]" value="{{ message|escape }}" />
-            </td>
-            <td><input class="trans" id="trans_message{{ forloop.counter0 }}" name="messages[{{ forloop.counter0 }}][trans]" size="60" />
-        </td></tr>
+            	<input class="trans" id="trans_message{{ forloop.counter0 }}" style="width: 100%;" name="messages[{{ forloop.counter0 }}][trans]" size="60" />
+        	</td>
+        </tr>
         {% endfor %}
-        <tr><td></td><td><input type="submit" type="text" value="Submit translations" />
-        </td></tr>
     </tbody>
 </table>
+<div class="box">
+	<div id="issue_descr_fields">
+	<p>
+		<label for="issue_tracker_id">{% trans "Submit only translations filled in this form" %}</label>
+		<input type="submit" name="trans_only_filled" value="{% trans "Submit" %}">
+	</p>
+	</div>
+	<div id="issue_descr_fields">
+	<p>
+		<label for="issue_tracker_id">{% trans "Submit all translatable string to the po file (you can translate later with a translation tool like Poedit)" %}</label>
+		<input type="submit" name="trans_all_with_blanks" value="{% trans "Submit" %}">
+	</p>
+	</div>	
+</div>
 </form>
 {% endif %}
 
