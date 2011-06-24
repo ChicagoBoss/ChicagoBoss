@@ -6,6 +6,7 @@ load_all_modules() ->
     load_all_modules(undefined).
 
 load_all_modules(OutDir) ->
+    boss_translator:start(),
     load_dirs(boss_files:test_path(), OutDir, fun compile/2),
     load_libraries(OutDir),
     load_mail_controllers(OutDir),

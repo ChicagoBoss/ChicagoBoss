@@ -56,6 +56,7 @@ stop() ->
     boss_news:stop(),
     boss_mq:stop(),
     boss_session:stop(),
+    boss_translator:stop(),
     gen_smtp_server:stop({global, boss_smtp_server}),
     boss_db:stop(),
     mochiweb_http:stop(),
