@@ -134,11 +134,13 @@ lang('POST', [Lang|Fmt], Auth) ->
                 Translation = proplists:get_value("trans", Message),
                 case Translation of
                     "" -> ok;
-                    _ -> 
+                    _ ->
+						OriginalEncoded = unicode:characters_to_list(boss_lang:escape_quotes(Original)),
+						TranslationEncoded = unicode:characters_to_list(boss_lang:escape_quotes(Translation)),
                         file:write(IODevice, 
-                            "\nmsgid \""++boss_lang:escape_quotes(Original)++"\"\n"),
+							io_lib:format("\nmsgid \"~ts\"\n",[list_to_binary(OriginalEncoded)])),	   
                         file:write(IODevice, 
-                            "msgstr \""++boss_lang:escape_quotes(Translation)++"\"\n")
+							io_lib:format("\msgstr \"~ts\"\n",[list_to_binary(TranslationEncoded)]))
                 end
         end, Req:deep_post_param(["messages"])),
     file:close(IODevice),

@@ -74,7 +74,8 @@
     </thead>
     <tbody>
         {% for message in untranslated_messages %}
-        <tr><td><span class="message" id="message{{ forloop.counter0 }}">{{ message }}</span>
+        <tr><td>
+        	<span class="message" id="message{{ forloop.counter0 }}"><input type="text" size="50" value='{{ message }}'></span>
                 <input type="hidden" name="messages[{{ forloop.counter0 }}][orig]" value="{{ message|escape }}" />
             </td>
             <td><input class="trans" id="trans_message{{ forloop.counter0 }}" name="messages[{{ forloop.counter0 }}][trans]" size="60" />
