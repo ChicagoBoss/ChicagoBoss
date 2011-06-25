@@ -63,6 +63,9 @@ process_view_file_tokens([], Acc) ->
 process_view_file_tokens([{trans_keyword, _, _}, {string_literal, _, String}|Rest], Acc) ->
     process_view_file_tokens(Rest, 
         [unescape_string_literal(string:strip(String, both, $"))|Acc]);
+process_view_file_tokens([{'_', _}, {'(', _}, {string_literal, _, String}, {')', _}|Rest], Acc) ->
+    process_view_file_tokens(Rest, 
+        [unescape_string_literal(string:strip(String, both, $"))|Acc]);
 process_view_file_tokens([_|Rest], Acc) ->
     process_view_file_tokens(Rest, Acc).
 
