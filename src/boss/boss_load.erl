@@ -61,15 +61,26 @@ load_dir(Dir, OutDir, Compiler) when is_function(Compiler) ->
             ("."++_, Acc) ->
                 Acc;
             (File, {Modules, Errors}) ->
-                case maybe_compile(Dir, File, OutDir, Compiler) of
-                    ok ->
-                        {Modules, Errors};
-                    {ok, Module} ->
-                        {[Module|Modules], Errors};
-                    {error, Error} ->
-                        {Modules, [Error | Errors]};
-                    {error, NewErrors, _NewWarnings} when is_list(NewErrors) ->
-                        {Modules, NewErrors ++ Errors}
+                AbsName = filename:join([Dir, File]),
+                case filelib:is_dir(AbsName) of
+                    true ->
+                        case load_dir(AbsName, OutDir, Compiler) of
+                            {ok, NewMods} ->
+                                {NewMods ++ Modules, Errors};
+                            {error, NewErrs} ->
+                                {Modules, NewErrs ++ Errors}
+                        end;
+                    false ->
+                        case maybe_compile(Dir, File, OutDir, Compiler) of
+                            ok ->
+                                {Modules, Errors};
+                            {ok, Module} ->
+                                {[Module|Modules], Errors};
+                            {error, Error} ->
+                                {Modules, [Error | Errors]};
+                            {error, NewErrors, _NewWarnings} when is_list(NewErrors) ->
+                                {Modules, NewErrors ++ Errors}
+                        end
                 end
         end, {[], []}, Files),
     case length(ErrorList) of

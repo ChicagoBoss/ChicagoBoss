@@ -14,13 +14,19 @@ init(Hostname, _SessionCount, Address, Options) ->
     Errors = case proplists:get_value(boss_env, Options, development) of
         development -> 
             case boss_load:load_mail_controllers() of
-                {ok, _} -> [];
-                {error, List} -> 
-                    List
+                {ok, _} -> 
+                    case boss_load:load_libraries() of
+                        {ok, _} ->
+                            case boss_load:load_models() of
+                                {ok, _} -> [];
+                                {error, List} -> List
+                            end;
+                        {error, List} -> List
+                    end;
+                {error, List} -> List
             end;
         _ -> []
     end,
-    io:format("Errors: ~p~n", [Errors]),
     {ok, [Hostname, " SMTP Chicago Boss: Tell me something I don't know"], 
         #state{remote_ip = Address, errors = Errors}}. 
 
@@ -78,12 +84,12 @@ handle_DATA(FromAddress, ToAddressList, Data, #state{ errors = [] } = State) ->
             lists:foldl(fun
                     (ToAddress, ErrorAcc) ->
                         [UserName, _DomainName] = re:split(ToAddress, "@"),
-                        Res1 = apply(incoming_mail_controller, list_to_atom(binary_to_list(UserName)), [FromAddress, Message]),
+                        Res1 = apply(incoming_mail_controller, list_to_atom(binary_to_list(UserName)), [binary_to_list(FromAddress), Message]),
                         case Res1 of
                             ok -> ErrorAcc;
                             {error, Error} -> [Error|ErrorAcc]
                         end
-                end, ToAddressList, [])
+                end, [], ToAddressList)
         catch
             What:Why ->
                 [io_lib:format("Message decode FAILED with ~p:~p~n", [What, Why])]
@@ -99,7 +105,7 @@ reply_with_errors(_FromAddress, _ToAddressList, #state{ errors = [] } = State) -
 reply_with_errors(FromAddress, ToAddressList, #state{ errors = Errors } = State) ->
     FirstAddress = hd(ToAddressList),
     boss_mail:send(binary_to_list(FirstAddress), binary_to_list(FromAddress), 
-        "ERROR", "There were errors delivering your message: ~p~n", Errors),
+        "ERROR", "There were errors delivering your message: ~p~n", [Errors]),
     reply_with_errors(FromAddress, ToAddressList, State#state{ errors = [] }).
 
 handle_RSET(State) ->

@@ -262,7 +262,8 @@ has_many_forms(HasMany, ModuleName, Limit, Opts) ->
     Type = proplists:get_value(module, Opts, Singular),
     ForeignKey = proplists:get_value(foreign_key, Opts, atom_to_list(ModuleName) ++ "_id"),
     [erl_syntax:add_precomments([erl_syntax:comment(
-                    ["% @spec "++atom_to_list(HasMany)++"() -> [ "++Type++" ]",
+                    [
+                        lists:concat(["% @spec ", HasMany, "() -> [ ", Type, " ]"]),
                         lists:concat(["% @doc Retrieves `", Type, "' records with `", ForeignKey, "' ",
                                 "set to the `Id' of this `", ModuleName, "'"])])],
             erl_syntax:function(erl_syntax:atom(HasMany),
@@ -270,7 +271,8 @@ has_many_forms(HasMany, ModuleName, Limit, Opts) ->
                             has_many_application_forms(Type, ForeignKey, Limit, Sort, SortOrder)
                         ])])),
         erl_syntax:add_precomments([erl_syntax:comment(
-                    ["% @spec first_"++Singular++"() -> "++Type++" | undefined",
+                    [
+                        lists:concat(["% @spec first_", Singular, "() -> ", Type, " | undefined"]),
                         lists:concat(["% @doc Retrieves the first `", Type, 
                                 "' that would be returned by `", HasMany, "()'"])])],
             erl_syntax:function(erl_syntax:atom("first_"++Singular),
@@ -280,7 +282,8 @@ has_many_forms(HasMany, ModuleName, Limit, Opts) ->
                             )
                         ])])),
         erl_syntax:add_precomments([erl_syntax:comment(
-                    ["% @spec last_"++Singular++"() -> "++Type++" | undefined",
+                    [
+                        lists:concat(["% @spec last_", Singular, "() -> ", Type, " | undefined"]),
                         lists:concat(["% @doc Retrieves the last `", Type,
                                 "' that would be returned by `", HasMany, "()'"])])],
             erl_syntax:function(erl_syntax:atom("last_"++Singular),
@@ -338,8 +341,9 @@ counter_getter_forms(Counters) ->
     lists:map(
         fun(Counter) ->
                 erl_syntax:add_precomments([erl_syntax:comment(
-                            ["% @spec "++atom_to_list(Counter)++"() -> integer()",
-                                "% @doc Retrieve the value of the `"++atom_to_list(Counter)++"' counter"])],
+                            [
+                                lists:concat(["% @spec ", Counter, "() -> integer()"]),
+                                lists:concat(["% @doc Retrieve the value of the `", Counter, "' counter"])])],
                     erl_syntax:function(erl_syntax:atom(Counter),
                         [erl_syntax:clause([], none, [
                                     erl_syntax:application(
