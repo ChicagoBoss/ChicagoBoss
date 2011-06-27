@@ -12,7 +12,8 @@
 {% block meta_scripts %}
 <script type="text/javascript" src="http://www.google.com/jsapi">
 </script>
-<script type="text/javascript" src="/admin/static/lang.js"></script>
+{% _javascript_include_tag _base_url="/admin" name="lang.js" %}
+
 <script type="text/javascript">
     var untranslated_messages = {
         {% for lang in languages %}

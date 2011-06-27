@@ -118,57 +118,45 @@ lang('GET', [Lang], Auth) ->
     end,
     Languages = boss_files:language_list(),
     {Untranslated, Translated} = boss_lang:extract_strings(Lang),
-    LastModified = filelib:last_modified(boss_files:lang_path(Lang)),
+	{UntranslatedBlocks, TranslatedBlocks} = boss_lang:extract_blocks(Lang),
+    LastModified = filelib:last_modified(boss_files:lang_strings_path(Lang)),
     {ok, [{this_lang, Lang}, {languages, Languages},
             {original_lang, OriginalLang},
             {untranslated_messages, Untranslated},
             {translated_messages, Translated},
+            {untranslated_blocks_messages, UntranslatedBlocks},
+            {translated_blocks_messages, TranslatedBlocks},
             {last_modified, LastModified},
 		  	{lang_section, true}],
         [{"Cache-Control", "no-cache"}]};
 lang('POST', [Lang|Fmt], Auth) ->
-	WithBlanks = Req:post_param("trans_all_with_blanks"),
-    LangFile = boss_files:lang_path(Lang),
-    {ok, IODevice} = file:open(LangFile, [write, append]),
-    lists:map(fun(Message) ->
-                Original = proplists:get_value("orig", Message),
-                Translation = proplists:get_value("trans", Message),
-                case Translation of
-                    "" -> 
-						case WithBlanks of
-							undefined -> ok;
-							_ -> lang_write_to_file(IODevice, Original, Translation)
-						end;
-                    _ -> lang_write_to_file(IODevice, Original, Translation)
-                end
-        end, Req:deep_post_param(["messages"])),
-    file:close(IODevice),
+	case {Req:post_param("trans_strings_only_filled"), Req:post_param("trans_all_strings_with_blanks"),
+		  Req:post_param("trans_blocks_only_filled"), Req:post_param("trans_all_blocks_with_blanks")} of
+		{_, undefined, undefined, undefined} -> boss_lang:generate_po_file(string, filled, Lang, Req:deep_post_param(["messages"]));
+		{undefined, _, undefined, undefined} -> boss_lang:generate_po_file(string, full, Lang, Req:deep_post_param(["messages"]));
+		{undefined, undefined, _, undefined} -> boss_lang:generate_po_file(block, filled, Lang, Req:deep_post_param(["messages"]));
+		{undefined, undefined, undefined, _} -> boss_lang:generate_po_file(block, full, Lang, Req:deep_post_param(["messages"]));
+		_ -> nothing
+	end,
     boss_translator:reload(Lang),
     case Fmt of
         ["json"] -> {json, [{success, true}]};
         [] -> {redirect, "/admin/lang/"++Lang}
     end.
 
-lang_write_to_file(IODevice, Original, Translation) ->
-	OriginalEncoded = unicode:characters_to_list(boss_lang:escape_quotes(Original)),
-	TranslationEncoded = unicode:characters_to_list(boss_lang:escape_quotes(Translation)),
-    file:write(IODevice, io_lib:format("\nmsgid \"~ts\"\n",[list_to_binary(OriginalEncoded)])),	   
-	file:write(IODevice, io_lib:format("\msgstr \"~ts\"\n",[list_to_binary(TranslationEncoded)])).
-
 create_lang('GET', [], Auth) ->
     {ok, [{lang_section, true}, {languages, boss_files:language_list()}]};
 create_lang('POST', [], Auth) ->
     % TODO sanitize
     NewLang = Req:post_param("language"),
-    LangFile = boss_files:lang_path(NewLang),
-    {ok, IODevice} = file:open(LangFile, [write]),
-    file:close(IODevice),
+	boss_lang:create_new(NewLang),
     {redirect, "/admin/lang/"++NewLang}.
 
 delete_lang('GET', [Lang], Auth) ->
     {ok, [{lang_section, true}, {this_lang, Lang}]};
 delete_lang('POST', [Lang], Auth) ->
-    ok = file:delete(boss_files:lang_path(Lang)),
+    ok = file:delete(boss_files:lang_strings_path(Lang)),
+	ok = file:delete(boss_files:lang_blocks_path(Lang)),
     {redirect, "/admin/lang"}.
 
 big_red_button('GET', [], Auth) ->

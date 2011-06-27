@@ -30,6 +30,6 @@
 {% endfor %}
 </ul>
 
-<p>{% trans "See the loaded routes" %} <a class="routes" href="{{ _base_url }}/admin/routes">{% trans "here" %}</a>
+<p>{% _link_to _base_url=_base_url url="/admin/routes" name=_("See the loaded routes") class="routes" %}</p>
 
 {% endblock %}

@@ -44,7 +44,20 @@
 </script>
 {% endblock %}
 {% block body %}
+
 <h1>{% trans "International Command Center" %}</h1>
+
+{% if this_lang %}
+<ul class="toc right">
+	<li class="heading1"><a href="#manage_languages">{% trans "Manage Languages" %}</a></li>
+	<li class="heading2"><a href="#strings">{% trans "String Translations" %}</a></li>
+	<li class="heading2"><a href="#blocks">{% trans "Blocks Translations" %}</a></li>
+	<li class="heading2"><a href="#actions">{% trans "Actions" %}</a></li>
+</ul>
+{% endif %}
+
+<h2 id="manage_languages">{% trans "Manage Languages" %}</h2>
+
 <p>
 <form action="/admin/create_lang">
     <p>
@@ -64,6 +77,10 @@
 &nbsp;&nbsp;&nbsp;&nbsp;
 </p>
 </form>
+
+<hr>
+
+{% if this_lang %}<h2 id="strings">{% trans "String Translations - trans and _(\"string\") params" %}</h2>{% endif %}
 
 {% if untranslated_messages %}
 <p><em>{{ untranslated_messages|length }} untranslated messages:</em> (<a href="#" onclick="javascript:startTranslations()">{% trans "Fill in the blanks with Google!" %}</a> <span style="font-size: 11px; font-family: Courier New; font-weight: bold;">{% trans "EXPERIMENTAL FEATURE" %}</span>)</p>
@@ -88,37 +105,116 @@
 	<div id="issue_descr_fields">
 	<p>
 		<label for="issue_tracker_id">{% trans "Submit only translations filled in this form" %}</label>
-		<input type="submit" name="trans_only_filled" value="{% trans "Submit" %}">
+		<input type="submit" name="trans_strings_only_filled" value="{% trans "Submit" %}">
+	</p>
+	</div>
+	<div id="issue_descr_fields">
+	<p>
+		<label for="issue_tracker_id">{% trans "Submit all translatable string to the po file (you can translate later with a translation tools like Poedit)" %}</label>
+		<input type="submit" name="trans_all_strings_with_blanks" value="{% trans "Submit" %}">
+	</p>
+	</div>	
+</div>
+</form>
+{% else %}
+{% if this_lang %}
+<h3>{% trans "No untranslated string messages found" %}
+{% endif %}
+{% endif %}
+
+{% if translated_messages %}
+	<p><em>{{ translated_messages|length }} translated messages:</em></p>
+	<table class="list files">
+	    <thead>
+	        <tr>
+	        	<th>{% trans "Original" %}</th><th>{% trans "Translation" %}</th>
+	        </tr>
+	    </thead>
+	    <tbody>
+	{% for orig, msg in translated_messages %}
+		<tr class="{% cycle 'odd' 'even' %}">
+			<td>{{ orig }}</td><td><em>{{ msg }}</em></td>
+		</tr>
+	{% endfor %}
+	</tbody>
+	</table>
+	{% if last_modified %}
+	<p><em>{% trans "Last modified" %}: {{ last_modified|date:"N j, Y, P" }}</em></p>
+	{% endif %}
+{% else %}
+	{% if this_lang %}
+	<h3>{% trans "No translated string messages found" %}
+	{% endif %}
+{% endif %}
+
+<hr>
+{% if this_lang %}<h2 id="blocks">{% trans "Block Translations - blocktrans" %}</h2>{% endif %}
+
+{% if untranslated_blocks_messages %}
+<p><em>{{ untranslated_blocks_messages|length }} untranslated messages:</em></p>
+<form method="post">
+<table class="list files">
+    <thead>
+        <tr><th>{% trans "Original" %}/{% trans "Translation" %}</th></tr>
+    </thead>
+    <tbody>
+        {% for message in untranslated_blocks_messages %}
+        <tr class="{% cycle 'odd' 'even' %}">
+        	<td>
+        		<span class="message" id="message{{ forloop.counter0 }}"><input type="text" style="width: 100%;" value='{{ message }}' readonly="readonly"></span>
+                <input type="hidden" name="messages[{{ forloop.counter0 }}][orig]" value="{{ message|escape }}" />
+            	<input class="trans" id="trans_message{{ forloop.counter0 }}" style="width: 100%;" name="messages[{{ forloop.counter0 }}][trans]" size="60" />
+        	</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<div class="box">
+	<div id="issue_descr_fields">
+	<p>
+		<label for="issue_tracker_id">{% trans "Submit only translations filled in this form" %}</label>
+		<input type="submit" name="trans_blocks_only_filled" value="{% trans "Submit" %}">
 	</p>
 	</div>
 	<div id="issue_descr_fields">
 	<p>
 		<label for="issue_tracker_id">{% trans "Submit all translatable string to the po file (you can translate later with a translation tool like Poedit)" %}</label>
-		<input type="submit" name="trans_all_with_blanks" value="{% trans "Submit" %}">
+		<input type="submit" name="trans_all_blocks_with_blanks" value="{% trans "Submit" %}">
 	</p>
 	</div>	
 </div>
 </form>
+{% else %}
+{% if this_lang %}
+<h3>{% trans "No untranslated block messages found" %}
+{% endif %}
 {% endif %}
 
-{% if translated_messages %}
-<p><em>{{ translated_messages|length }} translated messages:</em></p>
-<table border="1">
-    <thead>
-        <tr><th>{% trans "Original" %}</th><th>{% trans "Translation" %}</th></tr>
-    </thead>
-    <tbody>
-{% for orig, msg in translated_messages %}
-<tr><td>{{ orig }}</td><td><em>{{ msg }}</em></td></tr>
-{% endfor %}
-</tbody>
-</table>
-{% if last_modified %}
-<p><em>{% trans "Last modified" %}: {{ last_modified|date:"N j, Y, P" }}</em></p>
+{% if translated_blocks_messages %}
+	<p><em>{{ translated_blocks_messages|length }} translated messages:</em></p>
+	<table class="list files">
+	    <thead>
+	        <tr><th>{% trans "Original" %}</th><th>{% trans "Translation" %}</th></tr>
+	    </thead>
+	    <tbody>
+	{% for orig, msg in translated_blocks_messages %}
+		<tr class="{% cycle 'odd' 'even' %}">
+			<td>{{ orig }}</td><td><em>{{ msg }}</em></td>
+		</tr>
+	{% endfor %}
+	</tbody>
+	</table>
+	{% if last_modified %}
+	<p><em>{% trans "Last modified" %}: {{ last_modified|date:"N j, Y, P" }}</em></p>
+	{% endif %}
+{% else %}
+	{% if this_lang %}
+	<h3>{% trans "No translated block messages found" %}
+	{% endif %}
 {% endif %}
-{% endif %}
+
 {% if this_lang %}
-<p><a href="/admin/delete_lang/{{ this_lang }}">{% trans "Delete this language file" %}...</a></p>
+<p id="actions"><a href="/admin/delete_lang/{{ this_lang }}">{% trans "Delete this language file" %}...</a></p>
 {% endif %}
 
 {% endblock %}

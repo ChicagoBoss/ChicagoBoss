@@ -15,7 +15,7 @@
 {file, "skel/admin/admin_controller.erl", "{{dest}}/admin/admin_controller.erl"}.
 {file, "skel/admin/static/stylesheets/application_orig.css", "{{dest}}/admin/static/stylesheets/application_orig.css"}.
 {file, "skel/admin/static/stylesheets/application.css", "{{dest}}/admin/static/stylesheets/application.css"}.
-{file, "skel/admin/static/lang.js", "{{dest}}/admin/static/lang.js"}.
+{file, "skel/admin/static/javascripts/lang.js", "{{dest}}/admin/static/javascripts/lang.js"}.
 {file, "skel/admin/test/admin_test.erl", "{{dest}}/admin/test/admin_test.erl"}.
 {file, "skel/admin/view/layouts/admin.html", "{{dest}}/admin/view/layouts/admin.html"}.
 {file, "skel/admin/view/layouts/shared/_alerts.html", "{{dest}}/admin/view/layouts/shared/_alerts.html"}.
@@ -46,6 +46,11 @@
 {file, "skel/static/favicon.ico", "{{dest}}/static/favicon.ico"}.
 {file, "skel/test/mail_test.erl", "{{dest}}/test/mail_test.erl"}.
 {file, "skel/view/hello/world.html", "{{dest}}/view/hello/world.html"}.
+{file, "skel/view/lib/boss/_image_tag", "{{dest}}/view/lib/boss/_image_tag"}.
+{file, "skel/view/lib/boss/_javascript_include_tag", "{{dest}}/view/lib/boss/_javascript_include_tag"}.
+{file, "skel/view/lib/boss/_link_to", "{{dest}}/view/lib/boss/_link_to"}.
+{file, "skel/view/lib/boss/_link_to_ext", "{{dest}}/view/lib/boss/_link_to_ext"}.
+{file, "skel/view/lib/boss/_stylesheet_link_tag", "{{dest}}/view/lib/boss/_stylesheet_link_tag"}.
 {file, "skel/boss.config", "{{dest}}/boss.config"}.
 {file, "skel/boss.routes", "{{dest}}/boss.routes"}.
 {file, "skel/news.erl", "{{dest}}/news.erl"}.

@@ -3,7 +3,7 @@
 
 {% block left_submenu %}
 <ul>
-	<li><a href="{{ _base_url }}/admin/routes/reload">{% trans "Reload routes" %}</a></li>
+	<li>{% _link_to name=_("Reload routes") url="/admin/routes/reload" _base_url=_base_url %}</li>
 </ul>
 {% endblock %}
 
@@ -14,7 +14,7 @@
 {% endblock %}
 
 {% block body %}
-<h1>{% trans "Loaded Routes: file boss.routes" %}</h1>
+<h1>{% blocktrans routes_1 with routes_count=routes|length %}Loaded Routes ({{ routes_count }}): file boss.routes{% endblocktrans %}</h1>
 
 <table class="list files">
 	<thead>

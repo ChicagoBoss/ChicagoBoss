@@ -1,0 +1,1 @@
+<link href="{% if _base_url %}{{ _base_url }}{% endif %}/static/stylesheets/{{ name }}" media="{% if media %}{{ media }}{% else %}screen{% endif %}" rel="stylesheet" type="text/css" title="{% if title %}{{ title }}{% else %}{{ name }}{% endif %}" {% if extra %} {{ extra }}{% endif %} />
