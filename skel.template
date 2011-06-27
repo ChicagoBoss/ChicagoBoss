@@ -7,6 +7,7 @@
 {dir, "{{dest}}/lang"}.
 {dir, "{{dest}}/lib"}.
 {dir, "{{dest}}/ebin"}.
+{dir, "{{dest}}/include"}.
 {template, "skel/start-dev.sh", "{{dest}}/start-dev.sh"}.
 {template, "skel/start.sh", "{{dest}}/start.sh"}.
 {template, "skel/start-server.bat", "{{dest}}/start-server.bat"}.

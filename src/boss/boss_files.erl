@@ -39,6 +39,8 @@ test_path() -> [filename:join([root_dir(), "test"]), filename:join([root_admin_d
 
 ebin_dir() -> filename:join([root_dir(), "ebin"]).
 
+include_dir() -> filename:join([root_dir(), "include"]).
+
 test_list() ->
     module_list(test_path()).
 

@@ -71,9 +71,9 @@ handle_info(_Info, State) ->
     {noreply, State}.
 
 
-now_minus_seconds(Now, Seconds) ->
-    GregSeconds = calendar:datetime_to_gregorian_seconds(calendar:now_to_datetime(Now)) - Seconds,
-    {GregSeconds div (1000 * 1000), GregSeconds rem (1000 * 1000), 0}.
+now_minus_seconds({MegaSecs, Secs, MicroSecs}, Delta) ->
+    TotalSeconds = MegaSecs * 1000 * 1000 + Secs - Delta,
+    {TotalSeconds div (1000 * 1000), TotalSeconds rem (1000 * 1000), MicroSecs}.
 
 messages_newer_than_timestamp(Timestamp, Messages) ->
     messages_newer_than_timestamp(Timestamp, Messages, []).

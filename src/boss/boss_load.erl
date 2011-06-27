@@ -7,13 +7,13 @@ load_all_modules() ->
 
 load_all_modules(OutDir) ->
     boss_translator:start(),
-    load_dirs(boss_files:test_path(), OutDir, fun compile/2),
-    load_libraries(OutDir),
-    load_mail_controllers(OutDir),
-    load_web_controllers(OutDir),
-    load_models(OutDir),
-    load_view_lib(OutDir),
-    load_views(OutDir).
+    {ok, _} = load_dirs(boss_files:test_path(), OutDir, fun compile/2),
+    {ok, _} = load_libraries(OutDir),
+    {ok, _} = load_mail_controllers(OutDir),
+    {ok, _} = load_web_controllers(OutDir),
+    {ok, _} = load_models(OutDir),
+    {ok, _} = load_view_lib(OutDir),
+    {ok, _} = load_views(OutDir).
 
 load_libraries() ->
     load_libraries(undefined).
@@ -124,20 +124,29 @@ view_doc_root(ViewPath) ->
     filename:join(lists:reverse(lists:nthtail(2, lists:reverse(filename:split(ViewPath))))).
 
 compile_view_dir_erlydtl(LibPath, OutDir) ->
-    erlydtl_compiler:compile_dir(LibPath, ?HELPER_MODULE_NAME,
+    Res = erlydtl_compiler:compile_dir(LibPath, ?HELPER_MODULE_NAME,
         [{doc_root, filename:join(lists:reverse(lists:nthtail(1, lists:reverse(filename:split(LibPath)))))},
-            {compiler_options, []}, {out_dir, OutDir}]).
+            {compiler_options, []}, {out_dir, OutDir}]),
+    case Res of
+        ok -> {ok, ?HELPER_MODULE_NAME};
+        Err -> Err
+    end.
 
 compile_view_erlydtl(ViewPath, OutDir) ->
-    erlydtl_compiler:compile(ViewPath, view_module(ViewPath),
+    Module = view_module(ViewPath),
+    Res = erlydtl_compiler:compile(ViewPath, Module,
         [{doc_root, view_doc_root(ViewPath)}, {custom_tags_module, ?HELPER_MODULE_NAME},
             {compiler_options, []}, {out_dir, OutDir}, {blocktrans_fun,
-            fun(BlockName, Locale) ->
-                    case boss_translator:lookup(BlockName, Locale) of
-                        undefined -> default;
-                        Body -> list_to_binary(Body)
-                    end
-            end}, {blocktrans_locales, boss_files:language_list()}]).
+                fun(BlockName, Locale) ->
+                        case boss_translator:lookup(BlockName, Locale) of
+                            undefined -> default;
+                            Body -> list_to_binary(Body)
+                        end
+                end}, {blocktrans_locales, boss_files:language_list()}]),
+    case Res of
+        ok -> {ok, Module};
+        Err -> Err
+    end.
 
 compile_model(ModulePath, OutDir) ->
     boss_record_compiler:compile(ModulePath, [{out_dir, OutDir}]).
@@ -162,10 +171,7 @@ load_view_lib_if_old(ViewLibPath, Module) ->
     end,
     case NeedCompile of
         true ->
-            case compile_view_dir_erlydtl(ViewLibPath, undefined) of
-                ok -> {ok, Module};
-                Err -> Err
-            end;
+            compile_view_dir_erlydtl(ViewLibPath, undefined);
         false ->
             {ok, Module}
     end.
@@ -173,7 +179,11 @@ load_view_lib_if_old(ViewLibPath, Module) ->
 load_views() ->
     load_views(undefined).
 load_views(OutDir) ->
-    lists:map(fun(Path) -> compile_view_erlydtl(Path, OutDir) end, boss_files:view_file_list()).
+    ModuleList = lists:foldr(fun(Path, Acc) -> 
+                {ok, Module} = compile_view_erlydtl(Path, OutDir),
+                [Module|Acc]
+        end, [], boss_files:view_file_list()),
+    {ok, ModuleList}.
 
 load_view_if_old(ViewPath, Module) ->
     case load_view_lib_if_old(boss_files:view_lib_path(), ?HELPER_MODULE_NAME) of
@@ -189,10 +199,7 @@ load_view_if_old(ViewPath, Module) ->
             end,
             case NeedCompile of
                 true ->
-                    case compile_view_erlydtl(ViewPath, undefined) of
-                        ok -> {ok, Module};
-                        Err -> Err
-                    end;
+                    compile_view_erlydtl(ViewPath, undefined);
                 false ->
                     {ok, Module}
             end;

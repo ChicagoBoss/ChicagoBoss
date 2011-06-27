@@ -56,7 +56,7 @@ parse(File) ->
 parse_text(FileName, FileContents) ->
     case scan_transform(FileContents) of
         {ok, Tokens} ->
-            case aleppo:process_tokens(Tokens, [{file, FileName}]) of
+            case aleppo:process_tokens(Tokens, [{file, FileName}, {include, [boss_files:include_dir()]}]) of
                 {ok, ProcessedTokens} ->
                     {Forms, Errors} = parse_tokens(ProcessedTokens, FileName),
                     case length(Errors) of

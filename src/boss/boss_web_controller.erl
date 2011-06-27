@@ -116,7 +116,7 @@ process_result({redirect, Where, Headers}) ->
     {302, [{"Location", Where}, {"Cache-Control", "no-cache"}|Headers], ""};
 process_result({ok, Payload, Headers}) ->
     {200, [{"Content-Type", proplists:get_value("Content-Type", Headers, "text/html")}
-            |proplists:delete("Content-Type", Headers)], unicode:characters_to_binary(Payload)}.
+            |proplists:delete("Content-Type", Headers)], Payload}.
 
 trap_load_and_execute(Arg1, Arg2) ->
     case catch load_and_execute(Arg1, Arg2) of
@@ -289,7 +289,7 @@ render_view({Controller, Template, _}, Req, Variables, Headers) ->
                 Req:header(accept_language), proplists:get_value("Content-Language", Headers)),
             case Module:render(lists:merge([{"_lang", Lang}, {"_base_url", boss_router:base_url()}|Variables], BossFlash), [{translation_fun, TranslationFun}, {locale, Lang}]) of
                 {ok, Payload} ->
-                    {ok, Payload, Headers};
+                    {ok, unicode:characters_to_binary(Payload), Headers};
                 Err ->
                     Err
             end;
