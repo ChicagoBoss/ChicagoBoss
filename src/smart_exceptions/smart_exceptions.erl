@@ -500,8 +500,7 @@ bin_indicator({var, Lx, X}=Var, Line, Width, Type) when X =/= '_' ->
 bin_indicator({integer, _Lc, _C}, _Line, _Type, _Width) ->
     [];
 bin_indicator(P, Line, Type, Width) ->
-    io:format("%% bin_indicator: skipped unknown pattern"
-	      " ~w on line ~w\n", [P, Line]),
+    % io:format("%% bin_indicator: skipped unknown pattern" " ~w on line ~w\n", [P, Line]),
     [].
 
 %% The default values are just guessed at this point
