@@ -1,0 +1,1 @@
+<img src="{% if _base_url %}{{ _base_url }}{% endif %}/static/images/{{ name }}" {% if alt %}alt="{{ alt }}" {% endif %}/>

@@ -1,0 +1,1 @@
+<script type="text/javascript" src="{% if _base_url %}{{ _base_url }}{% endif %}/static/javascripts/{{ name }}"{% if extra %} {{ extra }}{% endif %}></script>
