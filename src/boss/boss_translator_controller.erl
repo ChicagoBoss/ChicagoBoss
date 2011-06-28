@@ -16,7 +16,7 @@ init(_Options) ->
                 {Lang, dict:from_list(boss_lang:extract_po_strings(Lang))}
         end, boss_files:language_list()),
     BlockDictionaryList = lists:map(fun(Lang) ->
-                {Lang, dict:from_list(boss_lang:extract_po_blocks(Lang))}
+                {Lang, dict:from_list(boss_lang:extract_po_blocks(Lang, comment))}
         end, boss_files:language_list()),
     {ok, #state{strings = dict:from_list(StringDictionaryList), blocks = dict:from_list(BlockDictionaryList)}}.
 
@@ -48,7 +48,7 @@ handle_call({is_loaded, Locale}, _From, State) ->
 
 handle_call({reload, Locale}, _From, State) ->
     StringDict = dict:from_list(boss_lang:extract_po_strings(Locale)),
-    BlockDict = dict:from_list(boss_lang:extract_po_blocks(Locale)),
+    BlockDict = dict:from_list(boss_lang:extract_po_blocks(Locale, comment)),
     NewState = State#state{
         strings = dict:store(Locale, StringDict, State#state.strings),
         blocks = dict:store(Locale, BlockDict, State#state.blocks)

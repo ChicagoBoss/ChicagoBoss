@@ -1,14 +1,27 @@
 -module(boss_lang).
 -compile(export_all).
 
+create_lang(Lang) ->
+    LangFile = boss_files:lang_path(Lang),
+    {ok, IODevice} = file:open(LangFile, [write]),
+    file:close(IODevice).
+
+delete_lang(Lang) ->
+	ok = file:delete(boss_files:lang_path(Lang)).
+
 extract_strings() ->
     lists:usort(extract_model_strings() ++ extract_view_strings()).
 
 extract_strings(Lang) ->
     AllStrings = extract_strings(),
-    PoStrings = extract_po_strings(Lang),
+    PoStrings = extract_po_strings(Lang) ++ extract_po_blocks(Lang, id),
     UntranslatedStrings = lists:filter(fun(S) -> 
-                case proplists:get_value(S, PoStrings) of
+				ToCheck = case S of
+					[{identifier, Identifier}, {string, String}] -> 
+						binary_to_list(String);
+					_ -> S
+				end,
+                case proplists:get_value(ToCheck, PoStrings) of
                     undefined -> true;
                     _ -> false
                 end
@@ -16,21 +29,36 @@ extract_strings(Lang) ->
     {UntranslatedStrings, PoStrings}.
 
 extract_po_strings(Lang) ->
-    LangFile = boss_files:lang_strings_path(Lang),
+    LangFile = boss_files:lang_path(Lang),
     Tokens = po_scanner:scan(LangFile),
     process_po_tokens(Tokens, []).
 
-extract_po_blocks(Lang) ->
-    LangFile = boss_files:lang_blocks_path(Lang),
+extract_po_blocks(Lang, Mode) ->
+    LangFile = boss_files:lang_path(Lang),
     Tokens = po_scanner:scan(LangFile),
-    process_po_tokens(Tokens, []).
+    process_po_block_tokens(Tokens, Mode, []).
 
 process_po_tokens([], Acc) ->
     lists:reverse(Acc);
+process_po_tokens([{comment, MsgComment}, {id, MsgId}, {str, MsgStr}|Rest], Acc) ->
+	process_po_tokens(Rest, Acc);
 process_po_tokens([{id, MsgId}, {str, MsgStr}|Rest], Acc) ->
     process_po_tokens(Rest, [{MsgId, MsgStr}|Acc]);
 process_po_tokens([_|Rest], Acc) ->
     process_po_tokens(Rest, Acc).
+
+process_po_block_tokens([], Mode, Acc) ->
+    lists:reverse(Acc);
+process_po_block_tokens([{id, MsgId}, {str, MsgStr}|Rest], Mode, Acc) ->
+	process_po_block_tokens(Rest, Mode, Acc);	
+process_po_block_tokens([{comment, MsgComment}, {id, MsgId}, {str, MsgStr}|Rest], Mode, Acc) ->
+	Id = case Mode of
+			 id -> MsgId;
+			 comment -> string:substr(MsgComment, 3, string:len(MsgComment) - 2)
+		 end,
+    process_po_block_tokens(Rest, Mode, [{Id, MsgStr}|Acc]);
+process_po_block_tokens([_|Rest], Mode, Acc) ->
+    process_po_block_tokens(Rest, Mode, Acc).
 
 extract_model_strings() ->
     lists:foldl(fun(Model, Acc) ->
@@ -50,8 +78,13 @@ extract_model_strings() ->
 
 extract_view_strings() ->
     ViewFiles = boss_files:view_file_list(),
-    lists:foldl(fun(File, Acc) -> Acc ++ process_view_file(File) end,
+    lists:foldl(fun(File, Acc) -> Acc ++ process_view_file(File) ++ process_view_file_blocks(File) end,
             [], ViewFiles).
+
+process_view_file_blocks(ViewFile) ->
+    {ok, Contents} = file:read_file(ViewFile),
+    {ok, Tokens} = blocktrans_scanner:scan(unicode:characters_to_list(Contents)),
+	lists:map(fun(X) -> [{identifier, element(1, X)}, {string, element(2, X)}] end, blocktrans_parser:parse(Tokens)).
 
 process_view_file(ViewFile) ->
     {ok, Contents} = file:read_file(ViewFile),

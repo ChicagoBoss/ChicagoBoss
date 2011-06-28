@@ -307,6 +307,8 @@ parse(CheckSum, Data, Context) ->
             end
     end.
 
+parse(Data) when is_binary(Data) ->
+	parse(binary_to_list(Data));
 parse(Data) ->
     case erlydtl_scanner:scan(unicode:characters_to_list(Data)) of
         {ok, Tokens} ->
