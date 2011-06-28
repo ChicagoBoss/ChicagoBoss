@@ -17,8 +17,8 @@
 scan(Path) -> 
     case file:read_file(Path) of
         {ok,File} ->
-            Template = binary_to_list(File),
-            scan(Template, [], {1, 1}, [in_text]);
+			Str = re:replace(File, "\\\\n", "\\\n", [global, {return,list}]),
+            scan(Str, [], {1, 1}, [in_text]);
         _Error ->
             io:format("No po file found at path ~p~n",[Path]),
             []
@@ -62,8 +62,8 @@ scan("\"" ++ T, Scanned, {Row, Column}, Stack) ->
   scan(T, Scanned, {Row, Column + 1}, lists:append([{in_string_body, []}], Stack));
 
 %%Carriage return are ignored
-scan("\n" ++ T, Scanned, {Row, _Column}, Status) ->
-    scan(T, Scanned, {Row + 1, 1}, Status);
+%% scan("\n" ++ T, Scanned, {Row, _Column}, Status) ->
+%%     scan(T, Scanned, {Row + 1, 1}, Status);
 
 %%Concat string body to already parsed
 scan([H | T] , Scanned, {Row, Column}, [{in_string_body, Body} | Stack]) ->
