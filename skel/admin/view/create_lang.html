@@ -1,5 +1,5 @@
 {% extends "view/layouts/admin.html" %}
-{% block title %}{% trans "Create a language file" %}{% endblock %}
+{% block title %}Create a language file{% endblock %}
 
 {% block left_submenu %}
 	{% include "view/shared/_lang_left_submenu.html" with new_language="true" %}
@@ -49,12 +49,12 @@
 </script>
 {% endblock %}
 {% block body %}
-<h1>{% trans "Create a new language" %}</h1>
+<h1>Create a new language</h1>
 <form method="post" class="tabular">
 	<div class="box">
 		<div id="issue_descr_fields">
 		<p>
-			<label for="issue_tracker_id">{% trans "Select the language" %}<span class="required"> *</span></label>
+			<label for="issue_tracker_id">Select the language<span class="required"> *</span></label>
 			<select id="select_language" name="language" style="width: 120px;"></select>
 		</p>
 		</div>

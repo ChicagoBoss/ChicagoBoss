@@ -160,16 +160,22 @@ lang_write_to_file(IODevice, Original, Translation, BlockIdentifier) ->
 		Identifier -> 
 			file:write(IODevice, io_lib:format("\n#. ~ts\n",[list_to_binary(Identifier)])),
 			file:write(IODevice, io_lib:format("msgid \"~s\"\n", [""])),
-			lang_write_multiline_to_file(IODevice, string:tokens(OriginalEncoded, "\r\n")),
+			{ok, OriginalTokens} = regexp:split(OriginalEncoded,"\r\n"),
+			lang_write_multiline_to_file(IODevice, OriginalTokens),
 			file:write(IODevice, io_lib:format("\msgstr \"~s\"\n", [""])),
-			lang_write_multiline_to_file(IODevice, string:tokens(TranslationEncoded, "\r\n"))
+			{ok, TranslationTokens} = regexp:split(TranslationEncoded,"\r\n"),
+			lang_write_multiline_to_file(IODevice, TranslationTokens)
 	end.
 
 lang_write_multiline_to_file(IODevice, []) -> ok;
 lang_write_multiline_to_file(IODevice, [Token|Rest]) ->
+	ParsedToken = case Token of
+		[] -> "";
+		_ -> Token
+	end,
 	case Rest of
-		[] -> file:write(IODevice, io_lib:format("\"~ts\"\n", [list_to_binary(Token)]));
-		_ -> file:write(IODevice, io_lib:format("\"~ts~c~c\"\n", [list_to_binary(Token), 92, 110]))
+		[] -> file:write(IODevice, io_lib:format("\"~ts\"\n", [list_to_binary(ParsedToken)]));
+		_ -> file:write(IODevice, io_lib:format("\"~ts~c~c\"\n", [list_to_binary(ParsedToken), 92, 110]))
 	end,
 	lang_write_multiline_to_file(IODevice, Rest).
 
@@ -207,7 +213,7 @@ upgrade('POST', [], Auth) ->
     {redirect, "/admin/upgrade"}.
 
 reread_news_script('POST', [], Auth) ->
-    ok = boss_record_compiler:compile(filename:join(["init", "news.erl"]), []),
+	ok = boss_record_compiler:compile(filename:join(["init", "news.erl"]), []),
     boss_news:reset(),
     {redirect, "/admin/upgrade"}.
 
