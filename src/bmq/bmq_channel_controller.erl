@@ -40,6 +40,11 @@ handle_cast({From, poll, undefined}, State) ->
     Now = erlang:now(),
     gen_server:reply(From, {ok, Now, lists:map(fun({Msg, _Ts}) -> Msg end, State#state.messages)}),
     {noreply, State#state{ last_pull = Now }};
+handle_cast({From, poll, 'last'}, State) ->
+    ReturnMessages = messages_newer_than_timestamp(State#state.last_pull, State#state.messages),
+    Now = erlang:now(),
+    gen_server:reply(From, {ok, Now, lists:map(fun({Msg, _Ts}) -> Msg end, ReturnMessages)}),
+    {noreply, State#state{ last_pull = Now }};
 handle_cast({From, poll, Timestamp}, State) ->
     ReturnMessages = messages_newer_than_timestamp(Timestamp, State#state.messages),
     Now = erlang:now(),
@@ -64,7 +69,6 @@ code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 handle_info(timeout, State) ->
-    io:format("Channel exiting: ~p~n", [State#state.channel]),
     gen_server:cast(bmq, {expire, State#state.channel}),
     exit(State#state.supervisor),
     {noreply, State};

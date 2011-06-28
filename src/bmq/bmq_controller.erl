@@ -29,18 +29,15 @@ handle_call({poll, Channel, Timestamp}, From, State) ->
             gen_server:cast(ChannelPid, {From, poll, Timestamp}),
             {noreply, State};
         _ -> 
-            io:format("Channel not in dictionary: ~p~n", [Channel]),
             {reply, {self(), erlang:now(), []}, State}
     end;
 
 handle_call({push, Channel, Message}, From, State) ->
-    io:format("Received push to ~p~n", [Channel]),
     {ChannelPid, NewState} = find_or_create_channel(Channel, State),
     gen_server:cast(ChannelPid, {From, push, Message}),
     {noreply, NewState}.
 
 handle_cast({expire, Channel}, State) ->
-    io:format("Removing channel: ~p~n", [Channel]),
     NewState = State#state{
         dict = dict:erase(Channel, State#state.dict)},
     {noreply, NewState};
