@@ -207,7 +207,7 @@ upgrade('POST', [], Auth) ->
     {redirect, "/admin/upgrade"}.
 
 reread_news_script('POST', [], Auth) ->
-    ok = boss_record_compiler:compile("news.erl", []),
+    ok = boss_record_compiler:compile(filename:join(["init", "news.erl"]), []),
     boss_news:reset(),
     {redirect, "/admin/upgrade"}.
 
