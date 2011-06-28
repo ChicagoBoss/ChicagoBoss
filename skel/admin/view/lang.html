@@ -1,5 +1,5 @@
 {% extends "view/layouts/admin.html" %}
-{% block title %}{% trans "International Command Center" %}{% endblock %}
+{% block title %}International Command Center{% endblock %}
 
 {% block left_submenu %}
 	{% include "view/shared/_lang_left_submenu.html" with index="true" %}
@@ -44,12 +44,25 @@
 </script>
 {% endblock %}
 {% block body %}
-<h1>{% trans "International Command Center" %}</h1>
+
+<h1>International Command Center</h1>
+
+{% if this_lang %}
+<ul class="toc right">
+	<li class="heading1"><a href="#languages">Manage Languages</a></li>
+	<li class="heading2"><a href="#untranslated">Untranslated messages</a></li>
+	<li class="heading2"><a href="#translated">Translated messages</a></li>
+	<li class="heading2"><a href="#actions">Actions</a></li>
+</ul>
+{% endif %}
+
+<h2 id="manage_languages">Manage Languages</h2>
+
 <p>
 <form action="/admin/create_lang">
     <p>
 {% if languages %}
-{% trans "Your language files:" %}
+Your language files:
 {% for lang in languages %}
 {% ifequal lang this_lang %}
 <strong>{{ lang }}</strong>
@@ -65,12 +78,17 @@
 </p>
 </form>
 
+{% if this_lang %}
+<hr>
+<h2 id="untranslated">Untranslated messages</h2>
+{% endif %}
+
 {% if untranslated_messages %}
-<p><em>{{ untranslated_messages|length }} untranslated messages:</em> (<a href="#" onclick="javascript:startTranslations()">{% trans "Fill in the blanks with Google!" %}</a> <span style="font-size: 11px; font-family: Courier New; font-weight: bold;">{% trans "EXPERIMENTAL FEATURE" %}</span>)</p>
+<p><em>{{ untranslated_messages|length }} untranslated messages:</em> (<a href="#" onclick="javascript:startTranslations()">Fill in the blanks with Google!</a> <span style="font-size: 11px; font-family: Courier New; font-weight: bold;">EXPERIMENTAL FEATURE</span>)</p>
 <form method="post">
 <table class="list files">
     <thead>
-        <tr><th>{% trans "Original" %}/{% trans "Translation" %}</th></tr>
+        <tr><th>Original/Translation</th></tr>
     </thead>
     <tbody>
         {% for message in untranslated_messages %}
@@ -98,38 +116,56 @@
 <div class="box">
 	<div id="issue_descr_fields">
 	<p>
-		<label for="issue_tracker_id">{% trans "Submit only translations filled in this form" %}</label>
-		<input type="submit" name="trans_only_filled" value="{% trans "Submit" %}">
+		<label for="issue_tracker_id">Submit only translations filled in this form</label>
+		<input type="submit" name="trans_only_filled" value="Submit">
 	</p>
 	</div>
 	<div id="issue_descr_fields">
 	<p>
-		<label for="issue_tracker_id">{% trans "Submit all translatable string to the po file (you can translate later with a translation tool like Poedit)" %}</label>
-		<input type="submit" name="trans_all_with_blanks" value="{% trans "Submit" %}">
+		<label for="issue_tracker_id">Submit all translatable string to the po file (you can translate later with a translation tool like Poedit)</label>
+		<input type="submit" name="trans_all_with_blanks" value="Submit">
 	</p>
 	</div>	
 </div>
 </form>
+{% else %}
+	{% if this_lang %}
+	<h3>No untranslated string messages found</h3>
+	{% endif %}
+{% endif %}
+
+{% if this_lang %}
+<hr>
+<h2 id="translated">Translated messages</h2>
 {% endif %}
 
 {% if translated_messages %}
 <p><em>{{ translated_messages|length }} translated messages:</em></p>
-<table border="1">
+<table class="list files">
     <thead>
-        <tr><th>{% trans "Original" %}</th><th>{% trans "Translation" %}</th></tr>
+        <tr><th>Original</th><th>Translation</th></tr>
     </thead>
     <tbody>
 {% for orig, msg in translated_messages %}
-<tr><td>{{ orig }}</td><td><em>{{ msg }}</em></td></tr>
+	<tr class="{% cycle 'odd' 'even' %}">
+		<td>{{ orig }}</td><td><em>{{ msg }}</em></td>
+	</tr>
 {% endfor %}
 </tbody>
 </table>
 {% if last_modified %}
-<p><em>{% trans "Last modified" %}: {{ last_modified|date:"N j, Y, P" }}</em></p>
+<p><em>Last modified: {{ last_modified|date:"N j, Y, P" }}</em></p>
 {% endif %}
+{% else %}
+	{% if this_lang %}
+	<h3>No translated string messages found</h3>
+	{% endif %}
 {% endif %}
+
 {% if this_lang %}
-<p><a href="/admin/delete_lang/{{ this_lang }}">{% trans "Delete this language file" %}...</a></p>
+<hr>
+<h2 id="actions">Actions</h2>
+<p><a href="/admin/delete_lang/{{ this_lang }}">Delete this language file...</a></p>
 {% endif %}
 
 {% endblock %}
