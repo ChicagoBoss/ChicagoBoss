@@ -133,13 +133,14 @@ lang('POST', [Lang|Fmt], Auth) ->
     lists:map(fun(Message) ->
                 Original = proplists:get_value("orig", Message),
                 Translation = proplists:get_value("trans", Message),
+				BlockIdentifier = proplists:get_value("identifier", Message),
                 case Translation of
                     "" -> 
 						case WithBlanks of
 							undefined -> ok;
-							_ -> lang_write_to_file(IODevice, Original, Translation)
+							_ -> lang_write_to_file(IODevice, Original, Translation, BlockIdentifier)
 						end;
-                    _ -> lang_write_to_file(IODevice, Original, Translation)
+                    _ -> lang_write_to_file(IODevice, Original, Translation, BlockIdentifier)
                 end
         end, Req:deep_post_param(["messages"])),
     file:close(IODevice),
@@ -149,26 +150,41 @@ lang('POST', [Lang|Fmt], Auth) ->
         [] -> {redirect, "/admin/lang/"++Lang}
     end.
 
-lang_write_to_file(IODevice, Original, Translation) ->
+lang_write_to_file(IODevice, Original, Translation, BlockIdentifier) ->
 	OriginalEncoded = unicode:characters_to_list(boss_lang:escape_quotes(Original)),
 	TranslationEncoded = unicode:characters_to_list(boss_lang:escape_quotes(Translation)),
-    file:write(IODevice, io_lib:format("\nmsgid \"~ts\"\n",[list_to_binary(OriginalEncoded)])),	   
-	file:write(IODevice, io_lib:format("\msgstr \"~ts\"\n",[list_to_binary(TranslationEncoded)])).
+	case BlockIdentifier of
+		undefined -> 
+			file:write(IODevice, io_lib:format("\nmsgid \"~ts\"\n",[list_to_binary(OriginalEncoded)])),	   
+			file:write(IODevice, io_lib:format("\msgstr \"~ts\"\n",[list_to_binary(TranslationEncoded)]));
+		Identifier -> 
+			file:write(IODevice, io_lib:format("\n#. ~ts\n",[list_to_binary(Identifier)])),
+			file:write(IODevice, io_lib:format("msgid \"~s\"\n", [""])),
+			lang_write_multiline_to_file(IODevice, string:tokens(OriginalEncoded, "\r\n")),
+			file:write(IODevice, io_lib:format("\msgstr \"~s\"\n", [""])),
+			lang_write_multiline_to_file(IODevice, string:tokens(TranslationEncoded, "\r\n"))
+	end.
+
+lang_write_multiline_to_file(IODevice, []) -> ok;
+lang_write_multiline_to_file(IODevice, [Token|Rest]) ->
+	case Rest of
+		[] -> file:write(IODevice, io_lib:format("\"~ts\"\n", [list_to_binary(Token)]));
+		_ -> file:write(IODevice, io_lib:format("\"~ts~c~c\"\n", [list_to_binary(Token), 92, 110]))
+	end,
+	lang_write_multiline_to_file(IODevice, Rest).
 
 create_lang('GET', [], Auth) ->
     {ok, [{lang_section, true}, {languages, boss_files:language_list()}]};
 create_lang('POST', [], Auth) ->
     % TODO sanitize
     NewLang = Req:post_param("language"),
-    LangFile = boss_files:lang_path(NewLang),
-    {ok, IODevice} = file:open(LangFile, [write]),
-    file:close(IODevice),
+	boss_lang:create_lang(NewLang),
     {redirect, "/admin/lang/"++NewLang}.
 
 delete_lang('GET', [Lang], Auth) ->
     {ok, [{lang_section, true}, {this_lang, Lang}]};
 delete_lang('POST', [Lang], Auth) ->
-    ok = file:delete(boss_files:lang_path(Lang)),
+	boss_lang:delete_lang(Lang),
     {redirect, "/admin/lang"}.
 
 big_red_button('GET', [], Auth) ->

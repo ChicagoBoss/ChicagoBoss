@@ -21,8 +21,7 @@ model_path(Model) -> filename:join([hd(model_path()), Model]).
 
 lang_path() -> filename:join([root_dir(), "lang"]).
 
-lang_strings_path(Lang) -> filename:join([lang_path(), lists:concat(["strings.", Lang, ".po"])]).
-lang_blocks_path(Lang) -> filename:join([lang_path(), lists:concat(["blocks.", Lang, ".po"])]).
+lang_path(Lang) -> filename:join([lang_path(), lists:concat(["strings.", Lang, ".po"])]).
 
 static_path() -> filename:join([root_dir(), "static"]).
 admin_static_path() -> filename:join([root_admin_dir(), "static"]).

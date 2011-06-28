@@ -76,9 +76,20 @@
         {% for message in untranslated_messages %}
         <tr class="{% cycle 'odd' 'even' %}">
         	<td>
-        		<span class="message" id="message{{ forloop.counter0 }}"><input type="text" style="width: 100%;" value='{{ message }}' readonly="readonly"></span>
+        		{% if message.identifier %}
+        		<span class="message" id="message{{ forloop.counter0 }}">
+        			<textarea style="width: 100%;" readonly="readonly">{{ message.string }}</textarea>
+        		</span>
+                <input type="hidden" name="messages[{{ forloop.counter0 }}][orig]" value="{{ message.string|escape }}" />
+                <input type="hidden" name="messages[{{ forloop.counter0 }}][identifier]" value="{{ message.identifier }}" />
+            	<textarea id="trans_message{{ forloop.counter0 }}" name="messages[{{ forloop.counter0 }}][trans]" style="width: 100%;"></textarea>
+				{% else %}
+        		<span class="message" id="message{{ forloop.counter0 }}">
+        			<input type="text" style="width: 100%;" value='{{ message }}' readonly="readonly">
+        		</span>
                 <input type="hidden" name="messages[{{ forloop.counter0 }}][orig]" value="{{ message|escape }}" />
             	<input class="trans" id="trans_message{{ forloop.counter0 }}" style="width: 100%;" name="messages[{{ forloop.counter0 }}][trans]" size="60" />
+            	{% endif %}
         	</td>
         </tr>
         {% endfor %}

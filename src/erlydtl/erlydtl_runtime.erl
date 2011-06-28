@@ -57,6 +57,7 @@ translate(String, TranslationFun, Default) when is_binary(String) ->
 translate(String, TranslationFun, Default) when is_function(TranslationFun) ->
     case TranslationFun(String) of
         undefined -> Default;
+		"" -> Default;
         Str -> Str
     end.
 
