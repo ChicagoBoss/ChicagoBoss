@@ -37,7 +37,7 @@ stop() ->
 pull(Channel) ->
     pull(Channel, undefined).
 
-%% @spec pull( Channel::string(), Since::tuple() | now ) -> {ok, Timestamp, [Message]} | {error, Reason}
+%% @spec pull( Channel::string(), Since::tuple() | last | now ) -> {ok, Timestamp, [Message]} | {error, Reason}
 %% @doc Pull messages from the specified `Channel' after `Since' (an `erlang:now/0' tuple). If no such messages
 %% are in the queue, blocks until a message is pushed to the queue.
 pull(Channel, Timestamp) when is_list(Channel) ->
@@ -58,7 +58,7 @@ pull(_, _) ->
 poll(Channel) ->
     poll(Channel, undefined).
 
-%% @spec poll( Channel::string(), Since::tuple() ) -> {ok, Timestamp, [Message]} | {error, Reason}
+%% @spec poll( Channel::string(), Since::tuple() | last ) -> {ok, Timestamp, [Message]} | {error, Reason}
 %% @doc Like `pull/2', but returns immediately if no matching messages are in the queue.
 poll(Channel, Timestamp) when is_list(Channel) ->
     gen_server:call(boss_mq, {poll, Channel, Timestamp});

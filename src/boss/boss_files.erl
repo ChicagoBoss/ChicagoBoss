@@ -51,10 +51,13 @@ web_controller_list() ->
     module_list(web_controller_path()).
 
 view_file_list() ->
-	ViewFiles = filelib:fold_files(filename:join([root_dir(), "view"]), ".*\\.(html|txt)$", true, fun(F1,Acc1) -> [F1 | Acc1] end, []),
+    ViewFiles = filelib:fold_files(filename:join([root_dir(), "view"]), ".*\\.(html|txt)$", true, fun(F1,Acc1) -> [F1 | Acc1] end, []),
     MailPattern = filename:join([root_dir(), "mail", "view", "*.{html,txt}"]),
     AdminPattern = filename:join([root_admin_dir(), "view", "*.{html,txt}"]),	
     ViewFiles ++ filelib:wildcard(MailPattern) ++ filelib:wildcard(AdminPattern).
+
+init_file_list() ->
+    filelib:wildcard(filename:join([root_dir(), "init", "*.erl"])).
 
 language_list() ->
     {ok, Files} = file:list_dir(lang_path()),

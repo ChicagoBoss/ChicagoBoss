@@ -21,7 +21,9 @@ start(Config) ->
     boss_session:start(),
     boss_mq:start(),
 
-    ok = boss_compiler:compile("news.erl", []),
+    lists:map(fun(File) ->
+                ok = boss_compiler:compile(File, [])
+        end, boss_files:init_file_list());
 
     boss_news:start(),
 	

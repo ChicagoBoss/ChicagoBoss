@@ -25,7 +25,7 @@
 <p>More complex specifications may be supported in the future.</p>
 
 <h3>The <code>news.erl</code> startup script</h3>
-<p>Listeners should be set up in the <code>news.erl</code> file in your project directory. The module should have one exported function, <code>init/0</code>, which is executed at server startup. This function is a convenient place to set up listeners before any web requests are received, but listeners can be set up anywhere in the application.</p>
+<p>Listeners should be set up in the <code>init/news.erl</code> file in your project directory. The module should have one exported function, <code>init/0</code>, which is executed at server startup. This function is a convenient place to set up listeners before any web requests are received, but listeners can be set up anywhere in the application.</p>
 
 <h3>HTTP API for supporting other frameworks</h3>
 <p>Other applications can post data update notifications to a Chicago Boss server via a simple HTTP API:</p>
