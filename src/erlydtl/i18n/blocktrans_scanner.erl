@@ -134,7 +134,7 @@ append_text([C], _Pos, [{open_blocktrans, BPos, ""}|Rest]) when ((C >= $a) and (
     [{open_blocktrans, BPos, [C]}|Rest];
 append_text(" ", _Pos, [{open_blocktrans, BPos, ""}|Rest]) ->
     [{open_blocktrans, BPos, ""}|Rest];
-append_text([C], _Pos, [{open_blocktrans, BPos, Name}|Rest]) when ((C >= $a) and (C =< $z)) or ((C >= $A) and (C =< $Z)) or (C =:= $_) orelse (C >= $0 andalso C =< $9) ->
+append_text([C], _Pos, [{open_blocktrans, BPos, Name}|Rest]) when is_list(Name) andalso ((C >= $a) and (C =< $z)) or ((C >= $A) and (C =< $Z)) or (C =:= $_) orelse (C >= $0 andalso C =< $9) ->
     [{open_blocktrans, BPos, [C|Name]}|Rest];
 append_text(" ", _Pos, [{open_blocktrans, BPos, Name}|Rest]) when is_list(Name) ->
     [{open_blocktrans, BPos, list_to_atom(lists:reverse(Name))}|Rest];

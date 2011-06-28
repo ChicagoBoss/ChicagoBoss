@@ -83,21 +83,6 @@ handle_request(Req, RequestMod, ResponseMod) ->
         "/admin/static/"++File ->
             Response = simple_bridge:make_response(ResponseMod, {Req, boss_files:admin_static_path()}),
             (Response:file([$/|File])):build_response();
-        "/socket.io/1/" ->
-            SessionId = boss_session:new_session(undefined),
-            Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
-            Response1 = (Response:status_code(200)):data([SessionId, "::10:xhr-polling"]),
-            Response1:build_response();
-        "/socket.io/1/xhr-polling/" ++ SessionId ->
-            io:format("Session: ~p Request: ~p~n", [SessionId, Request]),
-            Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
-            case Request:request_method() of
-                'GET' ->
-                    {ok, _Timestamp, _Messages} = boss_mq:pull(SessionId, 'now'),
-                    ((Response:status_code(200)):data("")):build_response();
-                'POST' ->
-                    ((Response:status_code(200)):data("ok")):build_response()
-            end;
         _ -> 
             SessionKey = boss_session:get_session_key(),
             SessionId = boss_session:new_session(Request:cookie(SessionKey)),			
