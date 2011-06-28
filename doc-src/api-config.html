@@ -23,7 +23,7 @@
         <li><code>boss_mail_driver_mock</code> - A black hole, useful for testing.</li>
     </ul></li>
     <li><code>mail_relay</code> - The relay server for SMTP mail deliveries.</li>
-    <li><code>port</code> - The port to run the server on. Defaults to 8001.</li>
+    <li><code>port</code> - The port to run the HTTP server on. Defaults to 8001.</li>
     <li><code>server</code> - The HTTP server to use. Valid values are:
     <ul>
         <li><code>mochiweb</code> - The <a href="http://code.google.com/p/mochiweb/">Mochiweb</a> Web Server</li>
@@ -47,6 +47,8 @@
         <li><code>tcp</code> (default)</li>
         <li><code>ssl</code></li>
     </ul>
+    <li><code>ssl_enable</code> - Enable HTTP over SSL</li>
+    <li><code>ssl_options</code> - SSL options; see <a href="http://www.erlang.org/doc/man/ssl.html">ssl(3erl)</a></li>
 </ul>
 <p><b>Warning:</b> From 0.5.2, the frontpage, default_action and default_actions configuration options has been moved to the <a href="api-controller.html#routes">new routing system</a></p>
 {% endblock %}

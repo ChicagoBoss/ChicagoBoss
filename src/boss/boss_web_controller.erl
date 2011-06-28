@@ -45,10 +45,17 @@ start(Config) ->
         _ ->
             ok
     end,
-    ServerConfig = [{loop, fun(Req) -> ?MODULE:handle_request(Req, RequestMod, ResponseMod) end} | Config],
+    SSLEnable = boss_env:get_env(ssl_enable, false),
+    SSLOptions = boss_env:get_env(ssl_options, []),
+    ServerConfig = [{loop, fun(Req) -> ?MODULE:handle_request(Req, RequestMod, ResponseMod) end},
+        {ssl, SSLEnable}, {ssl_opts, SSLOptions} | Config],
     case ServerMod of
-        mochiweb_http -> mochiweb_http:start(ServerConfig);
-        misultin -> misultin:start_link(ServerConfig)
+        mochiweb_http -> mochiweb_http:start([{ssl, SSLEnable}, {ssl_opts, SSLOptions} | ServerConfig]);
+        misultin -> 
+            case SSLEnable of
+                true -> misultin:start_link([{ssl, SSLOptions} | ServerConfig]);
+                false -> misultin:start_link(ServerConfig)
+            end
     end.
 
 stop() ->
