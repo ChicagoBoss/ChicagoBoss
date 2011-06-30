@@ -207,7 +207,7 @@ handle_call({updated, Id, OldAttrs, NewAttrs}, _From, State0) ->
                                                     ({id, ThisId, Attr}) when ThisId =:= Id, Attr =:= KeyString ->
                                                         CallBack(updated, {NewRecord, Key, OldVal, NewVal});
                                                     ({id, ThisId, "*"}) when ThisId =:= Id ->
-                                                        CallBack(updated, {NewRecord, Key, OldVal, NewVal})
+                                                        CallBack(updated, {NewRecord, Key, OldVal, NewVal});
                                                     ({module, ThisModule, Attr}) when ThisModule =:= Module, Attr =:= KeyString ->
                                                         CallBack(updated, {NewRecord, Key, OldVal, NewVal});
                                                     ({module, ThisModule, "*"}) when ThisModule =:= Module ->

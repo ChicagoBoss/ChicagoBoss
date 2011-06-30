@@ -128,19 +128,19 @@ scan("<!--{{" ++ T, Scanned, {Row, Column}, in_text) ->
     scan(T, [{open_var, {Row, Column}, '<!--{{'} | Scanned], {Row, Column + length("<!--{{")}, {in_code, "}}-->"});
 
 scan("{{" ++ T, Scanned, {Row, Column}, in_text) ->
-    scan(T, [{open_var, {Row, Column}, '{{'} | Scanned], {Row, Column + 2}, {in_code, "}}"});
+    scan(T, [{open_var, {Row, Column}, '{{'} | Scanned], {Row, Column + length("{{")}, {in_code, "}}"});
 
 scan("<!--{#" ++ T, Scanned, {Row, Column}, in_text) ->
     scan(T, Scanned, {Row, Column + length("<!--{#")}, {in_comment, "#}-->"});
 
 scan("{#" ++ T, Scanned, {Row, Column}, in_text) ->
-    scan(T, Scanned, {Row, Column + 2}, {in_comment, "#}"});
+    scan(T, Scanned, {Row, Column + length("{#")}, {in_comment, "#}"});
 
 scan("#}-->" ++ T, Scanned, {Row, Column}, {in_comment, "#}-->"}) ->
     scan(T, Scanned, {Row, Column + length("#}-->")}, in_text);
 
 scan("#}" ++ T, Scanned, {Row, Column}, {in_comment, "#}"}) ->
-    scan(T, Scanned, {Row, Column + 2}, in_text);
+    scan(T, Scanned, {Row, Column + length("#}")}, in_text);
 
 scan("<!--{%" ++ T, Scanned, {Row, Column}, in_text) ->
     scan(T, [{open_tag, {Row, Column}, '<!--{%'} | Scanned], 
@@ -148,7 +148,7 @@ scan("<!--{%" ++ T, Scanned, {Row, Column}, in_text) ->
 
 scan("{%" ++ T, Scanned, {Row, Column}, in_text) ->
     scan(T, [{open_tag, {Row, Column}, '{%'} | Scanned], 
-        {Row, Column + 2}, {in_code, "%}"});
+        {Row, Column + length("{%")}, {in_code, "%}"});
 
 scan([_ | T], Scanned, {Row, Column}, {in_comment, Closer}) ->
     scan(T, Scanned, {Row, Column + 1}, {in_comment, Closer});
@@ -289,30 +289,19 @@ scan([H | T], Scanned, {Row, Column}, {in_identifier, Closer}) ->
 
 % internal functions
 
-append_char(Scanned, Char) ->
-    [String | Scanned1] = Scanned,
-    [setelement(3, String, [Char | element(3, String)]) | Scanned1].
+append_char([{Type, Pos, Chars}|Scanned], Char) ->
+    [{Type, Pos, [Char | Chars]} | Scanned].
 
+append_text_char([], {Row, Column}, Char) ->
+    [{string, {Row, Column}, [Char]}];
+append_text_char([{string, StrPos, Chars} |Scanned1], _, Char) ->
+    [{string, StrPos, [Char | Chars]} | Scanned1];
 append_text_char(Scanned, {Row, Column}, Char) ->
-    case length(Scanned) of
-        0 ->
-            [{string, {Row, Column}, [Char]}];
-        _ ->
-            [Token | Scanned1] = Scanned,
-            case element(1, Token) of
-                string ->
-                    [{string, element(2, Token), [Char | element(3, Token)]} | Scanned1];
-                _ ->
-                    [{string, element(2, Token), [Char]} | Scanned]
-            end
-    end.
+    [{string, {Row, Column}, [Char]} | Scanned].
 
-char_type(Char) ->
-    case Char of 
-        C when ((C >= $a) and (C =< $z)) or ((C >= $A) and (C =< $Z)) or (C == $_) ->
-            letter_underscore;
-        C when ((C >= $0) and (C =< $9)) ->
-            digit;
-        _ ->
-            undefined
-    end.
+char_type(C) when ((C >= $a) andalso (C =< $z)) orelse ((C >= $A) andalso (C =< $Z)) orelse (C == $_) ->
+    letter_underscore;
+char_type(C) when ((C >= $0) andalso (C =< $9)) ->
+    digit;
+char_type(_C) ->
+    undefined.

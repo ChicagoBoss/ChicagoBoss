@@ -1064,21 +1064,26 @@ urlize(Input, Trunc) when is_binary(Input) ->
     urlize(binary_to_list(Input),Trunc);
 urlize(Input, Trunc) ->
     {ok,RE} = re:compile("(([[:alpha:]]+://|www\.)[^<>[:space:]]+[[:alnum:]/])"),
-    {match,Matches} = re:run(Input,RE,[global]),
-    Indexes = lists:map(fun(Match) -> lists:nth(2,Match) end, Matches),
-    Domains = lists:map(fun({Start, Length}) -> lists:sublist(Input, Start+1, Length) end, Indexes),
-    URIDomains = lists:map(fun(Domain) -> addDefaultURI(Domain) end, Domains),
-    case Trunc == 0 of
-        true ->
-            DomainsTrunc = Domains;
-        false ->
-            DomainsTrunc = lists:map(fun(Domain) -> string:concat( string:substr(Domain,1,Trunc-3), "...") end, Domains)
-    end,
-    ReplaceList = lists:zip(URIDomains,DomainsTrunc),
-    ReplaceStrings = lists:map(fun({URIDomain,Domain}) -> lists:flatten(io_lib:format("<a href=\"~s\" rel=\"nofollow\">~s</a>",[URIDomain,Domain])) end, ReplaceList),
-    Template = re:replace(Input,"(([[:alpha:]]+://|www\.)[^<>[:space:]]+[[:alnum:]/])", "~s", [global,{return,list}]),
-    Result = lists:flatten(io_lib:format(Template,ReplaceStrings)),
-    Result.
+    RegexResult = re:run(Input,RE,[global]),
+    case RegexResult of
+        {match, Matches} ->
+            Indexes = lists:map(fun(Match) -> lists:nth(2,Match) end, Matches),
+            Domains = lists:map(fun({Start, Length}) -> lists:sublist(Input, Start+1, Length) end, Indexes),
+            URIDomains = lists:map(fun(Domain) -> addDefaultURI(Domain) end, Domains),
+            case Trunc == 0 of
+                true ->
+                    DomainsTrunc = Domains;
+                false ->
+                    DomainsTrunc = lists:map(fun(Domain) -> string:concat( string:substr(Domain,1,Trunc-3), "...") end, Domains)
+            end,
+            ReplaceList = lists:zip(URIDomains,DomainsTrunc),
+            ReplaceStrings = lists:map(fun({URIDomain,Domain}) -> lists:flatten(io_lib:format("<a href=\"~s\" rel=\"nofollow\">~s</a>",[URIDomain,Domain])) end, ReplaceList),
+            Template = re:replace(Input,"(([[:alpha:]]+://|www\.)[^<>[:space:]]+[[:alnum:]/])", "~s", [global,{return,list}]),
+            Result = lists:flatten(io_lib:format(Template,ReplaceStrings)),
+            Result;
+        nomatch ->
+            Input
+    end.
 
 %% @doc Converts URLs into clickable links just like urlize, but truncates URLs longer than the given character limit.
 urlizetrunc(Input, Trunc) ->

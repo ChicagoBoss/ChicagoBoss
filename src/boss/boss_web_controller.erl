@@ -115,7 +115,7 @@ process_result({error, Payload}) ->
     error_logger:error_report(Payload),
     {500, [{"Content-Type", "text/html"}], "Error: <pre>" ++ io_lib:print(Payload) ++ "</pre>"};
 process_result({not_found, Payload}) ->
-    {404, [{"Content-Type", "text/html"}], unicode:characters_to_binary(Payload)};
+    {404, [{"Content-Type", "text/html"}], Payload};
 process_result({redirect, Where}) ->
     process_result({redirect, Where, []});
 process_result({redirect, "http://"++Where, Headers}) ->
@@ -297,7 +297,7 @@ render_view({Controller, Template, _}, Req, Variables, Headers) ->
                 Req:header(accept_language), proplists:get_value("Content-Language", Headers)),
             case Module:render(lists:merge([{"_lang", Lang}, {"_base_url", boss_router:base_url()}|Variables], BossFlash), [{translation_fun, TranslationFun}, {locale, Lang}]) of
                 {ok, Payload} ->
-                    {ok, unicode:characters_to_binary(Payload), Headers};
+                    {ok, Payload, Headers};
                 Err ->
                     Err
             end;
