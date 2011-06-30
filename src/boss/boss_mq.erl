@@ -7,6 +7,7 @@
 -export([
         pull/1,
         pull/2,
+        pull/3,
         poll/1,
         poll/2,
         push/2]).
@@ -40,17 +41,30 @@ pull(Channel) ->
 %% @spec pull( Channel::string(), Since::tuple() | last | now ) -> {ok, Timestamp, [Message]} | {error, Reason}
 %% @doc Pull messages from the specified `Channel' after `Since' (an `erlang:now/0' tuple). If no such messages
 %% are in the queue, blocks until a message is pushed to the queue.
-pull(Channel, Timestamp) when is_list(Channel) ->
+pull(Channel, Timestamp) ->
+    pull(Channel, Timestamp, infinity).
+
+%% @spec pull( Channel::string(), Since::tuple() | last | now, Timeout::integer() ) -> {ok, Timestamp, [Message]} | {error, Reason}
+%% @doc Pull messages from the specified `Channel' after `Since' (an `erlang:now/0' tuple). If no such messages
+%% are in the queue, blocks until a message is pushed to the queue, or until `Timeout' milliseconds have elapsed.
+pull(Channel, Timestamp, Timeout) when is_list(Channel) ->
+    TimeoutMs = case Timeout of
+        infinity -> infinity;
+        _ -> Timeout * 1000
+    end,
     case gen_server:call(boss_mq, {pull, Channel, Timestamp, self()}) of
-        ok ->
+        {ok, PullTime} ->
             receive
                 {_From, NewTimestamp, Messages} ->
                     {ok, NewTimestamp, Messages}
+            after
+                TimeoutMs ->
+                    {ok, PullTime, []}
             end;
         Error ->
             Error
     end;
-pull(_, _) ->
+pull(_, _, _) ->
     {error, invalid_channel}.
 
 %% @spec poll( Channel::string() ) -> {ok, Timestamp, [Message]} | {error, Reason}
@@ -65,7 +79,7 @@ poll(Channel, Timestamp) when is_list(Channel) ->
 poll(_, _) ->
     {error, invalid_channel}.
 
-%% @spec push( Channel::string(), Message ) -> ok
+%% @spec push( Channel::string(), Message ) -> {ok, Timestamp}
 %% @doc Pushes a message to the specified `Channel'.
 push(Channel, Message) when is_list(Channel) ->
     gen_server:call(boss_mq, {push, Channel, Message});

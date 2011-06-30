@@ -16,7 +16,7 @@ Author:		www.ytrip.im
 */
 
 html {
-  background:#ccc url(/admin/static/images/bg6.jpg);  
+  background-color:#ccc;
 	margin:0;
 	padding:0;
 }

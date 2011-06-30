@@ -1,5 +1,18 @@
 {% extends "view/layouts/admin.html" %}
 {% block title %}Models data management{% endblock %}
+{% block meta_scripts %}
+<script src="/admin/static/jquery-1.6.1.min.js"></script>
+<script src="/admin/static/news.js"></script>
+<script>
+    var topic_string = "{{ topic_string }}";
+    var timestamp = {{ timestamp }};
+    $(document).ready(function() {
+        if (topic_string) {
+            watch_topic(topic_string, timestamp);
+        }
+    });
+</script>
+{% endblock %}
 
 {% block body %}
 <h1>Models data management</h1>
@@ -31,22 +44,22 @@
                 {% endfor %}
             </tr>
             {% endif %}
-        {% for record in records %}
-        <tr>
+        {% for record_id, record in records %}
+        <tr id="{{ record_id }}">
+            <td><strong><a href="/admin/record/{{ record_id }}">{{ record_id }}</a></strong></td>
             {% for key, val, datatype in record %}
             {% if datatype == "id" %}
-            <td><strong><a href="/admin/record/{{ val }}">{{ val }}</a></strong></td>
             {% else %}
             {% if datatype == "datetime" %}
-            <td>{{ val|date:"N j, Y, P" }}</td>
+            <td id="{{ record_id }}-{{ key }}">{{ val|date:"N j, Y, P" }}</td>
             {% else %}
             {% if datatype == "foreign_id" %}
-            <td><a href="/admin/record/{{ val }}">{{ val }}</a></td>
+            <td id="{{ record_id }}-{{ key }}"><a href="/admin/record/{{ val }}">{{ val }}</a></td>
             {% else %}
             {% if datatype == "string" or datatype == "binary" %}
-            <td>{{ val|truncatewords:8 }}</td>
+            <td id="{{ record_id }}-{{ key }}">{{ val|truncatewords:8 }}</td>
             {% else %}
-            <td>{{ val }}</td>
+            <td id="{{ record_id }}-{{ key }}">{{ val }}</td>
             {% endif %}
             {% endif %}
             {% endif %}
@@ -69,4 +82,4 @@
         </p>
         {% endifnotequal %}
         {% endif %}
-        {% endblock %}
+{% endblock %}

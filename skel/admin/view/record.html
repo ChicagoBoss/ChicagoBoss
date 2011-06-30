@@ -1,5 +1,18 @@
-{% extends "view/model.html" %}
+{% extends "view/layouts/admin.html" %}
 {% block title %}{{ record.id }} (Chicago Boss Admin Interface){% endblock %}
+{% block meta_scripts %}
+<script src="/admin/static/jquery-1.6.1.min.js"></script>
+<script src="/admin/static/news.js"></script>
+<script>
+    var topic_string = "{{ record.id }}.*";
+    var timestamp = {{ timestamp }};
+    $(document).ready(function() {
+        if (topic_string) {
+            watch_topic(topic_string, timestamp);
+        }
+    });
+</script>
+{% endblock %}
 {% block body %}
 <h1>Displaying {{ record.id }}</h1>
 <p><em><a href="/admin/model/{{ type }}">Back to the {{ type }} list</a></em></p>
@@ -7,12 +20,12 @@
     {% if not datatype == "id" %}
         <strong>{{ key }}</strong><br />
         {% if datatype == "datetime" %}
-            {{ val|date:"N j, Y, P" }}
+        <span id="{{ record.id }}-{{ key }}">{{ val|date:"N j, Y, P" }}</span>
         {% else %}
         {% if datatype == "string" or datatype == "binary" %}
-            {{ val|linebreaksbr }}
+        <span id="{{ record.id }}-{{ key }}">{{ val|linebreaksbr }}</span>
         {% else %}
-            {{ val }}
+        <span id="{{ record.id }}-{{ key }}">{{ val }}</span>
         {% endif %}
         {% endif %}
         <br /><br />
@@ -34,9 +47,9 @@
         <td><strong><a href="/admin/record/{{ attr_val }}">{{ attr_val }}</a></strong></td>
         {% else %}
         {% if "_time" in attr_name %}
-        <td>{{ attr_val|date:"N j, Y, P" }}</td>
+        <td id="{{ key }}-{{ attr_name }}">{{ attr_val|date:"N j, Y, P" }}</td>
         {% else %}
-        <td>{{ attr_val|truncatewords:8 }}</td>
+        <td id="{{ key }}-{{ attr_name }}">{{ attr_val|truncatewords:8 }}</td>
         {% endif %}
         {% endifequal %}
         {% endfor %}

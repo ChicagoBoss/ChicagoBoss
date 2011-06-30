@@ -23,8 +23,8 @@ run_hooks(Record, Type, Function) ->
         false -> ok
     end.
 
-is_boss_record(Record) when is_tuple(Record) ->
+is_boss_record(Record) when is_tuple(Record) andalso is_atom(element(1, Record)) ->
     Type = element(1, Record),
-    erlang:function_exported(Type, attribute_names, 1);
+    erlang:function_exported(Type, attribute_names, 1) andalso erlang:function_exported(Type, new, tuple_size(Record) - 1);
 is_boss_record(_) ->
     false.

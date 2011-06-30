@@ -1,4 +1,4 @@
-{% extends "view/model.html" %}
+{% extends "view/layouts/admin.html" %}
 {% block title %}New {{ type }}{% endblock %}
 {% block body %}
 <h1>Create a new {{ type }}</h1>
@@ -10,7 +10,7 @@
 {% endfor %}
 </ol>
 {% endif %}
-<form name="create" method="post">
+<form name="create" action="/admin/create/{{ type }}" method="post">
 <table>
     {% for key, val in record.attributes %}
     {% ifnotequal key "id" %}

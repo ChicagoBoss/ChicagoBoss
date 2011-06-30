@@ -26,11 +26,29 @@ index('GET', [], Authorization) ->
     {ok, [ {index_section, true}, {modules_loaded, ModulesLoaded}, {config_env, ConfigValues}, {system_env, SystemValues}] }.
 
 routes('GET', [], Authorization) ->
-	{ok, [ {routes_section, true}, {routes, boss_router:get_all()} ]};
+    {ok, [ {routes_section, true}, {routes, boss_router:get_all()} ]};
 routes('GET', ["reload"], Authorization) ->
-	boss_router:reload(),
-	boss_flash:add(Req, notice, "Routes reloaded"),
-	{redirect, boss_router:base_url() ++ "/admin/routes"}.
+    boss_router:reload(),
+    boss_flash:add(Req, notice, "Routes reloaded"),
+    {redirect, boss_router:base_url() ++ "/admin/routes"}.
+
+heartbeat('POST', [WatchName], Authorization) ->
+    boss_news:extend_watch(list_to_integer(WatchName)),
+    {output, ""}.
+
+watch('POST', [], Authorization) ->
+    SessionID = Req:session_id(),
+    TopicString = Req:post_param("topic_string"),
+    {ok, WatchId} = boss_news:watch(TopicString, fun(updated, {Record, Attr, OldVal, NewVal}) ->
+                boss_mq:push("admin" ++ SessionID, [{ev, updated}, {data, [{id, Record:id()}, {attr, Attr}, {val, NewVal}]}])
+        end, 60),
+    {json, [{watch_id, WatchId}]}.
+
+events('GET', [Since], Authorization) ->
+    io:format("Pulling events...~n", []),
+    SessionID = Req:session_id(),
+    {ok, Timestamp, Messages} = boss_mq:pull("admin" ++ SessionID, now_from_micro_seconds(list_to_integer(Since)), 30),
+    {json, [{messages, Messages}, {timestamp, micro_seconds(Timestamp)}]}.
 
 model('GET', [], Authorization) ->
     {ok, [{model_section, true}, {records, []}, {models, boss_files:model_list()}, {this_model, ""}]};
@@ -41,10 +59,11 @@ model('GET', [ModelName, PageName], Authorization) ->
     Model = list_to_atom(ModelName),
     RecordCount = boss_db:count(Model),
     Records = boss_db:find(Model, [], ?RECORDS_PER_PAGE, (Page - 1) * ?RECORDS_PER_PAGE, id, str_descending),
+    TopicString = string:join(lists:map(fun(Record) -> Record:id() ++ ".*" end, Records), ", "),
     AttributesWithDataTypes = lists:map(fun(Record) ->
-                lists:map(fun({Key, Val}) ->
+                {Record:id(), lists:map(fun({Key, Val}) ->
                             {Key, Val, boss_db:data_type(Key, Val)}
-                    end, Record:attributes())
+                    end, Record:attributes())}
         end, Records),
     AttributeNames = case length(Records) of
         0 -> [];
@@ -54,7 +73,8 @@ model('GET', [ModelName, PageName], Authorization) ->
     {ok, 
         [{records, AttributesWithDataTypes}, {attribute_names, AttributeNames}, 
             {models, boss_files:model_list()}, {this_model, ModelName}, 
-            {pages, Pages}, {this_page, Page}, {model_section, true}], 
+            {pages, Pages}, {this_page, Page}, {model_section, true},
+            {topic_string, TopicString}, {timestamp, micro_seconds(erlang:now())}], 
         [{"Cache-Control", "no-cache"}]}.
 
 record('GET', [RecordId], Authorization) ->
@@ -63,7 +83,7 @@ record('GET', [RecordId], Authorization) ->
                 {Key, Val, boss_db:data_type(Key, Val)}
         end, Record:attributes()),
     {ok, [{'record', Record}, {'attributes', AttributesWithDataTypes}, 
-            {'type', boss_db:type(RecordId)}]}.
+            {'type', boss_db:type(RecordId)}, {timestamp, micro_seconds(erlang:now())}]}.
 
 delete('GET', [RecordId], Authorization) ->
     {ok, [{'record', boss_db:find(RecordId)}]};
@@ -227,3 +247,10 @@ news_api('POST', ["updated", Id], Auth) ->
 news_api('POST', ["deleted", Id], Auth) ->
     ok = boss_news:deleted(Id, Req:post_params("old")),
     {output, "ok"}.
+
+
+micro_seconds({Mega, Secs, Micro}) ->
+    Mega * 1000 * 1000 * 1000 * 1000 + Secs * 1000 * 1000 + Micro.
+
+now_from_micro_seconds(MicroSeconds) ->
+    {MicroSeconds div (1000 * 1000 * 1000 * 1000), MicroSeconds div (1000 * 1000), MicroSeconds}.

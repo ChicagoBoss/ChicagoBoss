@@ -41,6 +41,9 @@ cookie(Cookie) ->
             proplists:get_value(Cookie, Cookies)
     end.
 
+session_id() ->
+    cookie(boss_session:get_session_key()).
+
 query_params() -> Mod:query_params(Req).
 
 query_param(Param) ->

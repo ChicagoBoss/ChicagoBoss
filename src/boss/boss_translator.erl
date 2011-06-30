@@ -35,7 +35,7 @@ reload(Locale) ->
 
 %% @spec reload_all() -> ok | {error, Reason}
 reload_all() ->
-	lists:map(fun(X) -> reload(X) end, boss_files:language_list()).
+    lists:foldr(fun(X, ok) -> reload(X) end, ok, boss_files:language_list()).
 
 
 %% @spec fun_for(Locale::string()) -> TranslationFun::function() | none

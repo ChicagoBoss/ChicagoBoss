@@ -26,15 +26,15 @@ handle_call(_From, _, State) ->
 
 handle_cast({From, pull, 'now', Subscriber}, State) ->
     NewSubscribers = [Subscriber|State#state.subscribers],
-    gen_server:reply(From, ok),
+    gen_server:reply(From, {ok, erlang:now()}),
     {noreply, State#state{subscribers = NewSubscribers}};
 handle_cast({From, pull, 'last', Subscriber}, State) ->
     {NewSubscribers, LastPull} = pull_messages(State#state.last_pull, Subscriber, State),
-    gen_server:reply(From, ok),
+    gen_server:reply(From, {ok, LastPull}),
     {noreply, State#state{subscribers = NewSubscribers, last_pull = LastPull}};
 handle_cast({From, pull, Timestamp, Subscriber}, State) ->
     {NewSubscribers, LastPull} = pull_messages(Timestamp, Subscriber, State),
-    gen_server:reply(From, ok),
+    gen_server:reply(From, {ok, LastPull}),
     {noreply, State#state{subscribers = NewSubscribers, last_pull = LastPull}};
 handle_cast({From, poll, undefined}, State) ->
     Now = erlang:now(),

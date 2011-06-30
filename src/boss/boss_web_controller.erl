@@ -401,18 +401,23 @@ json_data(Data) ->
 
 json_data1([], Acc) ->
     lists:reverse(Acc);
-json_data1([{VariableName, [First|_] = Variable}|Rest], Acc) ->
+json_data1([{VariableName, [First|_] = Variable}|Rest], Acc) when is_integer(First) ->
+    json_data1(Rest, [{VariableName, list_to_binary(Variable)}|Acc]);
+json_data1([{VariableName, [First|_] = Variable}|Rest], Acc) when is_tuple(First) ->
     case boss_record_lib:is_boss_record(First) of
         true ->
             json_data1(Rest, [{VariableName, lists:map(fun boss_record_to_json/1, Variable)}|Acc]);
         false ->
-            json_data1(Rest, [{VariableName, Variable}|Acc])
+            json_data1(Rest, [{VariableName, {struct, json_data1(Variable, [])}}|Acc])
     end;
+json_data1([{VariableName, [First|_] = Variable}|Rest], Acc) when is_list(First) ->
+    json_data1(Rest, [{VariableName, lists:map(fun(Item) -> {struct, json_data1(Item, [])} end, Variable)}|Acc]);
+json_data1([{VariableName, {A, B, C} = Val}|Rest], Acc) when is_integer(A), is_integer(B), is_integer(C) ->
+    json_data1(Rest, [{VariableName, list_to_binary(erlydtl_filters:date(calendar:now_to_datetime(Val), "F d, Y H:i:s"))}|Acc]);
 json_data1([{VariableName, Variable}|Rest], Acc) ->
     case boss_record_lib:is_boss_record(Variable) of
         true -> 
-            Struct = boss_record_to_json(Variable),
-            json_data1(Rest, [{VariableName, Struct}|Acc]);
+            json_data1(Rest, [{VariableName, boss_record_to_json(Variable)}|Acc]);
         false -> 
             json_data1(Rest, [{VariableName, Variable}|Acc])
     end.
