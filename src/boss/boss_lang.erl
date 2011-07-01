@@ -49,7 +49,7 @@ lang_write_to_file(IODevice, Original, Translation, BlockIdentifier) ->
 	TranslationEncoded = boss_lang:escape_quotes(Translation),
 	case BlockIdentifier of
 		undefined -> 
-			file:write(IODevice, io_lib:format("\nmsgid \"~ts\"\n",[OriginalEncoded])),	   
+			file:write(IODevice, io_lib:format("\nmsgid \"~ts\"\n",[OriginalEncoded])),
 			file:write(IODevice, io_lib:format("\msgstr \"~ts\"\n",[TranslationEncoded]));
 		Identifier -> 
 			file:write(IODevice, io_lib:format("\n#. ~ts\n",[Identifier])),
@@ -147,12 +147,12 @@ extract_view_strings() ->
 
 process_view_file_blocks(ViewFile) ->
     {ok, Contents} = file:read_file(ViewFile),
-    {ok, Tokens} = blocktrans_scanner:scan(unicode:characters_to_list(Contents)),
+    {ok, Tokens} = blocktrans_scanner:scan(binary_to_list(Contents)),
 	lists:map(fun(X) -> [{identifier, element(1, X)}, {string, element(2, X)}] end, blocktrans_parser:parse(Tokens)).
 
 process_view_file(ViewFile) ->
     {ok, Contents} = file:read_file(ViewFile),
-    {ok, Tokens} = erlydtl_scanner:scan(unicode:characters_to_list(Contents)),
+    {ok, Tokens} = erlydtl_scanner:scan(binary_to_list(Contents)),
     process_view_file_tokens(Tokens, []).
 
 process_view_file_tokens([], Acc) ->
