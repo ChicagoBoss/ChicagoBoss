@@ -38,11 +38,10 @@ start() ->
                     _ -> Acc
                 end
         end, [], [db_port, db_host, db_username, db_password, db_database]),
-    DBAdapter = case application:get_env(db_adapter) of
-        {ok, Val} -> Val;
-        _ -> mock
-    end,
-    DBOptions1 = [{adapter, list_to_atom("boss_db_adapter_"++atom_to_list(DBAdapter))}|DBOptions],
+    DBAdapter = boss_env:get_env(db_adapter, mock),
+    DBShards = boss_env:get_env(db_shards, []),
+    DBOptions1 = [{adapter, list_to_atom("boss_db_adapter_"++atom_to_list(DBAdapter))},
+        {shards, DBShards}|DBOptions],
     start(DBOptions1).
 
 start(Options) ->

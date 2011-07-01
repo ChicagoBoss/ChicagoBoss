@@ -16,6 +16,10 @@
         <li><code>pgsql</code> - PostgreSQL</li>
         <li><code>tyrant</code> - Tokyo Tyrant</li>
     </ul></li>
+    <li><code>db_shards</code> - A list of proplists with per-shard database configuration. The proplists override the above options, and should contain an additional option:
+    <ul>
+        <li><code>db_shard_models</code> - A list of models (atoms) which are stored on the shard.</li>
+    </ul></li>
     <li><code>log_dir</code> - Directory in which to keep log files. Location is relative to the project directory. Defaults to "log".</li>
     <li><code>mail_driver</code> - The email delivery driver to use. Valid values are:
     <ul>
