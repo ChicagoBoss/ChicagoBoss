@@ -147,57 +147,16 @@ lang('GET', [Lang], Auth) ->
 		  	{lang_section, true}],
         [{"Cache-Control", "no-cache"}]};
 lang('POST', [Lang|Fmt], Auth) ->
-	WithBlanks = Req:post_param("trans_all_with_blanks"),
-    LangFile = boss_files:lang_path(Lang),
-    {ok, IODevice} = file:open(LangFile, [write, append]),
-    lists:map(fun(Message) ->
-                Original = proplists:get_value("orig", Message),
-                Translation = proplists:get_value("trans", Message),
-				BlockIdentifier = proplists:get_value("identifier", Message),
-                case Translation of
-                    "" -> 
-						case WithBlanks of
-							undefined -> ok;
-							_ -> lang_write_to_file(IODevice, Original, Translation, BlockIdentifier)
-						end;
-                    _ -> lang_write_to_file(IODevice, Original, Translation, BlockIdentifier)
-                end
-        end, Req:deep_post_param(["messages"])),
-    file:close(IODevice),
+	Mode =  case Req:post_param("trans_all_with_blanks") of
+				undefined -> filled;
+				_ -> all
+			end,
+	boss_lang:update_po(Lang, Mode, Req:deep_post_param(["messages"])),
     boss_translator:reload(Lang),
     case Fmt of
         ["json"] -> {json, [{success, true}]};
         [] -> {redirect, "/admin/lang/"++Lang}
     end.
-
-lang_write_to_file(IODevice, Original, Translation, BlockIdentifier) ->
-	OriginalEncoded = unicode:characters_to_list(boss_lang:escape_quotes(Original)),
-	TranslationEncoded = unicode:characters_to_list(boss_lang:escape_quotes(Translation)),
-	case BlockIdentifier of
-		undefined -> 
-			file:write(IODevice, io_lib:format("\nmsgid \"~ts\"\n",[list_to_binary(OriginalEncoded)])),	   
-			file:write(IODevice, io_lib:format("\msgstr \"~ts\"\n",[list_to_binary(TranslationEncoded)]));
-		Identifier -> 
-			file:write(IODevice, io_lib:format("\n#. ~ts\n",[list_to_binary(Identifier)])),
-			file:write(IODevice, io_lib:format("msgid \"~s\"\n", [""])),
-			{ok, OriginalTokens} = regexp:split(OriginalEncoded,"\r\n"),
-			lang_write_multiline_to_file(IODevice, OriginalTokens),
-			file:write(IODevice, io_lib:format("\msgstr \"~s\"\n", [""])),
-			{ok, TranslationTokens} = regexp:split(TranslationEncoded,"\r\n"),
-			lang_write_multiline_to_file(IODevice, TranslationTokens)
-	end.
-
-lang_write_multiline_to_file(IODevice, []) -> ok;
-lang_write_multiline_to_file(IODevice, [Token|Rest]) ->
-	ParsedToken = case Token of
-		[] -> "";
-		_ -> Token
-	end,
-	case Rest of
-		[] -> file:write(IODevice, io_lib:format("\"~ts\"\n", [list_to_binary(ParsedToken)]));
-		_ -> file:write(IODevice, io_lib:format("\"~ts~c~c\"\n", [list_to_binary(ParsedToken), 92, 110]))
-	end,
-	lang_write_multiline_to_file(IODevice, Rest).
 
 create_lang('GET', [], Auth) ->
     {ok, [{lang_section, true}, {languages, boss_files:language_list()}]};
