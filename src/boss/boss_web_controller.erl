@@ -297,7 +297,7 @@ render_view({Controller, Template, _}, Req, Variables, Headers) ->
                 Req:header(accept_language), proplists:get_value("Content-Language", Headers)),
             case Module:render(lists:merge([{"_lang", Lang}, {"_base_url", boss_router:base_url()}|Variables], BossFlash), [{translation_fun, TranslationFun}, {locale, Lang}]) of
                 {ok, Payload} ->
-                    {ok, unicode:characters_to_binary(Payload), Headers};
+                    {ok, Payload, Headers};
                 Err ->
                     Err
             end;
