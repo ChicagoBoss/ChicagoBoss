@@ -39,7 +39,7 @@ heartbeat('POST', [WatchName], Authorization) ->
 watch('POST', [], Authorization) ->
     SessionID = Req:session_id(),
     TopicString = Req:post_param("topic_string"),
-    {ok, WatchId} = boss_news:watch(TopicString, {fun admin_lib:push_update/3, "admin"++SessionID}, 60), 
+    {ok, WatchId} = boss_news:watch(TopicString, fun admin_lib:push_update/3, "admin"++SessionID, 60), 
     {json, [{watch_id, WatchId}]}.
 
 events('GET', [Since], Authorization) ->

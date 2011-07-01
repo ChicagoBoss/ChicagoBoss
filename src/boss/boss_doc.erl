@@ -65,6 +65,9 @@ get_vars("api-db.html", _InDir) ->
 get_vars("api-mq.html", _InDir) ->
     {boss_mq, EDoc} = edoc:get_doc("src/boss/boss_mq.erl", []),
     [{functions, extract_function_docs(EDoc)}];
+get_vars("api-news.html", _InDir) ->
+    {boss_news, EDoc} = edoc:get_doc("src/boss/boss_news.erl", []),
+    [{functions, extract_function_docs(EDoc)}];
 get_vars("api-test.html", _InDir) ->
     {boss_web_test, EDoc1} = edoc:get_doc("src/boss/boss_web_test.erl", []),
     {boss_assert, EDoc2} = edoc:get_doc("src/boss/boss_assert.erl", []),

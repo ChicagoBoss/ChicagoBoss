@@ -3,26 +3,32 @@
 <h2>BossNews: Events for your data model</h2>
 <p>The BossNews API lets you cleanly separate notification logic from your models and controllers. You can specify model attributes and collections to watch, and have a callback function invoked when that part of the model changes. BossNews might be used to send email updates about changes occuring on a website, or it might be used in conjunction with BossMQ to provide users with real-time events (for example, to fire an alert when someone replies to a user's forum post).</p>
 <h3>The <code>boss_news</code> module</h3>
-<p>The <code>boss_news</code> module provides two functions for attaching event listeners:</p>
-<div class="code">
-    boss_news:watch(AttributeSpec, fun(AffectedRecord, Attribute::atom(), OldValue, NewValue)) -&gt; ok
-</div>
-<p>Watch <code>AttributeSpec</code> for changes, and invoke the provided fun when a change occurs. The <code>AttributeSpec</code> is a string that takes the form <code>"RecordId.Attribute"</code>. Wildcards are permitted as the attribute name or as the numeric part of the RecordId. Examples of valid values for <code>AttributeSpec</code>:</p>
+<p>The <code>boss_news</code> module provides functions for creating and managing event listeners, called watches. Watches take a <code>TopicString</code>, which is a comma-separated list of topics to watch, and then execute the provided function when a topic changes. The following table summarizes valid topics and the events that the callback function will receive:</p>
+<table>
+    <tr><th>Topic</th><th>Event</th><th>EventInfo</th></tr>
+    <tr><td>RecordId.Attribute</td><td>updated</td><td>{Record, Attribute::atom(), OldValue, NewValue}</td></tr>
+    <tr><td>RecordId.*</td><td>updated</td><td>{Record, Attribute::atom(), OldValue, NewValue}</td></tr>
+    <tr><td>Type-*.Attribute</td><td>updated</td><td>{Record, Attribute::atom(), OldValue, NewValue}</td></tr>
+    <tr><td>Type-*.*</td><td>updated</td><td>{Record, Attribute::atom(), OldValue, NewValue}</td></tr>
+    <tr><td>Collection</td><td>created</td><td>NewRecord</td></tr>
+    <tr><td>Collection</td><td>deleted</td><td>DeletedRecord</td></tr>
+<p>Examples of valid topics are:</p>
 <ul>
     <li><code>"user-42.status"</code></li>
     <li><code>"user-*.status"</code></li>
     <li><code>"user-42.*</code></li>
     <li><code>"user-*.*</code></li>
-</ul>
-<div class="code">
-    boss_news:watch_set(CollectionSpec, fun(created | deleted, AffectedRecord)) -&gt; ok
-</div>
-<p>Watch <code>CollectionSpec</code> for changes, and invoke the provided fun when a relevant record is created or deleted. Currently, the <code>CollectionSpec</code> must be the pluralized form of a model module. Examples:</p>
-<ul>
     <li><code>"users"</code></li>
-    <li><code>"forum_posts"</code></li>
 </ul>
-<p>More complex specifications may be supported in the future.</p>
+<p>Functions for managing watches are:</p>
+{% for function in functions %}
+{% if function.description_long %}
+<div class="code">
+    {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
+</div>
+<p>{{ function.description_long }}</p>
+{% endif %}
+{% endfor %}
 
 <h3>The <code>news.erl</code> startup script</h3>
 <p>Listeners should be set up in the <code>init/news.erl</code> file in your project directory. The module should have one exported function, <code>init/0</code>, which is executed at server startup. This function is a convenient place to set up listeners before any web requests are received, but listeners can be set up anywhere in the application.</p>

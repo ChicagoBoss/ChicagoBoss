@@ -4,7 +4,7 @@
 
 -export([stop/0]).
 
--export([watch/2, watch/3, set_watch/3, set_watch/4]).
+-export([watch/3, watch/4, set_watch/4, set_watch/5]).
 
 -export([cancel_watch/1, extend_watch/1]).
 
@@ -27,23 +27,36 @@ start(Options) ->
 stop() ->
     ok.
 
-%% @doc Watch a record's attributes, and execute `CallBack' when they change.
-%% @spec watch( TopicString :: string(), CallBack ) -> {ok, WatchId} | {error, Reason}
-watch(TopicString, CallBack) ->
-    watch(TopicString, CallBack, ?TRILLION).
+%% @doc Watch records and attributes described by `TopicString', and execute 
+%% `CallBack(Event, EventInfo, UserInfo)' each time any of them changes.
+%% Note that the callback should be specified as a named fun and not a closure,
+%% or you may experience unexpected results during code reloads.
+%% @spec watch( TopicString :: string(), CallBack, UserInfo ) -> {ok, WatchId} | {error, Reason}
+watch(TopicString, CallBack, UserInfo) ->
+    watch(TopicString, CallBack, UserInfo, ?TRILLION).
 
-watch(TopicString, CallBack, TTL) ->
-    gen_server:call(boss_news, {watch, TopicString, CallBack, TTL}).
+%% @doc Same as `watch/3', except that the watch expires after `TTL' seconds.
+%% @spec watch( TopicString :: string(), CallBack, UserInfo, TTL) -> {ok, WatchId} | {error, Reason}
+watch(TopicString, CallBack, UserInfo, TTL) ->
+    gen_server:call(boss_news, {watch, TopicString, CallBack, UserInfo, TTL}).
 
-set_watch(WatchId, TopicString, CallBack) ->
-    set_watch(WatchId, TopicString, CallBack, ?TRILLION).
+%% @doc Create or replace a watch with `WatchId'.
+%% @spec set_watch( WatchId, TopicString::string(), CallBack, UserInfo ) -> ok | {error, Reason}
+set_watch(WatchId, TopicString, CallBack, UserInfo) ->
+    set_watch(WatchId, TopicString, CallBack, UserInfo, ?TRILLION).
 
-set_watch(WatchId, TopicString, CallBack, TTL) ->
-    gen_server:call(boss_news, {set_watch, WatchId, TopicString, CallBack, TTL}).
+%% @doc Same as `set_watch/4', except that the watch expires after `TTL' seconds.
+%% @spec set_watch( WatchId, TopicString::string(), CallBack, UserInfo, TTL ) -> ok | {error, Reason}
+set_watch(WatchId, TopicString, CallBack, UserInfo, TTL) ->
+    gen_server:call(boss_news, {set_watch, WatchId, TopicString, CallBack, UserInfo, TTL}).
 
+%% @doc Cancel an existing watch identified by `WatchId'.
+%% @spec cancel_watch( WatchId ) -> ok | {error, Reason}
 cancel_watch(WatchId) ->
     gen_server:call(boss_news, {cancel_watch, WatchId}).
 
+%% @doc Extend an existing watch by the time-to-live specified at creation time.
+%% @spec extend_watch( WatchId ) -> ok | {error, Reason}
 extend_watch(WatchId) ->
     gen_server:call(boss_news, {extend_watch, WatchId}).
 

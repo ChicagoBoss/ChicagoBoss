@@ -15,6 +15,13 @@
         id_watchers = dict:new(),
         watch_counter = 0}).
 
+-record(watch, {
+        watch_list = [],
+        callback,
+        user_info,
+        exp_time,
+        ttl}).
+
 start_link() ->
     start_link([]).
 
@@ -29,16 +36,16 @@ handle_call(reset, _From, _State) ->
 handle_call(dump, _From, State0) ->
     State = prune_expired_entries(State0),
     {reply, State, State};
-handle_call({watch, TopicString, CallBack, TTL}, From, State0) ->
+handle_call({watch, TopicString, CallBack, UserInfo, TTL}, From, State0) ->
     WatchId = State0#state.watch_counter,
-    {reply, RetVal, State} = handle_call({set_watch, WatchId, TopicString, CallBack, TTL}, From, State0),
+    {reply, RetVal, State} = handle_call({set_watch, WatchId, TopicString, CallBack, UserInfo, TTL}, From, State0),
     case RetVal of
         ok ->
             {reply, {ok, WatchId}, State#state{ watch_counter = WatchId + 1 }};
         Other ->
             {reply, Other, State0}
     end;
-handle_call({set_watch, WatchId, TopicString, CallBack, TTL}, From, State0) ->
+handle_call({set_watch, WatchId, TopicString, CallBack, UserInfo, TTL}, From, State0) ->
     {reply, _, State} = handle_call({cancel_watch, WatchId}, From, State0),
     Models = boss_files:model_list(),
     ExpTime = future_time(TTL),
@@ -90,12 +97,18 @@ handle_call({set_watch, WatchId, TopicString, CallBack, TTL}, From, State0) ->
                 Error
         end, {ok, State, []}, re:split(TopicString, ", +", [{return, list}])),
     case RetVal of
-        ok -> {reply, RetVal, NewState#state{ watch_dict = dict:store(WatchId, {WatchList, CallBack, ExpTime, TTL}, NewState#state.watch_dict) }};
+        ok -> {reply, RetVal, NewState#state{ watch_dict = dict:store(WatchId, 
+                        #watch{ 
+                            watch_list = WatchList, 
+                            callback = CallBack, 
+                            user_info = UserInfo, 
+                            exp_time = ExpTime, 
+                            ttl = TTL}, NewState#state.watch_dict) }};
         Error -> {reply, Error, State}
     end;
 handle_call({cancel_watch, WatchId}, _From, State) ->
     {RetVal, NewState} = case dict:find(WatchId, State#state.watch_dict) of
-        {ok, {_WatchList, _CallBack, ExpTime, _TTL}} ->
+        {ok, #watch{ exp_time = ExpTime }} ->
             NewTree = case gb_trees:lookup(ExpTime, State#state.ttl_tree) of
                 {value, [WatchId]} ->
                     insert_watch(0, WatchId, gb_trees:delete(ExpTime, State#state.ttl_tree));
@@ -110,7 +123,7 @@ handle_call({cancel_watch, WatchId}, _From, State) ->
 handle_call({extend_watch, WatchId}, _From, State0) ->
     State = prune_expired_entries(State0),
     {RetVal, NewState} = case dict:find(WatchId, State#state.watch_dict) of
-        {ok, {WatchList, CallBack, ExpTime, TTL}} ->
+        {ok, #watch{ exp_time = ExpTime, ttl = TTL } = Watch} ->
             NewExpTime = future_time(TTL),
             NewTree = case gb_trees:lookup(ExpTime, State#state.ttl_tree) of
                 {value, [WatchId]} ->
@@ -119,7 +132,7 @@ handle_call({extend_watch, WatchId}, _From, State0) ->
                     insert_watch(NewExpTime, WatchId, gb_trees:enter(ExpTime, lists:delete(WatchId, Watches), State#state.ttl_tree))
             end,
             {ok, State#state{ ttl_tree = NewTree, 
-                    watch_dict = dict:store(WatchId, {WatchList, CallBack, NewExpTime, TTL}, State#state.watch_dict) }};
+                    watch_dict = dict:store(WatchId, Watch#watch{ exp_time = NewExpTime }, State#state.watch_dict) }};
         _ ->
             {{error, not_found}, State}
     end,
@@ -137,10 +150,12 @@ handle_call({created, Id, Attrs}, _From, State0) ->
                 {ok, SetWatchers} -> 
                     Record = activate_record(Id, Attrs),
                     lists:map(fun(WatchId) ->
-                                {WatchList, CallBack, _, _} = dict:fetch(WatchId, State#state.watch_dict),
+                                #watch{ watch_list = WatchList, 
+                                    callback = CallBack, 
+                                    user_info = UserInfo } = dict:fetch(WatchId, State#state.watch_dict),
                                 lists:map(fun
                                         ({set, TopicString}) when TopicString =:= PluralModel ->
-                                            execute_callback(CallBack, event, Record);
+                                            execute_callback(CallBack, event, Record, UserInfo);
                                         (_) ->
                                             ok
                                     end, WatchList)
@@ -163,10 +178,12 @@ handle_call({deleted, Id, OldAttrs}, _From, State0) ->
                 {ok, SetWatchers} -> 
                     Record = activate_record(Id, OldAttrs),
                     lists:map(fun(WatchId) ->
-                                {WatchList, CallBack, _, _} = dict:fetch(WatchId, State#state.watch_dict),
+                                #watch{ watch_list = WatchList, 
+                                    callback = CallBack, 
+                                    user_info = UserInfo } = dict:fetch(WatchId, State#state.watch_dict),
                                 lists:map(fun
                                         ({set, TopicString}) when TopicString =:= PluralModel ->
-                                            execute_callback(CallBack, deleted, Record);
+                                            execute_callback(CallBack, deleted, Record, UserInfo);
                                         (_) ->
                                             ok
                                     end, WatchList)
@@ -202,16 +219,18 @@ handle_call({updated, Id, OldAttrs, NewAttrs}, _From, State0) ->
                             OldVal -> ok;
                             NewVal -> 
                                 lists:map(fun(WatchId) ->
-                                            {WatchList, CallBack, _, _} = dict:fetch(WatchId, State#state.watch_dict),
+                                            #watch{ watch_list = WatchList, 
+                                                callback = CallBack, 
+                                                user_info = UserInfo } = dict:fetch(WatchId, State#state.watch_dict),
                                             lists:map(fun
                                                     ({id, ThisId, Attr}) when ThisId =:= Id, Attr =:= KeyString ->
-                                                        execute_callback(CallBack, updated, {NewRecord, Key, OldVal, NewVal});
+                                                        execute_callback(CallBack, updated, {NewRecord, Key, OldVal, NewVal}, UserInfo);
                                                     ({id, ThisId, "*"}) when ThisId =:= Id ->
-                                                        execute_callback(CallBack, updated, {NewRecord, Key, OldVal, NewVal});
+                                                        execute_callback(CallBack, updated, {NewRecord, Key, OldVal, NewVal}, UserInfo);
                                                     ({module, ThisModule, Attr}) when ThisModule =:= Module, Attr =:= KeyString ->
-                                                        execute_callback(CallBack, updated, {NewRecord, Key, OldVal, NewVal});
+                                                        execute_callback(CallBack, updated, {NewRecord, Key, OldVal, NewVal}, UserInfo);
                                                     ({module, ThisModule, "*"}) when ThisModule =:= Module ->
-                                                        execute_callback(CallBack, updated, {NewRecord, Key, OldVal, NewVal});
+                                                        execute_callback(CallBack, updated, {NewRecord, Key, OldVal, NewVal}, UserInfo);
                                                     (_) -> ok
                                                 end, WatchList)
                                     end, AllWatchers)
@@ -257,7 +276,7 @@ activate_record(Id, Attrs) ->
 prune_expired_entries(#state{ ttl_tree = {Size, TreeNode} } = State) ->
     Now = future_time(0),
     {NewState, NewTree, NumDeleted} = prune_expired_nodes(fun(WatchId, StateAcc) ->
-                {WatchList, _CallBack, _ExpTime, _TTL} = dict:fetch(WatchId, StateAcc#state.watch_dict),
+                #watch{ watch_list = WatchList } = dict:fetch(WatchId, StateAcc#state.watch_dict),
                 NewState = lists:foldr(fun
                         ({set, TopicString}, Acc) ->
                             NewDict = case dict:fetch(TopicString, State#state.set_watchers) of
@@ -301,9 +320,5 @@ prune_expired_nodes(Function, Acc, {K, V, S, L}, Now) when K =< Now ->
 prune_expired_nodes(_Function, Acc, nil, _Now) ->
     {Acc, nil, 0}.
 
-execute_callback(CallBack, Event, EventInfo) when is_function(CallBack) ->
-    CallBack(Event, EventInfo);
-execute_callback({Fun, UserInfo}, Event, EventInfo) when is_function(Fun) ->
-    Fun(Event, EventInfo, UserInfo);
-execute_callback({M, F, A}, Event, EventInfo) ->
-    apply(M, F, [Event, EventInfo, A]).
+execute_callback(Fun, Event, EventInfo, UserInfo) when is_function(Fun) ->
+    Fun(Event, EventInfo, UserInfo).
