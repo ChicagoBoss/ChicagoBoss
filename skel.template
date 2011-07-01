@@ -13,9 +13,11 @@
 {template, "skel/start-server.bat", "{{dest}}/start-server.bat"}.
 {template, "skel/Makefile", "{{dest}}/Makefile"}.
 {file, "skel/admin/admin_controller.erl", "{{dest}}/admin/admin_controller.erl"}.
+{file, "skel/admin/admin_lib.erl", "{{dest}}/admin/admin_lib.erl"}.
 {file, "skel/admin/static/stylesheets/application_orig.css", "{{dest}}/admin/static/stylesheets/application_orig.css"}.
 {file, "skel/admin/static/stylesheets/application.css", "{{dest}}/admin/static/stylesheets/application.css"}.
 {file, "skel/admin/static/lang.js", "{{dest}}/admin/static/lang.js"}.
+{file, "skel/admin/static/news.js", "{{dest}}/admin/static/news.js"}.
 {file, "skel/admin/test/admin_test.erl", "{{dest}}/admin/test/admin_test.erl"}.
 {file, "skel/admin/view/layouts/admin.html", "{{dest}}/admin/view/layouts/admin.html"}.
 {file, "skel/admin/view/layouts/shared/_alerts.html", "{{dest}}/admin/view/layouts/shared/_alerts.html"}.

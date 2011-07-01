@@ -39,22 +39,21 @@ heartbeat('POST', [WatchName], Authorization) ->
 watch('POST', [], Authorization) ->
     SessionID = Req:session_id(),
     TopicString = Req:post_param("topic_string"),
-    {ok, WatchId} = boss_news:watch(TopicString, fun(updated, {Record, Attr, OldVal, NewVal}) ->
-                boss_mq:push("admin" ++ SessionID, [{ev, updated}, {data, [{id, Record:id()}, {attr, Attr}, {val, NewVal}]}])
-        end, 60),
+    {ok, WatchId} = boss_news:watch(TopicString, {fun admin_lib:push_update/3, "admin"++SessionID}, 60), 
     {json, [{watch_id, WatchId}]}.
 
 events('GET', [Since], Authorization) ->
     io:format("Pulling events...~n", []),
     SessionID = Req:session_id(),
-    {ok, Timestamp, Messages} = boss_mq:pull("admin" ++ SessionID, now_from_micro_seconds(list_to_integer(Since)), 30),
-    {json, [{messages, Messages}, {timestamp, micro_seconds(Timestamp)}]}.
+    {ok, Timestamp, Messages} = boss_mq:pull("admin" ++ SessionID, list_to_integer(Since), 30),
+    {json, [{messages, Messages}, {timestamp, Timestamp}]}.
 
 model('GET', [], Authorization) ->
-    {ok, [{model_section, true}, {records, []}, {models, boss_files:model_list()}, {this_model, ""}]};
+    {ok, [{model_section, true}, {records, []}, {models, boss_files:model_list()}, {this_model, ""}, {topic_string, ""}]};
 model('GET', [ModelName], Authorization) ->
     model('GET', [ModelName, "1"], Authorization);
 model('GET', [ModelName, PageName], Authorization) ->
+    SessionID = Req:session_id(),
     Page = list_to_integer(PageName),
     Model = list_to_atom(ModelName),
     RecordCount = boss_db:count(Model),
@@ -74,16 +73,17 @@ model('GET', [ModelName, PageName], Authorization) ->
         [{records, AttributesWithDataTypes}, {attribute_names, AttributeNames}, 
             {models, boss_files:model_list()}, {this_model, ModelName}, 
             {pages, Pages}, {this_page, Page}, {model_section, true},
-            {topic_string, TopicString}, {timestamp, micro_seconds(erlang:now())}], 
+            {topic_string, TopicString}, {timestamp, boss_mq:now("admin"++SessionID)}], 
         [{"Cache-Control", "no-cache"}]}.
 
 record('GET', [RecordId], Authorization) ->
+    SessionID = Req:session_id(),
     Record = boss_db:find(RecordId),
     AttributesWithDataTypes = lists:map(fun({Key, Val}) ->
                 {Key, Val, boss_db:data_type(Key, Val)}
         end, Record:attributes()),
     {ok, [{'record', Record}, {'attributes', AttributesWithDataTypes}, 
-            {'type', boss_db:type(RecordId)}, {timestamp, micro_seconds(erlang:now())}]}.
+            {'type', boss_db:type(RecordId)}, {timestamp, boss_mq:now("admin"++SessionID)}]}.
 
 delete('GET', [RecordId], Authorization) ->
     {ok, [{'record', boss_db:find(RecordId)}]};
@@ -147,16 +147,57 @@ lang('GET', [Lang], Auth) ->
 		  	{lang_section, true}],
         [{"Cache-Control", "no-cache"}]};
 lang('POST', [Lang|Fmt], Auth) ->
-	Mode =  case Req:post_param("trans_all_with_blanks") of
-				undefined -> filled;
-				_ -> all
-			end,
-	boss_lang:update_po(Lang, Mode, Req:deep_post_param(["messages"])),
+	WithBlanks = Req:post_param("trans_all_with_blanks"),
+    LangFile = boss_files:lang_path(Lang),
+    {ok, IODevice} = file:open(LangFile, [write, append]),
+    lists:map(fun(Message) ->
+                Original = proplists:get_value("orig", Message),
+                Translation = proplists:get_value("trans", Message),
+				BlockIdentifier = proplists:get_value("identifier", Message),
+                case Translation of
+                    "" -> 
+						case WithBlanks of
+							undefined -> ok;
+							_ -> lang_write_to_file(IODevice, Original, Translation, BlockIdentifier)
+						end;
+                    _ -> lang_write_to_file(IODevice, Original, Translation, BlockIdentifier)
+                end
+        end, Req:deep_post_param(["messages"])),
+    file:close(IODevice),
     boss_translator:reload(Lang),
     case Fmt of
         ["json"] -> {json, [{success, true}]};
         [] -> {redirect, "/admin/lang/"++Lang}
     end.
+
+lang_write_to_file(IODevice, Original, Translation, BlockIdentifier) ->
+	OriginalEncoded = unicode:characters_to_list(boss_lang:escape_quotes(Original)),
+	TranslationEncoded = unicode:characters_to_list(boss_lang:escape_quotes(Translation)),
+	case BlockIdentifier of
+		undefined -> 
+			file:write(IODevice, io_lib:format("\nmsgid \"~ts\"\n",[list_to_binary(OriginalEncoded)])),	   
+			file:write(IODevice, io_lib:format("\msgstr \"~ts\"\n",[list_to_binary(TranslationEncoded)]));
+		Identifier -> 
+			file:write(IODevice, io_lib:format("\n#. ~ts\n",[list_to_binary(Identifier)])),
+			file:write(IODevice, io_lib:format("msgid \"~s\"\n", [""])),
+			{ok, OriginalTokens} = regexp:split(OriginalEncoded,"\r\n"),
+			lang_write_multiline_to_file(IODevice, OriginalTokens),
+			file:write(IODevice, io_lib:format("\msgstr \"~s\"\n", [""])),
+			{ok, TranslationTokens} = regexp:split(TranslationEncoded,"\r\n"),
+			lang_write_multiline_to_file(IODevice, TranslationTokens)
+	end.
+
+lang_write_multiline_to_file(IODevice, []) -> ok;
+lang_write_multiline_to_file(IODevice, [Token|Rest]) ->
+	ParsedToken = case Token of
+		[] -> "";
+		_ -> Token
+	end,
+	case Rest of
+		[] -> file:write(IODevice, io_lib:format("\"~ts\"\n", [list_to_binary(ParsedToken)]));
+		_ -> file:write(IODevice, io_lib:format("\"~ts~c~c\"\n", [list_to_binary(ParsedToken), 92, 110]))
+	end,
+	lang_write_multiline_to_file(IODevice, Rest).
 
 create_lang('GET', [], Auth) ->
     {ok, [{lang_section, true}, {languages, boss_files:language_list()}]};
@@ -206,10 +247,3 @@ news_api('POST', ["updated", Id], Auth) ->
 news_api('POST', ["deleted", Id], Auth) ->
     ok = boss_news:deleted(Id, Req:post_params("old")),
     {output, "ok"}.
-
-
-micro_seconds({Mega, Secs, Micro}) ->
-    Mega * 1000 * 1000 * 1000 * 1000 + Secs * 1000 * 1000 + Micro.
-
-now_from_micro_seconds(MicroSeconds) ->
-    {MicroSeconds div (1000 * 1000 * 1000 * 1000), MicroSeconds div (1000 * 1000), MicroSeconds}.

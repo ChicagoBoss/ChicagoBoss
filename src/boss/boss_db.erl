@@ -65,26 +65,26 @@ find(_) ->
 find(Type, Conditions) ->
     find(Type, Conditions, ?DEFAULT_MAX).
 
-%% @spec find(Type::atom(), Conditions, Max::integer() | many ) -> [ BossRecord ]
+%% @spec find(Type::atom(), Conditions, Max::integer() | all ) -> [ BossRecord ]
 %% @doc Query for BossRecords. Returns up to `Max' number of BossRecords of type
 %% `Type' matching all of the given `Conditions'
 find(Type, Conditions, Max) ->
     find(Type, Conditions, Max, 0).
 
-%% @spec find( Type::atom(), Conditions, Max::integer() | many , Skip::integer() ) -> [ BossRecord ]
+%% @spec find( Type::atom(), Conditions, Max::integer() | all, Skip::integer() ) -> [ BossRecord ]
 %% @doc Query for BossRecords. Returns up to `Max' number of BossRecords of type
 %% `Type' matching all of the given `Conditions', skipping the first `Skip' results.
 find(Type, Conditions, Max, Skip) ->
     find(Type, Conditions, Max, Skip, id).
 
-%% @spec find( Type::atom(), Conditions, Max::integer() | many , Skip::integer(), Sort::atom() ) -> [ BossRecord ]
+%% @spec find( Type::atom(), Conditions, Max::integer() | all, Skip::integer(), Sort::atom() ) -> [ BossRecord ]
 %% @doc Query for BossRecords. Returns up to `Max' number of BossRecords of type
 %% `Type' matching all of the given `Conditions', skipping the
 %% first `Skip' results, sorted on the attribute `Sort'.
 find(Type, Conditions, Max, Skip, Sort) ->
     find(Type, Conditions, Max, Skip, Sort, str_ascending).
 
-%% @spec find( Type::atom(), Conditions, Max::integer() | many , Skip::integer(), Sort::atom(), SortOrder ) -> [ BossRecord ]
+%% @spec find( Type::atom(), Conditions, Max::integer() | all, Skip::integer(), Sort::atom(), SortOrder ) -> [ BossRecord ]
 %%       SortOrder = num_ascending | num_descending | str_ascending | str_descending
 %% @doc Query for BossRecords. Returns up to `Max' number of BossRecords of type
 %% Type matching all of the given `Conditions', skipping the
@@ -97,7 +97,9 @@ find(Type, Conditions, Max, Skip, Sort) ->
 %% sort them numerically.
 
 find(Type, Conditions, many, Skip, Sort, SortOrder) ->
-    find(Type, Conditions, 1000 * 1000 * 1000, Skip, Sort, SortOrder);
+    find(Type, Conditions, ?DEFAULT_MAX, Skip, Sort, SortOrder);
+find(Type, Conditions, all, Skip, Sort, SortOrder) ->
+    find(Type, Conditions, ?DEFAULT_MAX, Skip, Sort, SortOrder);
 find(Type, Conditions, Max, Skip, Sort, SortOrder) ->
     gen_server:call(boss_db, {find, Type, normalize_conditions(Conditions), Max, Skip, Sort, SortOrder},
     ?DEFAULT_TIMEOUT).

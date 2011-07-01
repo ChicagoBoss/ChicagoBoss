@@ -32,7 +32,12 @@ handle_call({poll, Channel, Timestamp}, _From, State) ->
 handle_call({push, Channel, Message}, _From, State) ->
     Adapter = State#state.adapter,
     Conn = State#state.connection,
-    {reply, Adapter:push(Conn, Channel, Message), State}.
+    {reply, Adapter:push(Conn, Channel, Message), State};
+
+handle_call({now, Channel}, _From, State) ->
+    Adapter = State#state.adapter,
+    Conn = State#state.connection,
+    {reply, Adapter:now(Conn, Channel), State}.
 
 
 handle_cast(_Request, State) ->

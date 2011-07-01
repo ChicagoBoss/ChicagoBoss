@@ -124,7 +124,7 @@ run_tests() ->
                   {length(Res) =:= 1, "Max not obeyed"}
               end,
               fun(_) ->
-                  Res = boss_db:find(boss_db_test_model, [], many, 1),
+                  Res = boss_db:find(boss_db_test_model, [], all, 1),
                   {length(Res) =:= 2, "Skip not obeyed"}
               end,
               fun([_Id1, _Id2, Id3]) ->

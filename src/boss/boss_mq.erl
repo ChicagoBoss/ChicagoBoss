@@ -10,7 +10,8 @@
         pull/3,
         poll/1,
         poll/2,
-        push/2]).
+        push/2,
+        now/1]).
 
 start() ->
     MQOptions = lists:foldl(fun(OptName, Acc) ->
@@ -38,15 +39,17 @@ stop() ->
 pull(Channel) ->
     pull(Channel, undefined).
 
-%% @spec pull( Channel::string(), Since::tuple() | last | now ) -> {ok, Timestamp, [Message]} | {error, Reason}
-%% @doc Pull messages from the specified `Channel' after `Since' (an `erlang:now/0' tuple). If no such messages
-%% are in the queue, blocks until a message is pushed to the queue.
+%% @spec pull( Channel::string(), Since::integer() | last | now ) -> {ok, Timestamp, [Message]} | {error, Reason}
+%% @doc Pull messages from the specified `Channel' after `Since' (a timestamp returned from a previous `pull'). 
+%% If no such messages are in the queue, blocks until a message is pushed to the queue.
 pull(Channel, Timestamp) ->
     pull(Channel, Timestamp, infinity).
 
-%% @spec pull( Channel::string(), Since::tuple() | last | now, Timeout::integer() ) -> {ok, Timestamp, [Message]} | {error, Reason}
-%% @doc Pull messages from the specified `Channel' after `Since' (an `erlang:now/0' tuple). If no such messages
+%% @spec pull( Channel::string(), Since::integer() | last | now, Timeout::integer() ) -> {ok, Timestamp, [Message]} | {error, Reason}
+%% @doc Pull messages from the specified `Channel' after `Since' (a timestamp returned from a previous `pull'). If no such messages
 %% are in the queue, blocks until a message is pushed to the queue, or until `Timeout' milliseconds have elapsed.
+pull(Channel, {MegaSecs, Secs, MicroSecs}, Timeout) ->
+    pull(Channel, 1000 * 1000 * (1000 * 1000 * MegaSecs + Secs) + MicroSecs, Timeout);
 pull(Channel, Timestamp, Timeout) when is_list(Channel) ->
     TimeoutMs = case Timeout of
         infinity -> infinity;
@@ -72,7 +75,7 @@ pull(_, _, _) ->
 poll(Channel) ->
     poll(Channel, undefined).
 
-%% @spec poll( Channel::string(), Since::tuple() | last ) -> {ok, Timestamp, [Message]} | {error, Reason}
+%% @spec poll( Channel::string(), Since::integer() | last ) -> {ok, Timestamp, [Message]} | {error, Reason}
 %% @doc Like `pull/2', but returns immediately if no matching messages are in the queue.
 poll(Channel, Timestamp) when is_list(Channel) ->
     gen_server:call(boss_mq, {poll, Channel, Timestamp});
@@ -84,4 +87,11 @@ poll(_, _) ->
 push(Channel, Message) when is_list(Channel) ->
     gen_server:call(boss_mq, {push, Channel, Message});
 push(_, _) ->
-    {error, invalid_channels}.
+    {error, invalid_channel}.
+
+%% @spec now( Channel::string() ) -> Timestamp
+%% @doc Retrieves the current time for the server managing `Channel'.
+now(Channel) when is_list(Channel) ->
+    gen_server:call(boss_mq, {now, Channel});
+now(_) ->
+    {error, invalid_channel}.

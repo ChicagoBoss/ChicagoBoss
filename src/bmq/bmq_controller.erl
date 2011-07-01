@@ -24,17 +24,18 @@ handle_call({pull, Channel, Timestamp, Subscriber}, From, State) ->
     {noreply, NewState};
 
 handle_call({poll, Channel, Timestamp}, From, State) ->
-    case dict:find(Channel, State#state.dict) of
-        {ok, ChannelPid} -> 
-            gen_server:cast(ChannelPid, {From, poll, Timestamp}),
-            {noreply, State};
-        _ -> 
-            {reply, {self(), erlang:now(), []}, State}
-    end;
+    {ChannelPid, NewState} = find_or_create_channel(Channel, State),
+    gen_server:cast(ChannelPid, {From, poll, Timestamp}),
+    {noreply, NewState};
 
 handle_call({push, Channel, Message}, From, State) ->
     {ChannelPid, NewState} = find_or_create_channel(Channel, State),
     gen_server:cast(ChannelPid, {From, push, Message}),
+    {noreply, NewState};
+
+handle_call({now, Channel}, From, State) ->
+    {ChannelPid, NewState} = find_or_create_channel(Channel, State),
+    gen_server:cast(ChannelPid, {From, now}),
     {noreply, NewState}.
 
 handle_cast({expire, Channel}, State) ->

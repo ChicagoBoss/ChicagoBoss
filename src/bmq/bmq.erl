@@ -10,3 +10,6 @@ poll(Channel, Timestamp) ->
 
 push(Channel, Message) ->
     gen_server:call(bmq, {push, Channel, Message}).
+
+now(Channel) ->
+    gen_server:call(bmq, {now, Channel}).

@@ -110,16 +110,16 @@ handle_call({cancel_watch, WatchId}, _From, State) ->
 handle_call({extend_watch, WatchId}, _From, State0) ->
     State = prune_expired_entries(State0),
     {RetVal, NewState} = case dict:find(WatchId, State#state.watch_dict) of
-        {ok, {_WatchList, _CallBack, ExpTime, TTL}} ->
+        {ok, {WatchList, CallBack, ExpTime, TTL}} ->
+            NewExpTime = future_time(TTL),
             NewTree = case gb_trees:lookup(ExpTime, State#state.ttl_tree) of
                 {value, [WatchId]} ->
-                    NewExpTime = future_time(TTL),
                     insert_watch(NewExpTime, WatchId, gb_trees:delete(ExpTime, State#state.ttl_tree));
                 {value, Watches} ->
-                    NewExpTime = future_time(TTL),
                     insert_watch(NewExpTime, WatchId, gb_trees:enter(ExpTime, lists:delete(WatchId, Watches), State#state.ttl_tree))
             end,
-            {ok, State#state{ ttl_tree = NewTree }};
+            {ok, State#state{ ttl_tree = NewTree, 
+                    watch_dict = dict:store(WatchId, {WatchList, CallBack, NewExpTime, TTL}, State#state.watch_dict) }};
         _ ->
             {{error, not_found}, State}
     end,
@@ -140,7 +140,7 @@ handle_call({created, Id, Attrs}, _From, State0) ->
                                 {WatchList, CallBack, _, _} = dict:fetch(WatchId, State#state.watch_dict),
                                 lists:map(fun
                                         ({set, TopicString}) when TopicString =:= PluralModel ->
-                                            CallBack(created, Record);
+                                            execute_callback(CallBack, event, Record);
                                         (_) ->
                                             ok
                                     end, WatchList)
@@ -166,7 +166,7 @@ handle_call({deleted, Id, OldAttrs}, _From, State0) ->
                                 {WatchList, CallBack, _, _} = dict:fetch(WatchId, State#state.watch_dict),
                                 lists:map(fun
                                         ({set, TopicString}) when TopicString =:= PluralModel ->
-                                            CallBack(deleted, Record);
+                                            execute_callback(CallBack, deleted, Record);
                                         (_) ->
                                             ok
                                     end, WatchList)
@@ -205,13 +205,13 @@ handle_call({updated, Id, OldAttrs, NewAttrs}, _From, State0) ->
                                             {WatchList, CallBack, _, _} = dict:fetch(WatchId, State#state.watch_dict),
                                             lists:map(fun
                                                     ({id, ThisId, Attr}) when ThisId =:= Id, Attr =:= KeyString ->
-                                                        CallBack(updated, {NewRecord, Key, OldVal, NewVal});
+                                                        execute_callback(CallBack, updated, {NewRecord, Key, OldVal, NewVal});
                                                     ({id, ThisId, "*"}) when ThisId =:= Id ->
-                                                        CallBack(updated, {NewRecord, Key, OldVal, NewVal});
+                                                        execute_callback(CallBack, updated, {NewRecord, Key, OldVal, NewVal});
                                                     ({module, ThisModule, Attr}) when ThisModule =:= Module, Attr =:= KeyString ->
-                                                        CallBack(updated, {NewRecord, Key, OldVal, NewVal});
+                                                        execute_callback(CallBack, updated, {NewRecord, Key, OldVal, NewVal});
                                                     ({module, ThisModule, "*"}) when ThisModule =:= Module ->
-                                                        CallBack(updated, {NewRecord, Key, OldVal, NewVal});
+                                                        execute_callback(CallBack, updated, {NewRecord, Key, OldVal, NewVal});
                                                     (_) -> ok
                                                 end, WatchList)
                                     end, AllWatchers)
@@ -300,3 +300,10 @@ prune_expired_nodes(Function, Acc, {K, V, S, L}, Now) when K =< Now ->
     {Acc3, Tree3, NumDeleted_S + NumDeleted_L + 1};
 prune_expired_nodes(_Function, Acc, nil, _Now) ->
     {Acc, nil, 0}.
+
+execute_callback(CallBack, Event, EventInfo) when is_function(CallBack) ->
+    CallBack(Event, EventInfo);
+execute_callback({Fun, UserInfo}, Event, EventInfo) when is_function(Fun) ->
+    Fun(Event, EventInfo, UserInfo);
+execute_callback({M, F, A}, Event, EventInfo) ->
+    apply(M, F, [Event, EventInfo, A]).
