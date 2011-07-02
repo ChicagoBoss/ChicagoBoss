@@ -61,7 +61,7 @@ compiler magic to provide clean, understandable controller logic, Django-style
 templates, and an ORM based on Erlang's parameterized modules. The best part is
 that the network I/O is 100% asynchronous so you can seamlessly integrate Comet
 endpoints into your app, and you never have to worry about a slow database
-query slowing down unrelated requests.
+query dragging down unrelated requests.
 
 CB ships with all the tools you need to build a feature-ful website, including
 sessions, URL routing, filtering requests and post-processing responses,
@@ -70,7 +70,7 @@ long-poll and message queues, and internationalization (i18n). Read on for
 details.
 
 *Databases*. Chicago Boss currently supports MySQL, PostgreSQL, Tokyo Tyrant,
-Mnesia, MongoDB, and Riak. In CB 0.5.4 and later, You can mix and match
+Mnesia, MongoDB, and Riak. In CB 0.5.4 and later, you can mix and match
 databases by configuring Boss to use vertical shards. For SQL databases, the
 conventions are similar to Rails (plural nouns for the table names, object_id
 for foreign keys, etc.).
