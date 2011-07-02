@@ -130,12 +130,16 @@ for storing and retrieving session information.
 
 *Routes*. By default, Chicago Boss uses the same routing conventions as Ruby on
 Rails (`/controller/action/id`). You can customize the routes and provide
-a base URL in the routes.config file.
+a base URL in the routes.config file. Of course, most routing occurs with the
+pattern- matching controller logic, e.g.
+
+    posts('GET', ["category", Category]) ->
+        ...
 
 *Email*. Chicago Boss ships with a miniature MVC for sending multipart emails.
 Emails can be templated with ErlyDTL, and it is easy to provide plain-text and
 HTML versions of the same email. In testing environments, email can be sent
-directly to the recipient, or in prouction can be relayed to an SMTP server.
+directly to the recipient, or in production can be relayed to an SMTP server.
 
 A Chicago Boss server can also receive email over SMTP. Each email address maps
 to a function in your incoming mail controller, so it is easy to write
@@ -158,8 +162,8 @@ cheap in Erlang, the overhead of keeping alive a blocking request is very small
 (just a few kilobytes of memory, compared to megabytes in Rails). You can
 thus keep alive thousands of Comet request with just a few megabytes of memory.
 Also notice that the controller logic remains nice and clean (no callbacks). We
-can perform an arbitrary number of network requests without increasing the
-scope level.
+can perform an arbitrary sequence of asynchronous network requests without
+increasing the scope level.
 
 *Events*. An interesting feature of Chicago Boss is the events API called
 BossNews. With it, you can watch a record or a set of records for changes,
