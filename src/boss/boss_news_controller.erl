@@ -76,7 +76,7 @@ handle_call({set_watch, WatchId, TopicString, CallBack, UserInfo, TTL}, From, St
                                             id_watchers = dict:store(Id, [WatchId|IdWatchers], StateAcc#state.id_watchers)
                                         }, {id, Id, Attr}}
                                 end,
-                                {ok, NewState1#state{ ttl_tree = insert_watch(ExpTime, WatchId, StateAcc#state.ttl_tree) }, [WatchInfo|WatchListAcc]}
+                                {ok, NewState1, [WatchInfo|WatchListAcc]}
                         end;
                     _ -> 
                         case lists:member(inflector:singularize(SingleTopic), Models) of
@@ -88,8 +88,7 @@ handle_call({set_watch, WatchId, TopicString, CallBack, UserInfo, TTL}, From, St
                                     _ -> []
                                 end,
                                 {ok, StateAcc#state{
-                                        set_watchers = dict:store(SingleTopic, [WatchId|SetWatchers], StateAcc#state.set_watchers),
-                                        ttl_tree = insert_watch(ExpTime, WatchId, StateAcc#state.ttl_tree)
+                                        set_watchers = dict:store(SingleTopic, [WatchId|SetWatchers], StateAcc#state.set_watchers)
                                     }, [{set, SingleTopic}|WatchListAcc]}
                         end
                 end;
@@ -97,13 +96,16 @@ handle_call({set_watch, WatchId, TopicString, CallBack, UserInfo, TTL}, From, St
                 Error
         end, {ok, State, []}, re:split(TopicString, ", +", [{return, list}])),
     case RetVal of
-        ok -> {reply, RetVal, NewState#state{ watch_dict = dict:store(WatchId, 
+        ok -> {reply, RetVal, NewState#state{ 
+                    watch_dict = dict:store(WatchId, 
                         #watch{ 
                             watch_list = WatchList, 
                             callback = CallBack, 
                             user_info = UserInfo, 
                             exp_time = ExpTime, 
-                            ttl = TTL}, NewState#state.watch_dict) }};
+                            ttl = TTL}, NewState#state.watch_dict),
+                    ttl_tree = insert_watch(ExpTime, WatchId, NewState#state.ttl_tree)
+                }};
         Error -> {reply, Error, State}
     end;
 handle_call({cancel_watch, WatchId}, _From, State) ->
@@ -279,27 +281,27 @@ prune_expired_entries(#state{ ttl_tree = {Size, TreeNode} } = State) ->
                 #watch{ watch_list = WatchList } = dict:fetch(WatchId, StateAcc#state.watch_dict),
                 NewState = lists:foldr(fun
                         ({set, TopicString}, Acc) ->
-                            NewDict = case dict:fetch(TopicString, State#state.set_watchers) of
+                            NewDict = case dict:fetch(TopicString, StateAcc#state.set_watchers) of
                                 [WatchId] ->
-                                    dict:erase(TopicString, State#state.set_watchers);
+                                    dict:erase(TopicString, StateAcc#state.set_watchers);
                                 Watchers ->
-                                    dict:store(TopicString, lists:delete(WatchId, Watchers), State#state.set_watchers)
+                                    dict:store(TopicString, lists:delete(WatchId, Watchers), StateAcc#state.set_watchers)
                             end,
                             Acc#state{ set_watchers = NewDict };
                         ({id, Id, _Attr}, Acc) ->
-                            NewDict = case dict:fetch(Id, State#state.id_watchers) of
+                            NewDict = case dict:fetch(Id, StateAcc#state.id_watchers) of
                                 [WatchId] ->
-                                    dict:erase(Id, State#state.id_watchers);
+                                    dict:erase(Id, StateAcc#state.id_watchers);
                                 Watchers ->
-                                    dict:store(Id, lists:delete(WatchId, Watchers), State#state.id_watchers)
+                                    dict:store(Id, lists:delete(WatchId, Watchers), StateAcc#state.id_watchers)
                             end,
                             Acc#state{ id_watchers = NewDict };
                         ({module, Module, _Attr}, Acc) ->
-                            NewDict = case dict:fetch(Module, State#state.wildcard_watchers) of
+                            NewDict = case dict:fetch(Module, StateAcc#state.wildcard_watchers) of
                                 [WatchId] ->
-                                    dict:erase(Module, State#state.wildcard_watchers);
+                                    dict:erase(Module, StateAcc#state.wildcard_watchers);
                                 Watchers ->
-                                    dict:store(Module, lists:delete(WatchId, Watchers), State#state.wildcard_watchers)
+                                    dict:store(Module, lists:delete(WatchId, Watchers), StateAcc#state.wildcard_watchers)
                             end,
                             Acc#state{ wildcard_watchers = NewDict };
                         (_, Acc) ->

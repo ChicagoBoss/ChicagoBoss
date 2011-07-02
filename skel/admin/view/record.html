@@ -5,6 +5,11 @@
 <script src="/admin/static/news.js"></script>
 <script>
     var topic_string = "{{ record.id }}.*";
+    {% for key, val in record.belongs_to %}
+    {% if val %}
+    topic_string += ", {{ val.id }}.*";
+    {% endif %}
+    {% endfor %}
     var timestamp = {{ timestamp }};
     $(document).ready(function() {
         if (topic_string) {
@@ -47,9 +52,9 @@
         <td><strong><a href="/admin/record/{{ attr_val }}">{{ attr_val }}</a></strong></td>
         {% else %}
         {% if "_time" in attr_name %}
-        <td id="{{ key }}-{{ attr_name }}">{{ attr_val|date:"N j, Y, P" }}</td>
+        <td id="{{ val.id }}-{{ attr_name }}">{{ attr_val|date:"N j, Y, P" }}</td>
         {% else %}
-        <td id="{{ key }}-{{ attr_name }}">{{ attr_val|truncatewords:8 }}</td>
+        <td id="{{ val.id }}-{{ attr_name }}">{{ attr_val|truncatewords:8 }}</td>
         {% endif %}
         {% endifequal %}
         {% endfor %}

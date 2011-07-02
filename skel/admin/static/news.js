@@ -5,7 +5,14 @@ function listen_for_events(timestamp) {
             for (var i=0; i<data.messages.length; i++) {
                 var message = data.messages[i];
                 if (message.ev == "updated") {
-                    $("#"+message.data.id+"-"+message.data.attr).html(message.data.val);
+                    var show_val = message.data.val;
+                    var elem_id = message.data.id+"-"+message.data.attr;
+                    var truncatewords = 8;
+                    if ($("table #"+elem_id).length > 0 
+                        && message.data.val.split(' ').length > truncatewords) {
+                        show_val = message.data.val.split(' ').slice(0, truncatewords).join(' ') + "...";
+                    }
+                    $("#"+elem_id).html(show_val);
                 }
             }
         }
