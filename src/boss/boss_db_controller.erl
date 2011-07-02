@@ -27,7 +27,10 @@ init(Options) ->
                     [] ->
                         {ShardAcc, ModelDictAcc};
                     Models ->
-                        ShardAdapter = proplists:get_value(db_adapter, ShardOptions, Adapter),
+                        ShardAdapter = case proplists:get_value(db_adapter, ShardOptions) of
+                            undefined -> Adapter;
+                            ShortName -> list_to_atom("boss_db_adapter_"++atom_to_list(ShortName))
+                        end,
                         {ok, ShardConn} = ShardAdapter:start(ShardOptions ++ Options),
                         Index = erlang:length(ShardAcc),
                         NewDict = lists:foldr(fun(ModelAtom, Dict) ->
