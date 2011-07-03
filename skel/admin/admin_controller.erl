@@ -1,4 +1,4 @@
--module(admin_controller, [Req]).
+-module(admin_controller, [Req, SessionID]).
 -compile(export_all).
 -define(RECORDS_PER_PAGE, 100).
 
@@ -31,7 +31,7 @@ routes('GET', [], Authorization) ->
     {ok, [ {routes_section, true}, {routes, boss_router:get_all()} ]};
 routes('GET', ["reload"], Authorization) ->
     boss_router:reload(),
-    boss_flash:add(Req, notice, "Routes reloaded"),
+    boss_flash:add(SessionID, notice, "Routes reloaded"),
     {redirect, boss_router:base_url() ++ "/admin/routes"}.
 
 heartbeat('POST', [WatchName], Authorization) ->
@@ -39,14 +39,12 @@ heartbeat('POST', [WatchName], Authorization) ->
     {output, ""}.
 
 watch('POST', [], Authorization) ->
-    SessionID = Req:session_id(),
     TopicString = Req:post_param("topic_string"),
     {ok, WatchId} = boss_news:watch(TopicString, fun admin_lib:push_update/3, "admin"++SessionID, 60), 
     {json, [{watch_id, WatchId}]}.
 
 events('GET', [Since], Authorization) ->
     io:format("Pulling events...~n", []),
-    SessionID = Req:session_id(),
     {ok, Timestamp, Messages} = boss_mq:pull("admin" ++ SessionID, list_to_integer(Since), 30),
     {json, [{messages, Messages}, {timestamp, Timestamp}]}.
 
@@ -55,7 +53,6 @@ model('GET', [], Authorization) ->
 model('GET', [ModelName], Authorization) ->
     model('GET', [ModelName, "1"], Authorization);
 model('GET', [ModelName, PageName], Authorization) ->
-    SessionID = Req:session_id(),
     Page = list_to_integer(PageName),
     Model = list_to_atom(ModelName),
     RecordCount = boss_db:count(Model),
@@ -79,7 +76,6 @@ model('GET', [ModelName, PageName], Authorization) ->
         [{"Cache-Control", "no-cache"}]}.
 
 record('GET', [RecordId], Authorization) ->
-    SessionID = Req:session_id(),
     Record = boss_db:find(RecordId),
     AttributesWithDataTypes = lists:map(fun({Key, Val}) ->
                 {Key, Val, boss_db:data_type(Key, Val)}

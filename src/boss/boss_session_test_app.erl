@@ -24,28 +24,27 @@ run_tests() ->
 	Key1Value = "jarl",
 	Key2 = "cleaf",
 	Key2Value = "pascual",
+        SessionID = "Foobar",
 	do(
       fun() ->
-		Req = make_request('GET', '/', []),
-		boss_session:set_session_data(Req, Key1, Key1Value),
-		boss_session:set_session_data(Req, Key2, Key2Value),
-		Req
+		boss_session:set_session_data(SessionID, Key1, Key1Value),
+		boss_session:set_session_data(SessionID, Key2, Key2Value)
       end,
 	  [
-	   	fun(Req) ->
-			{boss_session:get_session_data(Req, Key1) =:= Key1Value,
+	   	fun(_) ->
+			{boss_session:get_session_data(SessionID, Key1) =:= Key1Value,
 			 "Key1 value not stored correctly in session"}	
 		end,
-	   	fun(Req) ->
-			{boss_session:get_session_data(Req, Key2) =:= Key2Value,
+	   	fun(_) ->
+			{boss_session:get_session_data(SessionID, Key2) =:= Key2Value,
 			 "Key2 value not stored correctly in session"}	
 		end		
 	   ],
 	   [ "Get all data from session",
-		 fun(Req) ->
+		 fun(_) ->
 			do(
 			  fun() ->
-			  	Result = boss_session:get_session_data(Req),
+			  	Result = boss_session:get_session_data(SessionID),
 				Result
 			  end,
 			  [
@@ -65,11 +64,11 @@ run_tests() ->
 		 end,
 		 
 	     "Get keys from session",
-		 fun(Req) ->
+		 fun(_) ->
 			do(
 			  fun() ->
-			  	Key1Result = boss_session:get_session_data(Req, Key1),
-				Key2Result = boss_session:get_session_data(Req, Key2),
+			  	Key1Result = boss_session:get_session_data(SessionID, Key1),
+				Key2Result = boss_session:get_session_data(SessionID, Key2),
 				{Key1Result, Key2Result}
 			  end,
 			  [
@@ -85,12 +84,12 @@ run_tests() ->
 		 end,
 		 
 	     "Removing keys",
-		 fun(Req) ->
+		 fun(_) ->
 			do(
 			  fun() ->
-			  	boss_session:remove_session_data(Req, Key1),
-				Key1Result = boss_session:get_session_data(Req, Key1),
-				Key2Result = boss_session:get_session_data(Req, Key2),
+			  	boss_session:remove_session_data(SessionID, Key1),
+				Key1Result = boss_session:get_session_data(SessionID, Key1),
+				Key2Result = boss_session:get_session_data(SessionID, Key2),
 				{Key1Result, Key2Result}
 			  end,
 			  [
@@ -106,13 +105,13 @@ run_tests() ->
 		 end,
 		 
 	     "Removing all session",
-		 fun(Req) ->
+		 fun(_) ->
 			do(
 			  fun() ->
-			  	boss_session:delete_session(Req),
-				AllResult = boss_session:get_session_data(Req),
-				Key1Result = boss_session:get_session_data(Req, Key1),
-				Key2Result = boss_session:get_session_data(Req, Key2),
+			  	boss_session:delete_session(SessionID),
+				AllResult = boss_session:get_session_data(SessionID),
+				Key1Result = boss_session:get_session_data(SessionID, Key1),
+				Key2Result = boss_session:get_session_data(SessionID, Key2),
 				{AllResult, Key1Result, Key2Result}
 			  end,
 			  [
@@ -136,11 +135,4 @@ run_tests() ->
 
 do(Fun, Assertions, Continuations) ->
   boss_test:process_assertions_and_continuations(Assertions, Continuations, Fun()).
-
-make_request(Method, Uri, Headers) ->
-    Req = mochiweb_request:new(
-        false, %Socket
-        Method, Uri, {1, 0}, mochiweb_headers:make(Headers)),
-    DocRoot = "./static",
-    simple_bridge:make_request(mochiweb_request_bridge, {Req, DocRoot}).
 

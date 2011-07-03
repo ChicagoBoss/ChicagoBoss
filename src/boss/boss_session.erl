@@ -28,52 +28,38 @@ stop() ->
     ok.
 
 get_session_key() ->
-    case application:get_env(session_key) of
-        {ok, Val} -> Val;
-        _ -> "_boss_session"
-    end.
+    boss_env:get_env(session_key, "_boss_session").
 
 get_session_exp_time() ->
-	case application:get_env(session_exp_time) of
-        {ok, EVal} -> EVal;
-        _ -> 1440
-    end.
-
-get_sid_from_request(Req) ->
-	 Req:cookie(boss_session:get_session_key()).
+    boss_env:get_env(session_exp_time, 1440).
 
 %% @spec new_session(Cookie::string()) -> string | {error, Reason}
-%% @doc Starts new session with the specified Cookie.
+%% @doc Starts new session with the specified `Cookie'.
 new_session(Cookie) ->
     gen_server:call(boss_session, {new_session, Cookie}).
 
-%% @spec get_session_data(Req) -> list | {error, Reason}
-%% @doc Get session data for the Request.
-get_session_data(Req) ->
-    Sid = get_sid_from_request(Req),
-	gen_server:call(?MODULE,{get_session_data, Sid}).
+%% @spec get_session_data(SessionID) -> list | {error, Reason}
+%% @doc Get session data for the `SessionID'.
+get_session_data(SessionID) ->
+    gen_server:call(?MODULE,{get_session_data, SessionID}).
 
-%% @spec get_session_data(Req, Key) -> list | {error, Reason}
-%% @doc Get session data for the Request for a given Key.
-get_session_data(Req, Key) ->
-    Sid = get_sid_from_request(Req),
-	SessionData = gen_server:call(?MODULE,{get_session_data, Sid}),
+%% @spec get_session_data(SessionID, Key) -> list | {error, Reason}
+%% @doc Get session data for the `SessionID' for a given `Key'.
+get_session_data(SessionID, Key) ->
+    SessionData = gen_server:call(?MODULE,{get_session_data, SessionID}),
     proplists:get_value(Key, SessionData).
 
-%% @spec set_session_data(Req,Key,Value) -> ok | {error, Reason}
-%% @doc Set session data for the Sid.
-set_session_data(Req, Key, Value) ->
-	Sid = get_sid_from_request(Req),
-    gen_server:call(?MODULE,{set_session_data, Sid, Key, Value}).
+%% @spec set_session_data(SessionID, Key, Value) -> ok | {error, Reason}
+%% @doc Set session data for the `SessionID'.
+set_session_data(SessionID, Key, Value) ->
+    gen_server:call(?MODULE,{set_session_data, SessionID, Key, Value}).
 
-%% @spec delete_session(Req) -> ok | {error, Reason}
-%% @doc Delete session for given Sid.
-delete_session(Req) ->
-    Sid = get_sid_from_request(Req),	
-    gen_server:call(?MODULE,{delete_session, Sid}).
+%% @spec delete_session(SessionID) -> ok | {error, Reason}
+%% @doc Delete session for given `SessionID'.
+delete_session(SessionID) ->
+    gen_server:call(?MODULE,{delete_session, SessionID}).
 
-%% @spec remove_session_data(Sid, Key) -> ok | {error, Reason}
-%% @doc Remove the Key from session data for the Sid.
-remove_session_data(Req, Key) ->
-    Sid = get_sid_from_request(Req),	
-    gen_server:call(?MODULE,{remove_session_data, Sid, Key}).
+%% @spec remove_session_data(SessionID, Key) -> ok | {error, Reason}
+%% @doc Remove the Key from session data for the `SessionID'.
+remove_session_data(SessionID, Key) ->
+    gen_server:call(?MODULE,{remove_session_data, SessionID, Key}).

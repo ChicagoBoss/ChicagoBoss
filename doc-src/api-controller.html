@@ -10,9 +10,13 @@
 The URL <nobr>/foo/bar</nobr> will call the function <code>foo_controller:bar</code>. 
 Each controller module should go into your project's controller/ directory and the file name should end with "_controller.erl". 
 Helper functions should go into your project's lib/ directory.
-Controllers should take one parameter, the <a href="#simplebridge">SimpleBridge request object</a>. Declare it like:</p>
+Controllers can take one parameter or two parameters: the <a href="#simplebridge">SimpleBridge request object</a>, and an optional session ID (if <a href="api-session.html">sessions</a> are enabled). Declare it like:</p>
 <div class="code">
     <span class="attr">-module</span>(my_controller, [Req]).
+</div>
+Or:
+<div class="code">
+    <span class="attr">-module</span>(my_controller, [Req, SessionID]).
 </div>
 <p>Each exported controller function takes two or three arguments:</p>
 <ul>

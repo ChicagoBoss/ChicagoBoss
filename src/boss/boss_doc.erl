@@ -73,6 +73,11 @@ get_vars("api-test.html", _InDir) ->
     {boss_assert, EDoc2} = edoc:get_doc("src/boss/boss_assert.erl", []),
     [{test_functions, extract_function_docs(EDoc1)},
         {assert_functions, extract_function_docs(EDoc2)}];
+get_vars("api-session.html", _InDir) ->
+    {boss_session, EDoc1} = edoc:get_doc("src/boss/boss_session.erl", []),
+    {boss_flash, EDoc2} = edoc:get_doc("src/boss/boss_flash.erl", []),
+    [{session_functions, extract_function_docs(EDoc1)},
+        {flash_functions, extract_function_docs(EDoc2)}];
 get_vars(_, _InDir) ->
     [].
 

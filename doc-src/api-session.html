@@ -2,43 +2,22 @@
 {% block api_content %}
 <p>BossSession is a multiadapter session management. Currently ets and Mnesia (for distributed setups) are supported. For distributed setups, it is necessary to start Boss with a node name.</p>
 
-<p>BossSession is automatically started, so, by default an ets based session support is provided</p>
+<p>BossSession is automatically started, so, by default an ets based session support is provided.</p>
+
+<p>The current session ID is available to controllers as the second module parameter. To disable sessions, set "session_enable" to "false" in your boss.config file.</p>
 
 <p>BossFlash is a utility on top of boss_session, you can store messages between requests, automatically populated to the view as {{ "{{ boss_flash }}" }} and deleted from session after used.</p>
 
 <h2>boss_session</h2>
 
-<h3>get_session_data/1</h3>
+{% for function in session_functions %}
+{% if function.description_long %}
 <div class="code">
-boss_session:get_session_data(Req) -&gt; list | {error, Reason}
+    {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
 </div>
-<p>Get all session data associated to the Request.</p>
-
-<h3>get_session_data/2</h3>
-<div class="code">
-boss_session:get_session_data(Req, Key) -&gt; list | {error, Reason}
-</div>
-<p>Get session data for the Request for a given Key.</p>
-
-
-<h3>set_session_data/3</h3>
-<div class="code">
-set_session_data(Req,Key,Value) -&gt; ok | {error, Reason}
-</div>
-<p>Set session data for the Request with key Key and value Value.</p>
-
-<h3>delete_session/1</h3>
-<div class="code">
-delete_session(Req) -&gt; ok | {error, Reason}
-</div>
-<p>Delete all session data for the Request.</p>
-
-<h3>remove_session_data/2</h3>
-<div class="code">
-remove_session_data(Sid, Key) -&gt; ok | {error, Reason}
-</div>
-<p>Remove the Key from session data for the Request.</p>
-
+<p>{{ function.description_long }}</p>
+{% endif %}
+{% endfor %}
 
 
 <h2>boss_flash</h2>
@@ -51,17 +30,20 @@ boss_flash:add(Req, notice, "Flash Title", "Flash Message")
 
 <p>Use the boss_flash var in the view, should render "notice - Flash Title - Flash Message":</p>
 <div class="code">
-{{ "{% if boss_flash %}" }}
-{{ "{{ boss_flash.method }} - {{ boss_flash.title }} - {{ boss_flash.message }}" }}
-{{ "{% endif %}" }}
+{{ "{% for flash in boss_flash %}" }}
+{{ "{{ flash.method }} - {{ flash.title }} - {{ flash.message }}" }}
+{{ "{% endfor %}" }}
 </div>
 
 <h2>Functions</h2>
 
-<h3>boss_flash:add/3</h3>
-<p>add(Req, Type, Title)</p>
-
-<h3>boss_flash:add/4</h3>
-<p>add(Req, Type, Title, Message)</p>
+{% for function in flash_functions %}
+{% if function.description_long %}
+<div class="code">
+    {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
+</div>
+<p>{{ function.description_long }}</p>
+{% endif %}
+{% endfor %}
 
 {% endblock %}

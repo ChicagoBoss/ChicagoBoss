@@ -1,5 +1,5 @@
 -module(boss_web_controller).
--export([start/0, start/1, stop/0, handle_request/3, process_request/1]).
+-export([start/0, start/1, stop/0, handle_request/3, process_request/2]).
 -define(DEBUGPRINT(A), error_logger:info_report("~~o)> " ++ A)).
 
 start() ->
@@ -85,8 +85,13 @@ handle_request(Req, RequestMod, ResponseMod) ->
             (Response:file([$/|File])):build_response();
         _ -> 
             SessionKey = boss_session:get_session_key(),
-            SessionId = boss_session:new_session(Request:cookie(SessionKey)),			
-            {StatusCode, Headers, Payload} = process_request(Request),
+            SessionID = case boss_env:get_env(session_enable, true) of
+                true ->
+                    boss_session:new_session(Request:cookie(SessionKey));
+                false ->
+                    undefined
+            end,
+            {StatusCode, Headers, Payload} = process_request(Request, SessionID),
             ErrorFormat = "~s ~s ~p~n", 
             ErrorArgs = [Request:request_method(), Request:path(), StatusCode],
             case StatusCode of
@@ -96,16 +101,21 @@ handle_request(Req, RequestMod, ResponseMod) ->
             end,
             Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
             Response1 = (Response:status_code(StatusCode)):data(Payload),
-            SessionExpTime = boss_session:get_session_exp_time(),
-            Response2 = Response1:cookie(SessionKey, SessionId, "/", SessionExpTime),
+            Response2 = case SessionID of
+                undefined ->
+                    Response1;
+                _ ->
+                    SessionExpTime = boss_session:get_session_exp_time(),
+                    Response1:cookie(SessionKey, SessionID, "/", SessionExpTime)
+            end,
             Response3 = lists:foldl(fun({K, V}, Acc) -> Acc:header(K, V) end, Response2, Headers),
             Response3:build_response()
     end.
 
-process_request(Req) ->
+process_request(Req, SessionID) ->
     Result = case boss_router:parse_path(Req:path()) of
         {ok, {Controller, Action, Tokens}} ->
-            trap_load_and_execute({Controller, Action, Tokens}, Req);
+            trap_load_and_execute({Controller, Action, Tokens}, Req, SessionID);
         Else ->
             Else
     end,
@@ -126,28 +136,28 @@ process_result({ok, Payload, Headers}) ->
     {200, [{"Content-Type", proplists:get_value("Content-Type", Headers, "text/html")}
             |proplists:delete("Content-Type", Headers)], Payload}.
 
-trap_load_and_execute(Arg1, Arg2) ->
-    case catch load_and_execute(Arg1, Arg2) of
+trap_load_and_execute(Arg1, Arg2, Arg3) ->
+    case catch load_and_execute(Arg1, Arg2, Arg3) of
         {'EXIT', Reason} ->
             {error, Reason};
         Ok ->
             Ok
     end.
 
-load_and_execute(Location, Req) ->
+load_and_execute(Location, Req, SessionID) ->
     case boss_env:boss_env() of
-        production -> load_and_execute_prod(Location, Req);
-        testing -> load_and_execute_dev(Location, Req);
-        _ -> load_and_execute_dev(Location, Req)
+        production -> load_and_execute_prod(Location, Req, SessionID);
+        testing -> load_and_execute_dev(Location, Req, SessionID);
+        _ -> load_and_execute_dev(Location, Req, SessionID)
     end.
 
-load_and_execute_prod({Controller, _, _} = Location, Req) ->
+load_and_execute_prod({Controller, _, _} = Location, Req, SessionID) ->
     case lists:member(Controller ++ "_controller", boss_files:web_controller_list()) of
-        true -> execute_action(Location, Req);
+        true -> execute_action(Location, Req, SessionID);
         false -> render_view(Location, Req)
     end.
 
-load_and_execute_dev({"doc", ModelName, _}, Req) ->
+load_and_execute_dev({"doc", ModelName, _}, Req, _SessionID) ->
     case string:chr(ModelName, $.) of
         0 ->
             case boss_load:load_models() of
@@ -162,7 +172,7 @@ load_and_execute_dev({"doc", ModelName, _}, Req) ->
         _ ->
             {not_found, "File not found"}
     end;
-load_and_execute_dev({Controller, _, _} = Location, Req) ->
+load_and_execute_dev({Controller, _, _} = Location, Req, SessionID) ->
     case boss_load:load_mail_controllers() of
         {ok, _} -> 
             case boss_load:load_libraries() of
@@ -173,7 +183,7 @@ load_and_execute_dev({Controller, _, _} = Location, Req) ->
                                 true ->
                                     case boss_load:load_models() of
                                         {ok, _} ->
-                                            execute_action(Location, Req);
+                                            execute_action(Location, Req, SessionID);
                                         {error, ErrorList} ->
                                             render_errors(ErrorList, Req)
                                     end;
@@ -193,14 +203,14 @@ load_and_execute_dev({Controller, _, _} = Location, Req) ->
 render_errors(ErrorList, Req) ->
     render_view({"admin", "error", []}, Req, [{errors, ErrorList}]).
 
-execute_action(Location, Req) ->
-    execute_action(Location, Req, []).
+execute_action(Location, Req, SessionID) ->
+    execute_action(Location, Req, SessionID, []).
 
-execute_action({Controller, Action}, Req, LocationTrail) ->
-    execute_action({Controller, Action, []}, Req, LocationTrail);
-execute_action({Controller, Action, Tokens}, Req, LocationTrail) when is_atom(Action) ->
-    execute_action({Controller, atom_to_list(Action), Tokens}, Req, LocationTrail);
-execute_action({Controller, Action, Tokens} = Location, Req, LocationTrail) ->
+execute_action({Controller, Action}, Req, SessionID, LocationTrail) ->
+    execute_action({Controller, Action, []}, Req, SessionID, LocationTrail);
+execute_action({Controller, Action, Tokens}, Req, SessionID, LocationTrail) when is_atom(Action) ->
+    execute_action({Controller, atom_to_list(Action), Tokens}, Req, SessionID, LocationTrail);
+execute_action({Controller, Action, Tokens} = Location, Req, SessionID, LocationTrail) ->
     case lists:member(Location, LocationTrail) of
         true ->
             {error, "Circular redirect!"};
@@ -208,10 +218,15 @@ execute_action({Controller, Action, Tokens} = Location, Req, LocationTrail) ->
             % do not convert a list to an atom until we are sure the controller/action
             % pair exists. this prevents a memory leak due to atom creation.
             Module = list_to_atom(lists:concat([Controller, "_controller"])),
-            ControllerInstance = Module:new(Req),
             ExportStrings = lists:map(
                 fun({Function, Arity}) -> {atom_to_list(Function), Arity} end,
                 Module:module_info(exports)),
+            ControllerInstance = case proplists:get_value("new", ExportStrings) of
+                1 -> 
+                    Module:new(Req);
+                2 ->
+                    Module:new(Req, SessionID)
+            end,
             AuthInfo = case lists:member({"before_", 2}, ExportStrings) of
                 true -> ControllerInstance:before_(Action);
                 false -> {ok, undefined}
