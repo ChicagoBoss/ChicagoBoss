@@ -15,9 +15,13 @@ compile(File, Options) ->
                 TransformFun when is_function(TransformFun) ->
                     TransformFun(Forms)
             end,
+            ParseTransforms = case boss_env:get_env(smart_exceptions, boss_env:boss_env() =:= development) of
+                true -> [boss_db_pt, smart_exceptions];
+                false -> [boss_db_pt]
+            end,
             RevertedForms = lists:foldl(fun(Mod, Acc) ->
                        Mod:parse_transform(Acc, CompilerOptions)
-               end, erl_syntax:revert(NewForms), [boss_db_pt, smart_exceptions]),
+               end, erl_syntax:revert(NewForms), ParseTransforms),
             case compile_forms(RevertedForms, File, CompilerOptions) of
                 {ok, Module, Bin} ->
                     case proplists:get_value(out_dir, Options) of

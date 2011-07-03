@@ -51,27 +51,27 @@ view(<span class="atom">'GET'</span>, [Year, Month]) -&gt;<br />
 <p>A few examples:</p>
 
 <div class="code">
-<span class="Comment">%% The {Controller, Action} pair to be used on the home page. Defaults to {"hello", "world"} </span> 
-<span class="Comment">%% Format: {"Controller", "Action"}</span> 
-{<span class="Constant">front_page</span>, {<span class="String"><span class="String">&quot;</span>hello<span class="String">&quot;</span></span>, <span class="String"><span class="String">&quot;</span>world<span class="String">&quot;</span></span>}}.
-<span class="Comment">%%</span> 
-<span class="Comment">%% The action to call if none is specified. Defaults to "index" </span> 
-<span class="Comment">%% Format: "Action" </span> 
+    <span class="Comment">%% The {Controller, Action} pair to be used on the home page. Defaults to {"hello", "world"} </span><br /> 
+    <span class="Comment">%% Format: {"Controller", "Action"}</span><br /> 
+    {<span class="Constant">front_page</span>, {<span class="String"><span class="String">&quot;</span>hello<span class="String">&quot;</span></span>, <span class="String"><span class="String">&quot;</span>world<span class="String">&quot;</span></span>}}<br />.
+    <span class="Comment">%%</span><br /> 
+    <span class="Comment">%% The action to call if none is specified. Defaults to "index" </span><br /> 
+    <span class="Comment">%% Format: "Action" </span><br /> 
 {<span class="Constant">default_action</span>, <span class="String"><span class="String">&quot;</span>index<span class="String">&quot;</span></span>}.
-<span class="Comment">%%</span>
-<span class="Comment">%% A proplist of default actions to call if none is specified, keyed by controller name</span> 
-<span class="Comment">%% Format: [ {"Controller1", "Action"}, {"Controller2", "Action"}]</span> 
-{<span class="Constant">default_actions</span>, [{<span class="String"><span class="String">&quot;</span>admin<span class="String">&quot;</span></span>, <span class="String"><span class="String">&quot;</span>model<span class="String">&quot;</span></span>}]}.
-<span class="Comment">%%</span>
+<span class="Comment">%%</span><br />
+<span class="Comment">%% A proplist of default actions to call if none is specified, keyed by controller name</span> <br />
+<span class="Comment">%% Format: [ {"Controller1", "Action"}, {"Controller2", "Action"}]</span> <br />
+{<span class="Constant">default_actions</span>, [{<span class="String"><span class="String">&quot;</span>admin<span class="String">&quot;</span></span>, <span class="String"><span class="String">&quot;</span>model<span class="String">&quot;</span></span>}]}.<br />
+<span class="Comment">%%</span><br />
 <span class="Comment">%% Route for not-found actions, is called if not named route is found a the first url token</span>
-<span class="Comment">%% don't pertain to a controller</span>  
+<span class="Comment">%% don't pertain to a controller</span>  <br />
 <span class="Comment">%% Format: {"Controller", "Action", ["Param1", "ParamN"]}</span> 
-{<span class="Constant">not_found_route</span>, {<span class="String"><span class="String">&quot;</span>hello<span class="String">&quot;</span></span>, <span class="String"><span class="String">&quot;</span>world<span class="String">&quot;</span></span>, []}}.
-<span class="Comment">%%</span>
-<span class="Comment">%% Named routes, will take precedence over the previous</span> 
-<span class="Comment">%% Format: {"Full Url", {"Controller", "Action", ["Param1", "ParamN"]}}</span> 
-{<span class="String"><span class="String">&quot;</span>/login<span class="String">&quot;</span></span>, {<span class="String"><span class="String">&quot;</span>account<span class="String">&quot;</span></span>, <span class="String"><span class="String">&quot;</span>login<span class="String">&quot;</span></span>, []}}.
-{<span class="String"><span class="String">&quot;</span>/signup<span class="String">&quot;</span></span>, {<span class="String"><span class="String">&quot;</span>accounts<span class="String">&quot;</span></span>, <span class="String"><span class="String">&quot;</span>signup<span class="String">&quot;</span></span>, []}}.
+{<span class="Constant">not_found_route</span>, {<span class="String"><span class="String">&quot;</span>hello<span class="String">&quot;</span></span>, <span class="String"><span class="String">&quot;</span>world<span class="String">&quot;</span></span>, []}}.<br />
+<span class="Comment">%%</span><br />
+<span class="Comment">%% Named routes, will take precedence over the previous</span> <br />
+<span class="Comment">%% Format: {"Full Url", {"Controller", "Action", ["Param1", "ParamN"]}}</span> <br />
+{<span class="String"><span class="String">&quot;</span>/login<span class="String">&quot;</span></span>, {<span class="String"><span class="String">&quot;</span>account<span class="String">&quot;</span></span>, <span class="String"><span class="String">&quot;</span>login<span class="String">&quot;</span></span>, []}}.<br />
+{<span class="String"><span class="String">&quot;</span>/signup<span class="String">&quot;</span></span>, {<span class="String"><span class="String">&quot;</span>accounts<span class="String">&quot;</span></span>, <span class="String"><span class="String">&quot;</span>signup<span class="String">&quot;</span></span>, []}}.<br />
 </div>
 
 <a name="auth"></a>

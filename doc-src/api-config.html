@@ -42,6 +42,7 @@
     <li><code>session_key</code> - Cookie key for sessions. Defaults to "_boss_session"</li>
     <li><code>session_exp_time</code> - Expiration time for the session cookie. Defaults to 525600</li>	
     <li><code>session_mnesia_nodes</code> (optional, Mnesia sessions only) - List of Mnesia nodes, defaults to node()</li>
+    <li><code>smart_exceptions</code> - Enable <a href="https://github.com/thomasl/smart_exceptions">smart_exceptions</a>, which provide the line numbers of run-time errors. Defaults to <code>true</code> in development, <code>false</code> in production.</li>
     <li><code>smtp_server_enable</code> - Enable the SMTP server for incoming mail</li>
     <li><code>smtp_server_address</code> - The address that the SMTP server should bind to. Defaults to <code>{0, 0, 0, 0}</code> (all interfaces).</li>
     <li><code>smtp_server_domain</code> - The domain name of the SMTP server</li>
