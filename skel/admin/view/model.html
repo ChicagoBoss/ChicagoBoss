@@ -82,4 +82,7 @@
         </p>
         {% endifnotequal %}
         {% endif %}
+        {% if this_model %}
+        <p><a href="/admin/csv/{{ this_model }}">Export as CSV</a></p>
+        {% endif %}
 {% endblock %}

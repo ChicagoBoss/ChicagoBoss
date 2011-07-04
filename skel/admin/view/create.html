@@ -16,7 +16,7 @@
     {% ifnotequal key "id" %}
     {% if "_time" in key %}
     <tr><td>{{ key }}</td><td><input type="radio" name="{{ key }}" value="now" id="{{ key }}_now" checked="checked" /><label for="{{ key }}_now">Now</label>
-            &nbsp; <input type="radio" name="{{ key }}" value="null" id="{{ key }}_now" /><label for="{{ key }}_null">Null</label>
+            &nbsp; <input type="radio" name="{{ key }}" value="null" id="{{ key }}_null" /><label for="{{ key }}_null">Null</label>
     {% else %}
     <tr><td><label for="{{ key }}_textarea">{{ key }}</label></td><td><textarea id="{{ key }}_textarea" name="{{ key }}">{% if errors %}{{ val|escape }}{% endif %}</textarea></td></tr>
     {% endif %}

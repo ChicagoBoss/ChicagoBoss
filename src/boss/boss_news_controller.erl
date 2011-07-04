@@ -208,7 +208,7 @@ handle_call({updated, Id, OldAttrs, NewAttrs}, _From, State0) ->
                     ({Key, OldVal}, Acc0) ->
                         KeyString = atom_to_list(Key),
                         case NewRecord:Key() of
-                            OldVal -> {ok, Acc0};
+                            OldVal -> Acc0;
                             NewVal -> 
                                 lists:foldr(fun(WatchId, Acc1) ->
                                             #watch{ watch_list = WatchList, 

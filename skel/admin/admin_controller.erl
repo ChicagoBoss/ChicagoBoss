@@ -87,6 +87,26 @@ model('GET', [ModelName, PageName], Authorization) ->
             {topic_string, TopicString}, {timestamp, boss_mq:now("admin"++SessionID)}], 
         [{"Cache-Control", "no-cache"}]}.
 
+csv('GET', [ModelName], Authorization) ->
+    Model = list_to_atom(ModelName),
+    [First|_] = Records = boss_db:find(Model, [], all, 0, id, str_descending),
+    FirstLine = [lists:foldr(fun
+                (Attr, []) ->
+                    [atom_to_list(Attr)];
+                (Attr, Acc) ->
+                    [atom_to_list(Attr), ","|Acc]
+            end, [], First:attribute_names()), "\n"],
+    RecordLines = lists:map(fun(Record) ->
+                [lists:foldr(fun
+                            ({_Key, Val}, []) ->
+                                [admin_lib:encode_csv_value(Val)];
+                            ({_Key, Val}, Acc) ->
+                                [admin_lib:encode_csv_value(Val), ","|Acc]
+                        end, [], Record:attributes()), "\n"]
+        end, Records),
+    {output, [FirstLine, RecordLines], [{"Content-Type", "text/csv"}, 
+            {"Content-Disposition", "attachment;filename="++ModelName++".csv"}]}.
+
 record('GET', [RecordId], Authorization) ->
     Record = boss_db:find(RecordId),
     AttributesWithDataTypes = lists:map(fun({Key, Val}) ->
@@ -94,6 +114,32 @@ record('GET', [RecordId], Authorization) ->
         end, Record:attributes()),
     {ok, [{'record', Record}, {'attributes', AttributesWithDataTypes}, 
             {'type', boss_db:type(RecordId)}, {timestamp, boss_mq:now("admin"++SessionID)}]}.
+
+edit('GET', [RecordId], Authorization) ->
+    Record = boss_db:find(RecordId),
+    {ok, [{'record', Record}]};
+edit('POST', [RecordId], Authorization) ->
+    Record = boss_db:find(RecordId),
+    NewRecord = lists:foldr(fun
+            ('id', Acc) ->
+                Acc;
+            (Attr, Acc) ->
+                AttrName = atom_to_list(Attr),
+                Val = Req:post_param(AttrName),
+                case lists:suffix("_time", AttrName) of
+                    true ->
+                        case Val of "now" -> Acc:Attr(erlang:now());
+                            _ -> Acc
+                        end;
+                    false -> Acc:Attr(Val)
+                end
+        end, Record, Record:attribute_names()),
+    case NewRecord:save() of
+        {ok, SavedRecord} ->
+            {redirect, "/admin/record/"++RecordId};
+        {error, Errors} ->
+            {ok, [{errors, Errors}, {record, NewRecord}]}
+    end.
 
 delete('GET', [RecordId], Authorization) ->
     {ok, [{'record', boss_db:find(RecordId)}]};
@@ -107,26 +153,26 @@ create(Method, [RecordType], Authorization) ->
         true ->
             Module = list_to_atom(RecordType),
             NumArgs = proplists:get_value('new', Module:module_info(exports)),
+            DummyRecord = apply(list_to_atom(RecordType), 'new', lists:seq(1, NumArgs)),
             case Method of
                 'GET' ->
-                    Record = apply(list_to_atom(RecordType), 'new', lists:seq(1, NumArgs)),
-                    {ok, [{type, RecordType}, {'record', Record}]};
+                    {ok, [{type, RecordType}, {'record', DummyRecord}]};
                 'POST' ->
-                    DummyRecord = apply(list_to_atom(RecordType), 'new', lists:seq(1, NumArgs)),
-                    Record = apply(list_to_atom(RecordType), 'new', 
-                        lists:map(fun('id') -> 'id'; 
-                                (A) ->
-                                    AttrName = atom_to_list(A),
+                    Record = lists:foldr(fun
+                                ('id', Acc) -> Acc:id('id');
+                                (Attr, Acc) ->
+                                    AttrName = atom_to_list(Attr),
                                     Val = Req:post_param(AttrName),
-                                    case lists:suffix("_time", AttrName) of
+                                    Val1 = case lists:suffix("_time", AttrName) of
                                         true ->
-                                            case Req:post_param(AttrName) of
+                                            case Val of
                                                 "now" -> erlang:now();
                                                 _ -> ""
                                             end;
                                         _ -> Val
-                                    end
-                            end, DummyRecord:attribute_names())),
+                                    end,
+                                    Acc:Attr(Val1)
+                            end, DummyRecord, DummyRecord:attribute_names()),
                     case Record:save() of
                         {ok, SavedRecord} ->
                             {redirect, "/admin/record/"++SavedRecord:id()};

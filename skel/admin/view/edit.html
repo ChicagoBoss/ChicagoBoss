@@ -1,0 +1,28 @@
+{% extends "view/layouts/admin.html" %}
+{% block title %}Edit {{ record.id }} (Chicago Boss Admin Interface){% endblock %}
+{% block body %}
+<h1>Editing {{ record.id }}</h1>
+<p><em><a href="/admin/record/{{ record.id }}">Back to the {{ record.id }} detail page</a></em></p>
+{% if errors %}
+<ol>
+{% for error in errors %}
+<li style="color: red;">{{ error }}</li>
+{% endfor %}
+</ol>
+{% endif %}
+<form name="edit" action="/admin/edit/{{ record.id }}" method="post">
+<table>
+    {% for key, val in record.attributes %}
+    {% ifnotequal key "id" %}
+    {% if "_time" in key %}
+    <tr><td>{{ key }}</td><td><input type="radio" name="{{ key }}" value="now" id="{{ key }}_now" /><label for="{{ key }}_now">Now</label>
+            &nbsp; <input type="radio" name="{{ key }}" value="null" id="{{ key }}_null" checked="checked" /><label for="{{ key }}_null">{% if val %}{{ val|date }} {{ val|time }}{% else %}Null{% endif %}</label>
+    {% else %}
+    <tr><td><label for="{{ key }}_textarea">{{ key }}</label></td><td><textarea id="{{ key }}_textarea" name="{{ key }}">{{ val|escape }}</textarea></td></tr>
+    {% endif %}
+    {% endifnotequal %}
+    {% endfor %}
+</table>
+<p><input type="submit" value="Save changes" /></p>
+</form>
+{% endblock %}

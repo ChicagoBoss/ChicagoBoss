@@ -19,7 +19,7 @@
 </script>
 {% endblock %}
 {% block body %}
-<h1>Displaying {{ record.id }}</h1>
+<h1>Displaying {{ record.id }} (<a href="/admin/edit/{{ record.id }}">edit</a>)</h1>
 <p><em><a href="/admin/model/{{ type }}">Back to the {{ type }} list</a></em></p>
     {% for key, val, datatype in attributes %}
     {% if not datatype == "id" %}
