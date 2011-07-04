@@ -54,10 +54,10 @@ lang_write_to_file(IODevice, Original, Translation, BlockIdentifier) ->
 		Identifier -> 
 			file:write(IODevice, io_lib:format("\n#. ~ts\n",[Identifier])),
 			file:write(IODevice, io_lib:format("msgid \"~s\"\n", [""])),
-			{ok, OriginalTokens} = regexp:split(OriginalEncoded,"\r\n"),
+                        OriginalTokens = re:split(OriginalEncoded,"\r\n", [{return, list}]),
 			lang_write_multiline_to_file(IODevice, OriginalTokens),
 			file:write(IODevice, io_lib:format("\msgstr \"~s\"\n", [""])),
-			{ok, TranslationTokens} = regexp:split(TranslationEncoded,"\r\n"),
+                        TranslationTokens = re:split(TranslationEncoded,"\r\n", [{return, list}]),
 			lang_write_multiline_to_file(IODevice, TranslationTokens)
 	end.
 
