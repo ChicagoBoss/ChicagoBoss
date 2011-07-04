@@ -83,6 +83,6 @@
         {% endifnotequal %}
         {% endif %}
         {% if this_model %}
-        <p><a href="/admin/csv/{{ this_model }}">Export as CSV</a></p>
+        <p><a href="/admin/csv/{{ this_model }}">Export as CSV</a> - <a href="/admin/upload/{{ this_model }}">Bulk upload</a></p>
         {% endif %}
 {% endblock %}

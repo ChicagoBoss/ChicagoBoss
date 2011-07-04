@@ -179,6 +179,7 @@ save_record(Record) ->
                 true ->
                     case find(RecordId) of
                         {error, _Reason} -> {true, Record};
+                        undefined -> {true, Record};
                         FoundOldRecord -> {false, FoundOldRecord}
                     end
             end,

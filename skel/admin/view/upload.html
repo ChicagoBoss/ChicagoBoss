@@ -1,0 +1,16 @@
+{% extends "view/layouts/admin.html" %}
+{% block title %}Bulk upload ({{ type }}){% endblock %}
+{% block body %}
+<h1>Bulk upload ({{ type }})</h1>
+<p><em><a href="/admin/model/{{ type }}">Back to the {{ type }} list</a></em></p>
+<p>Choose a CSV file with these columns:</p>
+<ul>
+    {% for attr in attributes %}
+    <li><code>{{ attr }}</code></li>
+    {% endfor %}
+</ul>
+<form name="upload" action="/admin/upload/{{ type }}" method="post" enctype="multipart/form-data">
+    <input type="file" name="file" /> &nbsp; &nbsp;
+    <input type="submit" value="Upload" />
+</form>
+{% endblock %}

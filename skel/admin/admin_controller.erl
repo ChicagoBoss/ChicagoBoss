@@ -107,6 +107,33 @@ csv('GET', [ModelName], Authorization) ->
     {output, [FirstLine, RecordLines], [{"Content-Type", "text/csv"}, 
             {"Content-Disposition", "attachment;filename="++ModelName++".csv"}]}.
 
+upload('GET', [ModelName], Authorization) ->
+    Module = list_to_atom(ModelName),
+    NumArgs = proplists:get_value('new', Module:module_info(exports)),
+    DummyRecord = apply(Module, 'new', lists:seq(1, NumArgs)),
+    {ok, [{type, ModelName}, {attributes, DummyRecord:attribute_names()}]};
+upload('POST', [ModelName], Authorization) ->
+    Module = list_to_atom(ModelName),
+    NumArgs = proplists:get_value('new', Module:module_info(exports)),
+    DummyRecord = apply(Module, 'new', lists:map(fun(1) -> 'id'; (_) -> "" end, lists:seq(1, NumArgs))),
+    [{uploaded_file, FileName, Location, Length}] = Req:post_files(),
+    {ok, FileBytes} = file:read_file(Location),
+    [Head|Rest] = admin_lib:parse_csv(FileBytes),
+    RecordsToSave = lists:map(fun(Line) ->
+                {_, Record} = lists:foldl(fun(Val, {Counter, Acc}) ->
+                            AttrName = lists:nth(Counter, Head),
+                            Attr = list_to_atom(AttrName),
+                            {Counter + 1, Acc:Attr(Val)}
+                    end, {1, DummyRecord}, Line),
+                Record
+        end, Rest),
+    % TODO put these in a transaction
+    lists:foldl(fun(Record, ok) ->
+                {ok, _} = Record:save(),
+                ok
+        end, ok, RecordsToSave),
+    {redirect, "/admin/model/"++ModelName}.
+
 record('GET', [RecordId], Authorization) ->
     Record = boss_db:find(RecordId),
     AttributesWithDataTypes = lists:map(fun({Key, Val}) ->
