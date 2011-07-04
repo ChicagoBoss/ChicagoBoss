@@ -111,7 +111,7 @@ now_seconds() ->
     A * 1000 * 1000 + B.
 
 prune_expired_sessions(#state{ ttl_tree = Tree, session_dict = Dict, adapter = A, connection = C } = State, NowSeconds) ->
-    {NewDict, NewTree} = boss_mq:prune(fun(SessionID, DictAcc) ->
+    {NewDict, NewTree} = boss_pq:prune(fun(SessionID, DictAcc) ->
                 A:delete_session(C, SessionID),
                 dict:erase(SessionID, DictAcc)
         end, Dict, Tree, NowSeconds),

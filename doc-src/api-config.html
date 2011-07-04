@@ -2,6 +2,7 @@
 {% block api_content %}
 <p>All configuration takes place in <code>boss.config</code> in your project directory. Valid configuration options are:</p>
 <ul>
+    <li><code>admin_ip_blocks</code> - List of IP blocks that can access the admin interface. Defaults to <code>["127.0.0.1", "192.168.0.0/16", "10.0.0.0/16"]</code></li>
     <li><code>assume_locale</code> - The presumed locale of translatable strings. Defaults to "en".</li>
     <li><code>db_host</code> - The hostname of the database. Defaults to "localhost".</li>
     <li><code>db_port</code> - The port of the database. Defaults to 1978.</li>

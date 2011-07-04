@@ -2,17 +2,29 @@
 -compile(export_all).
 -define(RECORDS_PER_PAGE, 100).
 
+before_("access_denied") ->
+    ok;
 before_(_) ->
-	ClientIp = case Req:header(x_forwarded_for) of
-				   undefined -> Req:peer_ip();
-				   IP -> IP
-			   end,
-    case ClientIp of
-        {192, 168, _, _} ->
-            {ok, local};
-        {127, 0, 0, 1} ->
-            {ok, local};
-        {10, 0, _, _} ->
+    ClientIp = case Req:header(x_forwarded_for) of
+        undefined -> Req:peer_ip();
+        IP -> IP
+    end,
+    Authorized = lists:foldr(fun
+            (IPBlock, false) ->
+                case string:tokens(IPBlock, "/") of
+                    [IPAddress] ->
+                        IPAddress =:= string:join(lists:map(fun erlang:integer_to_list/1, 
+                                tuple_to_list(ClientIp)), ".");
+                    [IPAddress, Mask] ->
+                        MaskInt = list_to_integer(Mask),
+                        IPAddressTuple = list_to_tuple(lists:map(fun erlang:list_to_integer/1, string:tokens(IPAddress, "."))),
+                        admin_lib:mask_ipv4_address(ClientIp, MaskInt) =:= admin_lib:mask_ipv4_address(IPAddressTuple, MaskInt)
+                end;
+            (_, true) ->
+                true
+        end, false, boss_env:get_env(admin_ip_blocks, ["192.168.0.0/16", "127.0.0.1", "10.0.0.0/16"])),
+    case Authorized of
+        true ->
             {ok, local};
         _ ->
             {redirect, "/admin/access_denied"}
