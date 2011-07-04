@@ -13,11 +13,8 @@ start() ->
                     {ok, Val} -> [{OptName, Val}|Acc];
                     _ -> Acc
                 end
-        end, [], [session_key]),
-    SessionDriver = case application:get_env(session_adapter) of
-        {ok, Val} -> Val;
-        _ -> ets
-    end,
+        end, [], [session_key, session_exp_time]),
+    SessionDriver = boss_env:get_env(session_adapter, ets),
     SessionOptions1 = [{adapter, list_to_atom("boss_session_adapter_"++atom_to_list(SessionDriver))}|SessionOptions],
     start(SessionOptions1).
 

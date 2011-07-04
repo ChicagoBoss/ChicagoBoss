@@ -1,6 +1,7 @@
 -module(boss_session_adapter_mnesia).
 -behaviour(boss_session_adapter).
 -export([start/0, start/1, stop/1]).
+-export([needs_expiration/0]).
 -export([new_session/2, get_session_data/2, set_session_data/4]).
 -export([delete_session/2, remove_session_data/3]).
 
@@ -29,7 +30,10 @@ start(_Options) ->
     {ok, undefined}.
 
 stop(_) ->
-	ok.
+    ok.
+
+needs_expiration() ->
+    false.
 
 new_session(_, Cookie) ->
     case Cookie of

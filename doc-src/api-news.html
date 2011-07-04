@@ -21,6 +21,12 @@
     <li><code>"user-*.*</code></li>
     <li><code>"users"</code></li>
 </ul>
+<p>The return value of the callback function can be used to cancel (or extend) the watch that invoked the function. This feature can be used to ensure that a callback is only performed once. Meaningful return values are:</p>
+<ul>
+    <li><code>{ok, cancel_watch}</code> - Cancel the invoking watch.</li>
+    <li><code>{ok, extend_watch}</code> - Extend the invoking watch.</li>
+</ul>
+<p>(Other return values are ignored.)</p>
 <p>Functions for managing watches are:</p>
 {% for function in functions %}
 {% if function.description_long %}

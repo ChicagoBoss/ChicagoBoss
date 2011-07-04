@@ -1,10 +1,11 @@
 -module(boss_session_adapter_ets).
 -behaviour(boss_session_adapter).
 -export([start/0, start/1, stop/1]).
+-export([needs_expiration/0]).
 -export([new_session/2, get_session_data/2, set_session_data/4]).
 -export([delete_session/2, remove_session_data/3]).
 
--record(boss_session, {sid,data,ttl}).
+-record(boss_session, {sid, data, exp_time}).
 
 start() ->
     start([]).
@@ -16,18 +17,18 @@ start(_Options) ->
     {ok, undefined}.
 
 stop(_) ->
-	ok.
+    ok.
 
-new_session(_, Cookie) ->	
-    case Cookie of
-		undefined ->
-		    make_session();
-		Any ->
-		    case ets:member(?MODULE, Any) of
-			true -> Any;
-			false -> make_session()
-		    end
-	end.
+needs_expiration() ->
+    true.
+
+new_session(_, undefined) ->	
+    make_session();
+new_session(_, Any) ->
+    case ets:member(?MODULE, Any) of
+        true -> Any;
+        false -> make_session()
+    end.
 
 get_session_data(_, Sid) ->
     case ets:lookup(?MODULE, Sid) of
@@ -49,7 +50,7 @@ set_session_data(_, Sid, Key, Value) ->
 		    [{Key,Value}|Data]
 	    end,
     
-    ets:insert(?MODULE,#boss_session{sid=Sid,data=Data1,ttl=0}),
+    ets:insert(?MODULE,#boss_session{sid=Sid,data=Data1}),
     ok.
 
 delete_session(_, Sid) ->
@@ -69,7 +70,7 @@ remove_session_data(_, Sid, Key) ->
 		    Data
 	    end,
     
-    ets:insert(?MODULE,#boss_session{sid=Sid,data=Data1,ttl=0}),
+    ets:insert(?MODULE,#boss_session{sid=Sid,data=Data1}),
 	ok.
 	
 %%--------------------------------------------------------------------
@@ -80,7 +81,7 @@ make_session() ->
     Data = crypto:rand_bytes(2048),
     Sha_list = binary_to_list(crypto:sha(Data)),
     Id = lists:flatten(list_to_hex(Sha_list)),
-    Session = #boss_session{sid=Id,data=[],ttl=0},
+    Session = #boss_session{sid=Id,data=[]},
     ets:insert(?MODULE,Session),
     Id.
 
