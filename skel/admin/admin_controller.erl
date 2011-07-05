@@ -46,6 +46,9 @@ routes('GET', [], Authorization) ->
     {ok, [ {routes_section, true}, {routes, boss_router:get_all()} ]};
 routes('GET', ["reload"], Authorization) ->
     boss_router:reload(),
+    lists:map(fun(Node) ->
+                rpc:call(Node, boss_router, reload, [])
+        end, erlang:nodes()),
     boss_flash:add(SessionID, notice, "Routes reloaded"),
     {redirect, boss_router:base_url() ++ "/admin/routes"}.
 
