@@ -18,7 +18,7 @@ start_link() ->
     start_link([]).
 
 start_link(Args) ->
-    gen_server:start_link({local, boss_session}, ?MODULE, Args, []).
+    gen_server:start_link({global, boss_session}, ?MODULE, Args, []).
 
 init(Options) ->
     Adapter = proplists:get_value(adapter, Options, boss_session_adapter_ets),

@@ -1,3 +1,12 @@
 #!/bin/sh
 cd `dirname $0`
-exec erl -pa $PWD/ebin -pa {{src}}/ebin -pa {{src}}/deps/*/ebin -boot start_sasl -config boss -s boss -sname john -detached
+# For multi-node setups you need to change the -sname argument for every node
+# and also set the master_node config option. The master node runs global
+# services (sessions, message queue, events, and incoming mail) and should
+# be specified as the atom NodeName@NodeHost
+
+# If your server is running in an untrusted environment, you should probably
+# change the cookie too. (All nodes in a cluster must have the same cookie.)
+exec erl -pa $PWD/ebin -pa {{src}}/ebin -pa {{src}}/deps/*/ebin \
+    -boot start_sasl -config boss -s boss -cookie abc123 -detached \
+    -sname john 

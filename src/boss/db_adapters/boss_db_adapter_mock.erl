@@ -9,52 +9,59 @@ start() ->
     start([]).
 
 start(_Options) ->
-    {ok, MockSup} = boss_db_mock_sup:start_link(),
-    {ok, MockSup}.
+    case boss_env:is_master_node() of
+        true ->
+            {ok, MockSup} = boss_db_mock_sup:start_link(),
+            {ok, MockSup};
+        false ->
+            {ok, undefined}
+    end.
 
+stop(undefined) ->
+    ok;
 stop(MockSup) ->
     exit(MockSup),
     ok.
 
 find(_, Id) ->
-    gen_server:call(boss_db_mock, {find, Id}).
+    gen_server:call({global, boss_db_mock}, {find, Id}).
 
 find(_, Type, Conditions, Max, Skip, SortBy, SortOrder) ->
-    gen_server:call(boss_db_mock, {find, Type, Conditions, Max, Skip, SortBy, SortOrder}).
+    gen_server:call({global, boss_db_mock}, {find, Type, Conditions, Max, Skip, SortBy, SortOrder}).
 
 count(_, Type, Conditions) ->
-    gen_server:call(boss_db_mock, {count, Type, Conditions}).
+    gen_server:call({global, boss_db_mock}, {count, Type, Conditions}).
 
 counter(_, Id) ->
-    gen_server:call(boss_db_mock, {counter, Id}).
+    gen_server:call({global, boss_db_mock}, {counter, Id}).
 
 incr(_, Id, Amount) ->
-    gen_server:call(boss_db_mock, {incr, Id, Amount}).
+    gen_server:call({global, boss_db_mock}, {incr, Id, Amount}).
 
 delete(_, Id) ->
-    gen_server:call(boss_db_mock, {delete, Id}).
+    gen_server:call({global, boss_db_mock}, {delete, Id}).
 
 save_record(_, Record) ->
-    SavedRecord = gen_server:call(boss_db_mock, {save_record, Record}),
+    SavedRecord = gen_server:call({global, boss_db_mock}, {save_record, Record}),
     {ok, SavedRecord}.
 
 push(_, _Depth) ->
-    gen_server:call(boss_db_mock, push).
+    gen_server:call({global, boss_db_mock}, push).
 
 pop(_, _Depth) ->
-    gen_server:call(boss_db_mock, pop).
+    gen_server:call({global, boss_db_mock}, pop).
 
 dump(_) ->
-    gen_server:call(boss_db_mock, dump).
+    gen_server:call({global, boss_db_mock}, dump).
 
 transaction(_, TransactionFun) ->
-    gen_server:call(boss_db_mock, push),
+    gen_server:call({global, boss_db_mock}, push),
     try
         R = TransactionFun(),
-        gen_server:call(boss_db_mock, commit),
+        gen_server:call({global, boss_db_mock}, commit),
         {atomic, R}
     catch
         _:Why ->
-            gen_server:call(boss_db_mock, pop),
+            gen_server:call({global, boss_db_mock}, pop),
             {aborted, Why}
     end.

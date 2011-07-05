@@ -7,10 +7,10 @@
 -export([init/1]).
 
 start_link() ->
-    supervisor:start_link(?MODULE, []).
+    start_link([]).
 
 start_link(StartArgs) ->
-    supervisor:start_link(?MODULE, StartArgs).
+    supervisor:start_link({global, ?MODULE}, ?MODULE, StartArgs).
 
 init(StartArgs) ->
     {ok, {{one_for_one, 10, 10}, [

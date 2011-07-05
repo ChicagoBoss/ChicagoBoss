@@ -55,7 +55,7 @@ pull(Channel, Timestamp, Timeout) when is_list(Channel) ->
         infinity -> infinity;
         _ -> Timeout * 1000
     end,
-    case gen_server:call(boss_mq, {pull, Channel, Timestamp, self()}) of
+    case gen_server:call({global, ?MODULE}, {pull, Channel, Timestamp, self()}) of
         {ok, PullTime} ->
             receive
                 {_From, NewTimestamp, Messages} ->
@@ -78,20 +78,20 @@ poll(Channel) ->
 %% @spec poll( Channel::string(), Since::integer() | last ) -> {ok, Timestamp, [Message]} | {error, Reason}
 %% @doc Like `pull/2', but returns immediately if no matching messages are in the queue.
 poll(Channel, Timestamp) when is_list(Channel) ->
-    gen_server:call(boss_mq, {poll, Channel, Timestamp});
+    gen_server:call({global, ?MODULE}, {poll, Channel, Timestamp});
 poll(_, _) ->
     {error, invalid_channel}.
 
 %% @spec push( Channel::string(), Message ) -> {ok, Timestamp}
 %% @doc Pushes a message to the specified `Channel'.
 push(Channel, Message) when is_list(Channel) ->
-    gen_server:call(boss_mq, {push, Channel, Message});
+    gen_server:call({global, ?MODULE}, {push, Channel, Message});
 push(_, _) ->
     {error, invalid_channel}.
 
 %% @spec now( Channel::string() ) -> Timestamp
 %% @doc Retrieves the current time for the server managing `Channel'.
 now(Channel) when is_list(Channel) ->
-    gen_server:call(boss_mq, {now, Channel});
+    gen_server:call({global, ?MODULE}, {now, Channel});
 now(_) ->
     {error, invalid_channel}.

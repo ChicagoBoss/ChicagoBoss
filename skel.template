@@ -18,6 +18,7 @@
 {file, "skel/admin/static/stylesheets/application.css", "{{dest}}/admin/static/stylesheets/application.css"}.
 {file, "skel/admin/static/lang.js", "{{dest}}/admin/static/lang.js"}.
 {file, "skel/admin/static/news.js", "{{dest}}/admin/static/news.js"}.
+{file, "skel/admin/static/jquery-1.6.1.min.js", "{{dest}}/admin/static/jquery-1.6.1.min.js"}.
 {file, "skel/admin/test/admin_test.erl", "{{dest}}/admin/test/admin_test.erl"}.
 {file, "skel/admin/view/layouts/admin.html", "{{dest}}/admin/view/layouts/admin.html"}.
 {file, "skel/admin/view/layouts/shared/_alerts.html", "{{dest}}/admin/view/layouts/shared/_alerts.html"}.

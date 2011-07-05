@@ -18,34 +18,44 @@ start(Config) ->
     boss_router:initialize(),
 
     boss_db:start(),
-    boss_session:start(),
-    boss_mq:start(),
 
-    lists:map(fun(File) ->
-                ok = boss_compiler:compile(File, [])
-        end, boss_files:init_file_list()),
+    ThisNode = erlang:node(),
+    case boss_env:get_env(master_node, ThisNode) of
+        MasterNode when MasterNode =:= ThisNode ->
+            error_logger:info_msg("Starting master services on ~p~n", [MasterNode]),
+            boss_session:start(),
+            boss_mq:start(),
 
-    boss_news:start(),
+            lists:map(fun(File) ->
+                        ok = boss_compiler:compile(File, [])
+                end, boss_files:init_file_list()),
+
+            boss_news:start(),
+
+            case boss_env:get_env(smtp_server_enable, false) of
+                true ->
+                    Options = [
+                        {domain, boss_env:get_env(smtp_server_domain, "localhost")},
+                        {address, boss_env:get_env(smtp_server_address, {0, 0, 0, 0})},
+                        {port, boss_env:get_env(smtp_server_port, 25)},
+                        {protocol, boss_env:get_env(smtp_server_protocol, tcp)},
+                        {sessionoptions, [{boss_env, Env}]}],
+                    gen_smtp_server:start({global, boss_smtp_server}, boss_smtp_server, [Options]);
+                _ ->
+                    ok
+            end;
+        MasterNode ->
+            error_logger:info_msg("Pinging master node ~p from ~p~n", [MasterNode, ThisNode]),
+            pong = net_adm:ping(MasterNode)
+    end,
 	
     MailDriver = boss_env:get_env(mail_driver, boss_mail_driver_smtp),
     boss_mail:start([{driver, MailDriver}]),
 
     boss_translator:start(),
-    {ServerMod, RequestMod, ResponseMod} = case application:get_env(server) of
-        {ok, mochiweb} -> {mochiweb_http, mochiweb_request_bridge, mochiweb_response_bridge};
-        _ -> {misultin, misultin_request_bridge, misultin_response_bridge}
-    end,
-    case application:get_env(smtp_server_enable) of
-        {ok, true} ->
-            Options = [
-                {domain, boss_env:get_env(smtp_server_domain, "localhost")},
-                {address, boss_env:get_env(smtp_server_address, {0, 0, 0, 0})},
-                {port, boss_env:get_env(smtp_server_port, 25)},
-                {protocol, boss_env:get_env(smtp_server_protocol, tcp)},
-                {sessionoptions, [{boss_env, Env}]}],
-            gen_smtp_server:start({global, boss_smtp_server}, boss_smtp_server, [Options]);
-        _ ->
-            ok
+    {ServerMod, RequestMod, ResponseMod} = case boss_env:get_env(server, misultin) of
+        mochiweb -> {mochiweb_http, mochiweb_request_bridge, mochiweb_response_bridge};
+        misultin -> {misultin, misultin_request_bridge, misultin_response_bridge}
     end,
     SSLEnable = boss_env:get_env(ssl_enable, false),
     SSLOptions = boss_env:get_env(ssl_options, []),
@@ -61,11 +71,17 @@ start(Config) ->
 
 stop() ->
     error_logger:logfile(close),
-    boss_news:stop(),
-    boss_mq:stop(),
-    boss_session:stop(),
+    ThisNode = erlang:node(),
+    case boss_env:get_env(master_node, ThisNode) of
+        MasterNode when MasterNode =:= ThisNode ->
+            boss_news:stop(),
+            boss_mq:stop(),
+            boss_session:stop(),
+            gen_smtp_server:stop({global, boss_smtp_server});
+        _ ->
+            ok
+    end,
     boss_translator:stop(),
-    gen_smtp_server:stop({global, boss_smtp_server}),
     boss_db:stop(),
     mochiweb_http:stop(),
     misultin:stop().

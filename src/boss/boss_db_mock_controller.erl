@@ -9,7 +9,7 @@ start_link() ->
     start_link([]).
 
 start_link(Args) ->
-    gen_server:start_link({local, boss_db_mock}, ?MODULE, Args, []).
+    gen_server:start_link({global, boss_db_mock}, ?MODULE, Args, []).
 
 init(_Options) ->
     {ok, [{dict:new(), 1}]}.

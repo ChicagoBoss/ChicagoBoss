@@ -12,7 +12,7 @@ start_link() ->
     start_link([]).
 
 start_link(Args) ->
-    gen_server:start_link({local, boss_mq}, ?MODULE, Args, []).
+    gen_server:start_link({global, boss_mq}, ?MODULE, Args, []).
 
 init(Options) ->
     Adapter = proplists:get_value(adapter, Options, boss_mq_adapter_bmq),
