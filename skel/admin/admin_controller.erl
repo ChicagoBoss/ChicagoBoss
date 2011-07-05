@@ -309,13 +309,18 @@ big_red_button('GET', [], Auth) ->
 upgrade('GET', [], Auth) ->
     {ok, [ {upgrade_section, true} ]};
 upgrade('POST', [], Auth) ->
-    Modules = [M || {M, F} <- code:all_loaded(), is_list(F), not code:is_sticky(M)],
-    error_logger:info_msg("Reloading ~p modules...~n", [erlang:length(Modules)]),
-    [begin code:purge(M), code:load_file(M) end || M <- Modules],
+    error_logger:info_msg("Reloading modules...~n"),
+    boss_load:reload_all(),
     error_logger:info_msg("Reloading routes...~n"),
-	boss_router:reload(),
-	error_logger:info_msg("Reloading translation...~n"),
-	boss_translator:reload_all(),
+    boss_router:reload(),
+    error_logger:info_msg("Reloading translation...~n"),
+    boss_translator:reload_all(),
+    lists:map(fun(Node) ->
+                error_logger:info_msg("Reloading on ~p~n", [Node]),
+                rpc:call(Node, boss_load, reload_all, []),
+                rpc:call(Node, boss_router, reload, []),
+                rpc:call(Node, boss_translator, reload_all, [])
+        end, erlang:nodes()),
     {redirect, "/admin/upgrade"}.
 
 reread_news_script('POST', [], Auth) ->

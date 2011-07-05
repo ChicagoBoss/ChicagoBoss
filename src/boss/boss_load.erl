@@ -15,6 +15,10 @@ load_all_modules(OutDir) ->
     {ok, _} = load_view_lib(OutDir),
     {ok, _} = load_views(OutDir).
 
+reload_all() ->
+    Modules = [M || {M, F} <- code:all_loaded(), is_list(F), not code:is_sticky(M)],
+    [begin code:purge(M), code:load_file(M) end || M <- Modules].
+
 load_libraries() ->
     load_libraries(undefined).
 load_libraries(OutDir) ->
