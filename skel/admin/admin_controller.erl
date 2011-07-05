@@ -31,13 +31,16 @@ before_(_) ->
     end.
 
 index('GET', [], Authorization) ->
-	[{loaded, ModulesLoaded}, _, _, _, _, _] = application:info(),
-	ConfigValues = [ [{Key, Value}] || {Key, Value} <- application:get_all_env()],
-	SystemValues = [ {otp_release, erlang:system_info(system_version)},
-            {processors, erlang:system_info(logical_processors_online)},
-            {uptime, admin_lib:uptime()}
-        ],
-    {ok, [ {index_section, true}, {modules_loaded, ModulesLoaded}, {config_env, ConfigValues}, {system_env, SystemValues}] }.
+    [{loaded, ModulesLoaded}, _, _, _, _, _] = application:info(),
+    ConfigValues = [ [{Key, Value}] || {Key, Value} <- application:get_all_env()],
+    SystemValues = [ {otp_release, erlang:system_info(system_version)},
+        {processors, erlang:system_info(logical_processors_online)},
+        {uptime, admin_lib:uptime()},
+        {node, erlang:node()}
+    ],
+    {ok, [ {index_section, true}, {modules_loaded, ModulesLoaded}, 
+            {config_env, ConfigValues}, {system_env, SystemValues},
+            {nodes, erlang:nodes()}] }.
 
 routes('GET', [], Authorization) ->
     {ok, [ {routes_section, true}, {routes, boss_router:get_all()} ]};

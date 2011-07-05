@@ -15,6 +15,7 @@
 	<li><b>Erlang OTP Release:</b> {{ system_env.otp_release }}</li>
 	<li><b>Processors:</b> {{ system_env.processors }}</li>
 	<li><b>Up-time:</b> {{ system_env.uptime }}</li>
+        <li><b>Node name:</b> {{ system_env.node }}</li>
 </ul>
 
 <h2>Applications loaded</h2>
@@ -32,5 +33,14 @@
 </ul>
 
 <p>See the loaded routes <a class="routes" href="{{ _base_url }}/admin/routes">here</a>
+
+<h2>Connected nodes</h2>
+<ul>
+{% for node in nodes %}
+<li>{{ node }}</li>
+{% empty %}
+<li><em>None</em></li>
+{% endfor %}
+</ul>
 
 {% endblock %}
