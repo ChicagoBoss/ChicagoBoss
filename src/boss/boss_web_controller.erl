@@ -19,6 +19,11 @@ start(Config) ->
 
     boss_db:start(),
 
+    case boss_env:get_env(cache_enable, false) of
+        false -> ok;
+        true -> boss_cache:start()
+    end,
+
     ThisNode = erlang:node(),
     case boss_env:get_env(master_node, ThisNode) of
         MasterNode when MasterNode =:= ThisNode ->
@@ -83,6 +88,7 @@ stop() ->
     end,
     boss_translator:stop(),
     boss_db:stop(),
+    boss_cache:stop(),
     mochiweb_http:stop(),
     misultin:stop().
 

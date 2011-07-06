@@ -4,6 +4,9 @@
 <ul>
     <li><code>admin_ip_blocks</code> - List of IP blocks that can access the admin interface. Defaults to <code>["127.0.0.1", "192.168.0.0/16", "10.0.0.0/16"]</code></li>
     <li><code>assume_locale</code> - The presumed locale of translatable strings. Defaults to "en".</li>
+    <li><code>cache_adapter</code> - The cache adapter to use. Currently the only valid value is <code>memcached_bin</code>.</li>
+    <li><code>cache_servers</code> - A list of cache servers (<code>{Host, Port, PoolSize}</code>). Defaults to <code>[{"localhost", 11211, 1}]</code>.
+    <li><code>cache_exp_time</code> - The maximum time to keep a cache entry, in seconds. Defaults to 60.</li>
     <li><code>db_host</code> - The hostname of the database. Defaults to "localhost".</li>
     <li><code>db_port</code> - The port of the database. Defaults to 1978.</li>
     <li><code>db_username</code> - The username used for connecting to the database (if needed).</li>

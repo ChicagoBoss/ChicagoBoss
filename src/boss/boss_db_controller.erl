@@ -11,6 +11,8 @@
         connection, 
         shards = [],
         model_dict = dict:new(),
+        cache_enable,
+        cache_ttl,
         depth = 0}).
 
 start_link() ->
@@ -21,6 +23,8 @@ start_link(Args) ->
 
 init(Options) ->
     Adapter = proplists:get_value(adapter, Options, boss_db_adapter_mock),
+    CacheEnable = proplists:get_value(cache_enable, Options, false),
+    CacheTTL = proplists:get_value(cache_exp_time, Options, 60),
     {ok, Conn} = Adapter:start(Options),
     {Shards, ModelDict} = lists:foldr(fun(ShardOptions, {ShardAcc, ModelDictAcc}) ->
                 case proplists:get_value(db_shard_models, ShardOptions, []) of
@@ -39,29 +43,42 @@ init(Options) ->
                         {[{ShardAdapter, ShardConn}|ShardAcc], NewDict}
                 end
         end, {[], dict:new()}, proplists:get_value(shards, Options, [])),
-    {ok, #state{adapter = Adapter, connection = Conn, shards = Shards, model_dict = ModelDict}}.
+    {ok, #state{adapter = Adapter, connection = Conn, shards = Shards, model_dict = ModelDict,
+        cache_enable = CacheEnable, cache_ttl = CacheTTL }}.
 
-handle_call({find, Key}, _From, State) ->
+handle_call({find, Key}, From, #state{ cache_enable = true } = State) ->
+    case boss_cache:get(Key) of
+        undefined ->
+            io:format("Not cached: ~p~n", [Key]),
+            {reply, Res, _} = handle_call({find, Key}, From, State#state{ cache_enable = false }),
+            boss_cache:set(Key, Res, State#state.cache_ttl),
+            boss_news:set_watch(Key, lists:concat([Key, ", ", Key, ".*"]), fun boss_cache:handle_record_news/3, Key, State#state.cache_ttl),
+            {reply, Res, State};
+        CachedValue ->
+            io:format("Cached! ~p~n", [CachedValue]),
+            boss_news:extend_watch(Key),
+            {reply, CachedValue, State}
+    end;
+handle_call({find, Key}, _From, #state{ cache_enable = false } = State) ->
     {Adapter, Conn} = db_for_key(Key, State),
     {reply, Adapter:find(Conn, Key), State};
 
-handle_call({find, Type, Conditions}, _From, State) ->
-    {Adapter, Conn} = db_for_type(Type, State),
-    {reply, Adapter:find(Conn, Type, Conditions), State};
-
-handle_call({find, Type, Conditions, Max}, _From, State) ->
-    {Adapter, Conn} = db_for_type(Type, State),
-    {reply, Adapter:find(Conn, Type, Conditions, Max), State};
-
-handle_call({find, Type, Conditions, Max, Skip}, _From, State) ->
-    {Adapter, Conn} = db_for_type(Type, State),
-    {reply, Adapter:find(Conn, Type, Conditions, Max, Skip), State};
-
-handle_call({find, Type, Conditions, Max, Skip, Sort}, _From, State) ->
-    {Adapter, Conn} = db_for_type(Type, State),
-    {reply, Adapter:find(Conn, Type, Conditions, Max, Skip, Sort), State};
-
-handle_call({find, Type, Conditions, Max, Skip, Sort, SortOrder}, _From, State) ->
+handle_call({find, Type, Conditions, Max, Skip, Sort, SortOrder} = Cmd, From, #state{ cache_enable = true } = State) ->
+    Key = {Type, Conditions, Max, Skip, Sort, SortOrder},
+    case boss_cache:get(Key) of
+        undefined ->
+            io:format("Not cached: ~p~n", [Key]),
+            {reply, Res, _} = handle_call(Cmd, From, State#state{ cache_enable = false }),
+            boss_cache:set(Key, Res, State#state.cache_ttl),
+            boss_news:set_watch(Key, lists:concat([inflector:pluralize(atom_to_list(Type)), ", ", Type, "-*.*"]), fun boss_cache:handle_collection_news/3, Key,
+                State#state.cache_ttl),
+            {reply, Res, State};
+        CachedValue ->
+            io:format("Cached! ~p~n", [CachedValue]),
+            boss_news:extend_watch(Key),
+            {reply, CachedValue, State}
+    end;
+handle_call({find, Type, Conditions, Max, Skip, Sort, SortOrder}, _From, #state{ cache_enable = false } = State) ->
     {Adapter, Conn} = db_for_type(Type, State),
     {reply, Adapter:find(Conn, Type, Conditions, Max, Skip, Sort, SortOrder), State};
 

@@ -40,8 +40,9 @@ start() ->
         end, [], [db_port, db_host, db_username, db_password, db_database]),
     DBAdapter = boss_env:get_env(db_adapter, mock),
     DBShards = boss_env:get_env(db_shards, []),
+    CacheEnable = boss_env:get_env(cache_enable, false),
     DBOptions1 = [{adapter, list_to_atom("boss_db_adapter_"++atom_to_list(DBAdapter))},
-        {shards, DBShards}|DBOptions],
+        {cache_enable, CacheEnable}, {shards, DBShards}|DBOptions],
     start(DBOptions1).
 
 start(Options) ->
@@ -62,7 +63,7 @@ find(_) ->
 %% @doc Query for BossRecords. Returns all BossRecords of type
 %% `Type' matching all of the given `Conditions'
 find(Type, Conditions) ->
-    find(Type, Conditions, ?DEFAULT_MAX).
+    find(Type, Conditions, all).
 
 %% @spec find(Type::atom(), Conditions, Max::integer() | all ) -> [ BossRecord ]
 %% @doc Query for BossRecords. Returns up to `Max' number of BossRecords of type
