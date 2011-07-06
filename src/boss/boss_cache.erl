@@ -13,8 +13,11 @@ handle_collection_news(deleted, _, Key) ->
 handle_collection_news(created, _, Key) ->
     delete(Key),
     {ok, cancel_watch};
+handle_collection_news(updated, {_Record, Attr, _OldVal, _NewVal}, Key) when Attr =:= element(5, Key) ->
+    delete(Key),
+    {ok, cancel_watch};
 handle_collection_news(updated, {_Record, Attr, _OldVal, _NewVal}, Key) ->
-    Conditions = element(3, Key),
+    Conditions = element(2, Key),
     case proplists:lookup(Attr, Conditions) of
         none ->
             ok;
