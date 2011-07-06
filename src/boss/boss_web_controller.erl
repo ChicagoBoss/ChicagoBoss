@@ -24,11 +24,12 @@ start(Config) ->
         true -> boss_cache:start()
     end,
 
+    boss_session:start(),
+
     ThisNode = erlang:node(),
     case boss_env:get_env(master_node, ThisNode) of
         MasterNode when MasterNode =:= ThisNode ->
             error_logger:info_msg("Starting master services on ~p~n", [MasterNode]),
-            boss_session:start(),
             boss_mq:start(),
 
             lists:map(fun(File) ->

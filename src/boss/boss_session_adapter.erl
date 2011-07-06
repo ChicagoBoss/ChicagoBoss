@@ -5,8 +5,8 @@
 behaviour_info(callbacks) ->
     [
         {start, 0}, {start, 1}, {stop, 1}, 
-        {needs_expiration, 0}, {new_session, 2}, {get_session_data, 2}, 
-        {set_session_data, 4}, {delete_session, 2}, {remove_session_data, 3}
+        {session_exists, 2}, {create_session, 3}, {lookup_session, 2}, 
+        {lookup_session_value, 3}, {set_session_value, 4}, {delete_session, 2}, {delete_session_value, 3}
     ];
 behaviour_info(_Other) ->
     undefined.

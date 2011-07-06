@@ -6,10 +6,12 @@
 start(_Type, _StartArgs) ->
   boss_db:start(),
   case application:get_env(session_adapter) of
-  	{ok, mnesia} ->
-		  mnesia:stop(),
-		  mnesia:create_schema([node()]);		  
-    _ -> ok
+      {ok, mnesia} ->
+          mnesia:stop(),
+          mnesia:create_schema([node()]);		  
+      {ok, cache} ->
+          boss_cache:start();
+      _ -> ok
   end,
   boss_session:start(),
   run_tests(),

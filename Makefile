@@ -41,11 +41,14 @@ test_db_mongodb:
 	echo "db.boss_db_test_models.remove();"|mongo boss_test
 	$(ERL) -pa ebin -run boss_db_test start -config $(DB_CONFIG_DIR)/mongodb -noshell
 
-test_session_ets:
-	$(ERL) -pa ebin -run boss_session_test start -config $(SESSION_CONFIG_DIR)/ets -noshell
+test_session_cache:
+	$(ERL) -pa ebin -run boss_session_test start -config $(SESSION_CONFIG_DIR)/cache -noshell
 
 test_session_mnesia:
 	$(ERL) -pa ebin -run boss_session_test start -config $(SESSION_CONFIG_DIR)/mnesia -noshell
+
+test_session_mock:
+	$(ERL) -pa ebin -run boss_session_test start -config $(SESSION_CONFIG_DIR)/mock -noshell
 
 test_db_riak:
 	$(ERL) -pa ebin -pa deps/*/ebin -run boss_db_test start -config $(DB_CONFIG_DIR)/riak -noshell

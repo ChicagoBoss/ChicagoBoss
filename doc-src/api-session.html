@@ -1,8 +1,13 @@
 {% extends "api.html" %}
 {% block api_content %}
-<p>BossSession is a multiadapter session management. Currently ets and Mnesia (for distributed setups) are supported. For distributed setups, it is necessary to start Boss with a node name.</p>
+<p>BossSession is a multiadapter session management. The following adapters are supported (specified in boss.config):</p>
+<ul>
+    <li><code>cache</code> - Store sessions in whatever cache system is configured. Requires <code>cache_enable</code> to be set to <code>true</code>
+    <li><code>mnesia</code> - Mnesia. Requires the node to have a name.</li>
+    <li><code>mock</code> - In-memory sessions which uses ETS.</li>
+</ul>
 
-<p>BossSession is automatically started, so, by default an ets based session support is provided.</p>
+<p>BossSession is automatically started, so, by default an ETS based session support is provided.</p>
 
 <p>The current session ID is available to controllers as the second module parameter. To disable sessions, set "session_enable" to "false" in your boss.config file.</p>
 

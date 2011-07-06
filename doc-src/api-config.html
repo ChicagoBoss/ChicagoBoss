@@ -41,8 +41,9 @@
     <li><code>base_url</code>Sets the base_url passed to the views (for deployments on suburl's)</li>
     <li><code>session_adapter</code> Selects the session driver to use. Valid values:</li>
     <ul>
-        <li><code>ets</code> (default)</li>
-        <li><code>mnesia</code></li>
+        <li><code>cache</code> - Store sessions in the configured cache servers. Requires <code>cache_enable</code> to be set to <code>true</code>.</li>
+        <li><code>mnesia</code> - Mnesia sessions. Note that old sessions are not deleted.</li>
+        <li><code>mock</code> - In-memory sessions (default)</li>
     </ul>
     <li><code>session_enable</code> - Whether to enable sessions. Defaults to <code>true</code>.</li>
     <li><code>session_key</code> - Cookie key for sessions. Defaults to "_boss_session"</li>

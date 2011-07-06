@@ -5,7 +5,7 @@
 behaviour_info(callbacks) ->
     [
         {start, 0}, {start, 1}, {stop, 1}, 
-        {get, 2}, {set, 4}, {delete, 2}
+        {get, 3}, {set, 5}, {delete, 3}
     ];
 behaviour_info(_Other) ->
     undefined.

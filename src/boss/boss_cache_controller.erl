@@ -22,18 +22,18 @@ init(Options) ->
     {ok, Conn} = Adapter:start(Options),
     {ok, #state{ adapter = Adapter, connection = Conn }}.
 
-handle_call({get, Key}, _From, State) ->
+handle_call({get, Prefix, Key}, _From, State) ->
     Adapter = State#state.adapter,
     Conn = State#state.connection,
-    {reply, Adapter:get(Conn, Key), State};
-handle_call({set, Key, Value, TTL}, _From, State) ->
+    {reply, Adapter:get(Conn, Prefix, Key), State};
+handle_call({set, Prefix, Key, Value, TTL}, _From, State) ->
     Adapter = State#state.adapter,
     Conn = State#state.connection,
-    {reply, Adapter:set(Conn, Key, Value, TTL), State};
-handle_call({delete, Key}, _From, State) ->
+    {reply, Adapter:set(Conn, Prefix, Key, Value, TTL), State};
+handle_call({delete, Prefix, Key}, _From, State) ->
     Adapter = State#state.adapter,
     Conn = State#state.connection,
-    {reply, Adapter:delete(Conn, Key), State}.
+    {reply, Adapter:delete(Conn, Prefix, Key), State}.
 
 handle_cast(_Request, State) ->
     {noreply, State}.
