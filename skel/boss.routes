@@ -1,6 +1,6 @@
 %% The {Controller, Action} pair to be used on the home page. Defaults to {"hello", "world"}
 %% Format: {"Controller", "Action"}
-{front_page, {"hello", "world"}}.
+{front_page, {"admin", "splash"}}.
 %%
 %% The action to call if none is specified. Defaults to "index"
 %% Format: "Action" 

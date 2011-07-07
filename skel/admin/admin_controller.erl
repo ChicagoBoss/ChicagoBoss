@@ -2,6 +2,8 @@
 -compile(export_all).
 -define(RECORDS_PER_PAGE, 100).
 
+before_("splash") ->
+    ok;
 before_("access_denied") ->
     ok;
 before_(_) ->

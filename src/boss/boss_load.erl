@@ -7,13 +7,24 @@ load_all_modules() ->
 
 load_all_modules(OutDir) ->
     boss_translator:start(),
-    {ok, _} = load_dirs(boss_files:test_path(), OutDir, fun compile/2),
-    {ok, _} = load_libraries(OutDir),
-    {ok, _} = load_mail_controllers(OutDir),
-    {ok, _} = load_web_controllers(OutDir),
-    {ok, _} = load_models(OutDir),
-    {ok, _} = load_view_lib(OutDir),
-    {ok, _} = load_views(OutDir).
+    {ok, TestModules} = load_dirs(boss_files:test_path(), OutDir, fun compile/2),
+    {ok, LibModules} = load_libraries(OutDir),
+    {ok, MailModules} = load_mail_controllers(OutDir),
+    {ok, ControllerModules} = load_web_controllers(OutDir),
+    {ok, ModelModules} = load_models(OutDir),
+    {ok, ViewLibModule} = load_view_lib(OutDir),
+    {ok, ViewModules} = load_views(OutDir),
+    AllModules = TestModules ++ LibModules ++ MailModules ++ ControllerModules ++ 
+        ModelModules ++ [ViewLibModule] ++ ViewModules,
+    {ok, AllModules}.
+
+load_all_modules_and_emit_app_file(OutDir, AppName) ->
+    {ok, AllModules} = load_all_modules(OutDir),
+    {ok, [{application, AppName, AppData}]} = file:consult(lists:concat([AppName, ".app.src"])),
+    NewAppData = lists:keyreplace(modules, 1, AppData, {modules, AllModules}),
+    IOList = io_lib:format("~p.~n", [{application, AppName, NewAppData}]),
+    AppFile = filename:join([OutDir, lists:concat([AppName, ".app"])]),
+    file:write_file(AppFile, IOList).
 
 reload_all() ->
     Modules = [M || {M, F} <- code:all_loaded(), is_list(F), not code:is_sticky(M)],
@@ -97,11 +108,12 @@ load_dir(Dir, OutDir, Compiler) when is_function(Compiler) ->
 maybe_compile(Dir, File, OutDir, Compiler) ->
     case lists:suffix(".erl", File) of
         true ->
-            Module = filename:basename(File, ".erl"),
+            ModuleName = filename:basename(File, ".erl"),
+            Module = list_to_atom(ModuleName),
             AbsPath = filename:join([Dir, File]),
             case OutDir of
                 undefined ->
-                    case module_older_than(list_to_atom(Module), [AbsPath]) of
+                    case module_older_than(Module, [AbsPath]) of
                         true ->
                             case Compiler(AbsPath, OutDir) of
                                 ok ->

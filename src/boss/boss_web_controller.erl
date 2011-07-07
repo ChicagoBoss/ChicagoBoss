@@ -202,7 +202,7 @@ load_and_execute_dev({Controller, _, _} = Location, Req, SessionID) ->
                 {ok, _} ->
                     case boss_load:load_web_controllers() of
                         {ok, Controllers} ->
-                            case lists:member(Controller ++ "_controller", Controllers) of
+                            case lists:member(Controller ++ "_controller", lists:map(fun atom_to_list/1, Controllers)) of
                                 true ->
                                     case boss_load:load_models() of
                                         {ok, _} ->

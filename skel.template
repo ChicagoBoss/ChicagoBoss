@@ -8,10 +8,15 @@
 {dir, "{{dest}}/lib"}.
 {dir, "{{dest}}/ebin"}.
 {dir, "{{dest}}/include"}.
+{dir, "{{dest}}/view"}.
+{dir, "{{dest}}/view/lib"}.
+{dir, "{{dest}}/model"}.
+{dir, "{{dest}}/controller"}.
 {template, "skel/start-dev.sh", "{{dest}}/start-dev.sh"}.
 {template, "skel/start.sh", "{{dest}}/start.sh"}.
 {template, "skel/start-server.bat", "{{dest}}/start-server.bat"}.
 {template, "skel/Makefile", "{{dest}}/Makefile"}.
+{template, "skel/project.app.src", "{{dest}}/{{appid}}.app.src"}.
 {file, "skel/admin/admin_controller.erl", "{{dest}}/admin/admin_controller.erl"}.
 {file, "skel/admin/admin_lib.erl", "{{dest}}/admin/admin_lib.erl"}.
 {file, "skel/admin/static/stylesheets/application_orig.css", "{{dest}}/admin/static/stylesheets/application_orig.css"}.
@@ -32,23 +37,23 @@
 {file, "skel/admin/view/create.html", "{{dest}}/admin/view/create.html"}.
 {file, "skel/admin/view/delete_lang.html", "{{dest}}/admin/view/delete_lang.html"}.
 {file, "skel/admin/view/delete.html", "{{dest}}/admin/view/delete.html"}.
+{file, "skel/admin/view/edit.html", "{{dest}}/admin/view/edit.html"}.
 {file, "skel/admin/view/error.html", "{{dest}}/admin/view/error.html"}.
 {file, "skel/admin/view/index.html", "{{dest}}/admin/view/index.html"}.
 {file, "skel/admin/view/lang.html", "{{dest}}/admin/view/lang.html"}.
 {file, "skel/admin/view/model.html", "{{dest}}/admin/view/model.html"}.
 {file, "skel/admin/view/record.html", "{{dest}}/admin/view/record.html"}.
 {file, "skel/admin/view/routes.html", "{{dest}}/admin/view/routes.html"}.
+{file, "skel/admin/view/splash.html", "{{dest}}/admin/view/splash.html"}.
 {file, "skel/admin/view/upgrade.html", "{{dest}}/admin/view/upgrade.html"}.
-{file, "skel/controller/hello_controller.erl", "{{dest}}/controller/hello_controller.erl"}.
+{file, "skel/admin/view/upload.html", "{{dest}}/admin/view/upload.html"}.
 {file, "skel/mail/outgoing_mail_controller.erl", "{{dest}}/mail/outgoing_mail_controller.erl"}.
 {file, "skel/mail/incoming_mail_controller.erl", "{{dest}}/mail/incoming_mail_controller.erl"}.
 {file, "skel/mail/view/test_message.html", "{{dest}}/mail/view/test_message.html"}.
 {file, "skel/mail/view/test_message.txt", "{{dest}}/mail/view/test_message.txt"}.
-{file, "skel/model/greeting.erl", "{{dest}}/model/greeting.erl"}.
 {file, "skel/static/chicago-boss.png", "{{dest}}/static/chicago-boss.png"}.
 {file, "skel/static/favicon.ico", "{{dest}}/static/favicon.ico"}.
 {file, "skel/test/mail_test.erl", "{{dest}}/test/mail_test.erl"}.
-{file, "skel/view/hello/world.html", "{{dest}}/view/hello/world.html"}.
 {file, "skel/boss.config", "{{dest}}/boss.config"}.
 {file, "skel/boss.routes", "{{dest}}/boss.routes"}.
 {file, "skel/init/news.erl", "{{dest}}/init/news.erl"}.
