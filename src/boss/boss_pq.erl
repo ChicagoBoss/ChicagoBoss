@@ -1,7 +1,7 @@
 %% A priority queue based on gb_trees
 -module(boss_pq).
 
--export([prune/4, insert_value/3, move_value/4]).
+-export([prune/4, delete_value/3, insert_value/3, move_value/4]).
 
 prune(Function, State, {Size, TreeNode}, Now) ->
     {Acc1, Tree1, NumDeleted} = prune_expired_nodes(Function, State, TreeNode, Now),

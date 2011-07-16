@@ -4,29 +4,43 @@
 -export([follow_link/4, follow_redirect/3, submit_form/5]).
 -export([find_link_with_text/2]).
 
+-include("boss_web.hrl").
+
 start() ->
     start(["mock"]).
 
 start([Adapter]) ->
     run_tests([Adapter|boss_files:test_list()]).
 
-bootstrap_test_env(Adapter) ->
+bootstrap_test_env(Application, Adapter) ->
     AdapterMod = list_to_atom("boss_db_adapter_"++Adapter),
-    boss_router:initialize(),
+    RouterSupPid = boss_router:start([{application, Application}, 
+            {controllers, boss_files:web_controller_list(Application)}]),
     boss_db:start([{adapter, AdapterMod}]),
     boss_session:start(),
     boss_mq:start(),
     lists:map(fun(File) ->
                 ok = boss_compiler:compile(File, [])
-        end, boss_files:init_file_list()),
+        end, boss_files:init_file_list(Application)),
     boss_news:start(),
     boss_mail:start([{driver, boss_mail_driver_mock}]),
-    boss_translator:start(),
-    boss_load:load_all_modules().
+    TranslatorSupPid = boss_translator:start([{application, Application}]),
+    boss_load:load_all_modules(Application),
+    #boss_app_info{ 
+        application = Application,
+        base_url = "",
+        watches = [],
+        router_sup_pid = RouterSupPid,
+        translator_sup_pid = TranslatorSupPid,
+        model_modules = boss_files:model_list(Application),
+        controller_modules = boss_files:web_controller_list(Application)
+    }.
 
 % This function deliberately takes one argument so it can be invoked from the command-line.
-run_tests([Adapter|TestList]) ->
-    bootstrap_test_env(Adapter),
+run_tests([Application, Adapter|TestList]) ->
+    AppInfo = bootstrap_test_env(list_to_atom(Application), Adapter),
+    Pid = erlang:spawn(fun() -> app_info_loop(AppInfo) end),
+    register(app_info, Pid),
     io:format("~p~n", [TestList]),
     lists:map(fun(TestModule) ->
                 TestModuleAtom = list_to_atom(TestModule),
@@ -44,18 +58,26 @@ run_tests([Adapter|TestList]) ->
 %% -- no "http://" or domain name), passing in `RequestHeaders' to the
 %% server.
 get_request(Url, Headers, Assertions, Continuations) ->
-    RequesterPid = spawn(fun get_request_loop/0),
-    RequesterPid ! {self(), Url, Headers},
-    receive_response(RequesterPid, Assertions, Continuations).
+    app_info ! {self(), get_info},
+    receive
+        {_From, AppInfo} ->
+            RequesterPid = spawn(fun() -> get_request_loop(AppInfo) end),
+            RequesterPid ! {self(), Url, Headers},
+            receive_response(RequesterPid, Assertions, Continuations)
+    end.
 
 %% @spec post_request(Url, Headers, Contents, Assertions, Continuations) -> [{NumPassed, ErrorMessages}]
 %% @doc This test issues an HTTP POST request to `Url' (a path such as "/"
 %% -- no "http://" or domain name), passing in `RequestHeaders' to the
 %% server, and `Contents' as the request body.
 post_request(Url, Headers, Contents, Assertions, Continuations) ->
-    RequesterPid = spawn(fun post_request_loop/0),
-    RequesterPid ! {self(), Url, Headers, Contents},
-    receive_response(RequesterPid, Assertions, Continuations).
+    app_info ! {self(), get_info},
+    receive
+        {_From, AppInfo} ->
+            RequesterPid = spawn(fun() -> post_request_loop(AppInfo) end),
+            RequesterPid ! {self(), Url, Headers, Contents},
+            receive_response(RequesterPid, Assertions, Continuations)
+    end.
 
 %% @spec follow_link(LinkName, Response, Assertions, Continuations) -> [{NumPassed, ErrorMessages}]
 %% @doc This test looks for a link labeled `LinkName' in `Response' and issues
@@ -269,29 +291,38 @@ find_selected_value([{<<"option">>, Attrs, [Label]}|Rest]) when is_binary(Label)
             end
     end.
 
-get_request_loop() ->
+app_info_loop(AppInfo) ->
+    receive
+        {From, get_info} ->
+            From ! {self(), AppInfo},
+            app_info_loop(AppInfo)
+    end.
+
+get_request_loop(AppInfo) ->
     put(boss_environment, testing),
     receive
         {From, Uri, Headers} ->
             Req = make_request('GET', Uri, Headers),
-            From ! {self(), Uri, boss_web_controller:process_request(Req)};
+            Result = boss_web_controller:process_request(AppInfo, Req, testing, Uri, undefined),
+            From ! {self(), Uri, Result};
         Other ->
             error_logger:error_msg("Unexpected message in get_request_loop: ~p~n", [Other])
     end.
 
-post_request_loop() ->
+post_request_loop(AppInfo) ->
     put(boss_environment, testing),
     receive
         {From, Uri, Headers, Body} ->
             erlang:put(mochiweb_request_body, Body),
             erlang:put(mochiweb_request_body_length, length(Body)),
             erlang:put(mochiweb_request_post, mochiweb_util:parse_qs(Body)),
-            Req = make_request('POST', Uri, [{"Content-Encoding", "application/x-www-form-urlencoded"} | Headers]),
-            From ! {self(), Uri, boss_web_controller:process_request(Req)};
+            Req = make_request('POST', Uri, 
+                [{"Content-Encoding", "application/x-www-form-urlencoded"} | Headers]),
+            Result = boss_web_controller:process_request(AppInfo, Req, testing, Uri, undefined),
+            From ! {self(), Uri, Result};
         Other ->
             error_logger:error_msg("Unexpected message in post_request_loop: ~p~n", [Other])
     end.
-
 
 make_request(Method, Uri, Headers) ->
     Req = mochiweb_request:new(

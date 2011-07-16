@@ -7,20 +7,11 @@
 -record(state, {
         applications = [],
         http_pid,
+        smtp_pid,
         is_master_node = false
     }).
 
--record(app_info, {
-        application,
-        base_url,
-        watches,
-        router_sup_pid,
-        router_pid,
-        translator_sup_pid,
-        translator_pid,
-        model_modules = [],
-        controller_modules = []
-    }).
+-include("boss_web.hrl").
 
 start_link() ->
     start_link([]).
@@ -126,7 +117,7 @@ handle_info(timeout, State) ->
                         {controllers, ControllerList}]),
                 {ok, TranslatorSupPid} = boss_translator:start([{application, AppName}]),
                 InitWatches = init_watches(AppName), 
-                #app_info{ application = AppName,
+                #boss_app_info{ application = AppName,
                     watches = InitWatches,
                     router_sup_pid = RouterSupPid,
                     translator_sup_pid = TranslatorSupPid,
@@ -140,39 +131,39 @@ handle_info(timeout, State) ->
 
 handle_call(reload_translations, _From, State) ->
     lists:map(fun(AppInfo) ->
-                [{_, TranslatorPid, _, _}] = supervisor:which_children(AppInfo#app_info.translator_sup_pid),
+                [{_, TranslatorPid, _, _}] = supervisor:which_children(AppInfo#boss_app_info.translator_sup_pid),
                 boss_translator:reload_all(TranslatorPid)
         end, State#state.applications),
     {reply, ok, State};
 handle_call(reload_routes, _From, State) ->
     lists:map(fun(AppInfo) ->
-                [{_, RouterPid, _, _}] = supervisor:which_children(AppInfo#app_info.router_sup_pid),
+                [{_, RouterPid, _, _}] = supervisor:which_children(AppInfo#boss_app_info.router_sup_pid),
                 boss_router:reload(RouterPid)
         end, State#state.applications),
     {reply, ok, State};
 handle_call(reload_news, _From, State) ->
     NewApplications = lists:map(fun(AppInfo) ->
-                lists:map(fun boss_news:cancel_watch/1, AppInfo#app_info.watches),
-                AppInfo#app_info{ watches = init_watches(AppInfo#app_info.application) }
+                lists:map(fun boss_news:cancel_watch/1, AppInfo#boss_app_info.watches),
+                AppInfo#boss_app_info{ watches = init_watches(AppInfo#boss_app_info.application) }
         end, State#state.applications),
     {reply, ok, State#state{ applications = NewApplications }};
 handle_call(get_all_routes, _From, State) ->
     Routes = lists:map(fun(AppInfo) ->
-                [{_, RouterPid, _, _}] = supervisor:which_children(AppInfo#app_info.router_sup_pid),
-                {AppInfo#app_info.application, boss_router:get_all(RouterPid)}
+                [{_, RouterPid, _, _}] = supervisor:which_children(AppInfo#boss_app_info.router_sup_pid),
+                {AppInfo#boss_app_info.application, boss_router:get_all(RouterPid)}
         end, State#state.applications),
     {reply, Routes, State};
 handle_call(get_all_models, _From, State) ->
     Models = lists:foldl(fun(AppInfo, Acc) ->
-                boss_files:model_list(AppInfo#app_info.application) ++ Acc
+                boss_files:model_list(AppInfo#boss_app_info.application) ++ Acc
         end, [], State#state.applications),
     {reply, Models, State};
 handle_call(get_all_applications, _From, State) ->
-    Applications = lists:map(fun(AppInfo) -> AppInfo#app_info.application end, State#state.applications),
+    Applications = lists:map(fun(AppInfo) -> AppInfo#boss_app_info.application end, State#state.applications),
     {reply, Applications, State};
 handle_call({translator_pid, App}, _From, State) ->
     Pid = lists:foldl(fun
-            (#app_info{ application = App1, translator_sup_pid = SupPid }, _) when App1 =:= App ->
+            (#boss_app_info{ application = App1, translator_sup_pid = SupPid }, _) when App1 =:= App ->
                 [{_, TranslatorPid, _, _}] = supervisor:which_children(SupPid),
                 TranslatorPid;
             (_, Res) ->
@@ -181,7 +172,7 @@ handle_call({translator_pid, App}, _From, State) ->
     {reply, Pid, State};
 handle_call({router_pid, App}, _From, State) ->
     Pid = lists:foldl(fun
-            (#app_info{ application = App1, router_sup_pid = SupPid }, _) when App1 =:= App ->
+            (#boss_app_info{ application = App1, router_sup_pid = SupPid }, _) when App1 =:= App ->
                 [{_, RouterPid, _, _}] = supervisor:which_children(SupPid),
                 RouterPid;
             (_, Res) ->
@@ -193,7 +184,7 @@ handle_call({application_info, App}, _From, State) ->
     {reply, AppInfo, State};
 handle_call({base_url, App}, _From, State) ->
     BaseURL = lists:foldl(fun
-            (#app_info{ application = App1, base_url = URL }, _) when App1 =:= App ->
+            (#boss_app_info{ application = App1, base_url = URL }, _) when App1 =:= App ->
                 URL;
             (_, Res) ->
                 Res
@@ -270,7 +261,7 @@ handle_request(Req, RequestMod, ResponseMod) ->
                     TranslatorPid = boss_web:translator_pid(App),
                     RouterPid = boss_web:router_pid(App),
                     {StatusCode, Headers, Payload} = process_request(
-                        AppInfo#app_info{ translator_pid = TranslatorPid, router_pid = RouterPid }, 
+                        AppInfo#boss_app_info{ translator_pid = TranslatorPid, router_pid = RouterPid }, 
                         Request, Mode, Url, SessionID),
                     ErrorFormat = "~s ~s ~p~n", 
                     ErrorArgs = [Request:request_method(), Request:path(), StatusCode],
@@ -296,12 +287,12 @@ handle_request(Req, RequestMod, ResponseMod) ->
 process_request(AppInfo, Req, Mode, Url, SessionID) ->
     if 
         Mode =:= development ->
-            ControllerList = boss_files:web_controller_list(AppInfo#app_info.application),
-            boss_router:set_controllers(AppInfo#app_info.router_pid, ControllerList);
+            ControllerList = boss_files:web_controller_list(AppInfo#boss_app_info.application),
+            boss_router:set_controllers(AppInfo#boss_app_info.router_pid, ControllerList);
         true ->
             ok
     end,
-    RouterPid = AppInfo#app_info.router_pid,
+    RouterPid = AppInfo#boss_app_info.router_pid,
     Location = case boss_router:route(RouterPid, Url) of
         {ok, {Controller, Action, Tokens}} ->
             {Controller, Action, Tokens};
@@ -331,22 +322,20 @@ process_result(_, {error, Payload}) ->
     {500, [{"Content-Type", "text/html"}], "Error: <pre>" ++ io_lib:print(Payload) ++ "</pre>"};
 process_result(_, {not_found, Payload}) ->
     {404, [{"Content-Type", "text/html"}], Payload};
-process_result(AppInfo, {redirect, Where}) ->
-    process_result(AppInfo, {redirect, Where, []});
 process_result(AppInfo, {redirect, "http://"++Where, Headers}) ->
     process_result(AppInfo, {redirect, "/"++string:join(tl(string:tokens(Where, "/")), "/"), Headers});
-process_result(AppInfo, {redirect, [{_, _}|_] = Where, Headers}) ->
-    URL = boss_router:unroute(AppInfo#app_info.router_pid, Where),
+process_result(AppInfo, {redirect, {Controller, Action, Params}, Headers}) ->
+    URL = boss_router:unroute(AppInfo#boss_app_info.router_pid, Controller, Action, Params),
     process_result(AppInfo, {redirect, URL, Headers});
 process_result(AppInfo, {redirect, Where, Headers}) ->
-    {302, [{"Location", AppInfo#app_info.base_url ++ Where}, {"Cache-Control", "no-cache"}|Headers], ""};
+    {302, [{"Location", AppInfo#boss_app_info.base_url ++ Where}, {"Cache-Control", "no-cache"}|Headers], ""};
 process_result(_, {ok, Payload, Headers}) ->
     {200, [{"Content-Type", proplists:get_value("Content-Type", Headers, "text/html")}
             |proplists:delete("Content-Type", Headers)], Payload}.
 
 load_and_execute(production, {Controller, _, _} = Location, AppInfo, Req, SessionID) ->
-    case lists:member(boss_files:web_controller(AppInfo#app_info.application, Controller), 
-            lists:map(fun atom_to_list/1, AppInfo#app_info.controller_modules)) of
+    case lists:member(boss_files:web_controller(AppInfo#boss_app_info.application, Controller), 
+            lists:map(fun atom_to_list/1, AppInfo#boss_app_info.controller_modules)) of
         true -> execute_action(Location, AppInfo, Req, SessionID);
         false -> render_view(Location, AppInfo, Req)
     end;
@@ -373,7 +362,7 @@ load_and_execute(development, {Controller, _, _} = Location, AppInfo, Req, Sessi
                 {ok, _} ->
                     case boss_load:load_web_controllers() of
                         {ok, Controllers} ->
-                            case lists:member(boss_files:web_controller(AppInfo#app_info.application, Controller), 
+                            case lists:member(boss_files:web_controller(AppInfo#boss_app_info.application, Controller), 
                                     lists:map(fun atom_to_list/1, Controllers)) of
                                 true ->
                                     case boss_load:load_models() of
@@ -397,7 +386,7 @@ load_and_execute(development, {Controller, _, _} = Location, AppInfo, Req, Sessi
 
 render_errors(ErrorList, AppInfo, Req) ->
     case boss_html_error_template:render([{errors, ErrorList}, {request, Req}, 
-                {application, AppInfo#app_info.application}]) of
+                {application, AppInfo#boss_app_info.application}]) of
         {ok, Payload} ->
             {ok, Payload, []};
         Err ->
@@ -415,10 +404,10 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
     case lists:member(Location, LocationTrail) of
         true ->
             {error, "Circular redirect!"};
-        _ ->
+        false ->
             % do not convert a list to an atom until we are sure the controller/action
             % pair exists. this prevents a memory leak due to atom creation.
-            Module = list_to_atom(boss_files:web_controller(AppInfo#app_info.application, Controller)),
+            Module = list_to_atom(boss_files:web_controller(AppInfo#boss_app_info.application, Controller)),
             ExportStrings = lists:map(
                 fun({Function, Arity}) -> {atom_to_list(Function), Arity} end,
                 Module:module_info(exports)),
@@ -491,19 +480,21 @@ process_action_result({_, Req, LocationTrail}, {action_other, OtherLocation}, Ap
     execute_action(OtherLocation, AppInfo, Req, LocationTrail);
 
 process_action_result({_, Req, LocationTrail}, not_found, AppInfo, _) ->
-    NotFoundLocation = boss_router:handle(AppInfo#app_info.router_pid, 404),
+    NotFoundLocation = boss_router:handle(AppInfo#boss_app_info.router_pid, 404),
     execute_action(NotFoundLocation, AppInfo, Req, LocationTrail);
 
-process_action_result({{Controller, _, _}, _, _}, {redirect, [{_, _}|_] = Where}, _, _) ->
-    case proplists:is_defined(controller, Where) of
-        true -> Where;
-        false -> [{controller, Controller}|Where]
-    end;
+process_action_result(Info, {redirect, Where}, AppInfo, AuthInfo) ->
+    process_action_result(Info, {redirect, Where, []}, AppInfo, AuthInfo);
+process_action_result({{Controller, _, _}, _, _}, {redirect, [{_, _}|_] = Where, _}, _, _) ->
+    TheController = proplists:get_value(controller, Where, Controller),
+    TheAction = proplists:get_value(action, Where),
+    CleanParams = proplists:delete(controller, proplists:delete(action, Where)),
+    {redirect, {TheController, TheAction, CleanParams}};
 
 process_action_result(Info, {json, Data}, AppInfo, AuthInfo) ->
     process_action_result(Info, {json, Data, []}, AppInfo, AuthInfo);
 process_action_result(Info, {json, Data, Headers}, AppInfo, AuthInfo) ->
-    process_action_result(Info, {output, boss_json:encode(Data, AppInfo#app_info.model_modules),
+    process_action_result(Info, {output, boss_json:encode(Data, AppInfo#boss_app_info.model_modules),
             [{"Content-Type", proplists:get_value("Content-Type", Headers, "application/json")}
                 |proplists:delete("Content-Type", Headers)]}, AppInfo, AuthInfo);
 
@@ -523,18 +514,18 @@ render_view(Location, AppInfo, Req, Variables) ->
 
 render_view({Controller, Template, _}, AppInfo, Req, Variables, Headers) ->
     ViewPath = boss_files:web_view_path(Controller, Template),
-    LoadResult = boss_load:load_view_if_dev(AppInfo#app_info.application, ViewPath, AppInfo#app_info.translator_pid),
+    LoadResult = boss_load:load_view_if_dev(AppInfo#boss_app_info.application, ViewPath, AppInfo#boss_app_info.translator_pid),
     BossFlash = boss_flash:get_and_clear(Req),
     case LoadResult of
         {ok, Module} ->
-            {Lang, TranslationFun} = choose_translation_fun(AppInfo#app_info.translator_pid, 
+            {Lang, TranslationFun} = choose_translation_fun(AppInfo#boss_app_info.translator_pid, 
                 Module:translatable_strings(), Req:header(accept_language), 
                 proplists:get_value("Content-Language", Headers)),
             case Module:render(lists:merge([{"_lang", Lang}, 
-                            {"_base_url", AppInfo#app_info.base_url}|Variables], BossFlash), 
+                            {"_base_url", AppInfo#boss_app_info.base_url}|Variables], BossFlash), 
                     [{translation_fun, TranslationFun}, {locale, Lang},
                         {custom_tags_context, [{controller, Controller}, 
-                                {application, atom_to_list(AppInfo#app_info.application)},
+                                {application, atom_to_list(AppInfo#boss_app_info.application)},
                                 {action, Template}]}]) of
                 {ok, Payload} ->
                     {ok, Payload, Headers};
