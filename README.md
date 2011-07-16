@@ -44,7 +44,7 @@ Admin Interface
 
 You probably want to install the CB admin interface. Download it from
 
-    <https://github.com/evanmiller/chicagoboss_admin
+    <https://github.com/evanmiller/chicagoboss_admin>
 
 
 Upgrades
