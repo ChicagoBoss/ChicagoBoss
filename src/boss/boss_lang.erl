@@ -1,33 +1,33 @@
 -module(boss_lang).
 -compile(export_all).
 
-create_lang(Lang) ->
-    LangFile = boss_files:lang_path(Lang),
+create_lang(App, Lang) ->
+    LangFile = boss_files:lang_path(App, Lang),
     {ok, IODevice} = file:open(LangFile, [write]),
     file:close(IODevice).
 
-delete_lang(Lang) ->
-	ok = file:delete(boss_files:lang_path(Lang)).
+delete_lang(App, Lang) ->
+    ok = file:delete(boss_files:lang_path(App, Lang)).
 
 %% @doc Update the po file with all unstranslated messages for all languages (filled with blanks)
-update_po() ->
-	lists:map(fun(X) -> update_po(X, all, []) end, boss_files:language_list()).
+update_po(App) ->
+    lists:map(fun(X) -> update_po(App, X, all, []) end, boss_files:language_list(App)).
 
-%% @doc Update the po file with all unstranslated messages for the given language (filled with blanks)
+%% @doc Update the po file with all untranslated messages for the given language (filled with blanks)
 %% @spec update_po( Lang::string(), all::atom(), [] ) -> ok | {error, Reason}
-update_po(Lang, all, []) ->
-	{Untranslated, _Translated} = boss_lang:extract_strings(Lang),
+update_po(App, Lang, all, []) ->
+	{Untranslated, _Translated} = boss_lang:extract_strings(App, Lang),
 	case Untranslated of
 		[] -> ok;
 		_ ->
 			Translations = lists:map(fun(X) -> [{"orig", X}, {"trans", ""}] end, Untranslated),
-			update_po(Lang, all, Translations)
+			update_po(App, Lang, all, Translations)
 	end;
 
 %% @doc Update the po file for a given Language
 %% @spec update_po( Lang::string(), Mode::atom(all|filled), Translation::TupleList([{"orig", "x"}, {"trans", "y"}]) ) -> ok | {error, Reason}
-update_po(Lang, Mode, Translations) ->
-    LangFile = boss_files:lang_path(Lang),
+update_po(App, Lang, Mode, Translations) ->
+    LangFile = boss_files:lang_path(App, Lang),
     {ok, IODevice} = file:open(LangFile, [write, append]),	
     lists:map(fun(Message) ->
                 Original = proplists:get_value("orig", Message),
@@ -73,18 +73,18 @@ lang_write_multiline_to_file(IODevice, [Token|Rest]) ->
 	end,
 	lang_write_multiline_to_file(IODevice, Rest).
 
-extract_strings() ->
-    lists:usort(extract_model_strings() ++ extract_view_strings()).
+extract_strings(App) ->
+    lists:usort(extract_model_strings(App) ++ extract_view_strings(App)).
 
-extract_strings(Lang) ->
-    AllStrings = extract_strings(),
-    PoStrings = extract_po_strings(Lang) ++ extract_po_blocks(Lang, id),
+extract_strings(App, Lang) ->
+    AllStrings = extract_strings(App),
+    PoStrings = extract_po_strings(App, Lang) ++ extract_po_blocks(App, Lang, id),
     UntranslatedStrings = lists:filter(fun(S) -> 
-				ToCheck = case S of
-					[{identifier, _Identifier}, {string, String}] -> 
-						binary_to_list(String);
-					_ -> S
-				end,
+                ToCheck = case S of
+                    [{identifier, _Identifier}, {string, String}] -> 
+                        binary_to_list(String);
+                    _ -> S
+                end,
                 case proplists:get_value(ToCheck, PoStrings) of
                     undefined -> true;
                     _ -> false
@@ -92,13 +92,13 @@ extract_strings(Lang) ->
         end, lists:usort(AllStrings)),
     {UntranslatedStrings, PoStrings}.
 
-extract_po_strings(Lang) ->
-    LangFile = boss_files:lang_path(Lang),
+extract_po_strings(App, Lang) ->
+    LangFile = boss_files:lang_path(App, Lang),
     Tokens = po_scanner:scan(LangFile),
     process_po_tokens(Tokens, []).
 
-extract_po_blocks(Lang, Mode) ->
-    LangFile = boss_files:lang_path(Lang),
+extract_po_blocks(App, Lang, Mode) ->
+    LangFile = boss_files:lang_path(App, Lang),
     Tokens = po_scanner:scan(LangFile),
     process_po_block_tokens(Tokens, Mode, []).
 
@@ -124,31 +124,37 @@ process_po_block_tokens([{comment, MsgComment}, {id, MsgId}, {str, MsgStr}|Rest]
 process_po_block_tokens([_|Rest], Mode, Acc) ->
     process_po_block_tokens(Rest, Mode, Acc).
 
-extract_model_strings() ->
-    lists:foldl(fun(Model, Acc) ->
-                Type = list_to_atom(Model),
+extract_model_strings(App) ->
+    lists:foldl(fun(Type, Acc) ->
                 Exports = Type:module_info(exports),
                 case lists:member({validation_tests, 1}, Exports) of
                     true ->
-                        NumParams = proplists:get_value(new, Exports),
-                        DummyRecord = apply(Type, new, lists:seq(1, NumParams)),
+                        DummyRecord = boss_record_lib:dummy_record(Type),
                         Messages = lists:map(fun({_TestFun, TestMsg}) -> TestMsg end, 
                             DummyRecord:validation_tests()),
                         Messages ++ Acc;
                     false ->
                         Acc
                 end
-        end, [], boss_files:model_list()).
+        end, [], boss_files:model_list(App)).
 
-extract_view_strings() ->
-    ViewFiles = boss_files:view_file_list(),
-    lists:foldl(fun(File, Acc) -> Acc ++ process_view_file(File) ++ process_view_file_blocks(File) end,
-            [], ViewFiles).
+extract_view_strings(App) ->
+    case boss_env:is_developing_app(App) of
+        true ->
+            ViewFiles = boss_files:view_file_list(),
+            lists:foldl(fun(File, Acc) -> Acc ++ process_view_file(File) ++ process_view_file_blocks(File) end,
+                [], ViewFiles);
+        false ->
+            lists:foldl(
+                fun(Module, Acc) ->
+                        Module:translatable_strings() ++ Acc
+                end, [], boss_env:get_env(App, view_modules, []) ++ boss_env:get_env(App, view_lib_modules, []))
+    end.
 
 process_view_file_blocks(ViewFile) ->
     {ok, Contents} = file:read_file(ViewFile),
     {ok, Tokens} = blocktrans_scanner:scan(binary_to_list(Contents)),
-	lists:map(fun(X) -> [{identifier, element(1, X)}, {string, element(2, X)}] end, blocktrans_parser:parse(Tokens)).
+    lists:map(fun(X) -> [{identifier, element(1, X)}, {string, element(2, X)}] end, blocktrans_parser:parse(Tokens)).
 
 process_view_file(ViewFile) ->
     {ok, Contents} = file:read_file(ViewFile),

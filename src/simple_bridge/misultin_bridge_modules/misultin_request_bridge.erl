@@ -17,23 +17,23 @@
 init(Req) -> 
     Req.
 
-request_method({Req, _DocRoot}) -> 
+request_method(Req) -> 
     Req:get(method).
 
-path({Req, _DocRoot}) -> 
+path(Req) -> 
     {abs_path,Path} = Req:get(uri),
     Path.
 
-uri({Req, _DocRoot}) ->
+uri(Req) ->
     Req:get(uri).
 
-peer_ip({Req, _DocRoot}) -> 
+peer_ip(Req) -> 
     Req:get(peer_addr).
 
-peer_port({Req, _DocRoot}) -> 
+peer_port(Req) -> 
     Req:get(peer_port).
 
-headers({Req, _DocRoot}) ->
+headers(Req) ->
     Headers = Req:get(headers),
     F = fun(Header) -> proplists:get_value(Header, Headers) end,
     Headers1 = [
@@ -59,8 +59,8 @@ headers({Req, _DocRoot}) ->
     ],
     [{K, V} || {K, V} <- Headers1, V /= undefined].
 
-cookies({Req, DocRoot}) ->
-    Headers = headers({Req, DocRoot}),
+cookies(Req) ->
+    Headers = headers(Req),
     CookieData = proplists:get_value(cookie, Headers, ""),
     F = fun(Cookie) ->
         case string:tokens(Cookie, "=") of
@@ -73,11 +73,11 @@ cookies({Req, DocRoot}) ->
     end,
     [F(X) || X <- string:tokens(CookieData, ";")].
 
-query_params({Req, _DocRoot}) ->
+query_params(Req) ->
     Req:parse_qs().	
 
-post_params({Req, _DocRoot}) ->
+post_params(Req) ->
     Req:parse_post().
 
-request_body({Req, _DocRoot}) ->
+request_body(Req) ->
     Req:get(body).

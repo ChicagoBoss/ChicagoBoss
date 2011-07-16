@@ -45,7 +45,7 @@ init([]) ->
     Port = case application:get_env(port) of {ok, P} -> P; undefined -> 8001 end,
     WebConfig = [ {ip, Ip}, {port, Port} ],
     Web = {boss_web_controller,
-	   {boss_web_controller, start, [WebConfig]},
+	   {boss_web_controller, start_link, [WebConfig]},
 	   permanent, 5000, worker, dynamic},
 
     Processes = [Web],

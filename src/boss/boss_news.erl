@@ -18,11 +18,7 @@ start() ->
     start([]).
 
 start(Options) ->
-    boss_news_sup:start_link(Options),
-    case boss_load:module_is_loaded(news) of
-        true -> news:init();
-        false -> ok
-    end.
+    boss_news_sup:start_link(Options).
 
 stop() ->
     ok.

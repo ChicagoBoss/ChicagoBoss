@@ -16,7 +16,7 @@ receive_chat('GET', []) -&gt;<br />
     boss_mq:push("my-channel", &lt;&lt;"Secret Message"&gt;&gt;)
 </div>
 
-<p>Currently, only an in-memory message queue is supported, so all messaging must occur on the same CB server. Additional adapters will be added in the future to support more complex installations.</p>
+<p>Currently, only an in-memory message queue is supported, so all messaging must occur in the same CB cluster. Additional adapters will be added in the future to support more complex installations.</p>
 
 <h2>boss_mq API</h2>
 

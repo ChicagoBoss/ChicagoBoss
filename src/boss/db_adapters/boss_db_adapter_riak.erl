@@ -30,11 +30,9 @@ find(_, Id) ->
     case riakpool_client:get(Bucket, Key) of
         {ok, Value} ->
             Data = binary_to_term(Value),
-            DummyRecord = apply(Type, new, lists:seq(1, proplists:get_value(new,
-                                 Type:module_info(exports)))),
             Record = apply(Type, new, lists:map(fun (AttrName) ->
                             proplists:get_value(AttrName, Data)
-                    end, DummyRecord:attribute_names())),
+                    end, boss_record_lib:attribute_names(Type))),
             Record:id(Id);
         {error, Reason} ->
             {error, Reason}

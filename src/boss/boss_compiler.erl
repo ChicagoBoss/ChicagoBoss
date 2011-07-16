@@ -1,6 +1,7 @@
 -module(boss_compiler).
 -export([compile/1, compile/2, parse/1]).
 
+%% @spec compile( File::string() ) -> {ok, Module} | {error, Reason}
 compile(File) ->
     compile(File, []).
 
@@ -24,12 +25,13 @@ compile(File, Options) ->
                end, erl_syntax:revert(NewForms), ParseTransforms),
             case compile_forms(RevertedForms, File, CompilerOptions) of
                 {ok, Module, Bin} ->
-                    case proplists:get_value(out_dir, Options) of
+                    ok = case proplists:get_value(out_dir, Options) of
                         undefined -> ok;
                         OutDir ->
                             BeamFile = filename:join([OutDir, lists:concat([Module, ".beam"])]),
                             file:write_file(BeamFile, Bin)
-                    end;
+                    end,
+                    {ok, Module};
                 Error ->
                     Error
             end;

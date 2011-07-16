@@ -4,14 +4,14 @@
 
 -export([compile/1, compile/2, edoc_module/1, edoc_module/2]).
 
-%% @spec compile( File::string() ) -> ok | {error, Reason}
+%% @spec compile( File::string() ) -> {ok, Module} | {error, Reason}
 %% @equiv compile(File, [])
 compile(File) ->
     compile(File, []).
 
 compile(File, Options) ->
     boss_compiler:compile(File, 
-        [{pre_revert_transform, fun trick_out_forms/1}|Options]).
+        [{pre_revert_transform, fun ?MODULE:trick_out_forms/1}|Options]).
 
 %% @spec edoc_module( File::string() ) -> {Module::atom(), EDoc}
 %% @equiv edoc_module(File, [])

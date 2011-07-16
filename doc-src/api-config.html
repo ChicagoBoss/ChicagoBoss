@@ -2,7 +2,6 @@
 {% block api_content %}
 <p>All configuration takes place in <code>boss.config</code> in your project directory. Valid configuration options are:</p>
 <ul>
-    <li><code>admin_ip_blocks</code> - List of IP blocks that can access the admin interface. Defaults to <code>["127.0.0.1", "192.168.0.0/16", "10.0.0.0/16"]</code></li>
     <li><code>assume_locale</code> - The presumed locale of translatable strings. Defaults to "en".</li>
     <li><code>cache_adapter</code> - The cache adapter to use. Currently the only valid value is <code>memcached_bin</code>.</li>
     <li><code>cache_servers</code> - A list of cache servers (<code>{Host, Port, PoolSize}</code>). Defaults to <code>[{"localhost", 11211, 1}]</code>.

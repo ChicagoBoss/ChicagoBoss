@@ -50,12 +50,13 @@
     parse_trail = [],
     vars = [],
     custom_tags_dir = [],
-    custom_tags_module = none,
+    custom_tags_modules = [],
     reader = {file, read_file},
     module = [],
     compiler_options = [verbose, report_errors],
     force_recompile = false,
-    locale = none}).
+    locale = none,
+    is_compiling_dir = false}).
 
 -record(ast_info, {
     dependencies = [],
@@ -214,14 +215,15 @@ init_dtl_context(File, Module, Options) ->
         module = Module,
         doc_root = proplists:get_value(doc_root, Options, filename:dirname(File)),
         custom_tags_dir = proplists:get_value(custom_tags_dir, Options, filename:join([erlydtl_deps:get_base_dir(), "priv", "custom_tags"])),
-        custom_tags_module = proplists:get_value(custom_tags_module, Options, Ctx#dtl_context.custom_tags_module),
+        custom_tags_modules = proplists:get_value(custom_tags_modules, Options, Ctx#dtl_context.custom_tags_modules),
         blocktrans_fun = proplists:get_value(blocktrans_fun, Options, Ctx#dtl_context.blocktrans_fun),
         blocktrans_locales = proplists:get_value(blocktrans_locales, Options, Ctx#dtl_context.blocktrans_locales),
         vars = proplists:get_value(vars, Options, Ctx#dtl_context.vars), 
         reader = proplists:get_value(reader, Options, Ctx#dtl_context.reader),
         compiler_options = proplists:get_value(compiler_options, Options, Ctx#dtl_context.compiler_options),
         force_recompile = proplists:get_value(force_recompile, Options, Ctx#dtl_context.force_recompile),
-        locale = proplists:get_value(locale, Options, Ctx#dtl_context.locale)}.
+        locale = proplists:get_value(locale, Options, Ctx#dtl_context.locale),
+        is_compiling_dir = false}.
 
 init_dtl_context_dir(Dir, Module, Options) when is_list(Module) ->
     init_dtl_context_dir(Dir, list_to_atom(Module), Options);
@@ -232,14 +234,15 @@ init_dtl_context_dir(Dir, Module, Options) ->
         module = Module,
         doc_root = proplists:get_value(doc_root, Options, Dir),
         custom_tags_dir = proplists:get_value(custom_tags_dir, Options, filename:join([erlydtl_deps:get_base_dir(), "priv", "custom_tags"])),
-        custom_tags_module = proplists:get_value(custom_tags_module, Options, Module),
+        custom_tags_modules = proplists:get_value(custom_tags_modules, Options, Ctx#dtl_context.custom_tags_modules),
         blocktrans_fun = proplists:get_value(blocktrans_fun, Options, Ctx#dtl_context.blocktrans_fun),
         blocktrans_locales = proplists:get_value(blocktrans_locales, Options, Ctx#dtl_context.blocktrans_locales),
         vars = proplists:get_value(vars, Options, Ctx#dtl_context.vars), 
         reader = proplists:get_value(reader, Options, Ctx#dtl_context.reader),
         compiler_options = proplists:get_value(compiler_options, Options, Ctx#dtl_context.compiler_options),
         force_recompile = proplists:get_value(force_recompile, Options, Ctx#dtl_context.force_recompile),
-        locale = proplists:get_value(locale, Options, Ctx#dtl_context.locale)}.
+        locale = proplists:get_value(locale, Options, Ctx#dtl_context.locale),
+        is_compiling_dir = true}.
 
 
 is_up_to_date(_, #dtl_context{force_recompile = true}) ->
@@ -399,7 +402,11 @@ forms(File, Module, {BodyAst, BodyInfo}, {CustomTagsFunctionAst, CustomTagsInfo}
             erl_syntax:application(
                 erl_syntax:atom(proplists),
                 erl_syntax:atom(get_value),
-                [erl_syntax:atom(locale), erl_syntax:variable("Options"), erl_syntax:atom(none)])
+                [erl_syntax:atom(locale), erl_syntax:variable("Options"), erl_syntax:atom(none)]),
+            erl_syntax:application(
+                erl_syntax:atom(proplists),
+                erl_syntax:atom(get_value),
+                [erl_syntax:atom(custom_tags_context), erl_syntax:variable("Options"), erl_syntax:atom(none)])
         ]),
     ClauseOk = erl_syntax:clause([erl_syntax:variable("Val")], none,
         [erl_syntax:tuple([erl_syntax:atom(ok), erl_syntax:variable("Val")])]),     
@@ -427,7 +434,8 @@ forms(File, Module, {BodyAst, BodyInfo}, {CustomTagsFunctionAst, CustomTagsInfo}
 
     RenderInternalFunctionAst = erl_syntax:function(
         erl_syntax:atom(render_internal), 
-        [erl_syntax:clause([erl_syntax:variable("Variables"), erl_syntax:variable("TranslationFun"), erl_syntax:variable("CurrentLocale")], none, 
+        [erl_syntax:clause([erl_syntax:variable("Variables"), erl_syntax:variable("TranslationFun"), 
+                    erl_syntax:variable("CurrentLocale"), erl_syntax:variable("CustomTagsContext")], none, 
                 [BodyAstTmp])]),   
     
     ModuleAst  = erl_syntax:attribute(erl_syntax:atom(module), [erl_syntax:atom(Module)]),
@@ -1089,16 +1097,24 @@ tag_ast(Name, Args, Context, TreeWalker) ->
                 {erl_syntax:tuple([erl_syntax:string(Key), format(AST,Context, TreeWalker)]), merge_info(#ast_info{var_names=[VarName]}, AstInfoAcc)}
         end, #ast_info{}, Args),
 
-    {RenderAst, RenderInfo} = case Context#dtl_context.custom_tags_module of
-        none ->
-            {erl_syntax:application(none, erl_syntax:atom(render_tag),
-                    [erl_syntax:string(Name), erl_syntax:list(InterpretedArgs), options_ast()]),
-            AstInfo#ast_info{custom_tags = [Name]}};
-        Module ->
+    {RenderAst, RenderInfo} = custom_tags_modules_ast(Name, InterpretedArgs, Context),
+    {{RenderAst, merge_info(AstInfo, RenderInfo)}, TreeWalker}.
+
+custom_tags_modules_ast(Name, InterpretedArgs, #dtl_context{ custom_tags_modules = [], is_compiling_dir = false }) ->
+    {erl_syntax:application(none, erl_syntax:atom(render_tag),
+            [erl_syntax:string(Name), erl_syntax:list(InterpretedArgs), erl_syntax:variable("CustomTagsContext")]),
+        #ast_info{custom_tags = [Name]}};
+custom_tags_modules_ast(Name, InterpretedArgs, #dtl_context{ custom_tags_modules = [], is_compiling_dir = true, module = Module }) ->
+    {erl_syntax:application(erl_syntax:atom(Module), erl_syntax:atom(Name),
+            [erl_syntax:list(InterpretedArgs), erl_syntax:variable("CustomTagsContext")]), #ast_info{ custom_tags = [Name] }};
+custom_tags_modules_ast(Name, InterpretedArgs, #dtl_context{ custom_tags_modules = [Module|Rest] } = Context) ->
+    case lists:member({Name, 2}, Module:module_info(exports)) of
+        true ->
             {erl_syntax:application(erl_syntax:atom(Module), erl_syntax:atom(Name),
-                    [erl_syntax:list(InterpretedArgs), options_ast()]), AstInfo}
-    end,
-    {{RenderAst, RenderInfo}, TreeWalker}.
+                    [erl_syntax:list(InterpretedArgs), erl_syntax:variable("CustomTagsContext")]), #ast_info{}};
+        false ->
+            custom_tags_modules_ast(Name, InterpretedArgs, Context#dtl_context{ custom_tags_modules = Rest })
+    end.
 
 options_ast() ->
     erl_syntax:list([

@@ -5,42 +5,41 @@
 -export([start/0, start/1, stop/0]).
 
 -export([
-        is_loaded/1,
-        lookup/2, 
-        fun_for/1,
-        reload/1,
-		reload_all/0
+        is_loaded/2,
+        lookup/3, 
+        fun_for/2,
+        reload/2,
+        reload_all/1
     ]).
 
 start() ->
     start([]).
 
-start(_Options) ->
-    application:start(boss_translator).
+start(Options) ->
+    boss_translator_sup:start_link(Options).
 
 stop() ->
-    application:stop(boss_translator).
+    ok.
 
 %% @spec lookup(Key::string(), Locale::string()) -> Translation::string() | undefined
-lookup(Key, Locale) ->
-    gen_server:call(boss_translator, {lookup, Key, Locale}).
+lookup(Pid, Key, Locale) ->
+    gen_server:call(Pid, {lookup, Key, Locale}).
 
 %% @spec is_loaded(Locale::string()) -> true | false
-is_loaded(Locale) ->
-    gen_server:call(boss_translator, {is_loaded, Locale}).
+is_loaded(Pid, Locale) ->
+    gen_server:call(Pid, {is_loaded, Locale}).
 
 %% @spec reload(Locale::string()) -> ok | {error, Reason}
-reload(Locale) ->
-    gen_server:call(boss_translator, {reload, Locale}).
+reload(Pid, Locale) ->
+    gen_server:call(Pid, {reload, Locale}).
 
 %% @spec reload_all() -> ok | {error, Reason}
-reload_all() ->
-    lists:foldr(fun(X, ok) -> reload(X) end, ok, boss_files:language_list()).
-
+reload_all(Pid) ->
+    gen_server:call(Pid, reload_all).
 
 %% @spec fun_for(Locale::string()) -> TranslationFun::function() | none
-fun_for(Locale) ->
-    case is_loaded(Locale) of
-        true -> fun(String) -> lookup(String, Locale) end;
+fun_for(Pid, Locale) ->
+    case is_loaded(Pid, Locale) of
+        true -> fun(String) -> ?MODULE:lookup(Pid, String, Locale) end;
         false -> none
     end.

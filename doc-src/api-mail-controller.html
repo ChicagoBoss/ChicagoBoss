@@ -1,6 +1,6 @@
 {% extends "api.html" %}
 {% block api_content %}
-<p>Chicago Boss provides three API functions for sending emails. No SMTP configuration or server is necessary.</p>
+<p>Chicago Boss provides API functions for sending and receiving emails. No SMTP configuration or server is necessary.</p>
 
 <h2>Sending a simple email</h2>
 
@@ -20,11 +20,11 @@
 
 <h2>Sending email with templates</h2>
 <p>If the simple method doesn't meet your needs, Chicago Boss provides a way to send email using controllers and views.</p>
-<p>Mail controller logic should go into <code>mail/outgoing_mail_controller.erl</code> in your project directory, and templates should go into <code>mail/view/</code>. To send an email from a web controller, call:</p>
+<p>Mail controller logic should go into <code>src/mail/my_application_outgoing_mail_controller.erl</code> in your project directory, and templates should go into <code>src/mail/view/</code>. To send an email from a web controller, call:</p>
 <div class="code">
-    boss_mail:send(foo_message, [Arg1, Arg2, ...])
+    boss_mail:send_template(my_application, foo_message, [Arg1, Arg2, ...])
 </div>
-<p>That will invoke <code>outgoing_mail_controller:foo_message(Arg1, Arg2, ...)</code> and use the return value to populate the templates <code>mail/view/foo_message.txt</code> and <code>mail/view/foo_message.html</code>, then send the email in a background process. Your mail controller function should return:</div>
+<p>That will invoke <code>outgoing_mail_controller:foo_message(Arg1, Arg2, ...)</code> and use the return value to populate the templates <code>src/mail/view/foo_message.txt</code> and <code>src/mail/view/foo_message.html</code>, then send the email in a background process. Your mail controller function should return:</div>
 <div class="code">
     {ok, FromAddress, ToAddress, HeaderFields} | <br />
     {ok, FromAddress, ToAddress, HeaderFields, Variables} | <br />
@@ -44,4 +44,20 @@
 </ul>
 <p><strong>Formatting.</strong> If templates ending only in ".txt" are present, the message will be sent in plain-text; if templates ending only in ".html" are present, the message will be sent as HTML; but if both ".txt" and ".html" templates are present, the message will be sent as a a MIME multi-part message with alternative plain-text and HTML representations.</p>
 <p><strong>I18n.</strong> To use Chicago Boss's i18n machinery in emails, specify the desired language in the "Content-Language" header field returned from the mail controller.</p>
+
+<h2>Receiving email</h2>
+
+<p>To receive email, you must first enable the SMTP server in your configuration. You can then define endpoints in <code>src/mail/my_application_incoming_mail_controller.erl</code>. Each function should take two arguments:</p>
+<ul>
+    <li>The address that the email is from</li>
+    <li>A parsed version of the email</li>
+</ul>
+<p>The return value is ignored.</p>
+<p>To implement authentication for incoming email, simply define an <code>authorize_/3</code> function in your incoming mail controller. It should take three arguments:</p>
+<ul>
+    <li>The user name of the sender</li>
+    <li>The domain name of the sender</li>
+    <li>The IP address of the sender</li>
+</ul>
+<p>The <code>authorize_/3</code> function should return <code>true</code> if the user should be permitted to send email to the controller, or <code>false</code> otherwise.</p>
 {% endblock %}

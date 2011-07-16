@@ -265,10 +265,6 @@ multiple_where_clauses(Format, Key, ValueList, Operator) ->
 %% Boss models introspection
 %%
 
-attribute_names(Type) ->
-    DummyRecord = apply(Type, new, lists:seq(1, proplists:get_value(new, Type:module_info(exports)))),
-    DummyRecord:attribute_names().
-
 infer_type_from_id(Id) when is_list(Id) ->
     [Type, _BossId] = string:tokens(Id, "-"),
     {list_to_atom(Type), type_to_collection(Type), pack_id(Id)}.
@@ -307,7 +303,7 @@ mongo_tuple_to_record(Type, Row) ->
     Args = lists:map(fun(AttrName) ->
                 MongoValue = attr_value(AttrName, MongoDoc),
                 unpack_value(AttrName, MongoValue, Type)
-        end, attribute_names(Type)),
+        end, boss_record_lib:attribute_names(Type)),
     apply(Type, new, Args).
 
 % Boss and MongoDB have a different conventions to id attributes (id vs. '_id').

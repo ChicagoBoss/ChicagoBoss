@@ -1,5 +1,28 @@
-Upgrade: From 0.5.x
--------------------
+Upgrade: From 0.5 to 0.6
+------------------------
+
+Starting with Chicago Boss 0.6, projects follow an OTP layout, and the admin
+interface is a standalone OTP application.
+
+To upgrade, you will need to do the following in your project:
+
+    mkdir src
+    mkdir priv
+    mv controller/ init/ lib/ mail/ model/ test/ view/ src/
+    mv lang/ static/ priv/
+    PROJECT=my_application mv boss.routes priv/$PROJECT.routes
+
+In addition, you will need to prefix your controller modules with the application
+name. E.g.
+
+    mv blog_controller.erl my_application_blog_controller.erl
+
+This avoids module naming conflicts when multiple applications are installed on
+the same server (which was not possible prior to 0.6).
+
+
+Upgrade: From 0.5.x to 0.5.y
+----------------------------
 
 Starting with Chicago Boss 0.5, the framework source is kept separate from your
 project source. After downloading and building a new copy of CB, you need to update

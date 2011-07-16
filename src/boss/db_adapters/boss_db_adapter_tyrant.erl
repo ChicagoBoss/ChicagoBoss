@@ -123,7 +123,6 @@ parse_metadata_string([H|T], NameAcc, MetadataAcc) when H >= $a, H =< $z; H =:= 
     parse_metadata_string(T, [H|NameAcc], MetadataAcc).
 
 activate_record(Record, Type) ->
-    DummyRecord = apply(Type, new, lists:seq(1, proplists:get_value(new, Type:module_info(exports)))),
     Metadata = extract_metadata(Record, Type),
     apply(Type, new, lists:map(fun
                 (Key) ->
@@ -140,7 +139,7 @@ activate_record(Record, Type) ->
                                 false -> binary_to_list(Val)
                             end
                     end
-            end, DummyRecord:attribute_names())).
+            end, boss_record_lib:attribute_names(Type))).
 
 model_is_loaded(Type) ->
     case code:is_loaded(Type) of

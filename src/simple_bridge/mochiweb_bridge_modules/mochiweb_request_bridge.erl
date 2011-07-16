@@ -14,21 +14,21 @@
     socket/1, recv_from_socket/3
 ]).
 
-init({Req, DocRoot}) -> 
-    {Req, DocRoot}.
+init(Req) -> 
+    Req.
 
-request_method({Req, _DocRoot}) -> 
+request_method(Req) -> 
     Req:get(method).
 
-path({Req, _DocRoot}) -> 
+path(Req) -> 
     RawPath = Req:get(raw_path),
     {Path, _, _} = mochiweb_util:urlsplit_path(RawPath),
     Path.
 
-uri({Req, _DocRoot}) ->
+uri(Req) ->
     Req:get(raw_path).
 
-peer_ip({Req, _DocRoot}) -> 
+peer_ip(Req) -> 
     case Req:get(socket) of
         false -> {127, 0, 0, 1};
         Socket ->
@@ -36,12 +36,12 @@ peer_ip({Req, _DocRoot}) ->
             IP
     end.
 
-peer_port({Req, _DocRoot}) -> 
+peer_port(Req) -> 
     Socket = Req:get(socket),
     {ok, {_IP, Port}} = mochiweb_socket:peername(Socket),
     Port.
 
-headers({Req, _DocRoot}) ->
+headers(Req) ->
     F = fun(Header) -> Req:get_header_value(Header) end,
     Headers1 = [
         {connection, F("connection")},
@@ -68,23 +68,23 @@ headers({Req, _DocRoot}) ->
     ],
     [{K, V} || {K, V} <- Headers1, V /= undefined].
 
-cookies({Req, _DocRoot}) ->
+cookies(Req) ->
     Req:parse_cookie().
 
-query_params({Req, _DocRoot}) ->
+query_params(Req) ->
     Req:parse_qs().
 
-post_params({Req, _DocRoot}) ->
+post_params(Req) ->
     Req:parse_post().
 
-request_body({Req, _DocRoot}) ->
+request_body(Req) ->
     Req:recv_body().
 
-socket({Req, _DocRoot}) -> 	
+socket(Req) -> 	
     Req:get(socket).
 
-recv_from_socket(Length, Timeout, {Req, DocRoot}) -> 
-    Socket = socket({Req, DocRoot}),
+recv_from_socket(Length, Timeout, Req) -> 
+    Socket = socket(Req),
     case gen_tcp:recv(Socket, Length, Timeout) of
         {ok, Data} -> 
             put(mochiweb_request_recv, true),

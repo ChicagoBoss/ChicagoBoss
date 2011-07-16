@@ -2,39 +2,41 @@
 -compile(export_all).
 
 root_dir() -> filename:absname(""). %filename:join([filename:dirname(code:which(?MODULE)), ".."]).
-root_admin_dir() -> filename:join([root_dir(), "admin"]).
+root_src_dir() -> filename:join([root_dir(), "src"]).
+root_priv_dir(App) -> code:priv_dir(App).
 
-web_view_path("admin") -> 
-    filename:join([root_admin_dir(), "view"]);
+web_view_path() ->
+    filename:join([root_src_dir(), "view"]).
 web_view_path(Controller) -> 
-    filename:join([root_dir(), "view", Controller]).
+    filename:join([web_view_path(), Controller]).
 web_view_path(Controller, Template) -> web_view_path(Controller, Template, "html").
 web_view_path(Controller, Template, Extension) -> 
     filename:join([web_view_path(Controller), lists:concat([Template, ".", Extension])]).
 
+mail_view_path() ->
+    filename:join([root_src_dir(), "mail", "view"]).
 mail_view_path(Template) -> mail_view_path(Template, "txt").
 mail_view_path(Template, Extension) -> 
-    filename:join([root_dir(), "mail", "view", lists:concat([Template, ".", Extension])]).
+    filename:join([mail_view_path(), lists:concat([Template, ".", Extension])]).
 
-model_path() -> [filename:join([root_dir(), "model"])].
+model_path() -> [filename:join([root_src_dir(), "model"])].
 model_path(Model) -> filename:join([hd(model_path()), Model]).
 
-lang_path() -> filename:join([root_dir(), "lang"]).
+lang_path() -> filename:join([root_dir(), "priv", "lang"]).
+lang_path(App) -> filename:join([root_priv_dir(App), "lang"]).
+lang_path(App, Lang) -> filename:join([lang_path(App), lists:concat(["strings.", Lang, ".po"])]).
 
-lang_path(Lang) -> filename:join([lang_path(), lists:concat(["strings.", Lang, ".po"])]).
+static_path(App) -> filename:join([root_priv_dir(App), "static"]).
 
-static_path() -> filename:join([root_dir(), "static"]).
-admin_static_path() -> filename:join([root_admin_dir(), "static"]).
+lib_path() -> [filename:join([root_src_dir(), "lib"])].
 
-lib_path() -> [filename:join([root_dir(), "lib"])].
+view_lib_path() -> filename:join([root_src_dir(), "view", "lib"]).
 
-view_lib_path() -> filename:join([root_dir(), "view", "lib"]).
+web_controller_path() -> [filename:join([root_src_dir(), "controller"])].
 
-web_controller_path() -> [filename:join([root_dir(), "controller"]), filename:join([root_admin_dir()])].
+mail_controller_path() -> [filename:join([root_src_dir(), "mail"])].
 
-mail_controller_path() -> [filename:join([root_dir(), "mail"])].
-
-test_path() -> [filename:join([root_dir(), "test"]), filename:join([root_admin_dir(), "test"])].
+test_path() -> [filename:join([root_src_dir(), "test"])].
 
 ebin_dir() -> filename:join([root_dir(), "ebin"]).
 
@@ -43,23 +45,43 @@ include_dir() -> filename:join([root_dir(), "include"]).
 test_list() ->
     module_list(test_path()).
 
-model_list() ->
-    module_list(model_path()).
+model_list(AppName) ->
+    case boss_env:is_developing_app(AppName) of
+        true ->
+            module_list(model_path());
+        false ->
+            lists:map(fun atom_to_list/1, boss_env:get_env(AppName, model_modules, []))
+    end.
 
-web_controller_list() ->
-    module_list(web_controller_path()).
+web_controller_list(AppName) ->
+    case boss_env:is_developing_app(AppName) of
+        true ->
+            module_list(web_controller_path());
+        false ->
+            lists:map(fun atom_to_list/1, boss_env:get_env(AppName, controller_modules, []))
+    end.
+
+web_controller(AppName, Controller) ->
+    lists:concat([AppName, "_", Controller, "_controller"]).
 
 view_file_list() ->
-    ViewFiles = filelib:fold_files(filename:join([root_dir(), "view"]), ".*\\.(html|txt)$", true, fun(F1,Acc1) -> [F1 | Acc1] end, []),
-    MailPattern = filename:join([root_dir(), "mail", "view", "*.{html,txt}"]),
-    AdminPattern = filename:join([root_admin_dir(), "view", "*.{html,txt}"]),	
-    ViewFiles ++ filelib:wildcard(MailPattern) ++ filelib:wildcard(AdminPattern).
+    ViewFiles = filelib:fold_files(filename:join([root_src_dir(), "view"]), ".*\\.(html|txt)$", true, fun(F1,Acc1) -> [F1 | Acc1] end, []),
+    MailPattern = filename:join([root_src_dir(), "mail", "view", "*.{html,txt}"]),
+    ViewFiles ++ filelib:wildcard(MailPattern).
 
-init_file_list() ->
-    filelib:wildcard(filename:join([root_dir(), "init", "*.erl"])).
+init_file_list(App) ->
+    filelib:wildcard(filename:join([root_priv_dir(App), "init", "*.erl"])).
+
+routes_file(App) ->
+    filename:join([root_priv_dir(App), lists:concat([App, ".routes"])]).
 
 language_list() ->
-    {ok, Files} = file:list_dir(lang_path()),
+    language_list_dir(lang_path()).
+language_list(App) ->
+    language_list_dir(lang_path(App)).
+
+language_list_dir(Path) ->
+    {ok, Files} = file:list_dir(Path),
     lists:sort(lists:map(fun("strings."++Lang) -> filename:basename(Lang, ".po") end,
             lists:filter(fun
                     ("strings."++_Lang) -> true;
@@ -84,6 +106,3 @@ module_list1([Dir|Rest], ModuleAcc) ->
         _ ->
             module_list1(Rest, ModuleAcc)
     end.
-
-routes_file() ->
-	filename:join([root_dir(), "boss.routes"]).

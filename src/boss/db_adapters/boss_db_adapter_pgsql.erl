@@ -144,7 +144,6 @@ integer_to_id(Val, KeyString) ->
     ModelName ++ "-" ++ integer_to_list(Val).
 
 activate_record(Record, Metadata, Type) ->
-    DummyRecord = apply(Type, new, lists:seq(1, proplists:get_value(new, Type:module_info(exports)))),
     apply(Type, new, lists:map(fun
                 (id) ->
                     Index = keyindex(<<"id">>, 2, Metadata),
@@ -162,7 +161,7 @@ activate_record(Record, Metadata, Type) ->
                                 false -> Val
                             end
                     end
-            end, DummyRecord:attribute_names())).
+            end, boss_record_lib:attribute_names(Type))).
 
 model_is_loaded(Type) ->
     case code:is_loaded(Type) of

@@ -8,8 +8,8 @@
 &nbsp; <a href="#simplebridge">SimpleBridge request object</a></p>
 <p>Chicago Boss associates each URL with a function of a controller. 
 The URL <nobr>/foo/bar</nobr> will call the function <code>foo_controller:bar</code>. 
-Each controller module should go into your project's controller/ directory and the file name should end with "_controller.erl". 
-Helper functions should go into your project's lib/ directory.
+Each controller module should go into your project's src/controller/ directory and the file name should end with "_controller.erl". 
+Helper functions should go into your project's src/lib/ directory.
 Controllers can take one parameter or two parameters: the <a href="#simplebridge">SimpleBridge request object</a>, and an optional session ID (if <a href="api-session.html">sessions</a> are enabled). Declare it like:</p>
 <div class="code">
     <span class="attr">-module</span>(my_controller, [Req]).
@@ -45,37 +45,35 @@ view(<span class="atom">'GET'</span>, [Year, Month]) -&gt;<br />
 &nbsp;&nbsp;&nbsp;&nbsp;...<br />
 </div>
 
+<p>These function clauses act as templates for constructing URLs in the view; for each CamelCase variable, simply use the lower-cased underscored equivalent as the parameter name. To continue the example above, you can construct URLs to match the above controllers with the following view tags:</p>
+
+<div class="code">
+    {{ '{% url action="view" %}' }}<br />
+    {{ '{% url action="view" id="1234" %}' }}<br />
+    {{ '{% url action="view" tag="funny" %}' }}<br />
+    {{ '{% url action="view" tag="funny" author="saint-paul" %}' }}<br />
+    {{ '{% url action="view" year="2009" month="08" %}' }}<br />
+</div>
+
+<p>Template variables can of course be used in place of string literals.</p>
+
 <a name="routes"></a>
 <h3>Routes</h3>
 
-<p>The routing system is simple, in the file boss.routes you have some special routes and free-hand named routes, the routes are loaded at startup in memory (ets table) and reloaded on /admin/upgrade.</p> 
-
-<p>The file contains a list of erlang terms, one per line finished with a dot.</p>
+<p>Most routing takes place in the controller pattern-matching code. You can define additional routes in <code>priv/my_application.routes</code>. The file contains a list of erlang terms, one per line finished with a dot. Each term is a tuple with a URL or an HTTP status code as the first term, and a <code>{Controller, Action}</code> or <code>{Controller, Action, Parameters}</code> tuple as the second term.</p>
 
 <p>A few examples:</p>
 
 <div class="code">
-    <span class="Comment">%% The {Controller, Action} pair to be used on the home page. Defaults to {"hello", "world"} </span><br /> 
-    <span class="Comment">%% Format: {"Controller", "Action"}</span><br /> 
-    {<span class="Constant">front_page</span>, {<span class="String"><span class="String">&quot;</span>hello<span class="String">&quot;</span></span>, <span class="String"><span class="String">&quot;</span>world<span class="String">&quot;</span></span>}}<br />.
-    <span class="Comment">%%</span><br /> 
-    <span class="Comment">%% The action to call if none is specified. Defaults to "index" </span><br /> 
-    <span class="Comment">%% Format: "Action" </span><br /> 
-{<span class="Constant">default_action</span>, <span class="String"><span class="String">&quot;</span>index<span class="String">&quot;</span></span>}.
-<span class="Comment">%%</span><br />
-<span class="Comment">%% A proplist of default actions to call if none is specified, keyed by controller name</span> <br />
-<span class="Comment">%% Format: [ {"Controller1", "Action"}, {"Controller2", "Action"}]</span> <br />
-{<span class="Constant">default_actions</span>, [{<span class="String"><span class="String">&quot;</span>admin<span class="String">&quot;</span></span>, <span class="String"><span class="String">&quot;</span>model<span class="String">&quot;</span></span>}]}.<br />
-<span class="Comment">%%</span><br />
-<span class="Comment">%% Route for not-found actions, is called if not named route is found a the first url token</span>
-<span class="Comment">%% don't pertain to a controller</span>  <br />
-<span class="Comment">%% Format: {"Controller", "Action", ["Param1", "ParamN"]}</span> 
-{<span class="Constant">not_found_route</span>, {<span class="String"><span class="String">&quot;</span>hello<span class="String">&quot;</span></span>, <span class="String"><span class="String">&quot;</span>world<span class="String">&quot;</span></span>, []}}.<br />
-<span class="Comment">%%</span><br />
-<span class="Comment">%% Named routes, will take precedence over the previous</span> <br />
-<span class="Comment">%% Format: {"Full Url", {"Controller", "Action", ["Param1", "ParamN"]}}</span> <br />
-{<span class="String"><span class="String">&quot;</span>/login<span class="String">&quot;</span></span>, {<span class="String"><span class="String">&quot;</span>account<span class="String">&quot;</span></span>, <span class="String"><span class="String">&quot;</span>login<span class="String">&quot;</span></span>, []}}.<br />
-{<span class="String"><span class="String">&quot;</span>/signup<span class="String">&quot;</span></span>, {<span class="String"><span class="String">&quot;</span>accounts<span class="String">&quot;</span></span>, <span class="String"><span class="String">&quot;</span>signup<span class="String">&quot;</span></span>, []}}.<br />
+    {"/", {"hello", "world"{{ "}}" }}.<br />
+    {"/signup", {"account", "create"{{ "}}" }}.<br />
+    {404, {"main", "not_found"{{ "}}" }}.
+</div>
+
+<p>To define a default action for a controller, simply add a <code>default_action</code> attribute to the controller like so:</p>
+
+<div class="code">
+-default_action(index).
 </div>
 
 <a name="auth"></a>
@@ -126,11 +124,11 @@ before_(_) -&gt;<br />
 <p><code>Variables</code> will be passed into the associated Django template, and <code>Headers</code> are HTTP headers you want to set (e.g., <code>Content-Type</code>).</p>
 
 <div class="code">
-    {redirect, Location<span class="typevar">::string()</span>}
+    {redirect, Location}
 </div>
-<p>Perform a 302 HTTP redirect to <code>Location</code>.</p>
+<p>Perform a 302 HTTP redirect to <code>Location</code>, which may be a URL string or a proplist of parameters that will be converted to a URL using the routes system.</p>
 <div class="code">
-    {redirect, Location<span class="typevar">::string()</span>, Headers<span class="typevar">::proplist()</span>}
+    {redirect, Location, Headers<span class="typevar">::proplist()</span>}
 </div>
 <p>Perform a 302 HTTP redirect to <code>Location</code> and set additional HTTP <code>Headers</code>.</p>
 
@@ -180,6 +178,12 @@ before_(_) -&gt;<br />
 </div>
 
 <p>Return <code>Data</code> to the client as a JSON object while setting additional HTTP <code>Headers</code>.</p>
+
+<div class="code">
+    not_found
+</div>
+
+<p>Invoke the 404 File Not Found handler.</p>
 
 <br />
 <a name="filter"></a>

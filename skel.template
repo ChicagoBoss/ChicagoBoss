@@ -4,58 +4,27 @@
     {dest, "{{appid}}"}]}.
 {dir, "{{dest}}"}.
 {dir, "{{dest}}/log"}.
-{dir, "{{dest}}/lang"}.
-{dir, "{{dest}}/lib"}.
+{dir, "{{dest}}/priv/lang"}.
 {dir, "{{dest}}/ebin"}.
 {dir, "{{dest}}/include"}.
-{dir, "{{dest}}/view"}.
-{dir, "{{dest}}/view/lib"}.
-{dir, "{{dest}}/model"}.
-{dir, "{{dest}}/controller"}.
+{dir, "{{dest}}/src/lib"}.
+{dir, "{{dest}}/src/view"}.
+{dir, "{{dest}}/src/view/lib"}.
+{dir, "{{dest}}/src/model"}.
+{dir, "{{dest}}/src/controller"}.
+{dir, "{{dest}}/src/mail/view"}.
+{dir, "{{dest}}/src/test"}.
 {template, "skel/start-dev.sh", "{{dest}}/start-dev.sh"}.
 {template, "skel/start.sh", "{{dest}}/start.sh"}.
 {template, "skel/start-server.bat", "{{dest}}/start-server.bat"}.
 {template, "skel/Makefile", "{{dest}}/Makefile"}.
 {template, "skel/project.app.src", "{{dest}}/{{appid}}.app.src"}.
-{file, "skel/admin/admin_controller.erl", "{{dest}}/admin/admin_controller.erl"}.
-{file, "skel/admin/admin_lib.erl", "{{dest}}/admin/admin_lib.erl"}.
-{file, "skel/admin/static/stylesheets/application_orig.css", "{{dest}}/admin/static/stylesheets/application_orig.css"}.
-{file, "skel/admin/static/stylesheets/application.css", "{{dest}}/admin/static/stylesheets/application.css"}.
-{file, "skel/admin/static/lang.js", "{{dest}}/admin/static/lang.js"}.
-{file, "skel/admin/static/news.js", "{{dest}}/admin/static/news.js"}.
-{file, "skel/admin/static/jquery-1.6.1.min.js", "{{dest}}/admin/static/jquery-1.6.1.min.js"}.
-{file, "skel/admin/test/admin_test.erl", "{{dest}}/admin/test/admin_test.erl"}.
-{file, "skel/admin/view/layouts/admin.html", "{{dest}}/admin/view/layouts/admin.html"}.
-{file, "skel/admin/view/layouts/shared/_alerts.html", "{{dest}}/admin/view/layouts/shared/_alerts.html"}.
-{file, "skel/admin/view/layouts/shared/_main_menu.html", "{{dest}}/admin/view/layouts/shared/_main_menu.html"}.
-{file, "skel/admin/view/layouts/shared/_sidebar.html", "{{dest}}/admin/view/layouts/shared/_sidebar.html"}.
-{file, "skel/admin/view/shared/_lang_left_submenu.html", "{{dest}}/admin/view/shared/_lang_left_submenu.html"}.
-{file, "skel/admin/view/shared/_lang_right_submenu.html", "{{dest}}/admin/view/shared/_lang_right_submenu.html"}.
-{file, "skel/admin/view/access_denied.html", "{{dest}}/admin/view/access_denied.html"}.
-{file, "skel/admin/view/big_red_button.html", "{{dest}}/admin/view/big_red_button.html"}.
-{file, "skel/admin/view/create_lang.html", "{{dest}}/admin/view/create_lang.html"}.
-{file, "skel/admin/view/create.html", "{{dest}}/admin/view/create.html"}.
-{file, "skel/admin/view/delete_lang.html", "{{dest}}/admin/view/delete_lang.html"}.
-{file, "skel/admin/view/delete.html", "{{dest}}/admin/view/delete.html"}.
-{file, "skel/admin/view/edit.html", "{{dest}}/admin/view/edit.html"}.
-{file, "skel/admin/view/error.html", "{{dest}}/admin/view/error.html"}.
-{file, "skel/admin/view/index.html", "{{dest}}/admin/view/index.html"}.
-{file, "skel/admin/view/lang.html", "{{dest}}/admin/view/lang.html"}.
-{file, "skel/admin/view/model.html", "{{dest}}/admin/view/model.html"}.
-{file, "skel/admin/view/record.html", "{{dest}}/admin/view/record.html"}.
-{file, "skel/admin/view/routes.html", "{{dest}}/admin/view/routes.html"}.
-{file, "skel/admin/view/splash.html", "{{dest}}/admin/view/splash.html"}.
-{file, "skel/admin/view/upgrade.html", "{{dest}}/admin/view/upgrade.html"}.
-{file, "skel/admin/view/upload.html", "{{dest}}/admin/view/upload.html"}.
-{file, "skel/mail/outgoing_mail_controller.erl", "{{dest}}/mail/outgoing_mail_controller.erl"}.
-{file, "skel/mail/incoming_mail_controller.erl", "{{dest}}/mail/incoming_mail_controller.erl"}.
-{file, "skel/mail/view/test_message.html", "{{dest}}/mail/view/test_message.html"}.
-{file, "skel/mail/view/test_message.txt", "{{dest}}/mail/view/test_message.txt"}.
-{file, "skel/static/chicago-boss.png", "{{dest}}/static/chicago-boss.png"}.
-{file, "skel/static/favicon.ico", "{{dest}}/static/favicon.ico"}.
-{file, "skel/test/mail_test.erl", "{{dest}}/test/mail_test.erl"}.
-{file, "skel/boss.config", "{{dest}}/boss.config"}.
-{file, "skel/boss.routes", "{{dest}}/boss.routes"}.
-{file, "skel/init/news.erl", "{{dest}}/init/news.erl"}.
+{template, "skel/boss.config", "{{dest}}/boss.config"}.
+{file, "skel/src/mail/outgoing_mail_controller.erl", "{{dest}}/src/mail/{{appid}}_outgoing_mail_controller.erl"}.
+{file, "skel/src/mail/incoming_mail_controller.erl", "{{dest}}/src/mail/{{appid}}_incoming_mail_controller.erl"}.
+{file, "skel/priv/static/chicago-boss.png", "{{dest}}/priv/static/chicago-boss.png"}.
+{file, "skel/priv/static/favicon.ico", "{{dest}}/priv/static/favicon.ico"}.
+{file, "skel/priv/boss.routes", "{{dest}}/priv/{{appid}}.routes"}.
+{file, "skel/src/init/news.erl", "{{dest}}/src/init/{{appid}}_news.erl"}.
 {chmod, 8#755, "{{dest}}/start-dev.sh"}.
 {chmod, 8#755, "{{dest}}/start.sh"}.

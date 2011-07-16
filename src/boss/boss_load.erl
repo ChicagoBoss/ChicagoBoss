@@ -1,28 +1,35 @@
 -module(boss_load).
 -compile(export_all).
--define(HELPER_MODULE_NAME, '__boss_helper_module').
+-define(HELPER_MODULE_NAME, '_view_lib').
 
-load_all_modules() ->
-    load_all_modules(undefined).
+load_all_modules(Application) ->
+    load_all_modules(Application, undefined).
 
-load_all_modules(OutDir) ->
-    boss_translator:start(),
+load_all_modules(Application, OutDir) ->
+    TranslatorPid = boss_translator:start(),
     {ok, TestModules} = load_dirs(boss_files:test_path(), OutDir, fun compile/2),
     {ok, LibModules} = load_libraries(OutDir),
     {ok, MailModules} = load_mail_controllers(OutDir),
     {ok, ControllerModules} = load_web_controllers(OutDir),
     {ok, ModelModules} = load_models(OutDir),
-    {ok, ViewLibModule} = load_view_lib(OutDir),
-    {ok, ViewModules} = load_views(OutDir),
-    AllModules = TestModules ++ LibModules ++ MailModules ++ ControllerModules ++ 
-        ModelModules ++ [ViewLibModule] ++ ViewModules,
+    {ok, ViewLibModule} = load_view_lib(Application, OutDir, TranslatorPid),
+    {ok, ViewModules} = load_views(Application, OutDir, TranslatorPid),
+    AllModules = [{test_modules, TestModules}, {lib_modules, LibModules},
+        {mail_modules, MailModules}, {controller_modules, ControllerModules},
+        {model_modules, ModelModules}, {view_lib_modules, [ViewLibModule]},
+        {view_modules, ViewModules}],
     {ok, AllModules}.
 
-load_all_modules_and_emit_app_file(OutDir, AppName) ->
-    {ok, AllModules} = load_all_modules(OutDir),
-    {ok, [{application, AppName, AppData}]} = file:consult(lists:concat([AppName, ".app.src"])),
-    NewAppData = lists:keyreplace(modules, 1, AppData, {modules, AllModules}),
-    IOList = io_lib:format("~p.~n", [{application, AppName, NewAppData}]),
+load_all_modules_and_emit_app_file(AppName, OutDir) ->
+    {ok, ModulePropList} = load_all_modules(AppName, OutDir),
+    AllModules = lists:foldr(fun({_, Mods}, Acc) -> Mods ++ Acc end, [], ModulePropList),
+    DotAppSrc = lists:concat([AppName, ".app.src"]),
+    {ok, [{application, AppName, AppData}]} = file:consult(DotAppSrc),
+    AppData1 = lists:keyreplace(modules, 1, AppData, {modules, AllModules}),
+    DefaultEnv = proplists:get_value(env, AppData1, []),
+    AppData2 = lists:keyreplace(env, 1, AppData1, {env, ModulePropList ++ DefaultEnv}),
+
+    IOList = io_lib:format("~p.~n", [{application, AppName, AppData2}]),
     AppFile = filename:join([OutDir, lists:concat([AppName, ".app"])]),
     file:write_file(AppFile, IOList).
 
@@ -43,7 +50,7 @@ load_mail_controllers(OutDir) ->
 load_web_controllers() ->
     load_web_controllers(undefined).
 load_web_controllers(OutDir) ->
-    load_dirs(boss_files:web_controller_path(), OutDir, fun compile/2).
+    load_dirs(boss_files:web_controller_path(), OutDir, fun compile_controller/2).
 
 load_models() ->
     load_models(undefined).
@@ -115,46 +122,54 @@ maybe_compile(Dir, File, OutDir, Compiler) ->
                 undefined ->
                     case module_older_than(Module, [AbsPath]) of
                         true ->
-                            case Compiler(AbsPath, OutDir) of
-                                ok ->
-                                    {ok, Module};
-                                Err ->
-                                    Err
-                            end;
+                            Compiler(AbsPath, OutDir);
                         _ ->
                             {ok, Module}
                     end;
                 _ ->
-                    case Compiler(AbsPath, OutDir) of
-                        ok ->
-                            {ok, Module};
-                        Err ->
-                            Err
-                    end
+                    Compiler(AbsPath, OutDir)
             end;
         _ ->
             ok
     end.
 
 view_doc_root(ViewPath) ->
-    filename:join(lists:reverse(lists:nthtail(2, lists:reverse(filename:split(ViewPath))))).
+    lists:foldl(fun
+            (LibPath, Best) when length(LibPath) > length(Best) ->
+                case lists:prefix(LibPath, ViewPath) of
+                    true ->
+                        LibPath;
+                    false ->
+                        Best
+                end;
+            (_, Best) ->
+                Best
+        end, "", 
+        [boss_files:web_view_path(), boss_files:mail_view_path()]).
 
-compile_view_dir_erlydtl(LibPath, OutDir) ->
-    Res = erlydtl_compiler:compile_dir(LibPath, ?HELPER_MODULE_NAME,
-        [{doc_root, filename:join(lists:reverse(lists:nthtail(1, lists:reverse(filename:split(LibPath)))))},
-            {compiler_options, []}, {out_dir, OutDir}]),
+compile_view_dir_erlydtl(LibPath, Module, OutDir, TranslatorPid) ->
+    Res = erlydtl_compiler:compile_dir(LibPath, Module,
+        [{doc_root, view_doc_root(LibPath)}, {compiler_options, []}, 
+            {out_dir, OutDir}, {custom_tags_modules, [boss_erlydtl_tags]},
+            {blocktrans_fun, fun(BlockName, Locale) ->
+                    case boss_translator:lookup(TranslatorPid, BlockName, Locale) of
+                        undefined -> default;
+                        Body -> list_to_binary(Body)
+                    end
+            end}]),
     case Res of
-        ok -> {ok, ?HELPER_MODULE_NAME};
+        ok -> {ok, Module};
         Err -> Err
     end.
 
-compile_view_erlydtl(ViewPath, OutDir) ->
-    Module = view_module(ViewPath),
+compile_view_erlydtl(Application, ViewPath, OutDir, TranslatorPid) ->
+    HelperModule = helper_module(Application),
+    Module = view_module(Application, ViewPath),
     Res = erlydtl_compiler:compile(ViewPath, Module,
-        [{doc_root, view_doc_root(ViewPath)}, {custom_tags_module, ?HELPER_MODULE_NAME},
+        [{doc_root, view_doc_root(ViewPath)}, {custom_tags_modules, [boss_erlydtl_tags, HelperModule]},
             {compiler_options, []}, {out_dir, OutDir}, {blocktrans_fun,
                 fun(BlockName, Locale) ->
-                        case boss_translator:lookup(BlockName, Locale) of
+                        case boss_translator:lookup(TranslatorPid, BlockName, Locale) of
                             undefined -> default;
                             Body -> list_to_binary(Body)
                         end
@@ -167,15 +182,17 @@ compile_view_erlydtl(ViewPath, OutDir) ->
 compile_model(ModulePath, OutDir) ->
     boss_record_compiler:compile(ModulePath, [{out_dir, OutDir}]).
 
+compile_controller(ModulePath, OutDir) ->
+    boss_controller_compiler:compile(ModulePath, [{out_dir, OutDir}]).
+
 compile(ModulePath, OutDir) ->
     boss_compiler:compile(ModulePath, [{out_dir, OutDir}]).
 
-load_view_lib() ->
-    load_view_lib(undefined).
-load_view_lib(OutDir) ->
-    compile_view_dir_erlydtl(boss_files:view_lib_path(), OutDir).
+load_view_lib(Application, OutDir, TranslatorPid) ->
+    HelperModule = helper_module(Application),
+    compile_view_dir_erlydtl(boss_files:view_lib_path(), HelperModule, OutDir, TranslatorPid).
 
-load_view_lib_if_old(ViewLibPath, Module) ->
+load_view_lib_if_old(ViewLibPath, Module, TranslatorPid) ->
     NeedCompile = case module_is_loaded(Module) of
         true ->
             module_older_than(Module, lists:map(fun
@@ -187,22 +204,21 @@ load_view_lib_if_old(ViewLibPath, Module) ->
     end,
     case NeedCompile of
         true ->
-            compile_view_dir_erlydtl(ViewLibPath, undefined);
+            compile_view_dir_erlydtl(ViewLibPath, Module, undefined, TranslatorPid);
         false ->
             {ok, Module}
     end.
 
-load_views() ->
-    load_views(undefined).
-load_views(OutDir) ->
+load_views(Application, OutDir, TranslatorPid) ->
     ModuleList = lists:foldr(fun(Path, Acc) -> 
-                {ok, Module} = compile_view_erlydtl(Path, OutDir),
+                {ok, Module} = compile_view_erlydtl(Application, Path, OutDir, TranslatorPid),
                 [Module|Acc]
         end, [], boss_files:view_file_list()),
     {ok, ModuleList}.
 
-load_view_if_old(ViewPath, Module) ->
-    case load_view_lib_if_old(boss_files:view_lib_path(), ?HELPER_MODULE_NAME) of
+load_view_if_old(Application, ViewPath, Module, TranslatorPid) ->
+    HelperModule = helper_module(Application),
+    case load_view_lib_if_old(boss_files:view_lib_path(), HelperModule, TranslatorPid) of
         {ok, _} -> 
             NeedCompile = case module_is_loaded(Module) of
                 true ->
@@ -215,7 +231,7 @@ load_view_if_old(ViewPath, Module) ->
             end,
             case NeedCompile of
                 true ->
-                    compile_view_erlydtl(ViewPath, undefined);
+                    compile_view_erlydtl(Application, ViewPath, undefined, TranslatorPid);
                 false ->
                     {ok, Module}
             end;
@@ -223,12 +239,11 @@ load_view_if_old(ViewPath, Module) ->
             Err
     end.
 
-load_view_if_dev(ViewPath) ->
-    Module = view_module(ViewPath),
-    Result = case boss_env:boss_env() of
-        production -> {ok, Module};
-        testing -> {ok, Module};
-        _ -> load_view_if_old(ViewPath, Module)
+load_view_if_dev(Application, ViewPath, TranslatorPid) ->
+    Module = view_module(Application, ViewPath),
+    Result = case boss_env:is_developing_app(Application) of
+        true -> load_view_if_old(Application, ViewPath, Module, TranslatorPid);
+        false -> {ok, Module}
     end,
     case Result of
         {ok, Module} ->
@@ -278,9 +293,15 @@ module_older_than(CompileDate, [File|Rest]) ->
         filelib:last_modified(File)),
     (ModificationSeconds >= CompileSeconds) orelse module_older_than(CompileDate, Rest).
 
-view_module(ViewPath) ->
-    [File, Folder, Type|_] = lists:reverse(filename:split(ViewPath)),
-    Lc = string:to_lower(Type ++ "_" ++ Folder ++ "_" ++ File),
+view_module(Application, ViewPath) ->
+    RelativePath = lists:nthtail(length(boss_files:root_src_dir()) + 1, ViewPath),
+    Components = filename:split(RelativePath),
+    Lc = string:to_lower(lists:concat([Application, "_", string:join(Components, "_")])),
     ModuleIOList = re:replace(Lc, "\\.", "_", [global]),
     list_to_atom(binary_to_list(iolist_to_binary(ModuleIOList))).
 
+helper_module(Application) ->
+    list_to_atom(lists:concat([Application, ?HELPER_MODULE_NAME])).
+
+incoming_mail_controller_module(Application) ->
+    list_to_atom(atom_to_list(Application) ++ "_incoming_mail_controller").

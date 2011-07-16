@@ -23,8 +23,18 @@ run_hooks(Record, Type, Function) ->
         false -> ok
     end.
 
-is_boss_record(Record) when is_tuple(Record) andalso is_atom(element(1, Record)) ->
+is_boss_record(ModelList, Record) when is_tuple(Record) andalso is_atom(element(1, Record)) ->
     Type = element(1, Record),
-    erlang:function_exported(Type, attribute_names, 1) andalso erlang:function_exported(Type, new, tuple_size(Record) - 1);
-is_boss_record(_) ->
+    lists:member(Type, ModelList) andalso 
+        erlang:function_exported(Type, attribute_names, 1) andalso 
+        erlang:function_exported(Type, new, tuple_size(Record) - 1);
+is_boss_record(_, _) ->
     false.
+
+dummy_record(Module) ->
+    NumArgs = proplists:get_value('new', Module:module_info(exports)),
+    apply(Module, 'new', lists:map(fun(1) -> 'id'; (_) -> "" end, lists:seq(1, NumArgs))).
+
+attribute_names(Module) ->
+    DummyRecord = dummy_record(Module),
+    DummyRecord:attribute_names().

@@ -39,6 +39,14 @@ Dependencies
     2. make mochiweb with msys or cygwin
 
 
+Admin Interface
+---------------
+
+You probably want to install the CB admin interface. Download it from
+
+    <https://github.com/evanmiller/chicagoboss_admin
+
+
 Upgrades
 --------
 
@@ -130,11 +138,16 @@ for storing and retrieving session information.
 
 *Routes*. By default, Chicago Boss uses the same routing conventions as Ruby on
 Rails (`/controller/action/id`). You can customize the routes and provide
-a base URL in the routes.config file. Of course, most routing occurs with the
-pattern- matching controller logic, e.g.
+a base URL in the priv/application.routes file. Of course, most routing occurs
+with the pattern-matching controller logic, e.g.
 
     posts('GET', ["category", Category]) ->
         ...
+
+You can then generate URLs to match controller patterns in your templates like
+so:
+
+    {% url action="posts" category="some category" %}
 
 *Email*. Chicago Boss ships with a miniature MVC for sending multipart emails.
 Emails can be templated with ErlyDTL, and it is easy to provide plain-text and

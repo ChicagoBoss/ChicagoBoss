@@ -49,65 +49,49 @@ handle_call({watch, TopicString, CallBack, UserInfo, TTL}, From, State0) ->
     end;
 handle_call({set_watch, WatchId, TopicString, CallBack, UserInfo, TTL}, From, State0) ->
     {reply, _, State} = handle_call({cancel_watch, WatchId}, From, State0),
-    Models = boss_files:model_list(),
     ExpTime = future_time(TTL),
     {RetVal, NewState, WatchList} = lists:foldr(fun
             (SingleTopic, {ok, StateAcc, WatchListAcc}) ->
                 case re:split(SingleTopic, "\\.", [{return, list}]) of
                     [Id, Attr] ->
                         [Module, IdNum] = re:split(Id, "-", [{return, list}]),
-                        case lists:member(Module, Models) of
-                            false ->
-                                {{error, model_not_found}, StateAcc, WatchListAcc};
-                            true ->
-                                {NewState1, WatchInfo} = case IdNum of
-                                    "*" ->
-                                        SetAttrWatchers = case dict:find(Module, StateAcc#state.set_attr_watchers) of
-                                            {ok, Val} -> Val;
-                                            _ -> []
-                                        end,
-                                        {StateAcc#state{
-                                                set_attr_watchers = dict:store(Module, [WatchId|SetAttrWatchers], StateAcc#state.set_attr_watchers)
-                                            }, {set_attr, Module, Attr}};
-                                    _ ->
-                                        IdAttrWatchers = case dict:find(Id, StateAcc#state.id_attr_watchers) of
-                                            {ok, Val} -> Val;
-                                            _ -> []
-                                        end,
-                                        {StateAcc#state{
-                                            id_attr_watchers = dict:store(Id, [WatchId|IdAttrWatchers], StateAcc#state.id_attr_watchers)
-                                        }, {id_attr, Id, Attr}}
+                        {NewState1, WatchInfo} = case IdNum of
+                            "*" ->
+                                SetAttrWatchers = case dict:find(Module, StateAcc#state.set_attr_watchers) of
+                                    {ok, Val} -> Val;
+                                    _ -> []
                                 end,
-                                {ok, NewState1, [WatchInfo|WatchListAcc]}
-                        end;
+                                {StateAcc#state{
+                                        set_attr_watchers = dict:store(Module, [WatchId|SetAttrWatchers], StateAcc#state.set_attr_watchers)
+                                    }, {set_attr, Module, Attr}};
+                            _ ->
+                                IdAttrWatchers = case dict:find(Id, StateAcc#state.id_attr_watchers) of
+                                    {ok, Val} -> Val;
+                                    _ -> []
+                                end,
+                                {StateAcc#state{
+                                        id_attr_watchers = dict:store(Id, [WatchId|IdAttrWatchers], StateAcc#state.id_attr_watchers)
+                                    }, {id_attr, Id, Attr}}
+                        end,
+                        {ok, NewState1, [WatchInfo|WatchListAcc]};
                     _ -> 
                         case re:split(SingleTopic, "-", [{return, list}]) of
-                            [Module, _IdNum] ->
-                                case lists:member(Module, Models) of
-                                    false ->
-                                        {{error, model_not_found}, StateAcc, WatchListAcc};
-                                    true ->
-                                        IdWatchers = case dict:find(SingleTopic, State#state.id_watchers) of
-                                            {ok, Val} -> Val;
-                                            _ -> []
-                                        end,
-                                        {ok, StateAcc#state{
-                                                id_watchers = dict:store(SingleTopic, [WatchId|IdWatchers], StateAcc#state.id_watchers)
-                                            }, [{id, SingleTopic}|WatchListAcc]}
-                                end;
-                            [PluralModel] ->
-                                case lists:member(inflector:singularize(PluralModel), Models) of
-                                    false ->
-                                        {{error, model_not_found}, StateAcc, WatchListAcc};
-                                    true ->
-                                        SetWatchers = case dict:find(SingleTopic, StateAcc#state.set_watchers) of
-                                            {ok, Val} -> Val;
-                                            _ -> []
-                                        end,
-                                        {ok, StateAcc#state{
-                                                set_watchers = dict:store(SingleTopic, [WatchId|SetWatchers], StateAcc#state.set_watchers)
-                                            }, [{set, SingleTopic}|WatchListAcc]}
-                                end
+                            [_Module, _IdNum] ->
+                                IdWatchers = case dict:find(SingleTopic, State#state.id_watchers) of
+                                    {ok, Val} -> Val;
+                                    _ -> []
+                                end,
+                                {ok, StateAcc#state{
+                                        id_watchers = dict:store(SingleTopic, [WatchId|IdWatchers], StateAcc#state.id_watchers)
+                                    }, [{id, SingleTopic}|WatchListAcc]};
+                            [_PluralModel] ->
+                                SetWatchers = case dict:find(SingleTopic, StateAcc#state.set_watchers) of
+                                    {ok, Val} -> Val;
+                                    _ -> []
+                                end,
+                                {ok, StateAcc#state{
+                                        set_watchers = dict:store(SingleTopic, [WatchId|SetWatchers], StateAcc#state.set_watchers)
+                                    }, [{set, SingleTopic}|WatchListAcc]}
                         end
                 end;
             (_, Error) ->
@@ -150,107 +134,88 @@ handle_call({extend_watch, WatchId}, _From, State0) ->
 handle_call({created, Id, Attrs}, _From, State0) ->
     State = prune_expired_entries(State0),
     [Module | _IdNum] = re:split(Id, "-", [{return, list}]),
-    Models = boss_files:model_list(),
-    {RetVal, State1} = case lists:member(Module, Models) of
-        false ->
-            {{error, model_not_found}, State};
-        true ->
-            PluralModel = inflector:pluralize(Module),
-            case dict:find(PluralModel, State#state.set_watchers) of
-                {ok, SetWatchers} -> 
-                    Record = activate_record(Id, Attrs),
-                    NewState = lists:foldr(fun(WatchId, Acc0) ->
-                                #watch{ watch_list = WatchList, 
-                                    callback = CallBack, 
-                                    user_info = UserInfo } = dict:fetch(WatchId, State#state.watch_dict),
-                                lists:foldr(fun
-                                        ({set, TopicString}, Acc1) when TopicString =:= PluralModel ->
-                                            execute_callback(CallBack, created, Record, UserInfo, WatchId, Acc1);
-                                        (_, Acc1) ->
-                                            Acc1
-                                    end, Acc0, WatchList)
-                        end, State, SetWatchers),
-                    {ok, NewState};
-                _ -> {ok, State}
-            end
+    PluralModel = inflector:pluralize(Module),
+    {RetVal, State1} = case dict:find(PluralModel, State#state.set_watchers) of
+        {ok, SetWatchers} -> 
+            Record = activate_record(Id, Attrs),
+            NewState = lists:foldr(fun(WatchId, Acc0) ->
+                        #watch{ watch_list = WatchList, 
+                            callback = CallBack, 
+                            user_info = UserInfo } = dict:fetch(WatchId, State#state.watch_dict),
+                        lists:foldr(fun
+                                ({set, TopicString}, Acc1) when TopicString =:= PluralModel ->
+                                    execute_callback(CallBack, created, Record, UserInfo, WatchId, Acc1);
+                                (_, Acc1) ->
+                                    Acc1
+                            end, Acc0, WatchList)
+                end, State, SetWatchers),
+            {ok, NewState};
+        _ -> {ok, State}
     end,
     {reply, RetVal, State1};
 handle_call({deleted, Id, OldAttrs}, _From, State0) ->
     State = prune_expired_entries(State0),
     [Module | _IdNum] = re:split(Id, "-", [{return, list}]),
-    Models = boss_files:model_list(),
-    {RetVal, State1} = case lists:member(Module, Models) of
-        false ->
-            {{error, model_not_found}, State};
-        true ->
-            PluralModel = inflector:pluralize(Module),
-            case dict:find(PluralModel, State#state.set_watchers) of
-                {ok, SetWatchers} -> 
-                    Record = activate_record(Id, OldAttrs),
-                    NewState = lists:foldr(fun(WatchId, Acc0) ->
-                                #watch{ watch_list = WatchList, 
-                                    callback = CallBack, 
-                                    user_info = UserInfo } = dict:fetch(WatchId, State#state.watch_dict),
-                                lists:foldr(fun
-                                        ({set, TopicString}, Acc1) when TopicString =:= PluralModel ->
-                                            execute_callback(CallBack, deleted, Record, UserInfo, WatchId, Acc1);
-                                        ({id, TopicString}, Acc1) when TopicString =:= Id ->
-                                            execute_callback(CallBack, deleted, Record, UserInfo, WatchId, Acc1);
-                                        (_, Acc1) ->
-                                            Acc1
-                                    end, Acc0, WatchList)
-                        end, State, SetWatchers),
-                    {ok, NewState};
-                _ -> {ok, State}
-            end
+    PluralModel = inflector:pluralize(Module),
+    {RetVal, State1} = case dict:find(PluralModel, State#state.set_watchers) of
+        {ok, SetWatchers} -> 
+            Record = activate_record(Id, OldAttrs),
+            NewState = lists:foldr(fun(WatchId, Acc0) ->
+                        #watch{ watch_list = WatchList, 
+                            callback = CallBack, 
+                            user_info = UserInfo } = dict:fetch(WatchId, State#state.watch_dict),
+                        lists:foldr(fun
+                                ({set, TopicString}, Acc1) when TopicString =:= PluralModel ->
+                                    execute_callback(CallBack, deleted, Record, UserInfo, WatchId, Acc1);
+                                ({id, TopicString}, Acc1) when TopicString =:= Id ->
+                                    execute_callback(CallBack, deleted, Record, UserInfo, WatchId, Acc1);
+                                (_, Acc1) ->
+                                    Acc1
+                            end, Acc0, WatchList)
+                end, State, SetWatchers),
+            {ok, NewState};
+        _ -> {ok, State}
     end,
     {reply, RetVal, State1};
 handle_call({updated, Id, OldAttrs, NewAttrs}, _From, State0) ->
     State = prune_expired_entries(State0),
     [Module | _IdNum] = re:split(Id, "-", [{return, list}]),
-    Models = boss_files:model_list(),
-    {RetVal, State1} = case lists:member(Module, Models) of
-        false ->
-            {{error, model_not_found}, State};
-        true ->
-            IdWatchers = case dict:find(Id, State#state.id_attr_watchers) of
-                {ok, Val} -> Val;
-                _ -> []
-            end,
-            WildcardWatchers = case dict:find(Module, State#state.set_attr_watchers) of
-                {ok, Val1} -> Val1;
-                _ -> []
-            end,
-            AllWatchers = IdWatchers ++ WildcardWatchers,
-            OldRecord = activate_record(Id, OldAttrs),
-            NewRecord = activate_record(Id, NewAttrs),
-            NewState = lists:foldr(fun
-                    ({Key, OldVal}, Acc0) ->
-                        KeyString = atom_to_list(Key),
-                        case NewRecord:Key() of
-                            OldVal -> Acc0;
-                            NewVal -> 
-                                lists:foldr(fun(WatchId, Acc1) ->
-                                            #watch{ watch_list = WatchList, 
-                                                callback = CallBack, 
-                                                user_info = UserInfo } = dict:fetch(WatchId, State#state.watch_dict),
-                                            lists:foldr(fun
-                                                    ({id_attr, ThisId, Attr}, Acc2) when ThisId =:= Id, Attr =:= KeyString ->
-                                                        execute_callback(CallBack, updated, {NewRecord, Key, OldVal, NewVal}, UserInfo, WatchId, Acc2);
-                                                    ({id_attr, ThisId, "*"}, Acc2) when ThisId =:= Id ->
-                                                        execute_callback(CallBack, updated, {NewRecord, Key, OldVal, NewVal}, UserInfo, WatchId, Acc2);
-                                                    ({set_attr, ThisModule, Attr}, Acc2) when ThisModule =:= Module, Attr =:= KeyString ->
-                                                        execute_callback(CallBack, updated, {NewRecord, Key, OldVal, NewVal}, UserInfo, WatchId, Acc2);
-                                                    ({set_attr, ThisModule, "*"}, Acc2) when ThisModule =:= Module ->
-                                                        execute_callback(CallBack, updated, {NewRecord, Key, OldVal, NewVal}, UserInfo, WatchId, Acc2);
-                                                    (_, Acc2) -> Acc2
-                                                end, Acc1, WatchList)
-                                    end, Acc0, AllWatchers)
-                        end
-                end, State, OldRecord:attributes()),
-            {ok, NewState}
+    IdWatchers = case dict:find(Id, State#state.id_attr_watchers) of
+        {ok, Val} -> Val;
+        _ -> []
     end,
-    {reply, RetVal, State1}.
+    WildcardWatchers = case dict:find(Module, State#state.set_attr_watchers) of
+        {ok, Val1} -> Val1;
+        _ -> []
+    end,
+    AllWatchers = IdWatchers ++ WildcardWatchers,
+    OldRecord = activate_record(Id, OldAttrs),
+    NewRecord = activate_record(Id, NewAttrs),
+    NewState = lists:foldr(fun
+            ({Key, OldVal}, Acc0) ->
+                KeyString = atom_to_list(Key),
+                case NewRecord:Key() of
+                    OldVal -> Acc0;
+                    NewVal -> 
+                        lists:foldr(fun(WatchId, Acc1) ->
+                                    #watch{ watch_list = WatchList, 
+                                        callback = CallBack, 
+                                        user_info = UserInfo } = dict:fetch(WatchId, State#state.watch_dict),
+                                    lists:foldr(fun
+                                            ({id_attr, ThisId, Attr}, Acc2) when ThisId =:= Id, Attr =:= KeyString ->
+                                                execute_callback(CallBack, updated, {NewRecord, Key, OldVal, NewVal}, UserInfo, WatchId, Acc2);
+                                            ({id_attr, ThisId, "*"}, Acc2) when ThisId =:= Id ->
+                                                execute_callback(CallBack, updated, {NewRecord, Key, OldVal, NewVal}, UserInfo, WatchId, Acc2);
+                                            ({set_attr, ThisModule, Attr}, Acc2) when ThisModule =:= Module, Attr =:= KeyString ->
+                                                execute_callback(CallBack, updated, {NewRecord, Key, OldVal, NewVal}, UserInfo, WatchId, Acc2);
+                                            ({set_attr, ThisModule, "*"}, Acc2) when ThisModule =:= Module ->
+                                                execute_callback(CallBack, updated, {NewRecord, Key, OldVal, NewVal}, UserInfo, WatchId, Acc2);
+                                            (_, Acc2) -> Acc2
+                                        end, Acc1, WatchList)
+                            end, Acc0, AllWatchers)
+                end
+        end, State, OldRecord:attributes()),
+    {reply, ok, NewState}.
 
 handle_cast(_Request, State) ->
     {noreply, State}.
@@ -272,7 +237,7 @@ future_time(TTL) ->
 activate_record(Id, Attrs) ->
     [Module | _IdNum] = re:split(Id, "-", [{return, list}]),
     Type = list_to_atom(Module),
-    DummyRecord = apply(Type, new, lists:seq(1, proplists:get_value(new, Type:module_info(exports)))),
+    DummyRecord = boss_record_lib:dummy_record(Type),
     apply(Type, new, lists:map(fun
                 (id) -> Id;
                 (Key) -> proplists:get_value(Key, Attrs)
