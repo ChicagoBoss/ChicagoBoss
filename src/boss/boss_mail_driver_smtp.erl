@@ -2,15 +2,21 @@
 -export([start/0, stop/1, deliver/4]).
 
 start() ->
-    OptionsBase = [{auth, never}, {tls, if_available},
+    OptionsBase = [{tls, if_available},
         {ssl, false}, {hostname, smtp_util:guess_FQDN()}, {retries, 1}],
-    Options = case application:get_env(mail_relay) of
+    Options = case application:get_env(mail_relay_host) of
         {ok, Relay} ->
             [{relay, Relay} | OptionsBase];
         undefined ->
             OptionsBase
     end,
-    {ok, Options}.
+    Options1 = case application:get_env(mail_relay_username) of
+        {ok, UserName} ->
+            [{auth, always}, {username, UserName}, {password, boss_env:get_env(mail_relay_password, "")}|Options];
+        _ ->
+            [{auth, never}, Options]
+    end,
+    {ok, Options1}.
 
 stop(_) ->
     ok.
