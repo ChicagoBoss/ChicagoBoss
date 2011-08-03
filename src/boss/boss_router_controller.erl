@@ -49,6 +49,8 @@ handle_call({handle, StatusCode}, _From, State) ->
             {ok, {C, A, Tokens}}
     end,
     {reply, Result, State};
+handle_call({route, ""}, From, State) ->
+    handle_call({route, "/"}, From, State);
 handle_call({route, Url}, _From, State) ->
     Route = case ets:lookup(State#state.routes_table_id, Url) of
         [] -> 

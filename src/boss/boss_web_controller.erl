@@ -109,8 +109,8 @@ handle_info(timeout, State) ->
     Applications = boss_env:get_env(applications, []),
     AppInfoList = lists:map(fun
             (AppName) ->
-                BaseURL = boss_env:get_env(AppName, base_url, "/"),
                 application:start(AppName),
+                BaseURL = boss_env:get_env(AppName, base_url, "/"),
                 ModelList = boss_files:model_list(AppName),
                 ControllerList = boss_files:web_controller_list(AppName),
                 {ok, RouterSupPid} = boss_router:start([{application, AppName},
@@ -198,27 +198,21 @@ code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 find_application_for_path(Path, Applications) ->
-    find_application_for_path(Path, undefined, Applications).
+    find_application_for_path(Path, undefined, Applications, -1).
 
-find_application_for_path(_Path, Default, []) ->
+find_application_for_path(_Path, Default, [], LongestMatch) ->
     Default;
-find_application_for_path(Path, Default, [App|Rest]) ->
+find_application_for_path(Path, Default, [App|Rest], LongestMatch) ->
     BaseURL = boss_web:base_url(App),
-    NewDefault = case BaseURL =:= "" of
+    case length(BaseURL) > LongestMatch of
         true ->
-            case Default of
-                undefined ->
-                    App;
-                _ ->
-                    Default
+            case lists:prefix(BaseURL, Path) of
+                true -> find_application_for_path(Path, App, Rest, length(BaseURL));
+                false -> find_application_for_path(Path, Default, Rest, LongestMatch)
             end;
         false ->
-            case lists:prefix(BaseURL, Path) of
-                true -> App;
-                false -> Default
-            end
-    end,
-    find_application_for_path(Path, NewDefault, Rest).
+            find_application_for_path(Path, Default, Rest, LongestMatch)
+    end.
 
 init_watches(AppName) ->
     lists:foldr(fun(File, Acc) ->
@@ -263,8 +257,8 @@ handle_request(Req, RequestMod, ResponseMod) ->
                     {StatusCode, Headers, Payload} = process_request(
                         AppInfo#boss_app_info{ translator_pid = TranslatorPid, router_pid = RouterPid }, 
                         Request, Mode, Url, SessionID),
-                    ErrorFormat = "~s ~s ~p~n", 
-                    ErrorArgs = [Request:request_method(), Request:path(), StatusCode],
+                    ErrorFormat = "~s ~s [~p] ~p~n", 
+                    ErrorArgs = [Request:request_method(), Request:path(), App, StatusCode],
                     case StatusCode of
                         500 -> error_logger:error_msg(ErrorFormat, ErrorArgs);
                         404 -> error_logger:warning_msg(ErrorFormat, ErrorArgs);
@@ -335,7 +329,7 @@ process_result(_, {ok, Payload, Headers}) ->
 
 load_and_execute(production, {Controller, _, _} = Location, AppInfo, Req, SessionID) ->
     case lists:member(boss_files:web_controller(AppInfo#boss_app_info.application, Controller), 
-            lists:map(fun atom_to_list/1, AppInfo#boss_app_info.controller_modules)) of
+            AppInfo#boss_app_info.controller_modules) of
         true -> execute_action(Location, AppInfo, Req, SessionID);
         false -> render_view(Location, AppInfo, Req)
     end;
