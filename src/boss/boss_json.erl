@@ -1,11 +1,16 @@
 -module(boss_json).
 -export([encode/2]).
 
-encode(Data, ModelList) ->
-    mochijson2:encode({struct, json_data1(Data, ModelList, [])}).
+encode([First|_] = Data, ModelList) ->
+    case boss_record_list:is_boss_record(First, ModelList) of
+        true ->
+            mochijson2:encode(lists:map(fun boss_record_to_json/1, Data));
+        false ->
+            mochijson2:encode(json_data1(Data, ModelList, []))
+    end.
 
 json_data1([], _, Acc) ->
-    lists:reverse(Acc);
+    {struct, lists:reverse(Acc)};
 json_data1([{VariableName, [First|_] = Variable}|Rest], ModelList, Acc) when is_integer(First) ->
     json_data1(Rest, ModelList, [{VariableName, list_to_binary(Variable)}|Acc]);
 json_data1([{VariableName, [First|_] = Variable}|Rest], ModelList, Acc) when is_tuple(First) ->
@@ -13,11 +18,11 @@ json_data1([{VariableName, [First|_] = Variable}|Rest], ModelList, Acc) when is_
         true ->
             json_data1(Rest, ModelList, [{VariableName, lists:map(fun boss_record_to_json/1, Variable)}|Acc]);
         false ->
-            json_data1(Rest, ModelList, [{VariableName, {struct, json_data1(Variable, ModelList, [])}}|Acc])
+            json_data1(Rest, ModelList, [{VariableName, json_data1(Variable, ModelList, [])}|Acc])
     end;
 json_data1([{VariableName, [First|_] = Variable}|Rest], ModelList, Acc) when is_list(First) ->
     json_data1(Rest, ModelList, [{VariableName, lists:map(fun(Item) -> 
-                            {struct, json_data1(Item, ModelList, [])} 
+                            json_data1(Item, ModelList, [])
                     end, Variable)}|Acc]);
 json_data1([{VariableName, {A, B, C} = Val}|Rest], ModelList, Acc) when is_integer(A), is_integer(B), is_integer(C) ->
     json_data1(Rest, ModelList, [{VariableName, list_to_binary(erlydtl_filters:date(calendar:now_to_datetime(Val), "F d, Y H:i:s"))}|Acc]);

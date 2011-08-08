@@ -2,7 +2,7 @@
 -author('emmiller@gmail.com').
 -define(DATABASE_MODULE, boss_db).
 
--export([compile/1, compile/2, edoc_module/1, edoc_module/2]).
+-export([compile/1, compile/2, edoc_module/1, edoc_module/2, trick_out_forms/1]).
 
 %% @spec compile( File::string() ) -> {ok, Module} | {error, Reason}
 %% @equiv compile(File, [])
