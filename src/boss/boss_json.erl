@@ -2,7 +2,7 @@
 -export([encode/2]).
 
 encode([First|_] = Data, ModelList) ->
-    case boss_record_list:is_boss_record(First, ModelList) of
+    case boss_record_lib:is_boss_record(First, ModelList) of
         true ->
             mochijson2:encode(lists:map(fun boss_record_to_json/1, Data));
         false ->
