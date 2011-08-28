@@ -316,7 +316,11 @@ process_result(_, {error, Payload}) ->
     {500, [{"Content-Type", "text/html"}], "Error: <pre>" ++ io_lib:print(Payload) ++ "</pre>"};
 process_result(_, {not_found, Payload}) ->
     {404, [{"Content-Type", "text/html"}], Payload};
+process_result(AppInfo, {redirect, Where}) ->
+	process_result(AppInfo, {redirect, Where, []});
 process_result(AppInfo, {redirect, "http://"++Where, Headers}) ->
+    process_result(AppInfo, {redirect, "/"++string:join(tl(string:tokens(Where, "/")), "/"), Headers});
+process_result(AppInfo, {redirect, "https://"++Where, Headers}) ->
     process_result(AppInfo, {redirect, "/"++string:join(tl(string:tokens(Where, "/")), "/"), Headers});
 process_result(AppInfo, {redirect, {Controller, Action, Params}, Headers}) ->
     URL = boss_router:unroute(AppInfo#boss_app_info.router_pid, Controller, Action, Params),
