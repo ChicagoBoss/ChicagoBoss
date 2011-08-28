@@ -200,7 +200,7 @@ code_change(_OldVsn, State, _Extra) ->
 find_application_for_path(Path, Applications) ->
     find_application_for_path(Path, undefined, Applications, -1).
 
-find_application_for_path(_Path, Default, [], LongestMatch) ->
+find_application_for_path(_Path, Default, [], _LongestMatch) ->
     Default;
 find_application_for_path(Path, Default, [App|Rest], LongestMatch) ->
     BaseURL = boss_web:base_url(App),
@@ -335,7 +335,7 @@ load_and_execute(production, {Controller, _, _} = Location, AppInfo, Req, Sessio
     case lists:member(boss_files:web_controller(AppInfo#boss_app_info.application, Controller), 
             AppInfo#boss_app_info.controller_modules) of
         true -> execute_action(Location, AppInfo, Req, SessionID);
-        false -> render_view(Location, AppInfo, Req)
+        false -> render_view(Location, AppInfo, Req, SessionID)
     end;
 
 load_and_execute(development, {"doc", ModelName, _}, AppInfo, Req, _SessionID) ->
@@ -370,7 +370,7 @@ load_and_execute(development, {Controller, _, _} = Location, AppInfo, Req, Sessi
                                             render_errors(ErrorList, AppInfo, Req)
                                     end;
                                 false ->
-                                    render_view(Location, AppInfo, Req)
+                                    render_view(Location, AppInfo, Req, SessionID)
                             end;
                         {error, ErrorList} when is_list(ErrorList) ->
                             render_errors(ErrorList, AppInfo, Req)
@@ -440,9 +440,9 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
                     end,
                     Result = case ActionResult of
                         undefined ->
-                            render_view(Location, AppInfo, Req, [{"_before", Info}]);
+                            render_view(Location, AppInfo, Req, SessionID, [{"_before", Info}]);
                         ActionResult ->
-                            process_action_result({Location, Req, [Location|LocationTrail]}, 
+                            process_action_result({Location, Req, SessionID, [Location|LocationTrail]}, 
                                 ActionResult, AppInfo, Info)
                     end,
                     case proplists:get_value("after_", ExportStrings) of
@@ -462,8 +462,8 @@ process_action_result(Info, ok, AppInfo, AuthInfo) ->
     process_action_result(Info, {ok, []}, AppInfo, AuthInfo);
 process_action_result(Info, {ok, Data}, AppInfo, AuthInfo) ->
     process_action_result(Info, {ok, Data, []}, AppInfo, AuthInfo);
-process_action_result({Location, Req, _}, {ok, Data, Headers}, AppInfo, AuthInfo) ->
-    render_view(Location, AppInfo, Req, [{"_before", AuthInfo}|Data], Headers);
+process_action_result({Location, Req, SessionID, _}, {ok, Data, Headers}, AppInfo, AuthInfo) ->
+    render_view(Location, AppInfo, Req, SessionID, [{"_before", AuthInfo}|Data], Headers);
 
 process_action_result(Info, {render_other, OtherLocation}, AppInfo, AuthInfo) ->
     process_action_result(Info, {render_other, OtherLocation, []}, AppInfo, AuthInfo);
@@ -471,19 +471,19 @@ process_action_result(Info, {render_other, OtherLocation, Data}, AppInfo, AuthIn
     process_action_result(Info, {render_other, OtherLocation, Data, []}, AppInfo, AuthInfo);
 process_action_result(Info, {render_other, {Controller, Action}, Data, Headers}, AppInfo, AuthInfo) ->
     process_action_result(Info, {render_other, {Controller, Action, []}, Data, Headers}, AppInfo, AuthInfo);
-process_action_result({_, Req, _}, {render_other, {_, _, _} = OtherLocation, Data, Headers}, AppInfo, AuthInfo) ->
-    render_view(OtherLocation, AppInfo, Req, [{"_before", AuthInfo}|Data], Headers);
+process_action_result({_, Req, SessionID, _}, {render_other, {_, _, _} = OtherLocation, Data, Headers}, AppInfo, AuthInfo) ->
+    render_view(OtherLocation, AppInfo, Req, SessionID, [{"_before", AuthInfo}|Data], Headers);
 
-process_action_result({_, Req, LocationTrail}, {action_other, OtherLocation}, AppInfo, _) ->
-    execute_action(OtherLocation, AppInfo, Req, LocationTrail);
+process_action_result({_, Req, SessionID, LocationTrail}, {action_other, OtherLocation}, AppInfo, _) ->
+    execute_action(OtherLocation, AppInfo, Req, SessionID, LocationTrail);
 
-process_action_result({_, Req, LocationTrail}, not_found, AppInfo, _) ->
+process_action_result({_, Req, SessionID, LocationTrail}, not_found, AppInfo, _) ->
     NotFoundLocation = boss_router:handle(AppInfo#boss_app_info.router_pid, 404),
-    execute_action(NotFoundLocation, AppInfo, Req, LocationTrail);
+    execute_action(NotFoundLocation, AppInfo, Req, SessionID, LocationTrail);
 
 process_action_result(Info, {redirect, Where}, AppInfo, AuthInfo) ->
     process_action_result(Info, {redirect, Where, []}, AppInfo, AuthInfo);
-process_action_result({{Controller, _, _}, _, _}, {redirect, [{_, _}|_] = Where, _}, _, _) ->
+process_action_result({{Controller, _, _}, _, _, _}, {redirect, [{_, _}|_] = Where, _}, _, _) ->
     TheController = proplists:get_value(controller, Where, Controller),
     TheAction = proplists:get_value(action, Where),
     CleanParams = proplists:delete(controller, proplists:delete(action, Where)),
@@ -504,16 +504,16 @@ process_action_result(_, {output, Payload, Headers}, _, _) ->
 process_action_result(_, Else, _, _) ->
     Else.
 
-render_view(Location, AppInfo, Req) ->
-    render_view(Location, AppInfo, Req, []).
+render_view(Location, AppInfo, Req, SessionID) ->
+    render_view(Location, AppInfo, Req, SessionID, []).
 
-render_view(Location, AppInfo, Req, Variables) ->
-    render_view(Location, AppInfo, Req, Variables, []).
+render_view(Location, AppInfo, Req, SessionID, Variables) ->
+    render_view(Location, AppInfo, Req, SessionID, Variables, []).
 
-render_view({Controller, Template, _}, AppInfo, Req, Variables, Headers) ->
+render_view({Controller, Template, _}, AppInfo, Req, SessionID, Variables, Headers) ->
     ViewPath = boss_files:web_view_path(Controller, Template),
     LoadResult = boss_load:load_view_if_dev(AppInfo#boss_app_info.application, ViewPath, AppInfo#boss_app_info.translator_pid),
-    BossFlash = boss_flash:get_and_clear(Req),
+    BossFlash = boss_flash:get_and_clear(SessionID),
     case LoadResult of
         {ok, Module} ->
             {Lang, TranslationFun} = choose_translation_fun(AppInfo#boss_app_info.translator_pid, 
