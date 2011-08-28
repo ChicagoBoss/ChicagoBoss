@@ -236,6 +236,9 @@ handle_request(Req, RequestMod, ResponseMod) ->
             DocRoot = boss_files:static_path(App),
             Url = lists:nthtail(length(BaseURL), FullUrl),
             case Url of
+                "/favicon.ico" = File ->
+                    Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
+                    (Response:file(File)):build_response();
                 "/static/"++File -> 
                     Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
                     (Response:file([$/|File])):build_response();
