@@ -257,11 +257,11 @@ handle_request(Req, RequestMod, ResponseMod) ->
                     AppInfo = boss_web:application_info(App),
                     TranslatorPid = boss_web:translator_pid(App),
                     RouterPid = boss_web:router_pid(App),
-                    {StatusCode, Headers, Payload} = process_request(
+                    {Time, {StatusCode, Headers, Payload}} = timer:tc(?MODULE, process_request, [
                         AppInfo#boss_app_info{ translator_pid = TranslatorPid, router_pid = RouterPid }, 
-                        Request, Mode, Url, SessionID),
-                    ErrorFormat = "~s ~s [~p] ~p~n", 
-                    ErrorArgs = [Request:request_method(), Request:path(), App, StatusCode],
+                        Request, Mode, Url, SessionID]),
+                    ErrorFormat = "~s ~s [~p] ~p ~pms~n", 
+                    ErrorArgs = [Request:request_method(), Request:path(), App, StatusCode, Time div 1000],
                     case StatusCode of
                         500 -> error_logger:error_msg(ErrorFormat, ErrorArgs);
                         404 -> error_logger:warning_msg(ErrorFormat, ErrorArgs);
