@@ -22,6 +22,9 @@ Then visit http://localhost:8001/ in your browser. Congratulations, you have
 a web server. There will be a lot of PROGRESS REPORTs on your console but
 everything should be running smoothly.
 
+The project name should be a legal Erlang atom, i.e. start with a lowercase
+letter and contain only letters, digits, and underscores.
+
 
 Dependencies
 ------------
