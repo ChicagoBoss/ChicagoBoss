@@ -39,6 +39,16 @@
         <li><code>mochiweb</code> - The <a href="http://code.google.com/p/mochiweb/">Mochiweb</a> Web Server</li>
         <li><code>misultin</code> - The <a href="http://code.google.com/p/misultin/">Misultin</a> Web Server</li>
     </ul>
+    <li><code>servers</code> - A list of proplists with per-listener configuration. This override the defaults and above options, and have to contain folowing parameters:
+    <ul>
+        <li><code>server</code>The HTTP server to use. Valid values same as above</li>
+        <li><code>name</code>Name of server process, arbitrary atom can be set.</li>
+        <li><code>ip</code>IP address for HTTP server to bind to, use 0.0.0.0 to bind to all</li>
+        <li><code>port</code>The port to run the HTTP server on.</li>
+        <li><code>ssl_enable</code> - Enable HTTP over SSL for given server</li>
+        <li><code>ssl_options</code> - SSL options for this server; see <a href="http://www.erlang.org/doc/man/ssl.html">ssl(3erl)</a></li>
+    </ul>There are no defaults for those parameters.</li>
+
     <li><code>base_url</code>Sets the base_url passed to the views (for deployments on suburl's)</li>
     <li><code>session_adapter</code> Selects the session driver to use. Valid values:</li>
     <ul>
