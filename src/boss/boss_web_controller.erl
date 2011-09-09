@@ -83,28 +83,41 @@ init(Config) ->
             error_logger:info_msg("Pinging master node ~p from ~p~n", [MasterNode, ThisNode]),
             pong = net_adm:ping(MasterNode)
     end,
-	
+
     MailDriver = boss_env:get_env(mail_driver, boss_mail_driver_smtp),
     boss_mail:start([{driver, MailDriver}]),
 
-    {ServerMod, RequestMod, ResponseMod} = case boss_env:get_env(server, misultin) of
-        mochiweb -> {mochiweb_http, mochiweb_request_bridge, mochiweb_response_bridge};
-        misultin -> {misultin, misultin_request_bridge, misultin_response_bridge}
+    ServList=boss_env:get_env(servers, [
+        [{server, boss_env:get_env(server, misultin)}, {ip, proplists:get_value(ip, Config)}, {port, proplists:get_value(port, Config)},
+        {ssl_enable,boss_env:get_env(ssl_enable, false)}, {ssl_options,boss_env:get_env(ssl_options, [])}]]),
+    error_logger:info_msg("Configured Servers: ~p~n", [ServList]),
+    StartServFun =fun (ServerParams) ->
+        {ServerMod, RequestMod, ResponseMod} = case proplists:get_value(server, ServerParams) of
+            mochiweb -> {mochiweb_http, mochiweb_request_bridge, mochiweb_response_bridge};
+            misultin -> {misultin, misultin_request_bridge, misultin_response_bridge}
+        end,
+        Ip=proplists:get_value(ip, ServerParams),
+        Port=proplists:get_value(port, ServerParams),
+        Name=proplists:get_value(name, ServerParams),
+        SSLEnable = proplists:get_value(ssl_enable, ServerParams),
+        SSLOptions = proplists:get_value(ssl_options, ServerParams),
+        ServerConfig = [{loop, fun(Req) -> 
+                        ?MODULE:handle_request(Req, RequestMod, ResponseMod)
+                    end} | [{ip,Ip},{port,Port},{name, Name}]],
+        error_logger:info_msg("Starting server:~p ~p on ~p:~p ssl:~p ssl_opts:~p~n", [Name,ServerMod,Ip,Port,SSLEnable,SSLOptions]),
+        Pid = case ServerMod of
+            mochiweb_http -> mochiweb_http:start([{ssl, SSLEnable}, {ssl_opts, SSLOptions} | ServerConfig]);
+            misultin -> 
+                case SSLEnable of
+                    true -> misultin:start_link([{ssl, SSLOptions} | ServerConfig]);
+                    false -> misultin:start_link(ServerConfig)
+                end
+            end,
+        error_logger:info_msg("Started server:~p on ~p:~p ssl:~p ssl_opts:~p  pid:~p~n", [ServerMod,Ip,Port,SSLEnable,SSLOptions,Pid]),
+        Pid
     end,
-    SSLEnable = boss_env:get_env(ssl_enable, false),
-    SSLOptions = boss_env:get_env(ssl_options, []),
-    ServerConfig = [{loop, fun(Req) -> 
-                    ?MODULE:handle_request(Req, RequestMod, ResponseMod)
-            end} | Config],
-    Pid = case ServerMod of
-        mochiweb_http -> mochiweb_http:start([{ssl, SSLEnable}, {ssl_opts, SSLOptions} | ServerConfig]);
-        misultin -> 
-            case SSLEnable of
-                true -> misultin:start_link([{ssl, SSLOptions} | ServerConfig]);
-                false -> misultin:start_link(ServerConfig)
-            end
-    end,
-    {ok, #state{ http_pid = Pid, is_master_node = (ThisNode =:= MasterNode) }, 0}.
+    Pids=lists:map(StartServFun,ServList),
+    {ok, #state{ http_pid = Pids, is_master_node = (ThisNode =:= MasterNode) }, 0}.
 
 handle_info(timeout, State) ->
     Applications = boss_env:get_env(applications, []),
