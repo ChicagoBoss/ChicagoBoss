@@ -14,7 +14,7 @@ start() ->
         {ok, UserName} ->
             [{auth, always}, {username, UserName}, {password, boss_env:get_env(mail_relay_password, "")}|Options];
         _ ->
-            [{auth, never}, Options]
+            [{auth, never} | Options]
     end,
     {ok, Options1}.
 
