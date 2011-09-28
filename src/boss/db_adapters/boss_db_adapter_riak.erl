@@ -76,7 +76,7 @@ find(_, Type, Conditions, Max, Skip, Sort, SortOrder) ->
 
 % this is a stub just to make the tests runable
 count(Conn, Type, Conditions) ->
-    length(find(Conn, Type, Conditions, 0, 0, 0, 0)).
+    length(find(Conn, Type, Conditions, all, 0, 0, 0)).
 
 counter(_Conn, _Id) ->
     {error, notimplemented}.
