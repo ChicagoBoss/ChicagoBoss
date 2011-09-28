@@ -86,13 +86,12 @@ handle_call({unroute, Controller, Action, Params}, _From, State) ->
         undefined ->
             ControllerModule = list_to_atom(boss_files:web_controller(State#state.application, Controller)),
             {Tokens, Variables1} = convert_params_to_tokens(Params, ControllerModule, list_to_atom(Action)),
-            BaseURL = boss_web:base_url(State#state.application),
 
             URL = case Tokens of
                 [] ->
-                    lists:concat([BaseURL, "/", Controller, "/", Action]);
+                    lists:concat(["/", Controller, "/", Action]);
                 _ ->
-                    lists:concat([BaseURL, "/", Controller, "/", Action |
+                    lists:concat(["/", Controller, "/", Action |
                             lists:foldr(fun(T, Acc) -> ["/", T | Acc] end, [], Tokens)])
             end,
             QueryString = mochiweb_util:urlencode(Variables1),

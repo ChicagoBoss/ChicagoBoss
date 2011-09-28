@@ -24,4 +24,5 @@ url(Variables, Options) ->
         end, [], CleanVars),
 
     RouterPid = boss_web:router_pid(list_to_atom(lists:concat([App]))),
-    boss_router:unroute(RouterPid, Controller, Action, NoUndefinedVars).
+    BaseURL = boss_web:base_url(list_to_atom(lists:concat([App]))),
+    BaseURL ++ boss_router:unroute(RouterPid, Controller, Action, NoUndefinedVars).
