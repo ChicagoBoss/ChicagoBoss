@@ -13,7 +13,25 @@ start() ->
 
 start(_Options) ->
 %io:format("==> Start/1 Called~n"),
+    Nodes = [node()],
+    case catch mnesia:create_schema(Nodes) of
+      {error,{_,{already_exists,_}}} -> ok;
+      ok -> ok
+    end,
     application:start(mnesia),
+    %get all applications
+    Applications = boss_env:get_env(applications, []),
+    %get all models_modules for applications
+    Models = lists:foldl(fun(App, ModelList) -> ModelList ++ boss_env:get_env(App, model_modules, []) end, [], Applications),
+    %create mnesia tables from Models
+    lists:foreach(
+        fun(Model) ->
+            case catch mnesia:create_table(Model, [{type, set}, {attributes, boss_record_lib:attribute_names(Model)}, {disc_copies, Nodes}]) of
+                {atomic,ok} -> ok;
+                {aborted,{already_exists,_}} -> ok
+            end
+        end,
+    Models),
     {ok, undefined}.
 
 % -----
