@@ -42,6 +42,7 @@ terminate(_Reason, _State) ->
 init(Config) ->
     LogDir = boss_env:get_env(log_dir, "log"),
     LogFile = make_log_file_name(LogDir),
+    error_logger:logfile(close),
     ok = error_logger:logfile({open, LogFile}),
     %ok = error_logger:tty(false),
     ok = make_log_file_symlink(LogFile),
