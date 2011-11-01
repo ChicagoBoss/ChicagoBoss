@@ -20,8 +20,8 @@
 {template, "skel/Makefile", "{{dest}}/Makefile"}.
 {template, "skel/project.app.src", "{{dest}}/{{appid}}.app.src"}.
 {template, "skel/boss.config", "{{dest}}/boss.config"}.
-{file, "skel/src/mail/outgoing_mail_controller.erl", "{{dest}}/src/mail/{{appid}}_outgoing_mail_controller.erl"}.
-{file, "skel/src/mail/incoming_mail_controller.erl", "{{dest}}/src/mail/{{appid}}_incoming_mail_controller.erl"}.
+{template, "skel/src/mail/outgoing_mail_controller.erl", "{{dest}}/src/mail/{{appid}}_outgoing_mail_controller.erl"}.
+{template, "skel/src/mail/incoming_mail_controller.erl", "{{dest}}/src/mail/{{appid}}_incoming_mail_controller.erl"}.
 {file, "skel/priv/static/chicago-boss.png", "{{dest}}/priv/static/chicago-boss.png"}.
 {file, "skel/priv/static/favicon.ico", "{{dest}}/priv/static/favicon.ico"}.
 {file, "skel/priv/boss.routes", "{{dest}}/priv/{{appid}}.routes"}.
