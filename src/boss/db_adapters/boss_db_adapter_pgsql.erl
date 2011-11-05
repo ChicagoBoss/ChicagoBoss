@@ -26,7 +26,7 @@ find(Conn, Id) when is_list(Id) ->
         {ok, _Columns, []} ->
             undefined;
         {ok, Columns, [Record]} ->
-            case model_is_loaded(Type) of
+            case boss_record_lib:ensure_loaded(Type) of
                 true -> activate_record(Record, Columns, Type);
                 false -> {error, {module_not_loaded, Type}}
             end;
@@ -37,7 +37,7 @@ find(Conn, Id) when is_list(Id) ->
 find(Conn, Type, Conditions, Max, Skip, Sort, SortOrder) when is_atom(Type), is_list(Conditions), 
                                                               is_integer(Max), is_integer(Skip), 
                                                               is_atom(Sort), is_atom(SortOrder) ->
-    case model_is_loaded(Type) of
+    case boss_record_lib:ensure_loaded(Type) of
         true ->
             Query = build_select_query(Type, Conditions, Max, Skip, Sort, SortOrder),
             Res = pgsql:equery(Conn, Query, []),
@@ -162,17 +162,6 @@ activate_record(Record, Metadata, Type) ->
                             end
                     end
             end, boss_record_lib:attribute_names(Type))).
-
-model_is_loaded(Type) ->
-    case code:is_loaded(Type) of
-        {file, _Loaded} ->
-            Exports = Type:module_info(exports),
-            case proplists:get_value(attribute_names, Exports) of
-                1 -> true;
-                _ -> false
-            end;
-        false -> false
-    end.
 
 keyindex(Key, N, TupleList) ->
     keyindex(Key, N, TupleList, 1).

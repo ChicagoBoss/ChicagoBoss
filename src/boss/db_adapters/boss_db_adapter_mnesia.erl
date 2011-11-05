@@ -30,7 +30,7 @@ find(_, Id) when is_list(Id) ->
             undefined;
         {atomic,[Record]} ->   % I dont like this - we should really be checking that we only got 1 record
 %            io:format("Record is ~p~n",[Record]),
-            case model_is_loaded(Type) of
+            case boss_record_lib:ensure_loaded(Type) of
                 true ->
                     Record;
                 false ->
@@ -47,7 +47,7 @@ find(_, Type, Conditions, Max, Skip, Sort, SortOrder) when is_atom(Type), is_lis
 % This allows 'eq' conditions to be handled by Mnesia itself. The list of remaining
 % conditions form a 'filter' against which each record returned by Mnesia is tested here.
 % So...the first job here is to split the Conditions into a Pattern and a 'Filter'.
-    case model_is_loaded(Type) of
+    case boss_record_lib:ensure_loaded(Type) of
         true ->
             {Pattern, Filter} = build_query(Type, Conditions, Max, Skip, Sort, SortOrder),
             RawList = mnesia:dirty_match_object(list_to_tuple([Type | Pattern])),
@@ -222,18 +222,6 @@ infer_type_from_id(Id) when is_binary(Id) ->
     infer_type_from_id(binary_to_list(Id));
 infer_type_from_id(Id) when is_list(Id) ->
     list_to_atom(hd(string:tokens(Id, "-"))).
-
-% -----
-model_is_loaded(Type) ->
-    case code:is_loaded(Type) of
-        {file, _Loaded} ->
-            Exports = Type:module_info(exports),
-            case proplists:get_value(attribute_names, Exports) of
-                1 -> true;
-                _ -> false
-            end;
-        false -> false
-    end.
 
 %----- 
 build_query(Type, Conditions, _Max, _Skip, _Sort, _SortOrder) -> % a Query is a {Pattern, Filter} combo

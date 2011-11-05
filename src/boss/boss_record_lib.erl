@@ -38,3 +38,11 @@ dummy_record(Module) ->
 attribute_names(Module) ->
     DummyRecord = dummy_record(Module),
     DummyRecord:attribute_names().
+
+ensure_loaded(Module) ->
+    case code:ensure_loaded(Module) of
+        {module, Module} ->
+            Exports = Module:module_info(exports),
+            proplists:get_value(attribute_names, Exports) =:= 1;
+        _ -> false
+    end.

@@ -21,11 +21,9 @@ find(_, Id) when is_list(Id) ->
     Type = infer_type_from_id(Id),
     case medici:get(list_to_binary(Id)) of
         Record when is_list(Record) ->
-            case model_is_loaded(Type) of
-                true ->
-                    activate_record(Record, Type);
-                false ->
-                    {error, {module_not_loaded, Type}}
+            case boss_record_lib:ensure_loaded(Type) of
+                true -> activate_record(Record, Type);
+                false -> {error, {module_not_loaded, Type}}
             end;
         {error, invalid_operation} ->
             undefined;
@@ -35,7 +33,7 @@ find(_, Id) when is_list(Id) ->
 
 find(_, Type, Conditions, Max, Skip, Sort, SortOrder) when is_atom(Type), is_list(Conditions), is_integer(Max),
                                                         is_integer(Skip), is_atom(Sort), is_atom(SortOrder) ->
-    case model_is_loaded(Type) of
+    case boss_record_lib:ensure_loaded(Type) of
         true ->
             Query = build_query(Type, Conditions, Max, Skip, Sort, SortOrder),
             lists:map(fun({_Id, Record}) -> activate_record(Record, Type) end,
@@ -140,17 +138,6 @@ activate_record(Record, Type) ->
                             end
                     end
             end, boss_record_lib:attribute_names(Type))).
-
-model_is_loaded(Type) ->
-    case code:is_loaded(Type) of
-        {file, _Loaded} ->
-            Exports = Type:module_info(exports),
-            case proplists:get_value(attribute_names, Exports) of
-                1 -> true;
-                _ -> false
-            end;
-        false -> false
-    end.
 
 attribute_to_colname(Attribute) ->
     list_to_binary(atom_to_list(Attribute)).

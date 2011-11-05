@@ -54,7 +54,7 @@ find(Conn, Type, Conditions, Max, Skip, Sort, SortOrder) when is_atom(Type), is_
                                                               is_atom(Sort), is_atom(SortOrder) ->
 %    ?LOG("find Type", Type),
 %    ?LOG("find Conditions", Conditions),
-    case model_is_loaded(Type) of
+    case boss_record_lib:ensure_loaded(Type) of
         true ->
             Collection = type_to_collection(Type),
             Res = execute(Conn, fun() ->
@@ -268,17 +268,6 @@ multiple_where_clauses(Format, Key, ValueList, Operator) ->
 infer_type_from_id(Id) when is_list(Id) ->
     [Type, _BossId] = string:tokens(Id, "-"),
     {list_to_atom(Type), type_to_collection(Type), pack_id(Id)}.
-
-model_is_loaded(Type) ->
-    case code:is_loaded(Type) of
-        {file, _Loaded} ->
-            Exports = Type:module_info(exports),
-            case proplists:get_value(attribute_names, Exports) of
-                1 -> true;
-                _ -> false
-            end;
-        false -> false
-    end.
 
 is_id_attr(AttrName) ->
     lists:suffix("_id", atom_to_list(AttrName)).
