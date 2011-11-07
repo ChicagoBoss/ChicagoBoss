@@ -133,7 +133,7 @@ If you come from Rails, you'll instantly notice the benefit of Erlang's
 language design: you don't need an ugly `case request.method` statement inside
 every action, you never have atrocities like `render and return`, and you can
 always see every variable that is in scope. In CB apps, controller logic is
-alwas concise and usually a pleasure to read.
+always concise and usually a pleasure to read.
 
 *Sessions*. You can configure sessions to be stored in memory (ETS) or in an
 Mnesia database.  The `boss_session` and `boss_flash` modules provide functions
