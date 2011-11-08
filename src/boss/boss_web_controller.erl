@@ -535,9 +535,9 @@ render_view({Controller, Template, _}, AppInfo, Req, SessionID, Variables, Heade
                     Err
             end;
         {error, not_found} ->
-            {not_found, "The requested template was not found."};
-        {error, {_File, [{0, _Module, "Failed to read file"}]}} ->
-            {not_found, "The requested template was not found."};
+            {not_found, io_lib:format("The requested template (~p) was not found.", [ViewPath]) };
+        {error, {File, [{0, _Module, "Failed to read file"}]}} ->
+            {not_found, io_lib:format("The requested template (~p) was not found.", [File]) };
         {error, Error}-> 
             render_errors([Error], AppInfo, Req)
     end.
