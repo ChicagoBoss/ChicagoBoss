@@ -13,8 +13,15 @@ start(Options) ->
     DBUsername = proplists:get_value(db_username, Options, "guest"),
     DBPassword = proplists:get_value(db_password, Options, ""),
     DBDatabase = proplists:get_value(db_database, Options, "test"),
-    mysql:start(boss_pool, DBHost, DBPort, DBUsername, DBPassword, DBDatabase, fun(_, _, _, _) -> ok end, utf8),
-    {ok, boss_pool}.
+    DBIdentifier = proplists:get_value(db_shard_id, Options, boss_pool),
+    Result = mysql:start(DBIdentifier, DBHost, DBPort, DBUsername, DBPassword, DBDatabase, fun(_, _, _, _) -> ok end, utf8),
+    case Result of
+        {error, {already_started,_}} ->
+            mysql:connect(DBIdentifier, DBHost, DBPort, DBUsername, DBPassword, DBDatabase, utf8, true, false);
+        _ ->
+            ok
+    end,
+    {ok, DBIdentifier}.
 
 stop(_Pid) -> ok.
 
