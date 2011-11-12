@@ -44,7 +44,7 @@ init(Options) ->
                         {[{ShardAdapter, ShardConn}|ShardAcc], NewDict}
                 end
         end, {[], dict:new()}, proplists:get_value(shards, Options, [])),
-    {ok, #state{adapter = Adapter, connection = Conn, shards = Shards, model_dict = ModelDict,
+    {ok, #state{adapter = Adapter, connection = Conn, shards = lists:reverse(Shards), model_dict = ModelDict,
         cache_enable = CacheEnable, cache_ttl = CacheTTL, cache_prefix = db }}.
 
 handle_call({find, Key}, From, #state{ cache_enable = true, cache_prefix = Prefix } = State) ->
