@@ -181,6 +181,8 @@ build_search_query(Conditions) ->
     Terms = build_search_query(Conditions, []),
     string:join(Terms, " AND ").
 
+build_search_query([], Acc) ->
+    lists:reverse(Acc);
 build_search_query([{Key, 'equals', Value}|Rest], Acc) ->
     build_search_query(Rest, [lists:concat([Key, ":", quote_value(Value)])|Acc]);
 build_search_query([{Key, 'not_equals', Value}|Rest], Acc) ->
