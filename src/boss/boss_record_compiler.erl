@@ -26,12 +26,15 @@ edoc_module(File, Options) ->
     edoc_extract:source(trick_out_forms(Forms), edoc:read_comments(File), 
         File, edoc_lib:get_doc_env([]), Options).
 
+trick_out_forms(Forms) ->
+    trick_out_forms(Forms, []).
+
 trick_out_forms([
         {attribute, _, module, {ModuleName, Parameters}}
-        | _T] = Forms) ->
-    trick_out_forms(Forms, ModuleName, Parameters);
-trick_out_forms([_|T]) ->
-    trick_out_forms(T).
+        | _T] = Forms, LeadingForms) ->
+    trick_out_forms(lists:reverse(LeadingForms, Forms), ModuleName, Parameters);
+trick_out_forms([H|T], LeadingForms) ->
+    trick_out_forms(T, [H|LeadingForms]).
 
 trick_out_forms(Forms, ModuleName, Parameters) ->
     Attributes = proplists:get_value(attributes, erl_syntax_lib:analyze_forms(Forms)),
