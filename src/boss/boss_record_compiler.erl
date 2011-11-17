@@ -30,7 +30,7 @@ trick_out_forms([
         {attribute, _, module, {ModuleName, Parameters}}
         | _T] = Forms) ->
     trick_out_forms(Forms, ModuleName, Parameters);
-trick_out_forms([H|T]) ->
+trick_out_forms([_|T]) ->
     trick_out_forms(T).
 
 trick_out_forms(Forms, ModuleName, Parameters) ->
