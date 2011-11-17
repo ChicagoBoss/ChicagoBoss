@@ -45,7 +45,7 @@ handle_call({handle, StatusCode}, _From, State) ->
             not_found;
         [#boss_handler{ controller = C, action = A, params = P }] ->
             ControllerModule = list_to_atom(boss_files:web_controller(State#state.application, C)),
-            {Tokens, []} = convert_params_to_tokens(P, ControllerModule, list_to_atom(A)),
+            {[], Tokens} = convert_params_to_tokens(P, ControllerModule, list_to_atom(A)),
             {ok, {C, A, Tokens}}
     end,
     {reply, Result, State};
@@ -54,11 +54,21 @@ handle_call({route, ""}, From, State) ->
 handle_call({route, Url}, _From, State) ->
     Route = case ets:lookup(State#state.routes_table_id, Url) of
         [] -> 
-            case string:tokens(Url, "/") of
+			case string:tokens(Url, "/") of
                 [Controller] -> 
-                    {ok, {Controller, default_action(State, Controller), []}};
+					case is_controller(State, Controller) of
+						true -> 
+							{ok, {Controller, default_action(State, Controller), []}};
+						false -> 
+							not_found
+					end;
                 [Controller, Action|Params] ->
-                    {ok, {Controller, Action, Params}};
+					case is_controller(State, Controller) of
+						true -> 
+							{ok, {Controller, Action, Params}};
+						false -> 
+							not_found
+					end;
                 _ ->
                     not_found
             end;
