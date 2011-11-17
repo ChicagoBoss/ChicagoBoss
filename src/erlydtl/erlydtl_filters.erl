@@ -302,7 +302,9 @@ round(Number, Precision) ->
 force_escape(Input) when is_list(Input) ->
     escape(Input, []);
 force_escape(Input) when is_binary(Input) ->
-    escape(Input, 0).
+    escape(Input, 0);
+force_escape(Input) ->
+    Input.
 
 format_integer(Input) when is_integer(Input) ->
     integer_to_list(Input);

@@ -27,10 +27,11 @@ edoc_module(File, Options) ->
         File, edoc_lib:get_doc_env([]), Options).
 
 trick_out_forms([
-        {attribute, _, file, {_FileName, _FileNum}},
         {attribute, _, module, {ModuleName, Parameters}}
         | _T] = Forms) ->
-    trick_out_forms(Forms, ModuleName, Parameters).
+    trick_out_forms(Forms, ModuleName, Parameters);
+trick_out_forms([H|T]) ->
+    trick_out_forms(T).
 
 trick_out_forms(Forms, ModuleName, Parameters) ->
     Attributes = proplists:get_value(attributes, erl_syntax_lib:analyze_forms(Forms)),
