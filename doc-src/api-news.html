@@ -38,11 +38,13 @@
 {% endif %}
 {% endfor %}
 
-<h3>The <code>news.erl</code> startup script</h3>
-<p>Listeners should be set up in the <code>init/news.erl</code> file in your project directory. The module should have one exported function, <code>init/0</code>, which is executed at server startup. This function is a convenient place to set up listeners before any web requests are received, but listeners can be set up anywhere in the application.</p>
+<h3>The <code>*_news.erl</code> startup script</h3>
+<p>Listeners should be set up in the <code>priv/init/&lt;appname&gt;_news.erl</code> file in your project directory. The module should have one exported function, <code>init/0</code>, which is executed at server startup. This function is a convenient place to set up listeners before any web requests are received, but listeners can be set up anywhere in the application.</p>
+
+<p>The script's <code>init/0</code> function must return <code>{ok, ListOfWatchIDs}</code>. If the script is reloaded during the lifetime of the application (for example, via the admin application), then this list of watches will be cancelled before the script is executed again.</p>
 
 <h3>HTTP API for supporting other frameworks</h3>
-<p>Other applications can post data update notifications to a Chicago Boss server via a simple HTTP API:</p>
+<p>If the admin application is installed, other applications can post data update notifications to a Chicago Boss server via a simple HTTP API:</p>
 <div class="code">
     POST /admin/news_api/created/&lt;record-id&gt;<br />
     POST /admin/news_api/updated/&lt;record-id&gt;<br />
