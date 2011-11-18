@@ -56,19 +56,15 @@ handle_call({route, Url}, _From, State) ->
         [] -> 
 			case string:tokens(Url, "/") of
                 [Controller] -> 
-					case is_controller(State, Controller) of
-						true -> 
-							{ok, {Controller, default_action(State, Controller), []}};
-						false -> 
-							not_found
-					end;
+                    case is_controller(State, Controller) of
+                        true -> {ok, {Controller, default_action(State, Controller), []}};
+                        false -> not_found
+                    end;
                 [Controller, Action|Params] ->
-					case is_controller(State, Controller) of
-						true -> 
-							{ok, {Controller, Action, Params}};
-						false -> 
-							not_found
-					end;
+                    case is_controller(State, Controller) of
+                        true -> {ok, {Controller, Action, Params}};
+                        false -> not_found
+                    end;
                 _ ->
                     not_found
             end;
