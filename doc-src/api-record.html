@@ -112,6 +112,12 @@ BossRecords are <em>specially compiled parameterized modules</em> that follow th
     <li><code>before_delete()</code> - executed just before a BossRecord is removed from the database.</li>
 </ul>
 
-<p>Return values are ignored.</p>
+<p><code>before_create/0</code> and <code>before_update/0</code> should return one of:</p>
+<ul>
+    <li><code>ok</code> - Continue with the save</li>
+    <li><code>{ok, ModifiedRecord}</code> - Save <code>ModifiedRecord</code> instead</li>
+    <li><code>{error, Reason}</code> - Abort the save</li>
+</ul>
+<p>Return values for the other hook functions are ignored.</p>
 
 {% endblock %}
