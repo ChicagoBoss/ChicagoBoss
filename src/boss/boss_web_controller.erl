@@ -117,6 +117,10 @@ handle_info(timeout, State) ->
                 {ok, RouterSupPid} = boss_router:start([{application, AppName},
                         {controllers, ControllerList}]),
                 {ok, TranslatorSupPid} = boss_translator:start([{application, AppName}]),
+                case boss_env:is_developing_app(AppName) of
+                    true -> boss_load:load_all_modules(AppName, TranslatorSupPid);
+                    false -> ok
+                end,
                 InitWatches = init_watches(AppName), 
                 #boss_app_info{ application = AppName,
                     watches = InitWatches,
