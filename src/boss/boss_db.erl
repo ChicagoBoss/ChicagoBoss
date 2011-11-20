@@ -136,13 +136,17 @@ incr(Key, Count) ->
 %% @doc Delete the BossRecord with the given `Id'.
 delete(Key) ->
     AboutToDelete = boss_db:find(Key),
-    boss_record_lib:run_before_delete_hooks(AboutToDelete),
-    case gen_server:call(boss_db, {delete, Key}, ?DEFAULT_TIMEOUT) of
-        ok -> 
-            boss_news:deleted(Key, AboutToDelete:attributes()),
-            ok;
-        RetVal -> 
-            RetVal
+    case boss_record_lib:run_before_delete_hooks(AboutToDelete) of
+        ok ->
+            case gen_server:call(boss_db, {delete, Key}, ?DEFAULT_TIMEOUT) of
+                ok -> 
+                    boss_news:deleted(Key, AboutToDelete:attributes()),
+                    ok;
+                RetVal -> 
+                    RetVal
+            end;
+        {error, Reason} ->
+            {error, Reason}
     end.
 
 push() ->
