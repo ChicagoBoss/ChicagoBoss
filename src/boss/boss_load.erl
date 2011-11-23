@@ -2,11 +2,10 @@
 -compile(export_all).
 -define(HELPER_MODULE_NAME, '_view_lib').
 
-load_all_modules(Application) ->
-    load_all_modules(Application, undefined).
+load_all_modules(Application, TranslatorPid) ->
+    load_all_modules(Application, TranslatorPid, undefined).
 
-load_all_modules(Application, OutDir) ->
-    TranslatorPid = boss_translator:start(),
+load_all_modules(Application, TranslatorPid, OutDir) ->
     {ok, TestModules} = load_dirs(boss_files:test_path(), OutDir, fun compile/2),
     {ok, LibModules} = load_libraries(OutDir),
     {ok, MailModules} = load_mail_controllers(OutDir),
@@ -21,7 +20,8 @@ load_all_modules(Application, OutDir) ->
     {ok, AllModules}.
 
 load_all_modules_and_emit_app_file(AppName, OutDir) ->
-    {ok, ModulePropList} = load_all_modules(AppName, OutDir),
+    TranslatorPid = boss_translator:start([{application, AppName}]),
+    {ok, ModulePropList} = load_all_modules(AppName, TranslatorPid, OutDir),
     AllModules = lists:foldr(fun({_, Mods}, Acc) -> Mods ++ Acc end, [], ModulePropList),
     DotAppSrc = lists:concat([AppName, ".app.src"]),
     {ok, [{application, AppName, AppData}]} = file:consult(DotAppSrc),

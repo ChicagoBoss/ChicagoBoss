@@ -236,10 +236,33 @@ before_(_) -&gt;<br />
 This function parses parameters that have numerical or labeled indices, such as "widget[4][name]", and returns either a value or a set of nested lists (for numerical indices) and proplists (for string indices).</p>
 
 <div class="code">
-    header( Key<span class="typevar">::string()</span> ) -&gt; string() | undefined
+    header( Key<span class="typevar">::atom()</span> ) -&gt; string() | undefined
 </div>
 
-<p>Get the value of a given HTTP request header</p>
+<p>Get the value of a given HTTP request header. Valid values are:</p>
+<ul>
+    <li><code>accept</code></li>
+    <li><code>accept_language</code></li>
+    <li><code>accept_ranges</code></li>
+    <li><code>authorization</code></li>
+    <li><code>connection</code></li>
+    <li><code>content_encoding</code></li>
+    <li><code>content_length</code></li>
+    <li><code>content_type</code></li>
+    <li><code>cookie</code></li>
+    <li><code>host</code></li>
+    <li><code>if_match</code></li>
+    <li><code>if_modified_since</code></li>
+    <li><code>if_none_match</code></li>
+    <li><code>if_unmodified_since</code></li>
+    <li><code>keep_alive</code></li>
+    <li><code>location</code></li>
+    <li><code>range</code></li>
+    <li><code>referer</code></li>
+    <li><code>transfer_encoding</code></li>
+    <li><code>user_agent</code></li>
+    <li><code>x_forwarded_for</code></li>
+</ul>
 
 <div class="code">
     cookie( Key<span class="typevar">::string()</span> ) -&gt; string() | undefined

@@ -126,10 +126,11 @@ process_po_block_tokens([_|Rest], Mode, Acc) ->
 
 extract_model_strings(App) ->
     lists:foldl(fun(Type, Acc) ->
-                Exports = Type:module_info(exports),
+                TypeAtom = list_to_atom(Type),
+                Exports = TypeAtom:module_info(exports),
                 case lists:member({validation_tests, 1}, Exports) of
                     true ->
-                        DummyRecord = boss_record_lib:dummy_record(Type),
+                        DummyRecord = boss_record_lib:dummy_record(TypeAtom),
                         Messages = lists:map(fun({_TestFun, TestMsg}) -> TestMsg end, 
                             DummyRecord:validation_tests()),
                         Messages ++ Acc;

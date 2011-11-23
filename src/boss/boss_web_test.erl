@@ -25,7 +25,7 @@ bootstrap_test_env(Application, Adapter) ->
     boss_news:start(),
     boss_mail:start([{driver, boss_mail_driver_mock}]),
     TranslatorSupPid = boss_translator:start([{application, Application}]),
-    boss_load:load_all_modules(Application),
+    boss_load:load_all_modules(Application, TranslatorSupPid),
     #boss_app_info{ 
         application = Application,
         base_url = "",
