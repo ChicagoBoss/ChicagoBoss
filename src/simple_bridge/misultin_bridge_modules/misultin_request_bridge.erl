@@ -5,7 +5,7 @@
     init/1,
     request_method/1, path/1, uri/1,
     peer_ip/1, peer_port/1,
-    headers/1, cookies/1,
+    headers/1, header/2, cookies/1,
     query_params/1, post_params/1, request_body/1
 ]).
 
@@ -32,6 +32,10 @@ peer_ip(Req) ->
 
 peer_port(Req) -> 
     Req:get(peer_port).
+
+header(Header, Req) ->
+%    proplists:get_value(Header, Req:get(headers)) 
+    misultin_utility:get_key_value(Header, Req:get(headers)).
 
 headers(Req) ->
     Headers = Req:get(headers),
