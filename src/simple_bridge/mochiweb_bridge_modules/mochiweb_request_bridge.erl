@@ -42,7 +42,7 @@ peer_port(Req) ->
     Port.
     
 header(Header, Req) ->
-    Req:get_header_value(Header).
+    Req:get_header_value(string:to_lower(Header)).
 
 headers(Req) ->
     F = fun(Header) -> Req:get_header_value(Header) end,
