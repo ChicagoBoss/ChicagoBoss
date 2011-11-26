@@ -288,7 +288,13 @@ prune_expired_entries(#state{ ttl_tree = Tree } = State) ->
     NewState#state{ ttl_tree = NewTree }.
 
 execute_callback(Fun, Event, EventInfo, UserInfo, WatchId, State) when is_function(Fun) ->
-    case Fun(Event, EventInfo, UserInfo) of
+    Result = case proplists:get_value(arity, erlang:fun_info(Fun)) of
+        2 ->
+            Fun(Event, EventInfo);
+        3 ->
+            Fun(Event, EventInfo, UserInfo)
+    end,
+    case Result of
         {ok, cancel_watch} -> 
             {reply, _, NewState} = handle_call({cancel_watch, WatchId}, undefined, State),
             NewState;
