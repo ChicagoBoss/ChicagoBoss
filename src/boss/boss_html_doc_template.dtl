@@ -1,0 +1,16 @@
+<html>
+    <head>
+        <title>/doc ({{ application }})</title>
+    </head>
+    <body>
+        <h1><em>Documentation??</em></h1>
+        <ul>
+        {% for model in models %}
+        <li><a href="{{ _base_url }}/doc/{{ model }}">{{ model }}</a></li>
+        {% endfor %}
+        </ul>
+        <br />
+        <br />
+        <p><em>{% now "D, j F Y g:i a" %}</em></p>
+    </body>
+</html>

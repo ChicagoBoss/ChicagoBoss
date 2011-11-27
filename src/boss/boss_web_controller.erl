@@ -286,6 +286,27 @@ handle_request(Req, RequestMod, ResponseMod) ->
             end
     end.
 
+process_request(AppInfo, Req, development, "/doc", SessionID) ->
+    Result = case catch load_and_execute(development, {"doc", [], []}, AppInfo, Req, SessionID) of
+        {'EXIT', Reason} ->
+            {error, Reason};
+        Ok ->
+            Ok
+    end,
+    process_result(AppInfo, Result);
+process_request(AppInfo, Req, development, "/doc/"++ModelName, SessionID) ->
+    Result = case string:chr(ModelName, $.) of
+        0 ->
+            case catch load_and_execute(development, {"doc", ModelName, []}, AppInfo, Req, SessionID) of
+                {'EXIT', Reason} ->
+                    {error, Reason};
+                Ok ->
+                    Ok
+            end;
+        _ ->
+            {not_found, "File not found"}
+    end,
+    process_result(AppInfo, Result);
 process_request(AppInfo, Req, Mode, Url, SessionID) ->
     if 
         Mode =:= development ->
@@ -345,21 +366,28 @@ load_and_execute(production, {Controller, _, _} = Location, AppInfo, Req, Sessio
         true -> execute_action(Location, AppInfo, Req, SessionID);
         false -> render_view(Location, AppInfo, Req, SessionID)
     end;
-
 load_and_execute(development, {"doc", ModelName, _}, AppInfo, Req, _SessionID) ->
-    case string:chr(ModelName, $.) of
-        0 ->
-            case boss_load:load_models() of
-                {ok, _} ->
+    case boss_load:load_models() of
+        {ok, ModelModules} ->
+            case lists:member(ModelName, lists:map(fun atom_to_list/1, ModelModules)) of
+                true ->
                     Model = list_to_atom(ModelName),
                     {Model, Edoc} = boss_record_compiler:edoc_module(
                         boss_files:model_path(ModelName++".erl"), [{private, true}]),
                     {ok, edoc:layout(Edoc), []};
-                {error, ErrorList} ->
-                    render_errors(ErrorList, AppInfo, Req)
+                false ->
+                    case boss_html_doc_template:render([
+                                {application, AppInfo#boss_app_info.application},
+                                {'_base_url', AppInfo#boss_app_info.base_url},
+                                {models, ModelModules}]) of
+                        {ok, Payload} ->
+                            {ok, Payload, []};
+                        Err ->
+                            Err
+                    end
             end;
-        _ ->
-            {not_found, "File not found"}
+        {error, ErrorList} ->
+            render_errors(ErrorList, AppInfo, Req)
     end;
 load_and_execute(development, {Controller, _, _} = Location, AppInfo, Req, SessionID) ->
     case boss_load:load_mail_controllers() of
