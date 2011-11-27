@@ -221,12 +221,17 @@ find_application_for_path(Path, Default, [App|Rest], LongestMatch) ->
 
 init_watches(AppName) ->
     lists:foldr(fun(File, Acc) ->
-                {ok, Module} = boss_compiler:compile(File, []),
-                case lists:suffix("_news.erl", File) of
-                    true ->
-                        {ok, NewWatches} = Module:init(),
-                        NewWatches ++ Acc;
-                    false ->
+                case boss_compiler:compile(File, []) of
+                    {ok, Module} ->
+                        case lists:suffix("_news.erl", File) of
+                            true ->
+                                {ok, NewWatches} = Module:init(),
+                                NewWatches ++ Acc;
+                            false ->
+                                Acc
+                        end;
+                    Error ->
+                        error_logger:error_msg("Compilation of ~p failed: ~p~n", [File, Error]),
                         Acc
                 end
         end, [], boss_files:init_file_list(AppName)).
@@ -489,10 +494,18 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
                         _ ->
                             Result
                     end;
-                Other ->
-                    Other
+                {redirect, Where} ->
+                    {redirect, process_redirect(Where, Module)}
             end
     end.
+
+process_redirect([{_, _}|_] = Where, Controller) ->
+    TheController = proplists:get_value(controller, Where, Controller),
+    TheAction = proplists:get_value(action, Where),
+    CleanParams = proplists:delete(controller, proplists:delete(action, Where)),
+    {TheController, TheAction, CleanParams};
+process_redirect(Where, _) ->
+    Where.
 
 process_action_result(Info, ok, AppInfo, AuthInfo) ->
     process_action_result(Info, {ok, []}, AppInfo, AuthInfo);
@@ -519,11 +532,8 @@ process_action_result({_, Req, SessionID, LocationTrail}, not_found, AppInfo, _)
 
 process_action_result(Info, {redirect, Where}, AppInfo, AuthInfo) ->
     process_action_result(Info, {redirect, Where, []}, AppInfo, AuthInfo);
-process_action_result({{Controller, _, _}, _, _, _}, {redirect, [{_, _}|_] = Where, _}, _, _) ->
-    TheController = proplists:get_value(controller, Where, Controller),
-    TheAction = proplists:get_value(action, Where),
-    CleanParams = proplists:delete(controller, proplists:delete(action, Where)),
-    {redirect, {TheController, TheAction, CleanParams}};
+process_action_result({{Controller, _, _}, _, _, _}, {redirect, Where, Headers}, _, _) ->
+    {redirect, process_redirect(Where, Controller), Headers};
 
 process_action_result(Info, {json, Data}, AppInfo, AuthInfo) ->
     process_action_result(Info, {json, Data, []}, AppInfo, AuthInfo);

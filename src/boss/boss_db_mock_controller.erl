@@ -58,7 +58,7 @@ handle_call({save_record, Record}, _From, [{Dict, IdCounter}|OldState]) ->
             (Other) ->
                 Other
         end, Record:attributes()),
-    NewRecord = Record:attributes(NewAttributes),
+    NewRecord = Record:set(NewAttributes),
     {reply, NewRecord, [{dict:store(Id, NewRecord, Dict), IdCounter1}|OldState]};
 handle_call(push, _From, [{Dict, IdCounter}|_] = State) ->
     {reply, ok, [{Dict, IdCounter}|State]};
