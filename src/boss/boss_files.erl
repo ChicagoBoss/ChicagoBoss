@@ -3,7 +3,13 @@
 
 root_dir() -> filename:absname(""). %filename:join([filename:dirname(code:which(?MODULE)), ".."]).
 root_src_dir() -> filename:join([root_dir(), "src"]).
-root_priv_dir(App) -> code:priv_dir(App).
+root_priv_dir(App) -> 
+    case boss_env:is_developing_app(App) of
+       true ->
+           filename:join([root_dir(), "priv"]);
+       false ->
+           code:priv_dir(App)
+   end.
 
 web_view_path() ->
     filename:join([root_src_dir(), "view"]).
