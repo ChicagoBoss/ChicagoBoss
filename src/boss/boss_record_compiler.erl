@@ -1,6 +1,8 @@
 -module(boss_record_compiler).
 -author('emmiller@gmail.com').
 -define(DATABASE_MODULE, boss_db).
+-define(PREFIX, "BOSSRECORDINTERNAL").
+-define(HAS_MANY_LIMIT, 1000 * 1000 * 1000).
 
 -export([compile/1, compile/2, edoc_module/1, edoc_module/2, trick_out_forms/1]).
 
@@ -57,7 +59,6 @@ trick_out_forms(Forms, ModuleName, Parameters) ->
         counter_incr_forms(Counters) ++
         association_forms(ModuleName, Attributes) ++
         parameter_getter_forms(Parameters) ++
-        parameter_setter_forms(ModuleName, Parameters) ++
         []).
 
 override_functions(Forms) ->
@@ -126,37 +127,9 @@ parameter_getter_forms(Parameters) ->
                         [erl_syntax:clause([], none, [erl_syntax:variable(P)])]))
         end, Parameters).
 
-parameter_setter_forms(ModuleName, Parameters) ->
-    lists:map(
-        fun(P) ->
-                erl_syntax:add_precomments([erl_syntax:comment(
-                        [
-                            lists:concat(["% @spec ", parameter_to_colname(P), "( ", P, "::", 
-                                    case lists:suffix("Time", atom_to_list(P)) of 
-                                        true -> "tuple()";
-                                        false -> "string()"
-                                    end, " ) -> ", inflector:camelize(atom_to_list(ModuleName))]),
-                            lists:concat(["% @doc Set the value of `", P, "'."])])],
-                    erl_syntax:function(
-                        erl_syntax:atom(parameter_to_colname(P)),
-                        [erl_syntax:clause([erl_syntax:variable("NewValue")], none,
-                                [
-                                    erl_syntax:application(
-                                        erl_syntax:atom(ModuleName),
-                                        erl_syntax:atom(new),
-                                        lists:map(
-                                            fun
-                                                (Param) when Param =:= P ->
-                                                    erl_syntax:variable("NewValue");
-                                                (Other) ->
-                                                    erl_syntax:variable(Other)
-                                            end, Parameters))
-                                ])]))
-        end, Parameters).
-
 get_attributes_forms(ModuleName, Parameters) ->
     [erl_syntax:add_precomments([erl_syntax:comment(
-                    ["% @spec attributes() -> [{Key::atom(), Value::string() | undefined}]",
+                    ["% @spec attributes() -> [{Attribute::atom(), Value::string() | undefined}]",
                         lists:concat(["% @doc A proplist of the `", ModuleName, "' parameters and their values."])])],
             erl_syntax:function(
                 erl_syntax:atom(attributes),
@@ -169,11 +142,11 @@ get_attributes_forms(ModuleName, Parameters) ->
 
 set_attributes_forms(ModuleName, Parameters) ->
     [erl_syntax:add_precomments([erl_syntax:comment(
-                    ["% @spec attributes(Proplist) -> "++inflector:camelize(atom_to_list(ModuleName)),
+                    ["% @spec set([{Attribute::atom(), Value}]) -> "++inflector:camelize(atom_to_list(ModuleName)),
                         "% @doc Set multiple record attributes at once. Does not save the record."])],
             erl_syntax:function(
-                erl_syntax:atom(attributes),
-                [erl_syntax:clause([erl_syntax:variable("Proplist")], none,
+                erl_syntax:atom(set),
+                [erl_syntax:clause([erl_syntax:variable("AttributeProplist")], none,
                         [erl_syntax:application(
                                 erl_syntax:atom(ModuleName),
                                 erl_syntax:atom(new),
@@ -182,9 +155,21 @@ set_attributes_forms(ModuleName, Parameters) ->
                                                 erl_syntax:atom(proplists),
                                                 erl_syntax:atom(get_value),
                                                 [erl_syntax:atom(parameter_to_colname(P)),
-                                                    erl_syntax:variable("Proplist"),
+                                                    erl_syntax:variable("AttributeProplist"),
                                                     erl_syntax:variable(P)])
-                                    end, Parameters))])]))].
+                                    end, Parameters))])])),
+    erl_syntax:add_precomments([erl_syntax:comment(
+                    ["% @spec set(Attribute::atom(), NewValue) -> "++inflector:camelize(atom_to_list(ModuleName)),
+                        "% @doc Set the value of a particular attribute. Does not save the record."])],
+            erl_syntax:function(
+                erl_syntax:atom(set),
+                [erl_syntax:clause([erl_syntax:variable("Attribute"), erl_syntax:variable("NewValue")], none,
+                        [
+                            erl_syntax:application(
+                                erl_syntax:atom(set),
+                                [erl_syntax:list([erl_syntax:tuple([erl_syntax:variable("Attribute"), erl_syntax:variable("NewValue")])])])
+                        ])]))
+    ].
 
 association_forms(ModuleName, Attributes) ->
     {Forms, BelongsToList} = lists:foldl(
@@ -258,7 +243,7 @@ has_one_forms(HasOne, ModuleName, Opts) ->
     ].
 
 has_many_forms(HasMany, ModuleName, many, Opts) ->
-    has_many_forms(HasMany, ModuleName, 1000000, Opts);
+    has_many_forms(HasMany, ModuleName, ?HAS_MANY_LIMIT, Opts);
 has_many_forms(HasMany, ModuleName, Limit, Opts) -> 
     Sort = proplists:get_value(sort_by, Opts, 'id'),
     SortOrder = proplists:get_value(sort_order, Opts, str_ascending),
@@ -300,8 +285,8 @@ has_many_forms(HasMany, ModuleName, Limit, Opts) ->
 
 first_or_undefined_forms(Forms) ->
     erl_syntax:case_expr(Forms,
-        [erl_syntax:clause([erl_syntax:list([erl_syntax:variable("BOSSRECORDINTERNALRecord")])], none,
-                [erl_syntax:variable("BOSSRECORDINTERNALRecord")]),
+        [erl_syntax:clause([erl_syntax:list([erl_syntax:variable(?PREFIX++"Record")])], none,
+                [erl_syntax:variable(?PREFIX++"Record")]),
             erl_syntax:clause([erl_syntax:underscore()], none, [erl_syntax:atom(undefined)])]).
 
 reverse_sort_order(str_ascending) -> str_descending;

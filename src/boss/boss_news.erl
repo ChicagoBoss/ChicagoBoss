@@ -4,7 +4,9 @@
 
 -export([stop/0]).
 
--export([watch/3, watch/4, set_watch/4, set_watch/5]).
+-export([watch/2, watch/3, watch/4]).
+
+-export([set_watch/3, set_watch/4, set_watch/5]).
 
 -export([cancel_watch/1, extend_watch/1]).
 
@@ -24,9 +26,15 @@ stop() ->
     ok.
 
 %% @doc Watch records and attributes described by `TopicString', and execute 
-%% `CallBack(Event, EventInfo, UserInfo)' each time any of them changes.
+%% `CallBack(Event, EventInfo)' each time any of them changes.
 %% Note that the callback should be specified as a named fun and not a closure,
 %% or you may experience unexpected results during code reloads.
+%% @spec watch( TopicString :: string(), CallBack ) -> {ok, WatchId} | {error, Reason}
+watch(TopicString, CallBack) ->
+    watch(TopicString, CallBack, []).
+
+%% @doc Same as `watch/2', except that `UserInfo' will be passed as a third argument
+%% to the callback if the callback takes three arguments.
 %% @spec watch( TopicString :: string(), CallBack, UserInfo ) -> {ok, WatchId} | {error, Reason}
 watch(TopicString, CallBack, UserInfo) ->
     watch(TopicString, CallBack, UserInfo, ?TRILLION).
@@ -37,6 +45,11 @@ watch(TopicString, CallBack, UserInfo, TTL) ->
     gen_server:call({global, ?MODULE}, {watch, TopicString, CallBack, UserInfo, TTL}).
 
 %% @doc Create or replace a watch with `WatchId'.
+%% @spec set_watch( WatchId, TopicString::string(), CallBack ) -> ok | {error, Reason}
+set_watch(WatchId, TopicString, CallBack) ->
+    set_watch(WatchId, TopicString, CallBack, []).
+
+%% @doc Same as `set_watch/3', except that `UserInfo' is passed to the callback.
 %% @spec set_watch( WatchId, TopicString::string(), CallBack, UserInfo ) -> ok | {error, Reason}
 set_watch(WatchId, TopicString, CallBack, UserInfo) ->
     set_watch(WatchId, TopicString, CallBack, UserInfo, ?TRILLION).

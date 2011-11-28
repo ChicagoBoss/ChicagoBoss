@@ -51,7 +51,7 @@ view(<span class="atom">'GET'</span>, [Year, Month]) -&gt;<br />
     {{ '{% url action="view" %}' }}<br />
     {{ '{% url action="view" id="1234" %}' }}<br />
     {{ '{% url action="view" tag="funny" %}' }}<br />
-    {{ '{% url action="view" tag="funny" author="saint-paul" %}' }}<br />
+    {{ '{% url action="view" tag="funny" author_name="saint-paul" %}' }}<br />
     {{ '{% url action="view" year="2009" month="08" %}' }}<br />
 </div>
 
@@ -88,10 +88,10 @@ view(<span class="atom">'GET'</span>, [Year, Month]) -&gt;<br />
 <p><code>ExtraInfo</code> will be passed as the third argument to the action, and as a variable called "before_" to the templates.</p>
 
 <div class="code">
-    {redirect, Location<span class="typevar">::string()</span>}
+    {redirect, Location}
 </div>
 
-<p>Do not execute the action. Instead, perform a 302 redirect to <code>Location</code>.</p>
+<p>Do not execute the action. Instead, perform a 302 redirect to <code>Location</code>, which can be a string or a proplist that will be converted to a URL using the routes system.</p>
 
 <p>Probably most common before_ looks like:</p>
 

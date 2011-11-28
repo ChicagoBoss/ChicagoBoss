@@ -9,7 +9,7 @@
     init/1,
     request_method/1, path/1, uri/1,
     peer_ip/1, peer_port/1,
-    headers/1, cookies/1,
+    headers/1, header/2, cookies/1,
     query_params/1, post_params/1, request_body/1,
     socket/1, recv_from_socket/3
 ]).
@@ -40,6 +40,9 @@ peer_port(Req) ->
     Socket = Req:get(socket),
     {ok, {_IP, Port}} = mochiweb_socket:peername(Socket),
     Port.
+    
+header(Header, Req) ->
+    Req:get_header_value(Header).
 
 headers(Req) ->
     F = fun(Header) -> Req:get_header_value(Header) end,

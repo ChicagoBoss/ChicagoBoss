@@ -15,12 +15,13 @@ BossRecords are <em>specially compiled parameterized modules</em> that follow th
 
     <li><p>All parameters will be available as lower-case, underscored functions,
     e.g. <code>-module(foo, [Id, TheText])</code> will generate the getter functions 
-    <code>id()</code> and <code>the_text()</code>, and the setters <code>id(NewId)</code> 
-    and <code>the_text(NewText)</code>. Note that setters do not save the BossRecord.</p></li>
+    <code>id()</code> and <code>the_text()</code>.</p></li>
 
-    <li><p>To auto-generate an ID, pass the atom <code>'id'</code> as the first parameter to <code>my_module:new</code>.</p></li>
+    <li><p>BossRecords can be instantiated with either <code>my_module:new/N</code> (like any other parameterized module), or with <code>boss_record:new(my_module, Attributes)</code>, where <code>Attributes</code> is a proplist.</p></li>
 
-    <li><p>Call <code>new</code> with strings, floats, integers, atoms, or binaries for all other parameters</p></li>
+    <li><p>To auto-generate an ID, pass the atom <code>'id'</code> as the first parameter to <code>my_module:new/N</code>. Alternatively, just use <code>boss_record:new/2</code>.</p></li>
+
+    <li><p>Call <code>my_module:new/N</code> with strings, floats, integers, atoms, or binaries for all other parameters</p></li>
 
     <li><p>Parameters that end in "Time" (e.g., <code>CreationTime</code>, <code>UpdateTime</code>) should be
     passed either <code>erlang:now()</code> or a DateTime tuple.</p></li>
