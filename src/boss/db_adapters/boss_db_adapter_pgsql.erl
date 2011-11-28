@@ -98,7 +98,7 @@ save_record(Conn, Record) when is_tuple(Record) ->
             Res = pgsql:equery(Conn, Query, []),
             case Res of
                 {ok, _, _, [{Id}]} ->
-                    {ok, Record:id(lists:concat([Type, "-", integer_to_list(Id)]))};
+                    {ok, Record:set(id, lists:concat([Type, "-", integer_to_list(Id)]))};
                 {error, Reason} -> {error, Reason}
             end;
         Defined when is_list(Defined) ->

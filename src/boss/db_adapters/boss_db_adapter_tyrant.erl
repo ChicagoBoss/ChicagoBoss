@@ -67,7 +67,7 @@ save_record(_, Record) when is_tuple(Record) ->
         Defined when is_list(Defined) ->
             Defined
     end,
-    RecordWithId = Record:id(Id),
+    RecordWithId = Record:set(id, Id),
     PackedRecord = pack_record(RecordWithId, Type),
 
     Result = medici:put(list_to_binary(Id), PackedRecord),

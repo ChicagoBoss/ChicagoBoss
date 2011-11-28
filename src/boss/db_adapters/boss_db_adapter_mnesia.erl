@@ -198,7 +198,7 @@ save_record(_, Record) when is_tuple(Record) ->
         Defined ->
             Defined
     end,
-    RecordWithId = Record:id(Id),
+    RecordWithId = Record:set(id, Id),
 
     Fun = fun() -> mnesia:write(Type, RecordWithId, write) end,
     
