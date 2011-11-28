@@ -32,23 +32,23 @@ trick_out_forms(Forms) ->
     trick_out_forms(Forms, []).
 
 trick_out_forms([
-        {attribute, _, module, {ModuleName, Parameters}}
-        | _T] = Forms, LeadingForms) ->
-    trick_out_forms(lists:reverse(LeadingForms, Forms), ModuleName, Parameters);
+        {attribute, _Pos, module, {ModuleName, Parameters}} = H
+        | Forms], LeadingForms) ->
+    trick_out_forms(lists:reverse([H|LeadingForms]), Forms, ModuleName, Parameters);
 trick_out_forms([H|T], LeadingForms) ->
     trick_out_forms(T, [H|LeadingForms]).
 
-trick_out_forms(Forms, ModuleName, Parameters) ->
-    Attributes = proplists:get_value(attributes, erl_syntax_lib:analyze_forms(Forms)),
-    [{eof, _Line}|OtherForms] = lists:reverse(Forms),
+trick_out_forms(LeadingForms, Forms, ModuleName, Parameters) ->
+    Attributes = proplists:get_value(attributes, erl_syntax_lib:analyze_forms(LeadingForms ++ Forms)),
+    [{eof, _Line}|ReversedOtherForms] = lists:reverse(Forms),
+    UserForms = lists:reverse(ReversedOtherForms),
     Counters = lists:foldl(
         fun
             ({counter, Counter}, Acc) -> [Counter|Acc];
             (_, Acc) -> Acc
         end, [], Attributes),
 
-    override_functions(
-        lists:reverse(OtherForms) ++ 
+    GeneratedForms = 
         save_forms(ModuleName) ++
         validate_forms(ModuleName) ++
         set_attributes_forms(ModuleName, Parameters) ++
@@ -58,11 +58,33 @@ trick_out_forms(Forms, ModuleName, Parameters) ->
         counter_reset_forms(Counters) ++
         counter_incr_forms(Counters) ++
         association_forms(ModuleName, Attributes) ++
-        parameter_getter_forms(Parameters) ++
-        []).
+        parameter_getter_forms(Parameters),
 
-override_functions(Forms) ->
-    override_functions(Forms, [], []).
+    UserFunctionList = list_functions(UserForms),
+    GeneratedFunctionList = list_functions(GeneratedForms),
+
+    GeneratedExportForms = export_forms(GeneratedFunctionList),
+
+    LeadingForms ++ GeneratedExportForms ++ UserForms ++ 
+        override_functions(GeneratedForms, UserFunctionList).
+
+list_functions(Forms) ->
+    list_functions(Forms, []).
+
+list_functions([], DefinedFunctions) ->
+    lists:reverse(DefinedFunctions);
+list_functions([{'function', _, Name, Arity, _}|Rest], DefinedFunctions) ->
+    list_functions(Rest, [{Name, Arity}|DefinedFunctions]);
+list_functions([{tree, 'function', _, {'function', {tree, 'atom', _, Name}, 
+                [{tree, 'clause', _, {'clause', Args, _, _}}|_]}}|Rest], 
+    DefinedFunctions) ->
+    Arity = length(Args), 
+    list_functions(Rest, [{Name, Arity}|DefinedFunctions]);
+list_functions([_H|T], DefinedFunctions) ->
+    list_functions(T, DefinedFunctions).
+
+override_functions(Forms, DefinedFunctions) ->
+    override_functions(Forms, [], DefinedFunctions).
 
 override_functions([{'function', _, Name, Arity, _} = Function|Rest], Acc, DefinedFunctions) ->
     case lists:member({Name, Arity}, DefinedFunctions) of
@@ -82,6 +104,14 @@ override_functions([H|T], Acc, DefinedFunctions) ->
     override_functions(T, [H|Acc], DefinedFunctions);
 override_functions([], Acc, _) ->
     lists:reverse(Acc).
+
+export_forms(FunctionList) ->
+    export_forms(FunctionList, []).
+
+export_forms([], Acc) ->
+    lists:reverse(Acc);
+export_forms([{Name, Arity}|Rest], Acc) ->
+    export_forms(Rest, [erl_syntax:attribute(erl_syntax:atom(export), [erl_syntax:list([erl_syntax:arity_qualifier(erl_syntax:atom(Name), erl_syntax:integer(Arity))])])|Acc]).
 
 validate_forms(ModuleName) ->
     [erl_syntax:add_precomments([erl_syntax:comment(
