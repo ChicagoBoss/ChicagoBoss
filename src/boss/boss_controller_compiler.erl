@@ -11,7 +11,8 @@ compile(File, Options) ->
 
 add_routes_to_forms(Forms) ->
     [{eof, _Line}|OtherForms] = lists:reverse(Forms),
-    add_routes_to_forms(lists:reverse(OtherForms), [], []).
+    Forms1 = add_export_to_forms(lists:reverse(OtherForms)),
+    add_routes_to_forms(Forms1, [], []).
 
 add_routes_to_forms([], FormAcc, RouteAcc) ->
     RoutesFunction = function_for_routes(lists:reverse(RouteAcc)),
@@ -21,6 +22,14 @@ add_routes_to_forms([{function, _, Name, Arity, Clauses} = Fxn|Rest], FormAcc, R
     add_routes_to_forms(Rest, [Fxn|FormAcc], lists:reverse(NewRoutes, RouteAcc));
 add_routes_to_forms([H|T], FormAcc, RouteAcc) ->
     add_routes_to_forms(T, [H|FormAcc], RouteAcc).
+
+add_export_to_forms(Forms) ->
+    add_export_to_forms(Forms, []).
+
+add_export_to_forms([{attribute, _, module, _} = H | T], LeadingForms) ->
+    lists:reverse(LeadingForms, [H, {attribute, {0, 2}, export, [{'_routes', 0}]} | T]);
+add_export_to_forms([H|T], LeadingForms) ->
+    add_export_to_forms(T, [H|LeadingForms]).
 
 extract_routes_from_clauses(Name, Clauses) ->
     extract_routes_from_clauses(Name, Clauses, []).

@@ -124,7 +124,7 @@ save_record(Pid, Record) when is_tuple(Record) ->
                     case Res1 of
                         {data, MysqlRes} ->
                             [[Id]] = mysql:get_result_rows(MysqlRes),
-                            {ok, Record:id(lists:concat([Type, "-", integer_to_list(Id)]))};
+                            {ok, Record:set(id, lists:concat([Type, "-", integer_to_list(Id)]))};
                         {error, MysqlRes} ->
                             {error, mysql:get_result_reason(MysqlRes)}
                     end;
@@ -136,7 +136,7 @@ save_record(Pid, Record) when is_tuple(Record) ->
             Res = mysql:fetch(Pid, Query),
             case Res of
                 {updated, _} ->
-                    {ok, Record:id(lists:concat([Type, "-", integer_to_list(Identifier)]))};
+                    {ok, Record:set(id, lists:concat([Type, "-", integer_to_list(Identifier)]))};
                 {error, MysqlRes} -> {error, mysql:get_result_reason(MysqlRes)}
             end;			
         Defined when is_list(Defined) ->

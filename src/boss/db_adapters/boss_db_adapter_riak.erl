@@ -33,7 +33,7 @@ find(_, Id) ->
             Record = apply(Type, new, lists:map(fun (AttrName) ->
                             proplists:get_value(AttrName, Data)
                     end, boss_record_lib:attribute_names(Type))),
-            Record:id(Id);
+            Record:set(id, Id);
         {error, Reason} ->
             {error, Reason}
     end.
@@ -106,7 +106,7 @@ save_record(_, Record) ->
     end,
     ok = riakpool_client:put(list_to_binary(Bucket), list_to_binary(Key),
                              term_to_binary(PropList)),
-    {ok, Record:id(atom_to_list(Type) ++ "-" ++ Key)}.
+    {ok, Record:set(id, atom_to_list(Type) ++ "-" ++ Key)}.
 
 % These 2 functions are not part of the behaviour but are required for
 % tests to pass

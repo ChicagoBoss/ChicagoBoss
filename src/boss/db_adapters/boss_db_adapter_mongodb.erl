@@ -158,7 +158,7 @@ save_record(Conn, Record) when is_tuple(Record) ->
     case Res of
         {ok, ok} -> {ok, Record};
         {ok, Id} -> 
-            {ok, Record:id(unpack_id(Type, Id))};
+            {ok, Record:set(id, unpack_id(Type, Id))};
         {failure, Reason} -> {error, Reason};
         {connection_failure, Reason} -> {error, Reason}
     end.
