@@ -28,7 +28,6 @@
         type/1,
         data_type/2]).
 
--define(DEFAULT_MAX, (1000 * 1000 * 1000)).
 -define(DEFAULT_TIMEOUT, (30 * 1000)).
 
 start() ->
@@ -96,10 +95,6 @@ find(Type, Conditions, Max, Skip, Sort) ->
 %% Note that Time attributes are stored internally as numbers, so you should
 %% sort them numerically.
 
-find(Type, Conditions, many, Skip, Sort, SortOrder) ->
-    find(Type, Conditions, ?DEFAULT_MAX, Skip, Sort, SortOrder);
-find(Type, Conditions, all, Skip, Sort, SortOrder) ->
-    find(Type, Conditions, ?DEFAULT_MAX, Skip, Sort, SortOrder);
 find(Type, Conditions, Max, Skip, Sort, SortOrder) ->
     gen_server:call(boss_db, {find, Type, normalize_conditions(Conditions), Max, Skip, Sort, SortOrder},
     ?DEFAULT_TIMEOUT).
