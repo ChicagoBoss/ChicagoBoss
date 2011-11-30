@@ -5,6 +5,9 @@
 reload_routes() ->
     gen_server:call(boss_web, reload_routes).
 
+reload_translation(Locale) ->
+    gen_server:call(boss_web, {reload_translation, Locale}).
+
 reload_translations() ->
     gen_server:call(boss_web, reload_translations).
 
