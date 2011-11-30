@@ -50,7 +50,7 @@ find(Conn, Id) when is_list(Id) ->
     end.
 
 find(Conn, Type, Conditions, Max, Skip, Sort, SortOrder) when is_atom(Type), is_list(Conditions), 
-                                                              (is_integer(Max) or Max =:= all), is_integer(Skip), 
+                                                              is_integer(Max) orelse Max =:= all, is_integer(Skip), 
                                                               is_atom(Sort), is_atom(SortOrder) ->
 %    ?LOG("find Type", Type),
 %    ?LOG("find Conditions", Conditions),

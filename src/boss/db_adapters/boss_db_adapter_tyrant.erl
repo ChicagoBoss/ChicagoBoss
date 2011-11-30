@@ -32,7 +32,7 @@ find(_, Id) when is_list(Id) ->
     end.
 
 find(_, Type, Conditions, Max, Skip, Sort, SortOrder) when is_atom(Type), is_list(Conditions),
-                                                        (is_integer(Max) or Max =:= all),
+                                                        is_integer(Max) orelse Max =:= all,
                                                         is_integer(Skip), is_atom(Sort), is_atom(SortOrder) ->
     case boss_record_lib:ensure_loaded(Type) of
         true ->
