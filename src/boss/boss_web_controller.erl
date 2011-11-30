@@ -362,9 +362,11 @@ process_result(AppInfo, {redirect, "http://"++Where, Headers}) ->
     process_result(AppInfo, {redirect, "/"++string:join(tl(string:tokens(Where, "/")), "/"), Headers});
 process_result(AppInfo, {redirect, "https://"++Where, Headers}) ->
     process_result(AppInfo, {redirect, "/"++string:join(tl(string:tokens(Where, "/")), "/"), Headers});
-process_result(AppInfo, {redirect, {Controller, Action, Params}, Headers}) ->
-    URL = boss_router:unroute(AppInfo#boss_app_info.router_pid, Controller, Action, Params),
-    process_result(AppInfo, {redirect, URL, Headers});
+process_result(_AppInfo, {redirect, {Application, Controller, Action, Params}, Headers}) ->
+    RouterPid = boss_web:router_pid(list_to_atom(lists:concat([Application]))),
+    URL = boss_router:unroute(RouterPid, Controller, Action, Params),
+    BaseURL = boss_web:base_url(list_to_atom(lists:concat([Application]))),
+    {302, [{"Location", BaseURL ++ URL}, {"Cache-Control", "no-cache"}|Headers], ""};
 process_result(AppInfo, {redirect, Where, Headers}) ->
     {302, [{"Location", AppInfo#boss_app_info.base_url ++ Where}, {"Cache-Control", "no-cache"}|Headers], ""};
 process_result(_, {ok, Payload, Headers}) ->
@@ -501,23 +503,26 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
                             Result
                     end;
                 {redirect, Where} ->
-                    {redirect, process_redirect(Controller, Where)}
+                    {redirect, process_redirect(Controller, Where, AppInfo)}
             end
     end.
 
 process_location(Controller,  [{_, _}|_] = Where, AppInfo) ->
-    {TheController, TheAction, CleanParams} = process_redirect(Controller, Where),
+    {_, TheController, TheAction, CleanParams} = process_redirect(Controller, Where, AppInfo),
     ControllerModule = list_to_atom(boss_files:web_controller(AppInfo#boss_app_info.application, Controller)),
     ActionAtom = list_to_atom(TheAction),
     {Tokens, []} = boss_controller_lib:convert_params_to_tokens(CleanParams, ControllerModule, ActionAtom),
     {TheController, TheAction, Tokens}.
 
-process_redirect(Controller, [{_, _}|_] = Where) ->
+process_redirect(Controller, [{_, _}|_] = Where, AppInfo) ->
+    TheApplication = proplists:get_value(application, Where, AppInfo#boss_app_info.application),
     TheController = proplists:get_value(controller, Where, Controller),
     TheAction = proplists:get_value(action, Where),
-    CleanParams = proplists:delete(controller, proplists:delete(action, Where)),
-    {TheController, TheAction, CleanParams};
-process_redirect(_, Where) ->
+    CleanParams = lists:foldl(fun(Key, Vars) ->
+                proplists:delete(Key, Vars)
+        end, Where, [application, controller, action]),
+    {TheApplication, TheController, TheAction, CleanParams};
+process_redirect(_, Where, _) ->
     Where.
 
 process_action_result(Info, ok, AppInfo, AuthInfo) ->
@@ -544,8 +549,8 @@ process_action_result({_, Req, SessionID, LocationTrail}, not_found, AppInfo, _)
 
 process_action_result(Info, {redirect, Where}, AppInfo, AuthInfo) ->
     process_action_result(Info, {redirect, Where, []}, AppInfo, AuthInfo);
-process_action_result({{Controller, _, _}, _, _, _}, {redirect, Where, Headers}, _, _) ->
-    {redirect, process_redirect(Controller, Where), Headers};
+process_action_result({{Controller, _, _}, _, _, _}, {redirect, Where, Headers}, AppInfo, _) ->
+    {redirect, process_redirect(Controller, Where, AppInfo), Headers};
 
 process_action_result(Info, {json, Data}, AppInfo, AuthInfo) ->
     process_action_result(Info, {json, Data, []}, AppInfo, AuthInfo);
