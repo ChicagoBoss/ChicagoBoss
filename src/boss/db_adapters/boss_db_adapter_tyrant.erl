@@ -32,12 +32,19 @@ find(_, Id) when is_list(Id) ->
     end.
 
 find(_, Type, Conditions, Max, Skip, Sort, SortOrder) when is_atom(Type), is_list(Conditions),
+                                                        (is_integer(Max) or Max =:= all),
                                                         is_integer(Skip), is_atom(Sort), is_atom(SortOrder) ->
     case boss_record_lib:ensure_loaded(Type) of
         true ->
             Query = build_query(Type, Conditions, Max, Skip, Sort, SortOrder),
-            lists:map(fun({_Id, Record}) -> activate_record(Record, Type) end,
-                medici:mget(medici:search(Query)));
+            ResultRows = medici:mget(medici:search(Query)),
+            FilteredRows = case {Max, Skip} of
+                {all, Skip} when Skip > 0 ->
+                    lists:nthtail(Skip, ResultRows);
+                _ ->
+                    ResultRows
+            end,
+            lists:map(fun({_Id, Record}) -> activate_record(Record, Type) end, FilteredRows);
         false ->
             []
     end.
@@ -147,10 +154,8 @@ build_query(Type, Conditions, Max, Skip, Sort, SortOrder) ->
     Query1 = apply_limit(Query, Max, Skip),
     medici:query_order(Query1, atom_to_list(Sort), SortOrder).
 
-apply_limit(Query, all, 0) ->
+apply_limit(Query, all, _) ->
     Query;
-apply_limit(Query, all, Skip) ->
-    medici:query_limit(Query, ?TRILLION, Skip);
 apply_limit(Query, Max, Skip) ->
     medici:query_limit(Query, Max, Skip).
 

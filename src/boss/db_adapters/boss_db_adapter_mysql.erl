@@ -45,7 +45,7 @@ find(Pid, Id) when is_list(Id) ->
     end.
 
 find(Pid, Type, Conditions, Max, Skip, Sort, SortOrder) when is_atom(Type), is_list(Conditions), 
-                                                              is_integer(Max), is_integer(Skip), 
+                                                              (is_integer(Max) or Max =:= all), is_integer(Skip), 
                                                               is_atom(Sort), is_atom(SortOrder) ->
     case boss_record_lib:ensure_loaded(Type) of
         true ->
@@ -54,9 +54,16 @@ find(Pid, Type, Conditions, Max, Skip, Sort, SortOrder) when is_atom(Type), is_l
             case Res of
                 {data, MysqlRes} ->
                     Columns = mysql:get_result_field_info(MysqlRes),
+                    ResultRows = mysql:get_result_rows(MysqlRes),
+                    FilteredRows = case {Max, Skip} of
+                        {all, Skip} when Skip > 0 ->
+                            lists:nthtail(Skip, ResultRows);
+                        _ ->
+                            ResultRows
+                    end,
                     lists:map(fun(Row) ->
                                 activate_record(Row, Columns, Type)
-                        end, mysql:get_result_rows(MysqlRes));
+                        end, FilteredRows);
                 {error, MysqlRes} ->
                     {error, mysql:get_result_reason(MysqlRes)}
             end;
@@ -266,8 +273,8 @@ build_select_query(Type, Conditions, Max, Skip, Sort, SortOrder) ->
     ["SELECT * FROM ", TableName, 
         " WHERE ", build_conditions(Conditions),
         " ORDER BY ", atom_to_list(Sort), " ", sort_order_sql(SortOrder),
-        case Max of all -> ""; _ -> [" LIMIT ", integer_to_list(Max)] end,
-        " OFFSET ", integer_to_list(Skip)
+        case Max of all -> ""; _ -> [" LIMIT ", integer_to_list(Max),
+                    " OFFSET ", integer_to_list(Skip)] end
     ].
 
 join([], _) -> [];
