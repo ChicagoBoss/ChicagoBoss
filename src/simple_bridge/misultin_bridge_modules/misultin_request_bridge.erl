@@ -34,45 +34,45 @@ peer_port(Req) ->
     Req:get(peer_port).
 
 header(connection, Req) ->
-    misultin_utility:get_key_value('Connection');
+    misultin_utility:get_key_value('Connection', Req:get(headers));
 header(accept, Req) ->
-    misultin_utility:get_key_value('Accept');
+    misultin_utility:get_key_value('Accept', Req:get(headers));
 header(host, Req) ->
-    misultin_utility:get_key_value('Host');
+    misultin_utility:get_key_value('Host', Req:get(headers));
 header(if_modified_since, Req) ->
-    misultin_utility:get_key_value('If-Modified-Since');
+    misultin_utility:get_key_value('If-Modified-Since', Req:get(headers));
 header(if_match, Req) ->
-    misultin_utility:get_key_value('If-Match');
+    misultin_utility:get_key_value('If-Match', Req:get(headers));
 header(if_none_match, Req) ->
-    misultin_utility:get_key_value('If-None-Match');
+    misultin_utility:get_key_value('If-None-Match', Req:get(headers));
 header(if_range, Req) ->
-    misultin_utility:get_key_value('If-Range');
+    misultin_utility:get_key_value('If-Range', Req:get(headers));
 header(if_unmodified_since, Req) ->
-    misultin_utility:get_key_value('If-Unmodified-Since');
+    misultin_utility:get_key_value('If-Unmodified-Since', Req:get(headers));
 header(range, Req) ->
-    misultin_utility:get_key_value('Range');
+    misultin_utility:get_key_value('Range', Req:get(headers));
 header(referer, Req) ->
-    misultin_utility:get_key_value('Referer');
+    misultin_utility:get_key_value('Referer', Req:get(headers));
 header(user_agent, Req) ->
-    misultin_utility:get_key_value('User-Agent');
+    misultin_utility:get_key_value('User-Agent', Req:get(headers));
 header(accept_ranges, Req) ->
-    misultin_utility:get_key_value('Accept-Ranges');
+    misultin_utility:get_key_value('Accept-Ranges', Req:get(headers));
 header(cookie, Req) ->
-    misultin_utility:get_key_value('Cookie');
+    misultin_utility:get_key_value('Cookie', Req:get(headers));
 header(keep_alive, Req) ->
-    misultin_utility:get_key_value('Keep-Alive');
+    misultin_utility:get_key_value('Keep-Alive', Req:get(headers));
 header(location, Req) ->
-    misultin_utility:get_key_value('Location');
+    misultin_utility:get_key_value('Location', Req:get(headers));
 header(content_length, Req) ->
-    misultin_utility:get_key_value('Content-Length');
+    misultin_utility:get_key_value('Content-Length', Req:get(headers));
 header(content_type, Req) ->
-    misultin_utility:get_key_value('Content-Type');
+    misultin_utility:get_key_value('Content-Type', Req:get(headers));
 header(content_encoding, Req) ->
-    misultin_utility:get_key_value('Content-Encoding');
+    misultin_utility:get_key_value('Content-Encoding', Req:get(headers));
 header(authorization, Req) ->
-    misultin_utility:get_key_value('Authorization');
+    misultin_utility:get_key_value('Authorization', Req:get(headers));
 header(transfer_encoding, Req) ->
-    misultin_utility:get_key_value('Transfer-Encoding')}
+    misultin_utility:get_key_value('Transfer-Encoding', Req:get(headers));
 header(Header, Req) ->
     misultin_utility:get_key_value(Header, Req:get(headers)).
 
