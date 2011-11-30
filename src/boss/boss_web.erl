@@ -8,8 +8,8 @@ reload_routes() ->
 reload_translation(Locale) ->
     gen_server:call(boss_web, {reload_translation, Locale}).
 
-reload_translations() ->
-    gen_server:call(boss_web, reload_translations).
+reload_all_translations() ->
+    gen_server:call(boss_web, reload_all_translations).
 
 reload_news() ->
     gen_server:call(boss_web, reload_news).

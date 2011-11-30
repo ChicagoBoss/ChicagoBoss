@@ -140,7 +140,7 @@ handle_call({reload_translation, Locale}, _From, State) ->
                 boss_translator:reload(TranslatorPid, Locale)
         end, State#state.applications),
     {reply, ok, State};
-handle_call(reload_translations, _From, State) ->
+handle_call(reload_all_translations, _From, State) ->
     lists:map(fun(AppInfo) ->
                 [{_, TranslatorPid, _, _}] = supervisor:which_children(AppInfo#boss_app_info.translator_sup_pid),
                 boss_translator:reload_all(TranslatorPid)
