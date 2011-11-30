@@ -27,7 +27,7 @@ div.quote {
     font-style: italic;
 }
 div.code {
-padding: 10px; font-family: Courier New; background-color: black; color: white;
+padding: 10px; font-family: Courier New; background-color: #CCC; color: black;
 }
 div.code span.attr {
     color: #00FF1A;

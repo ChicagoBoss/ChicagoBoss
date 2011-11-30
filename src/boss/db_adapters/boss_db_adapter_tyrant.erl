@@ -31,7 +31,7 @@ find(_, Id) when is_list(Id) ->
             {error, Reason}
     end.
 
-find(_, Type, Conditions, Max, Skip, Sort, SortOrder) when is_atom(Type), is_list(Conditions), is_integer(Max),
+find(_, Type, Conditions, Max, Skip, Sort, SortOrder) when is_atom(Type), is_list(Conditions),
                                                         is_integer(Skip), is_atom(Sort), is_atom(SortOrder) ->
     case boss_record_lib:ensure_loaded(Type) of
         true ->
@@ -144,7 +144,15 @@ attribute_to_colname(Attribute) ->
 
 build_query(Type, Conditions, Max, Skip, Sort, SortOrder) ->
     Query = build_conditions(Type, Conditions),
-    medici:query_order(medici:query_limit(Query, Max, Skip), atom_to_list(Sort), SortOrder).
+    Query1 = apply_limit(Query, Max, Skip),
+    medici:query_order(Query1, atom_to_list(Sort), SortOrder).
+
+apply_limit(Query, all, 0) ->
+    Query;
+apply_limit(Query, all, Skip) ->
+    medici:query_limit(Query, ?TRILLION, Skip);
+apply_limit(Query, Max, Skip) ->
+    medici:query_limit(Query, Max, Skip).
 
 build_conditions(Type, Conditions) ->
     build_conditions1([{'_type', 'equals', atom_to_list(Type)}|Conditions], []).

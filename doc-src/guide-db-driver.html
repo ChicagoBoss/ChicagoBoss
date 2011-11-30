@@ -15,7 +15,7 @@
 </div>
 <p>Returns a BossRecord matching the <code>Id</code>. The <code>Id</code> must be unique across data types.</p>
 <div class="code">
-    find(Conn, Type<span class="typevar">::atom()</span>, Conditions, Max<span class="typevar">::integer()</span>, Skip<span class="typevar">::integer()</span>, Sort<span class="typevar">::atom()</span>, SortOrder) -&gt; [BossRecord]
+    find(Conn, Type<span class="typevar">::atom()</span>, Conditions, Max<span class="typevar">::integer()</span> | all, Skip<span class="typevar">::integer()</span>, Sort<span class="typevar">::atom()</span>, SortOrder) -&gt; [BossRecord]
 </div>
 <p>Queries for BossRecords. The <code>Conditions</code> are guaranteed to be in {Key, Operator, Value} format. See <a href="api-db.html">the BossDB API</a> for a list of query operators you need to support.</p>
 <div class="code">

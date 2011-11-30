@@ -107,11 +107,10 @@ apply_skip(List, Skip) when Skip >= length(List) ->
 apply_skip(List, Skip) -> 
     lists:nthtail(Skip, List).
 
-apply_max(List, Max) when Max>0, length(List) > Max ->
-    {MaxList,_} = lists:split(Max, List),
-    MaxList;
-apply_max(List, _Max) ->
-    List.
+apply_max(List, all) ->
+    List;
+apply_max(List, Max) when is_integer(Max) ->
+    lists:sublist(List, Max).
 
 test_rec(Rec,{Key, 'not_equals', Value}) ->
     apply(Rec,Key,[]) /= Value;

@@ -33,7 +33,7 @@
 <p>Functions available in the <code>boss_web_test</code> module include:</p>
 {% for function in test_functions %}
 {% if function.description_long %}
-<div class="code">
+<div class="code spec">
     {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
 </div>
 <p>{{ function.description_long }}</p>
@@ -45,7 +45,7 @@
 <p>The <code>Assertions</code> list in a <code>boss_web_test</code> invocation will usually refer to functions in the <code>boss_assert</code> module. Available functions include:</p>
 {% for function in assert_functions %}
 {% if function.description_long %}
-<div class="code">
+<div class="code spec">
     {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
 </div>
 <p>{{ function.description_long }}</p>

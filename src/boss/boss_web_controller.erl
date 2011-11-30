@@ -134,6 +134,12 @@ handle_info(timeout, State) ->
 
     {noreply, State#state{ applications = AppInfoList }}.
 
+handle_call({reload_translation, Locale}, _From, State) ->
+    lists:map(fun(AppInfo) ->
+                [{_, TranslatorPid, _, _}] = supervisor:which_children(AppInfo#boss_app_info.translator_sup_pid),
+                boss_translator:reload(TranslatorPid, Locale)
+        end, State#state.applications),
+    {reply, ok, State};
 handle_call(reload_translations, _From, State) ->
     lists:map(fun(AppInfo) ->
                 [{_, TranslatorPid, _, _}] = supervisor:which_children(AppInfo#boss_app_info.translator_sup_pid),
@@ -313,14 +319,14 @@ process_request(AppInfo, Req, development, "/doc/"++ModelName, SessionID) ->
     end,
     process_result(AppInfo, Result);
 process_request(AppInfo, Req, Mode, Url, SessionID) ->
+    RouterPid = AppInfo#boss_app_info.router_pid,
     if 
         Mode =:= development ->
             ControllerList = boss_files:web_controller_list(AppInfo#boss_app_info.application),
-            boss_router:set_controllers(AppInfo#boss_app_info.router_pid, ControllerList);
+            boss_router:set_controllers(RouterPid, ControllerList);
         true ->
             ok
     end,
-    RouterPid = AppInfo#boss_app_info.router_pid,
     Location = case boss_router:route(RouterPid, Url) of
         {ok, {Controller, Action, Tokens}} ->
             {Controller, Action, Tokens};
@@ -365,7 +371,7 @@ process_result(_, {ok, Payload, Headers}) ->
     {200, [{"Content-Type", proplists:get_value("Content-Type", Headers, "text/html")}
             |proplists:delete("Content-Type", Headers)], Payload}.
 
-load_and_execute(production, {Controller, _, _} = Location, AppInfo, Req, SessionID) ->
+load_and_execute(Mode, {Controller, _, _} = Location, AppInfo, Req, SessionID) when Mode =:= production; Mode =:= testing->
     case lists:member(boss_files:web_controller(AppInfo#boss_app_info.application, Controller), 
             AppInfo#boss_app_info.controller_modules) of
         true -> execute_action(Location, AppInfo, Req, SessionID);
@@ -495,16 +501,23 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
                             Result
                     end;
                 {redirect, Where} ->
-                    {redirect, process_redirect(Where, Module)}
+                    {redirect, process_redirect(Controller, Where)}
             end
     end.
 
-process_redirect([{_, _}|_] = Where, Controller) ->
+process_location(Controller,  [{_, _}|_] = Where, AppInfo) ->
+    {TheController, TheAction, CleanParams} = process_redirect(Controller, Where),
+    ControllerModule = list_to_atom(boss_files:web_controller(AppInfo#boss_app_info.application, Controller)),
+    ActionAtom = list_to_atom(TheAction),
+    {Tokens, []} = boss_controller_lib:convert_params_to_tokens(CleanParams, ControllerModule, ActionAtom),
+    {TheController, TheAction, Tokens}.
+
+process_redirect(Controller, [{_, _}|_] = Where) ->
     TheController = proplists:get_value(controller, Where, Controller),
     TheAction = proplists:get_value(action, Where),
     CleanParams = proplists:delete(controller, proplists:delete(action, Where)),
     {TheController, TheAction, CleanParams};
-process_redirect(Where, _) ->
+process_redirect(_, Where) ->
     Where.
 
 process_action_result(Info, ok, AppInfo, AuthInfo) ->
@@ -518,13 +531,12 @@ process_action_result(Info, {render_other, OtherLocation}, AppInfo, AuthInfo) ->
     process_action_result(Info, {render_other, OtherLocation, []}, AppInfo, AuthInfo);
 process_action_result(Info, {render_other, OtherLocation, Data}, AppInfo, AuthInfo) ->
     process_action_result(Info, {render_other, OtherLocation, Data, []}, AppInfo, AuthInfo);
-process_action_result(Info, {render_other, {Controller, Action}, Data, Headers}, AppInfo, AuthInfo) ->
-    process_action_result(Info, {render_other, {Controller, Action, []}, Data, Headers}, AppInfo, AuthInfo);
-process_action_result({_, Req, SessionID, _}, {render_other, {_, _, _} = OtherLocation, Data, Headers}, AppInfo, AuthInfo) ->
-    render_view(OtherLocation, AppInfo, Req, SessionID, [{"_before", AuthInfo}|Data], Headers);
+process_action_result({{Controller, _, _}, Req, SessionID, _}, {render_other, OtherLocation, Data, Headers}, AppInfo, AuthInfo) ->
+    render_view(process_location(Controller, OtherLocation, AppInfo),
+        AppInfo, Req, SessionID, [{"_before", AuthInfo}|Data], Headers);
 
-process_action_result({_, Req, SessionID, LocationTrail}, {action_other, OtherLocation}, AppInfo, _) ->
-    execute_action(OtherLocation, AppInfo, Req, SessionID, LocationTrail);
+process_action_result({{Controller, _, _}, Req, SessionID, LocationTrail}, {action_other, OtherLocation}, AppInfo, _) ->
+    execute_action(process_location(Controller, OtherLocation, AppInfo), AppInfo, Req, SessionID, LocationTrail);
 
 process_action_result({_, Req, SessionID, LocationTrail}, not_found, AppInfo, _) ->
     NotFoundLocation = boss_router:handle(AppInfo#boss_app_info.router_pid, 404),
@@ -533,7 +545,7 @@ process_action_result({_, Req, SessionID, LocationTrail}, not_found, AppInfo, _)
 process_action_result(Info, {redirect, Where}, AppInfo, AuthInfo) ->
     process_action_result(Info, {redirect, Where, []}, AppInfo, AuthInfo);
 process_action_result({{Controller, _, _}, _, _, _}, {redirect, Where, Headers}, _, _) ->
-    {redirect, process_redirect(Where, Controller), Headers};
+    {redirect, process_redirect(Controller, Where), Headers};
 
 process_action_result(Info, {json, Data}, AppInfo, AuthInfo) ->
     process_action_result(Info, {json, Data, []}, AppInfo, AuthInfo);

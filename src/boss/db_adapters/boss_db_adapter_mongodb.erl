@@ -58,10 +58,11 @@ find(Conn, Type, Conditions, Max, Skip, Sort, SortOrder) when is_atom(Type), is_
         true ->
             Collection = type_to_collection(Type),
             Res = execute(Conn, fun() ->
-                    Selector = build_conditions(Conditions, 
-                                                {Sort, pack_sort_order(SortOrder)}),
-                    mongo:find(Collection, Selector, [],
-                               Skip, Max) 
+                    Selector = build_conditions(Conditions, {Sort, pack_sort_order(SortOrder)}),
+                    case Max of 
+                        all -> mongo:find(Collection, Selector, [], Skip); 
+                        _ -> mongo:find(Collection, Selector, [], Skip, Max)
+                    end
                 end),
             case Res of
                 {ok, Curs} ->

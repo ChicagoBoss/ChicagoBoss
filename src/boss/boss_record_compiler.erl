@@ -2,7 +2,6 @@
 -author('emmiller@gmail.com').
 -define(DATABASE_MODULE, boss_db).
 -define(PREFIX, "BOSSRECORDINTERNAL").
--define(HAS_MANY_LIMIT, 1000 * 1000 * 1000).
 
 -export([compile/1, compile/2, edoc_module/1, edoc_module/2, trick_out_forms/1]).
 
@@ -273,7 +272,7 @@ has_one_forms(HasOne, ModuleName, Opts) ->
     ].
 
 has_many_forms(HasMany, ModuleName, many, Opts) ->
-    has_many_forms(HasMany, ModuleName, ?HAS_MANY_LIMIT, Opts);
+    has_many_forms(HasMany, ModuleName, all, Opts);
 has_many_forms(HasMany, ModuleName, Limit, Opts) -> 
     Sort = proplists:get_value(sort_by, Opts, 'id'),
     SortOrder = proplists:get_value(sort_order, Opts, str_ascending),
