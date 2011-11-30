@@ -38,7 +38,7 @@ BossRecords are <em>specially compiled parameterized modules</em> that follow th
 {% for function in functions %}
 {% ifnotequal function.function "trivial_counter" %}
 <a name="{{ function.function }}"></a>
-<div class="code">
+<div class="code spec">
     {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
 </div>
 <p>
@@ -57,13 +57,13 @@ BossRecords are <em>specially compiled parameterized modules</em> that follow th
 
 <p>Special associations are generated from the following module attributes:</p>
 
-<div class="code">
+<div class="code spec">
     <span class="attr">-belongs_to</span>(foo).
 </div>
 
 <p>Requires a matching <code>FooId</code> in the parameter list. Adds a function <code>foo()</code> which returns the BossRecord (of any type, usually <code>foo</code>) with ID equal to the current BossRecord's <code>FooId</code>.</p>
 
-<div class="code">
+<div class="code spec">
     <span class="attr">-has</span>({bar, 1}).<br />
     <span class="attr">-has</span>({bars, Count}). % Count &gt; 1<br />
     <span class="attr">-has</span>({bars, many}). % alias for 1 million<br />
@@ -72,9 +72,11 @@ BossRecords are <em>specially compiled parameterized modules</em> that follow th
 <p>Generates a function <code>bar()</code> or <code>bars()</code> which returns up to <code>Count</code> "bar" BossRecords with <code>FooId</code> equal to this BossRecord's ID. If Count is greater than 1, also creates <code>first_bar()</code> and <code>last_bar()</code> which return the first and last items in the association.</p>
 
 <p>When <code>Count</code> is not equal to 1, <code>has</code> can also take a proplist of options as the third element in the tuple:</p>
-<div class="code">
+
+<div class="code spec">
     <span class="attr">-has</span>({bars, many, [{sort_by, first_name}]}).</span>
 </div>
+
 <p>Valid options are:</p>
 <ul>
     <li><code>sort_by</code> - attribute to sort on. Defaults to 'id'</li>
@@ -93,7 +95,7 @@ BossRecords are <em>specially compiled parameterized modules</em> that follow th
 
 <p>The two above attributes work similar to <code>belongs_to</code> and <code>has_many/has_one</code> in Rails.</p>
 
-<div class="code">
+<div class="code spec">
     <span class="attr">-counter</span>(foo_counter).
 </div>
 

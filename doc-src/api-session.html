@@ -17,7 +17,7 @@
 
 {% for function in session_functions %}
 {% if function.description_long %}
-<div class="code">
+<div class="code spec">
     {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
 </div>
 <p>{{ function.description_long }}</p>
@@ -44,7 +44,7 @@ boss_flash:add(Req, notice, "Flash Title", "Flash Message")
 
 {% for function in flash_functions %}
 {% if function.description_long %}
-<div class="code">
+<div class="code spec">
     {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
 </div>
 <p>{{ function.description_long }}</p>

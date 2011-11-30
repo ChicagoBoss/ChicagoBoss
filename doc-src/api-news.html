@@ -31,7 +31,7 @@
 <p>Functions for managing watches are:</p>
 {% for function in functions %}
 {% if function.description_long %}
-<div class="code">
+<div class="code spec">
     {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
 </div>
 <p>{{ function.description_long }}</p>
