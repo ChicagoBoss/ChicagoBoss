@@ -319,14 +319,14 @@ process_request(AppInfo, Req, development, "/doc/"++ModelName, SessionID) ->
     end,
     process_result(AppInfo, Result);
 process_request(AppInfo, Req, Mode, Url, SessionID) ->
+    RouterPid = AppInfo#boss_app_info.router_pid,
     if 
         Mode =:= development ->
             ControllerList = boss_files:web_controller_list(AppInfo#boss_app_info.application),
-            boss_router:set_controllers(AppInfo#boss_app_info.router_pid, ControllerList);
+            boss_router:set_controllers(RouterPid, ControllerList);
         true ->
             ok
     end,
-    RouterPid = AppInfo#boss_app_info.router_pid,
     Location = case boss_router:route(RouterPid, Url) of
         {ok, {Controller, Action, Tokens}} ->
             {Controller, Action, Tokens};
@@ -371,7 +371,7 @@ process_result(_, {ok, Payload, Headers}) ->
     {200, [{"Content-Type", proplists:get_value("Content-Type", Headers, "text/html")}
             |proplists:delete("Content-Type", Headers)], Payload}.
 
-load_and_execute(production, {Controller, _, _} = Location, AppInfo, Req, SessionID) ->
+load_and_execute(Mode, {Controller, _, _} = Location, AppInfo, Req, SessionID) when Mode =:= production; Mode =:= testing->
     case lists:member(boss_files:web_controller(AppInfo#boss_app_info.application, Controller), 
             AppInfo#boss_app_info.controller_modules) of
         true -> execute_action(Location, AppInfo, Req, SessionID);

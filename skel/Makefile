@@ -13,4 +13,4 @@ update_po:
 
 .PHONY: test
 test:
-	$(ERL) -pa {{src}}/ebin -run boss_web_test -noshell
+	$(ERL) -pa $(PWD)/ebin -pa {{src}}/ebin -run boss_web_test start $(APP) -noshell
