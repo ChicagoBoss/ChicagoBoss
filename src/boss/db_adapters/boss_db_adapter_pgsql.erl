@@ -232,8 +232,7 @@ build_select_query(Type, Conditions, Max, Skip, Sort, SortOrder) ->
     ["SELECT * FROM ", TableName, 
         " WHERE ", build_conditions(Conditions),
         " ORDER BY ", atom_to_list(Sort), " ", sort_order_sql(SortOrder),
-        case Max of all -> ""; _ -> [" LIMIT ", integer_to_list(Max)] end, 
-        " OFFSET ", integer_to_list(Skip)
+        case Max of all -> ""; _ -> [" LIMIT ", integer_to_list(Max), " OFFSET ", integer_to_list(Skip)] end
     ].
 
 join([], _) -> [];
