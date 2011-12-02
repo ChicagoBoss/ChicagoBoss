@@ -14,6 +14,8 @@
     <span class="braces">{{ "{%" }}</span> <span class="keyword">endfor</span> <span class="braces">{{ "%}" }}</span><br />
     <span class="bracket">&lt;/<span class="name">ol</span>&gt;</span>
 </div>
+<p>If You have some strings in controller code or libraries which have to be translated, use boss_translator:trans(AppName, String, Locale). Language file generator will scan beam for calls to this function and include String in generated PO file.</p>
+<p>Currently You have to use this call directly, do not define a precompiler macro</p>
 <p><em>Step 2</em>: Now we need to create a language file. Visit /admin/lang on your development server. You should see a page like this:</p>
 <img src="http://www.chicagoboss.org/images/translator-new.jpg" />
 <p><em>Step 3</em>: Click "New language file"</p>
