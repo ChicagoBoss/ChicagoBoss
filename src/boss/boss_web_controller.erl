@@ -1,6 +1,6 @@
 -module(boss_web_controller).
 -behaviour(gen_server).
--export([start_link/0, start_link/1, handle_request/3, process_request/5]).
+-export([start_link/0, start_link/1, handle_request/4, process_request/6]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 -define(DEBUGPRINT(A), error_logger:info_report("~~o)> " ++ A)).
 
@@ -89,6 +89,7 @@ init(Config) ->
 
     ServList=boss_env:get_env(servers, [
         [{server, boss_env:get_env(server, misultin)}, {ip, proplists:get_value(ip, Config)}, {port, proplists:get_value(port, Config)},
+         {name, default},
         {ssl_enable,boss_env:get_env(ssl_enable, false)}, {ssl_options,boss_env:get_env(ssl_options, [])}]]),
     error_logger:info_msg("Configured Servers: ~p~n", [ServList]),
     StartServFun =fun (ServerParams) ->
@@ -102,8 +103,8 @@ init(Config) ->
         SSLEnable = proplists:get_value(ssl_enable, ServerParams),
         SSLOptions = proplists:get_value(ssl_options, ServerParams),
         ServerConfig = [{loop, fun(Req) -> 
-                        ?MODULE:handle_request(Req, RequestMod, ResponseMod)
-                    end} | [{ip,Ip},{port,Port},{name, Name}]],
+                        ?MODULE:handle_request(Name, Req, RequestMod, ResponseMod)
+                    end} | [{ip,Ip},{port,Port},{name,Name}]],
         error_logger:info_msg("Starting server:~p ~p on ~p:~p ssl:~p ssl_opts:~p~n", [Name,ServerMod,Ip,Port,SSLEnable,SSLOptions]),
         Pid = case ServerMod of
             mochiweb_http -> mochiweb_http:start([{ssl, SSLEnable}, {ssl_opts, SSLOptions} | ServerConfig]);
@@ -249,7 +250,7 @@ init_watches(AppName) ->
                 end
         end, [], boss_files:init_file_list(AppName)).
 
-handle_request(Req, RequestMod, ResponseMod) ->
+handle_request(Instance, Req, RequestMod, ResponseMod) ->
     LoadedApplications = boss_web:get_all_applications(),
     Request = simple_bridge:make_request(RequestMod, Req),
     case Request:path() of
@@ -282,7 +283,7 @@ handle_request(Req, RequestMod, ResponseMod) ->
                     RouterPid = boss_web:router_pid(App),
                     {Time, {StatusCode, Headers, Payload}} = timer:tc(?MODULE, process_request, [
                         AppInfo#boss_app_info{ translator_pid = TranslatorPid, router_pid = RouterPid }, 
-                        Request, Mode, Url, SessionID]),
+                        Request, Mode, Instance, Url, SessionID]),
                     ErrorFormat = "~s ~s [~p] ~p ~pms~n", 
                     ErrorArgs = [Request:request_method(), Request:path(), App, StatusCode, Time div 1000],
                     case StatusCode of
@@ -304,18 +305,18 @@ handle_request(Req, RequestMod, ResponseMod) ->
             end
     end.
 
-process_request(AppInfo, Req, development, "/doc", SessionID) ->
-    Result = case catch load_and_execute(development, {"doc", [], []}, AppInfo, Req, SessionID) of
+process_request(AppInfo, Req, development, Instance, "/doc", SessionID) ->
+    Result = case catch load_and_execute(development, {"doc", [], []}, AppInfo, Instance, Req, SessionID) of
         {'EXIT', Reason} ->
             {error, Reason};
         Ok ->
             Ok
     end,
     process_result(AppInfo, Result);
-process_request(AppInfo, Req, development, "/doc/"++ModelName, SessionID) ->
+process_request(AppInfo, Req, development, Instance, "/doc/"++ModelName, SessionID) ->
     Result = case string:chr(ModelName, $.) of
         0 ->
-            case catch load_and_execute(development, {"doc", ModelName, []}, AppInfo, Req, SessionID) of
+            case catch load_and_execute(development, {"doc", ModelName, []}, AppInfo, Instance, Req, SessionID) of
                 {'EXIT', Reason} ->
                     {error, Reason};
                 Ok ->
@@ -325,7 +326,7 @@ process_request(AppInfo, Req, development, "/doc/"++ModelName, SessionID) ->
             {not_found, "File not found"}
     end,
     process_result(AppInfo, Result);
-process_request(AppInfo, Req, Mode, Url, SessionID) ->
+process_request(AppInfo, Req, Mode, Instance, Url, SessionID) ->
     if 
         Mode =:= development ->
             ControllerList = boss_files:web_controller_list(AppInfo#boss_app_info.application),
@@ -349,7 +350,7 @@ process_request(AppInfo, Req, Mode, Url, SessionID) ->
         undefined ->
             {not_found, "The requested page was not found. Additionally, no handler was found for processing 404 errors."};
         _ ->
-            case catch load_and_execute(Mode, Location, AppInfo, Req, SessionID) of
+            case catch load_and_execute(Mode, Location, AppInfo, Instance, Req, SessionID) of
                 {'EXIT', Reason} ->
                     {error, Reason};
                 Ok ->
@@ -378,13 +379,13 @@ process_result(_, {ok, Payload, Headers}) ->
     {200, [{"Content-Type", proplists:get_value("Content-Type", Headers, "text/html")}
             |proplists:delete("Content-Type", Headers)], Payload}.
 
-load_and_execute(production, {Controller, _, _} = Location, AppInfo, Req, SessionID) ->
+load_and_execute(production, {Controller, _, _} = Location, AppInfo, Instance, Req, SessionID) ->
     case lists:member(boss_files:web_controller(AppInfo#boss_app_info.application, Controller), 
             AppInfo#boss_app_info.controller_modules) of
-        true -> execute_action(Location, AppInfo, Req, SessionID);
+        true -> execute_action(Location, AppInfo, Instance, Req, SessionID);
         false -> render_view(Location, AppInfo, Req, SessionID)
     end;
-load_and_execute(development, {"doc", ModelName, _}, AppInfo, Req, _SessionID) ->
+load_and_execute(development, {"doc", ModelName, _}, AppInfo, _Instance, Req, _SessionID) ->
     case boss_load:load_models() of
         {ok, ModelModules} ->
             case lists:member(ModelName, lists:map(fun atom_to_list/1, ModelModules)) of
@@ -407,7 +408,7 @@ load_and_execute(development, {"doc", ModelName, _}, AppInfo, Req, _SessionID) -
         {error, ErrorList} ->
             render_errors(ErrorList, AppInfo, Req)
     end;
-load_and_execute(development, {Controller, _, _} = Location, AppInfo, Req, SessionID) ->
+load_and_execute(development, {Controller, _, _} = Location, AppInfo, Instance, Req, SessionID) ->
     case boss_load:load_mail_controllers() of
         {ok, _} -> 
             case boss_load:load_libraries() of
@@ -419,7 +420,7 @@ load_and_execute(development, {Controller, _, _} = Location, AppInfo, Req, Sessi
                                 true ->
                                     case boss_load:load_models() of
                                         {ok, _} ->
-                                            execute_action(Location, AppInfo, Req, SessionID);
+                                            execute_action(Location, AppInfo, Instance, Req, SessionID);
                                         {error, ErrorList} ->
                                             render_errors(ErrorList, AppInfo, Req)
                                     end;
@@ -445,14 +446,14 @@ render_errors(ErrorList, AppInfo, Req) ->
             Err
     end.
 
-execute_action(Location, AppInfo, Req, SessionID) ->
-    execute_action(Location, AppInfo, Req, SessionID, []).
+execute_action(Location, AppInfo, Instance, Req, SessionID) ->
+    execute_action(Location, AppInfo, Instance, Req, SessionID, []).
 
-execute_action({Controller, Action}, AppInfo, Req, SessionID, LocationTrail) ->
-    execute_action({Controller, Action, []}, AppInfo, Req, SessionID, LocationTrail);
-execute_action({Controller, Action, Tokens}, AppInfo, Req, SessionID, LocationTrail) when is_atom(Action) ->
-    execute_action({Controller, atom_to_list(Action), Tokens}, AppInfo, Req, SessionID, LocationTrail);
-execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID, LocationTrail) ->
+execute_action({Controller, Action}, AppInfo, Instance, Req, SessionID, LocationTrail) ->
+    execute_action({Controller, Action, []}, AppInfo, Instance, Req, SessionID, LocationTrail);
+execute_action({Controller, Action, Tokens}, AppInfo, Instance, Req, SessionID, LocationTrail) when is_atom(Action) ->
+    execute_action({Controller, atom_to_list(Action), Tokens}, AppInfo, Instance, Req, SessionID, LocationTrail);
+execute_action({Controller, Action, Tokens} = Location, AppInfo, Instance, Req, SessionID, LocationTrail) ->
     case lists:member(Location, LocationTrail) of
         true ->
             {error, "Circular redirect!"};
@@ -464,10 +465,10 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
                 fun({Function, Arity}) -> {atom_to_list(Function), Arity} end,
                 Module:module_info(exports)),
             ControllerInstance = case proplists:get_value("new", ExportStrings) of
-                1 -> 
-                    Module:new(Req);
-                2 ->
-                    Module:new(Req, SessionID)
+                2 -> 
+                    Module:new(Instance, Req);
+                3 ->
+                    Module:new(Instance, Req, SessionID)
             end,
             AuthInfo = case lists:member({"before_", 2}, ExportStrings) of
                 true -> 
