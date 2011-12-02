@@ -32,6 +32,10 @@ handle_cast({From, pull, 'last', Subscriber}, State) ->
     {NewSubscribers, LastPull} = pull_messages(State#state.last_pull, Subscriber, State),
     gen_server:reply(From, {ok, LastPull}),
     {noreply, State#state{subscribers = NewSubscribers, last_pull = LastPull}};
+handle_cast({From, pull, undefined, Subscriber}, State) ->
+    {NewSubscribers, LastPull} = pull_messages(undefined, Subscriber, State),
+    gen_server:reply(From, {ok, LastPull}),
+    {noreply, State#state{subscribers = NewSubscribers, last_pull = LastPull}};
 handle_cast({From, pull, Timestamp, Subscriber}, State) when is_integer(Timestamp) ->
     {NewSubscribers, LastPull} = pull_messages(Timestamp, Subscriber, State),
     gen_server:reply(From, {ok, LastPull}),
@@ -88,9 +92,10 @@ seconds_to_micro_seconds(Seconds) ->
 now_to_micro_seconds({MegaSecs, Secs, MicroSecs}) ->
     MegaSecs * 1000 * 1000 * 1000 * 1000 + Secs * 1000 * 1000 + MicroSecs.
 
+messages_newer_than_timestamp(undefined, Messages) ->
+    Messages;
 messages_newer_than_timestamp(Timestamp, Messages) ->
     messages_newer_than_timestamp(Timestamp, Messages, []).
-
 
 messages_newer_than_timestamp(_, [], Acc) ->
     lists:reverse(Acc);
