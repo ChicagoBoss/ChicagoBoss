@@ -12,6 +12,8 @@
         reload_all/1
     ]).
 
+-export([trans/3]).
+
 start() ->
     start([]).
 
@@ -42,4 +44,10 @@ fun_for(Pid, Locale) ->
     case is_loaded(Pid, Locale) of
         true -> fun(String) -> ?MODULE:lookup(Pid, String, Locale) end;
         false -> none
+    end.
+
+trans(App,T,Lang) ->
+    case boss_translator:lookup(boss_web:translator_pid(App), T, Lang) of
+        undefined -> T;
+        S-> S
     end.

@@ -74,7 +74,7 @@ lang_write_multiline_to_file(IODevice, [Token|Rest]) ->
 	lang_write_multiline_to_file(IODevice, Rest).
 
 extract_strings(App) ->
-    lists:usort(extract_model_strings(App) ++ extract_view_strings(App)).
+    lists:usort(extract_model_strings(App) ++ extract_view_strings(App) ++ extract_controller_strings(App)).
 
 extract_strings(App, Lang) ->
     AllStrings = extract_strings(App),
@@ -91,6 +91,55 @@ extract_strings(App, Lang) ->
                 end
         end, lists:usort(AllStrings)),
     {UntranslatedStrings, PoStrings}.
+
+extract_controller_strings(_App) ->
+    Modules=boss_files:module_list([boss_files:lib_path(),
+                            boss_files:web_controller_path(),
+                            boss_files:mail_controller_path()]),
+    lists:foldl(fun
+        (Module, Acc) ->
+            io:format("~p~n",[Module]),
+            case beam_lib:chunks(filename:join([boss_files:ebin_dir(),Module]),
+                    [abstract_code]) of
+                {error,beam_lib,_} -> Acc;
+                {ok,{_,[{abstract_code,{raw_abstract_v1,AbsCode}}]}} -> scan_abs_code(AbsCode,Acc)
+            end
+        end, [], Modules).
+
+scan_abs_code([],Acc) -> Acc;
+scan_abs_code({call,_,{atom,_,_Func},Params},Acc) -> scan_abs_code(Params,Acc);
+scan_abs_code({call,_,{remote,_,{atom,_,boss_translator},{atom,_,trans}},
+        [{atom,_,_App},{string,_,String},_]},Acc) -> 
+    [String|Acc];
+scan_abs_code({call,_,{remote,_,{atom,_,_Module},{atom,_,_Func}},Params},Acc) -> scan_abs_code(Params,Acc);
+scan_abs_code({call,_,{remote,_,{var,_,_Obj},{atom,_,_Func}},Params},Acc) -> scan_abs_code(Params,Acc);
+scan_abs_code({call,_,{remote,_,_,{atom,_,_Func}},Params},Acc) -> scan_abs_code(Params,Acc);
+scan_abs_code({'fun',_,{function,_,_}},Acc) -> Acc;
+scan_abs_code({'fun',_,{clauses,Clauses}},Acc) -> scan_abs_code(Clauses,Acc);
+scan_abs_code({'case',_,_expr,Clauses},Acc) -> scan_abs_code(Clauses,Acc);
+scan_abs_code({'if',_,Clauses},Acc) -> scan_abs_code(Clauses,Acc);
+scan_abs_code({'receive',_,Clauses,_timeout,TimeoutClauses},Acc) -> 
+    scan_abs_code(TimeoutClauses,scan_abs_code(Clauses,Acc));
+scan_abs_code({eof,_},Acc) -> Acc;
+scan_abs_code({nil,_},Acc) -> Acc;
+scan_abs_code({atom,_,_},Acc) -> Acc;
+scan_abs_code({string,_,_},Acc) -> Acc;
+scan_abs_code({var,_,_},Acc) -> Acc;
+scan_abs_code({integer,_,_},Acc) -> Acc;
+scan_abs_code({record,_,{var,_,_},_,Elements},Acc) -> scan_abs_code(Elements,Acc);
+scan_abs_code({record_field,_,{atom,_,_},Elements},Acc) -> scan_abs_code(Elements,Acc);
+scan_abs_code({record_field,_,{var,_,_},_,Elements},Acc) -> scan_abs_code(Elements,Acc);
+scan_abs_code({tuple,_,Elements},Acc) -> scan_abs_code(Elements,Acc);
+scan_abs_code({cons,_,Param1,Param2},Acc) -> scan_abs_code(Param2,scan_abs_code(Param1,Acc));
+scan_abs_code({op,_,_opname,Param1,Param2},Acc) -> scan_abs_code(Param2,scan_abs_code(Param1,Acc));
+scan_abs_code({attribute,_,_,_},Acc) -> Acc;
+scan_abs_code({match,_,_,_},Acc) -> Acc;
+scan_abs_code({function,_,_,_,Clauses},Acc) -> scan_abs_code(Clauses,Acc);
+scan_abs_code({clause,_,_,_,Code},Acc) -> scan_abs_code(Code,Acc);
+scan_abs_code(Arg,Acc) when is_tuple(Arg) -> Acc;
+scan_abs_code([Expr|Rest],Acc) -> 
+    NewAcc=scan_abs_code(Expr,Acc),
+    scan_abs_code(Rest,NewAcc).
 
 extract_po_strings(App, Lang) ->
     LangFile = boss_files:lang_path(App, Lang),
