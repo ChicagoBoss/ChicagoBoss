@@ -76,7 +76,7 @@ view_file_list() ->
     ViewFiles ++ filelib:wildcard(MailPattern).
 
 init_file_list(App) ->
-    filelib:wildcard(filename:join([root_priv_dir(App), "init", "*.erl"])).
+    lists:sort(filelib:wildcard(filename:join([root_priv_dir(App), "init", "*.erl"]))).
 
 routes_file(App) ->
     filename:join([root_priv_dir(App), lists:concat([App, ".routes"])]).

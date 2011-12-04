@@ -11,8 +11,8 @@ reload_translation(Locale) ->
 reload_all_translations() ->
     gen_server:call(boss_web, reload_all_translations).
 
-reload_news() ->
-    gen_server:call(boss_web, reload_news).
+reload_init_scripts() ->
+    gen_server:call(boss_web, reload_init_scripts).
 
 get_all_routes() ->
     gen_server:call(boss_web, get_all_routes).

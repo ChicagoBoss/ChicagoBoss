@@ -29,7 +29,7 @@ bootstrap_test_env(Application, Adapter) ->
     #boss_app_info{ 
         application = Application,
         base_url = "",
-        watches = [],
+        init_data = [],
         router_sup_pid = RouterSupPid,
         translator_sup_pid = TranslatorSupPid,
         model_modules = boss_files:model_list(Application),

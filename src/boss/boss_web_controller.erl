@@ -30,7 +30,10 @@ terminate(Reason, #state{ is_master_node = true } = State) ->
             ok
     end,
     terminate(Reason, State#state{ is_master_node = false });
-terminate(_Reason, _State) ->
+terminate(_Reason, State) ->
+    lists:map(fun(AppInfo) ->
+                stop_init_scripts(AppInfo#boss_app_info.application, AppInfo#boss_app_info.init_data)
+        end, State#state.applications),
     error_logger:logfile(close),
     boss_translator:stop(),
     boss_router:stop(),
@@ -121,9 +124,9 @@ handle_info(timeout, State) ->
                     true -> boss_load:load_all_modules(AppName, TranslatorSupPid);
                     false -> ok
                 end,
-                InitWatches = init_watches(AppName), 
+                InitData = run_init_scripts(AppName), 
                 #boss_app_info{ application = AppName,
-                    watches = InitWatches,
+                    init_data = InitData,
                     router_sup_pid = RouterSupPid,
                     translator_sup_pid = TranslatorSupPid,
                     base_url = (if BaseURL =:= "/" -> ""; true -> BaseURL end),
@@ -152,10 +155,11 @@ handle_call(reload_routes, _From, State) ->
                 boss_router:reload(RouterPid)
         end, State#state.applications),
     {reply, ok, State};
-handle_call(reload_news, _From, State) ->
+handle_call(reload_init_scripts, _From, State) ->
     NewApplications = lists:map(fun(AppInfo) ->
-                lists:map(fun boss_news:cancel_watch/1, AppInfo#boss_app_info.watches),
-                AppInfo#boss_app_info{ watches = init_watches(AppInfo#boss_app_info.application) }
+                stop_init_scripts(AppInfo#boss_app_info.application, AppInfo#boss_app_info.init_data),
+                NewInitData = run_init_scripts(AppInfo#boss_app_info.application),
+                AppInfo#boss_app_info{ init_data = NewInitData }
         end, State#state.applications),
     {reply, ok, State#state{ applications = NewApplications }};
 handle_call(get_all_routes, _From, State) ->
@@ -225,15 +229,31 @@ find_application_for_path(Path, Default, [App|Rest], LongestMatch) ->
             find_application_for_path(Path, Default, Rest, LongestMatch)
     end.
 
-init_watches(AppName) ->
-    lists:foldr(fun(File, Acc) ->
+stop_init_scripts(Application, InitData) ->
+    lists:foldr(fun(File, _) ->
                 case boss_compiler:compile(File, []) of
                     {ok, Module} ->
-                        case lists:suffix("_news.erl", File) of
-                            true ->
-                                {ok, NewWatches} = Module:init(),
-                                NewWatches ++ Acc;
-                            false ->
+                        case proplists:get_value(Module, InitData, init_failed) of
+                           init_failed ->
+                               ok;
+                           ScriptInitData ->
+                               catch Module:stop(ScriptInitData)
+                       end;
+                   Error -> error_logger:error_msg("Compilation of ~p failed: ~p~n", [File, Error])
+                end
+        end, ok, boss_files:init_file_list(Application)).
+
+run_init_scripts(AppName) ->
+    lists:foldl(fun(File, Acc) ->
+                case boss_compiler:compile(File, []) of
+                    {ok, Module} ->
+                        case catch Module:init() of
+                            {ok, Info} ->
+                                [{Module, Info}|Acc];
+                            ok ->
+                                [{Module, true}|Acc];
+                            Error ->
+                                error_logger:error_msg("Execution of ~p failed: ~p~n", [File, Error]),
                                 Acc
                         end;
                     Error ->

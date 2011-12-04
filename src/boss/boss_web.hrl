@@ -2,7 +2,7 @@
 -record(boss_app_info, {
         application,
         base_url,
-        watches,
+        init_data,
         router_sup_pid,
         router_pid,
         translator_sup_pid,
