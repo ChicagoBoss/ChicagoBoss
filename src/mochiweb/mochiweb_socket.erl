@@ -40,7 +40,7 @@ accept({ssl, ListenSocket}) ->
             {error, Reason}
     end;
 accept(ListenSocket) ->
-    gen_tcp:accept(ListenSocket, ?ACCEPT_TIMEOUT).
+    gen_tcp:accept(ListenSocket).
 
 recv({ssl, Socket}, Length, Timeout) ->
     ssl:recv(Socket, Length, Timeout);
