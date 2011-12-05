@@ -41,34 +41,60 @@ peer_port(Req) ->
     {ok, {_IP, Port}} = mochiweb_socket:peername(Socket),
     Port.
     
+header(connection, Req) ->
+    Req:get_header_value("connection");
+header(accept, Req) ->
+    Req:get_header_value("accept");
+header(host, Req) ->
+    Req:get_header_value("host");
+header(if_modified_since, Req) ->
+    Req:get_header_value("if-modified-since");
+header(if_match, Req) ->
+    Req:get_header_value("if-match");
+header(if_none_match, Req) ->
+    Req:get_header_value("if-none-match");
+header(if_unmodified_since, Req) ->
+    Req:get_header_value("if-unmodified-since");
+header(if_range, Req) ->
+    Req:get_header_value("if-range");
+header(range, Req) ->
+    Req:get_header_value("range");
+header(user_agent, Req) ->
+    Req:get_header_value("user-agent");
+header(accept_language, Req) ->
+    Req:get_header_value("accept-language");
+header(accept_ranges, Req) ->
+    Req:get_header_value("accept-ranges");
+header(cookie, Req) ->
+    Req:get_header_value("cookie");
+header(keep_alive, Req) ->
+    Req:get_header_value("keep-alive");
+header(location, Req) ->
+    Req:get_header_value("location");
+header(content_length, Req) ->
+    Req:get_header_value("content-length");
+header(content_type, Req) ->
+    Req:get_header_value("content-type");
+header(content_encoding, Req) ->
+    Req:get_header_value("content-encoding");
+header(authorization, Req) ->
+    Req:get_header_value("authorization");
+header(x_forwarded_for, Req) ->
+    Req:get_header_value("x-forwarded-for");
+header(transfer_encoding, Req) ->
+    Req:get_header_value("transfer-encoding");
 header(Header, Req) ->
     Req:get_header_value(Header).
 
 headers(Req) ->
-    F = fun(Header) -> Req:get_header_value(Header) end,
-    Headers1 = [
-        {connection, F("connection")},
-        {accept, F("accept")},
-        {host, F("host")},
-        {if_modified_since, F("if-modified-since")},
-        {if_match, F("if-match")},
-        {if_none_match, F("if-range")},
-        {if_unmodified_since, F("if-unmodified-since")},
-        {range, F("range")},
-        {referer, F("referer")},
-        {user_agent, F("user-agent")},
-        {accept_language, F("accept-language")},
-        {accept_ranges, F("accept-ranges")},
-        {cookie, F("cookie")},
-        {keep_alive, F("keep-alive")},
-        {location, F("location")},
-        {content_length, F("content-length")},
-        {content_type, F("content-type")},
-        {content_encoding, F("content-encoding")},
-        {authorization, F("authorization")},
-        {x_forwarded_for, F("x-forwarded-for")},
-        {transfer_encoding, F("transfer-encoding")}
+    Headers = [connection, accept, host, if_modified_since,
+        connection, accept, host, if_modified_since, if_match, 
+        if_none_match, if_unmodified_since, if_range, range, 
+        referer, user_agent, accept_language, accept_ranges, 
+        cookie, keep_alive, location, content_length, content_type,
+        content_encoding, authorization, x_forwarded_for, transfer_encoding
     ],
+    Headers1 = lists:map(fun(H) -> {H, header(H, Req)} end, Headers),
     [{K, V} || {K, V} <- Headers1, V /= undefined].
 
 cookies(Req) ->

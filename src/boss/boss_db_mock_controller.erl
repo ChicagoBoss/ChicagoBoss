@@ -24,7 +24,7 @@ handle_call({find, Type, Conditions, Max, Skip, SortBy, SortOrder}, _From, [{Dic
     Records = do_find(Dict, Type, Conditions, Max, Skip, SortBy, SortOrder),
     {reply, Records, State};
 handle_call({count, Type, Conditions}, _From, [{Dict, _IdCounter}|_] = State) ->
-    Records = do_find(Dict, Type, Conditions, 1000 * 1000 * 1000 * 1000, 0, id, str_ascending),
+    Records = do_find(Dict, Type, Conditions, all, 0, id, str_ascending),
     {reply, length(Records), State};
 handle_call({delete, Id}, _From, [{Dict, IdCounter}|OldState]) ->
     {reply, ok, [{dict:erase(Id, Dict), IdCounter}|OldState]};
@@ -82,29 +82,30 @@ handle_info(_Info, State) ->
     {noreply, State}.
 
 do_find(Dict, Type, Conditions, Max, Skip, SortBy, SortOrder) ->
-    lists:sublist(lists:nthtail(Skip, 
-            lists:sort(fun(RecordA, RecordB) ->
-                        AttributeA = sortable_attribute(RecordA, SortBy),
-                        AttributeB = sortable_attribute(RecordB, SortBy),
-                        case SortOrder of
-                            str_ascending ->
-                                AttributeA < AttributeB;
-                            str_descending ->
-                                AttributeA > AttributeB;
-                            num_ascending ->
-                                AttributeA < AttributeB;
-                            num_descending ->
-                                AttributeA > AttributeB
-                        end
-                end,
-                lists:map(fun({_, V}) -> V end,
-                    dict:to_list(dict:filter(
-                            fun(_Id, Record) when is_tuple(Record) ->
-                                    element(1, Record) =:= Type andalso
-                                    match_cond(Record, Conditions);
-                                (_Id, _) ->
-                                    false
-                            end, Dict))))), Max).
+    Tail = lists:nthtail(Skip, 
+        lists:sort(fun(RecordA, RecordB) ->
+                    AttributeA = sortable_attribute(RecordA, SortBy),
+                    AttributeB = sortable_attribute(RecordB, SortBy),
+                    case SortOrder of
+                        str_ascending ->
+                            AttributeA < AttributeB;
+                        str_descending ->
+                            AttributeA > AttributeB;
+                        num_ascending ->
+                            AttributeA < AttributeB;
+                        num_descending ->
+                            AttributeA > AttributeB
+                    end
+            end,
+            lists:map(fun({_, V}) -> V end,
+                dict:to_list(dict:filter(
+                        fun(_Id, Record) when is_tuple(Record) ->
+                                element(1, Record) =:= Type andalso
+                                match_cond(Record, Conditions);
+                            (_Id, _) ->
+                                false
+                        end, Dict))))), 
+    case Max of all -> Tail; _ -> lists:sublist(Tail, Max) end.
 
 match_cond(_Record, []) ->
     true;

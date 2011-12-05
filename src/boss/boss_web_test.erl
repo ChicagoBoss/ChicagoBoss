@@ -1,35 +1,35 @@
 % web-centric functional tests
 -module(boss_web_test).
--export([start/0, start/1, run_tests/1, get_request/4, post_request/5, read_email/4]).
+-export([start/1, run_tests/1, get_request/4, post_request/5, read_email/4]).
 -export([follow_link/4, follow_redirect/3, submit_form/5]).
 -export([find_link_with_text/2]).
 
 -include("boss_web.hrl").
 
-start() ->
-    start(["mock"]).
-
-start([Adapter]) ->
-    run_tests([Adapter|boss_files:test_list()]).
+start([Application]) ->
+    start([Application, "mock"]);
+start([Application, Adapter]) ->
+    run_tests([Application, Adapter|boss_files:test_list()]).
 
 bootstrap_test_env(Application, Adapter) ->
     AdapterMod = list_to_atom("boss_db_adapter_"++Adapter),
-    RouterSupPid = boss_router:start([{application, Application}, 
+    ok = application:start(Application),
+    {ok, RouterSupPid} = boss_router:start([{application, Application}, 
             {controllers, boss_files:web_controller_list(Application)}]),
     boss_db:start([{adapter, AdapterMod}]),
     boss_session:start(),
     boss_mq:start(),
     lists:map(fun(File) ->
-                ok = boss_compiler:compile(File, [])
+                {ok, _} = boss_compiler:compile(File, [])
         end, boss_files:init_file_list(Application)),
     boss_news:start(),
     boss_mail:start([{driver, boss_mail_driver_mock}]),
-    TranslatorSupPid = boss_translator:start([{application, Application}]),
+    {ok, TranslatorSupPid} = boss_translator:start([{application, Application}]),
     boss_load:load_all_modules(Application, TranslatorSupPid),
     #boss_app_info{ 
         application = Application,
         base_url = "",
-        watches = [],
+        init_data = [],
         router_sup_pid = RouterSupPid,
         translator_sup_pid = TranslatorSupPid,
         model_modules = boss_files:model_list(Application),
@@ -62,6 +62,7 @@ get_request(Url, Headers, Assertions, Continuations) ->
     receive
         {_From, AppInfo} ->
             RequesterPid = spawn(fun() -> get_request_loop(AppInfo) end),
+            link(RequesterPid),
             RequesterPid ! {self(), Url, Headers},
             receive_response(RequesterPid, Assertions, Continuations)
     end.
@@ -75,6 +76,7 @@ post_request(Url, Headers, Contents, Assertions, Continuations) ->
     receive
         {_From, AppInfo} ->
             RequesterPid = spawn(fun() -> post_request_loop(AppInfo) end),
+            link(RequesterPid),
             RequesterPid ! {self(), Url, Headers, Contents},
             receive_response(RequesterPid, Assertions, Continuations)
     end.
@@ -303,7 +305,11 @@ get_request_loop(AppInfo) ->
     receive
         {From, Uri, Headers} ->
             Req = make_request('GET', Uri, Headers),
-            Result = boss_web_controller:process_request(AppInfo, Req, testing, Uri, undefined),
+            [{_, RouterPid, _, _}] = supervisor:which_children(AppInfo#boss_app_info.router_sup_pid),
+            [{_, TranslatorPid, _, _}] = supervisor:which_children(AppInfo#boss_app_info.translator_sup_pid),
+            Result = boss_web_controller:process_request(AppInfo#boss_app_info {
+                    router_pid = RouterPid, translator_pid = TranslatorPid }, 
+                Req, testing, Uri, undefined),
             From ! {self(), Uri, Result};
         Other ->
             error_logger:error_msg("Unexpected message in get_request_loop: ~p~n", [Other])
@@ -316,9 +322,13 @@ post_request_loop(AppInfo) ->
             erlang:put(mochiweb_request_body, Body),
             erlang:put(mochiweb_request_body_length, length(Body)),
             erlang:put(mochiweb_request_post, mochiweb_util:parse_qs(Body)),
+            [{_, RouterPid, _, _}] = supervisor:which_children(AppInfo#boss_app_info.router_sup_pid),
+            [{_, TranslatorPid, _, _}] = supervisor:which_children(AppInfo#boss_app_info.translator_sup_pid),
             Req = make_request('POST', Uri, 
                 [{"Content-Encoding", "application/x-www-form-urlencoded"} | Headers]),
-            Result = boss_web_controller:process_request(AppInfo, Req, testing, Uri, undefined),
+            Result = boss_web_controller:process_request(AppInfo#boss_app_info{
+                    router_pid = RouterPid, translator_pid = TranslatorPid }, 
+                Req, testing, Uri, undefined),
             From ! {self(), Uri, Result};
         Other ->
             error_logger:error_msg("Unexpected message in post_request_loop: ~p~n", [Other])
@@ -328,8 +338,7 @@ make_request(Method, Uri, Headers) ->
     Req = mochiweb_request:new(
         false, %Socket
         Method, Uri, {1, 0}, mochiweb_headers:make(Headers)),
-    DocRoot = "./static",
-    simple_bridge:make_request(mochiweb_request_bridge, {Req, DocRoot}).
+    simple_bridge:make_request(mochiweb_request_bridge, Req).
 
 receive_response(RequesterPid, Assertions, Continuations) ->
     receive

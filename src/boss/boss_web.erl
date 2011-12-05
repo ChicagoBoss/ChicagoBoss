@@ -5,11 +5,14 @@
 reload_routes() ->
     gen_server:call(boss_web, reload_routes).
 
-reload_translations() ->
-    gen_server:call(boss_web, reload_translations).
+reload_translation(Locale) ->
+    gen_server:call(boss_web, {reload_translation, Locale}).
 
-reload_news() ->
-    gen_server:call(boss_web, reload_news).
+reload_all_translations() ->
+    gen_server:call(boss_web, reload_all_translations).
+
+reload_init_scripts() ->
+    gen_server:call(boss_web, reload_init_scripts).
 
 get_all_routes() ->
     gen_server:call(boss_web, get_all_routes).
