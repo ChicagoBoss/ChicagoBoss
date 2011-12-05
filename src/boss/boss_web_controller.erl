@@ -88,12 +88,12 @@ init(Config) ->
     boss_mail:start([{driver, MailDriver}]),
 
     ServList=boss_env:get_env(servers, [
-        [{server, boss_env:get_env(server, misultin)}, {ip, proplists:get_value(ip, Config)}, {port, proplists:get_value(port, Config)},
+        [{engine, boss_env:get_env(server, misultin)}, {ip, proplists:get_value(ip, Config)}, {port, proplists:get_value(port, Config)},
          {name, default},
         {ssl_enable,boss_env:get_env(ssl_enable, false)}, {ssl_options,boss_env:get_env(ssl_options, [])}]]),
-    error_logger:info_msg("Configured Servers: ~p~n", [ServList]),
+    error_logger:info_msg("Configured Listener Instances: ~p~n", [ServList]),
     StartServFun =fun (ServerParams) ->
-        {ServerMod, RequestMod, ResponseMod} = case proplists:get_value(server, ServerParams) of
+        {ServerMod, RequestMod, ResponseMod} = case proplists:get_value(engine, ServerParams) of
             mochiweb -> {mochiweb_http, mochiweb_request_bridge, mochiweb_response_bridge};
             misultin -> {misultin, misultin_request_bridge, misultin_response_bridge}
         end,
@@ -105,7 +105,7 @@ init(Config) ->
         ServerConfig = [{loop, fun(Req) -> 
                         ?MODULE:handle_request(Name, Req, RequestMod, ResponseMod)
                     end} | [{ip,Ip},{port,Port},{name,Name}]],
-        error_logger:info_msg("Starting server:~p ~p on ~p:~p ssl:~p ssl_opts:~p~n", [Name,ServerMod,Ip,Port,SSLEnable,SSLOptions]),
+        error_logger:info_msg("Starting Instance: ~p ~p on ~p:~p ssl:~p ssl_opts:~p~n", [Name,ServerMod,Ip,Port,SSLEnable,SSLOptions]),
         Pid = case ServerMod of
             mochiweb_http -> mochiweb_http:start([{ssl, SSLEnable}, {ssl_opts, SSLOptions} | ServerConfig]);
             misultin -> 
@@ -114,7 +114,7 @@ init(Config) ->
                     false -> misultin:start_link(ServerConfig)
                 end
             end,
-        error_logger:info_msg("Started server:~p on ~p:~p ssl:~p ssl_opts:~p  pid:~p~n", [ServerMod,Ip,Port,SSLEnable,SSLOptions,Pid]),
+        error_logger:info_msg("Started Instance: ~p on ~p:~p ssl:~p ssl_opts:~p  pid:~p~n", [ServerMod,Ip,Port,SSLEnable,SSLOptions,Pid]),
         Pid
     end,
     Pids=lists:map(StartServFun,ServList),

@@ -41,7 +41,7 @@
     </ul>
     <li><code>servers</code> - A list of proplists with per-listener configuration. This override the defaults and above options, and have to contain folowing parameters:
     <ul>
-        <li><code>server</code>The HTTP server to use. Valid values same as above</li>
+        <li><code>engine</code>The HTTP server to use. Valid values same as for parameter 'server' above. You can have many mochiwebs but only one misultin instance. </li>
         <li><code>name</code>Name of server process, arbitrary atom can be set.</li>
         <li><code>ip</code>IP address for HTTP server to bind to, use 0.0.0.0 to bind to all</li>
         <li><code>port</code>The port to run the HTTP server on.</li>
