@@ -379,9 +379,9 @@ process_result(_, {not_found, Payload}) ->
 process_result(AppInfo, {redirect, Where}) ->
 	process_result(AppInfo, {redirect, Where, []});
 process_result(AppInfo, {redirect, "http://"++Where, Headers}) ->
-    process_result(AppInfo, {redirect, "/"++string:join(tl(string:tokens(Where, "/")), "/"), Headers});
+    process_result(AppInfo, {redirect_external, "http://"++Where, Headers});
 process_result(AppInfo, {redirect, "https://"++Where, Headers}) ->
-    process_result(AppInfo, {redirect, "/"++string:join(tl(string:tokens(Where, "/")), "/"), Headers});
+    process_result(AppInfo, {redirect_external, "https://"++Where, Headers});
 process_result(_AppInfo, {redirect, {Application, Controller, Action, Params}, Headers}) ->
     RouterPid = boss_web:router_pid(list_to_atom(lists:concat([Application]))),
     URL = boss_router:unroute(RouterPid, Controller, Action, Params),
@@ -389,6 +389,8 @@ process_result(_AppInfo, {redirect, {Application, Controller, Action, Params}, H
     {302, [{"Location", BaseURL ++ URL}, {"Cache-Control", "no-cache"}|Headers], ""};
 process_result(AppInfo, {redirect, Where, Headers}) ->
     {302, [{"Location", AppInfo#boss_app_info.base_url ++ Where}, {"Cache-Control", "no-cache"}|Headers], ""};
+process_result(AppInfo, {redirect_external, Where, Headers}) ->
+    {302, [{"Location", Where}, {"Cache-Control", "no-cache"}|Headers], ""};
 process_result(_, {ok, Payload, Headers}) ->
     {200, [{"Content-Type", proplists:get_value("Content-Type", Headers, "text/html")}
             |proplists:delete("Content-Type", Headers)], Payload}.
