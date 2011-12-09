@@ -602,7 +602,7 @@ render_view({Controller, Template, _}, AppInfo, Req, SessionID, Variables, Heade
     case LoadResult of
         {ok, Module} ->
             {Lang, TranslationFun} = choose_translation_fun(AppInfo#boss_app_info.translator_pid, 
-                Module:translatable_strings(), Req:header(accept_language), 
+                Module:translatable_strings(), Req:header("Accept-Language"), 
                 proplists:get_value("Content-Language", Headers)),
             case Module:render(lists:merge([{"_lang", Lang}, 
                             {"_base_url", AppInfo#boss_app_info.base_url}|Variables], BossFlash), 
