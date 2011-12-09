@@ -581,6 +581,14 @@ process_action_result(Info, {json, Data, Headers}, AppInfo, AuthInfo) ->
             [{"Content-Type", proplists:get_value("Content-Type", Headers, "application/json")}
                 |proplists:delete("Content-Type", Headers)]}, AppInfo, AuthInfo);
 
+process_action_result(Info, {jsonp, Callback, Data}, AppInfo, AuthInfo) ->
+    process_action_result(Info, {jsonp, Callback, Data, []}, AppInfo, AuthInfo);
+process_action_result(Info, {jsonp, Callback, Data, Headers}, AppInfo, AuthInfo) ->
+    JsonData  = boss_json:encode(Data, AppInfo#boss_app_info.model_modules),
+    process_action_result(Info, {output, Callback ++ "(" ++ JsonData ++ ");",
+            [{"Content-Type", proplists:get_value("Content-Type", Headers, "application/javascript")}
+                |proplists:delete("Content-Type", Headers)]}, AppInfo, AuthInfo);
+
 process_action_result(Info, {output, Payload}, AppInfo, AuthInfo) ->
     process_action_result(Info, {output, Payload, []}, AppInfo, AuthInfo);
 process_action_result(_, {output, Payload, Headers}, _, _) ->
