@@ -1,7 +1,7 @@
 {application, boss,
     [
     {description, "Chicago Boss web framework"},
-    {vsn, "0.6.8"},
+    {vsn, "0.6.9"},
     {registered, [
         boss_cache, boss_cache_sup,
         boss_db, boss_db_sup, 
