@@ -38,7 +38,7 @@ trick_out_forms([H|T], LeadingForms) ->
     trick_out_forms(T, [H|LeadingForms]).
 
 trick_out_forms(LeadingForms, Forms, ModuleName, Parameters) ->
-    Attributes = proplists:get_value(attributes, erl_syntax_lib:analyze_forms(LeadingForms ++ Forms)),
+    Attributes = proplists:get_value(attributes, erl_syntax_lib:analyze_forms(LeadingForms ++ Forms), []),
     [{eof, _Line}|ReversedOtherForms] = lists:reverse(Forms),
     UserForms = lists:reverse(ReversedOtherForms),
     Counters = lists:foldl(
