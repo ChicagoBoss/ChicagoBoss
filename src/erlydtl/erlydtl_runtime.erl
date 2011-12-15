@@ -52,11 +52,10 @@ fetch_value(Key, Data) ->
 
 translate(_, none, Default) ->
     Default;
-translate(String, TranslationFun, Default) when is_binary(String) ->
-    translate(binary_to_list(String), TranslationFun, Default);
 translate(String, TranslationFun, Default) when is_function(TranslationFun) ->
     case TranslationFun(String) of
         undefined -> Default;
+        <<"">> -> Default;
         "" -> Default;
         Str -> Str
     end.
@@ -154,18 +153,23 @@ is_true(V) ->
 'lt'(_, _) ->
     false.
 
-stringify_final(In) ->
-   stringify_final(In, []).
-stringify_final([], Out) ->
-   lists:reverse(Out);
-stringify_final([El | Rest], Out) when is_atom(El) ->
-   stringify_final(Rest, [atom_to_list(El) | Out]);
-stringify_final([El | Rest], Out) when is_list(El) ->
-   stringify_final(Rest, [stringify_final(El) | Out]);
-stringify_final([El | Rest], Out) when is_tuple(El) ->
-   stringify_final(Rest, [io_lib:print(El) | Out]);
-stringify_final([El | Rest], Out) ->
-   stringify_final(Rest, [El | Out]).
+stringify_final(In, BinaryStrings) ->
+    stringify_final(In, [], BinaryStrings).
+
+stringify_final([], Out, _) ->
+    lists:reverse(Out);
+stringify_final([El | Rest], Out, false = BinaryStrings) when is_atom(El) ->
+    stringify_final(Rest, [atom_to_list(El) | Out], BinaryStrings);
+stringify_final([El | Rest], Out, true = BinaryStrings) when is_atom(El) ->
+    stringify_final(Rest, [list_to_binary(atom_to_list(El)) | Out], BinaryStrings);
+stringify_final([El | Rest], Out, BinaryStrings) when is_list(El) ->
+    stringify_final(Rest, [stringify_final(El, BinaryStrings) | Out], BinaryStrings);
+stringify_final([El | Rest], Out, false = BinaryStrings) when is_tuple(El) ->
+    stringify_final(Rest, [io_lib:print(El) | Out], BinaryStrings);
+stringify_final([El | Rest], Out, true = BinaryStrings) when is_tuple(El) ->
+    stringify_final(Rest, [list_to_binary(io_lib:print(El)) | Out], BinaryStrings);
+stringify_final([El | Rest], Out, BinaryStrings) ->
+    stringify_final(Rest, [El | Out], BinaryStrings).
 
 init_counter_stats(List) ->
     init_counter_stats(List, undefined).

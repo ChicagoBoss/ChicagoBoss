@@ -43,6 +43,8 @@
 %
 % Format the current date/time
 %
+format(FormatString) when is_binary(FormatString) ->
+    format(binary_to_list(FormatString));
 format(FormatString) ->
     {Date, Time} = erlang:localtime(),
     replace_tags(Date, Time, FormatString).
@@ -51,8 +53,10 @@ format(FormatString) ->
 % This is the format returned by erlang:localtime()
 % and other standard date/time BIFs
 %
+format(DateTime, FormatString) when is_binary(FormatString) ->
+    format(DateTime, binary_to_list(FormatString));
 format({{_,_,_} = Date,{_,_,_} = Time}, FormatString) ->
-   replace_tags(Date, Time, FormatString);
+    replace_tags(Date, Time, FormatString);
 %
 % Format a tuple of the form {Y,M,D}
 %

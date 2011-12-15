@@ -182,6 +182,8 @@ center(Input, Number) when is_list(Input) ->
     string:centre(Input, Number).
  
 %% @doc Removes all values of arg from the given string.
+cut(Input, Arg) when is_binary(Arg) ->
+    cut(Input, binary_to_list(Arg));
 cut(Input, Arg) when is_binary(Input) ->
     cut(binary_to_list(Input), Arg);
 cut(Input, [Char]) when is_list(Input) ->
@@ -231,6 +233,8 @@ divisibleby(Input, Divisor) when is_binary(Input) ->
     divisibleby(binary_to_list(Input), Divisor);
 divisibleby(Input, Divisor) when is_list(Input) ->
     divisibleby(list_to_integer(Input), Divisor);
+divisibleby(Input, Divisor) when is_binary(Divisor) ->
+    divisibleby(Input, binary_to_list(Divisor));
 divisibleby(Input, Divisor) when is_list(Divisor) ->
     divisibleby(Input, list_to_integer(Divisor));
 divisibleby(Input, Divisor) when is_integer(Input), is_integer(Divisor) ->
@@ -325,6 +329,8 @@ get_digit(Input, Digit) when is_binary(Input) ->
     get_digit(binary_to_list(Input), Digit);
 get_digit(Input, Digit) when is_integer(Input) ->
     get_digit(integer_to_list(Input), Digit);
+get_digit(Input, Digit) when is_binary(Digit) ->
+    get_digit(Input, binary_to_list(Digit));
 get_digit(Input, Digit) when is_list(Digit) ->
     get_digit(Input, list_to_integer(Digit));
 get_digit(Input, Digit) when Digit > erlang:length(Input) ->
@@ -490,8 +496,10 @@ random_range(Start, End) when End >= Start ->
     Num = Rand + Start,
     lists:flatten(io_lib:format("~B",[Num])).
 
-removetags(Input, Tags) when is_binary(Input), is_binary(Tags) ->
-    removetags(binary_to_list(Input), binary_to_list(Tags));
+removetags(Input, Tags) when is_binary(Input) ->
+    removetags(binary_to_list(Input), Tags);
+removetags(Input, Tags) when is_binary(Tags) ->
+    removetags(Input, binary_to_list(Tags));
 removetags(Input, Tags) ->
     TagList = string:tokens(Tags," "),
     TagListString = string:join(TagList,"|"),
@@ -516,6 +524,8 @@ slice(Input, Index) when is_list(Input) ->
 %% @doc Returns a formatted string
 stringformat(Input, Conversion) when is_binary(Input) ->
     stringformat(binary_to_list(Input), Conversion);
+stringformat(Input, Conversion) when is_binary(Conversion) ->
+    stringformat(Input, binary_to_list(Conversion));
 stringformat(Input, Conversion) ->
     ParsedConversion = re:replace(Conversion, "([\-#\+ ]?)([0-9\*]+)?(\.?)([0-9]?)([diouxXeEfFgGcrs])", "\\1 ,\\2 ,\\3 ,\\4 ,\\5 ", [{return,list}]),
     ?debugFmt("ParsedConversion: ~p~n", [ParsedConversion]),
@@ -669,6 +679,8 @@ cast_to_integer(Input) when is_integer(Input) ->
     Input;
 cast_to_integer(Input) when is_float(Input) ->
     erlang:round(Input);
+cast_to_integer(Input) when is_binary(Input) ->
+    cast_to_integer(binary_to_list(Input));
 cast_to_integer(Input) when is_list(Input)->
     case lists:member($., Input) of
         true ->
@@ -793,8 +805,10 @@ wordwrap(Input, Number) when is_list(Input) ->
     wordwrap(Input, [], [], 0, Number).
 
 %% @doc Given a string mapping values for true, false and (optionally) undefined, returns one of those strings according to the value.
-yesno(Bool, Choices) when is_binary(Choices) ->
+yesno(Bool, Choices) when is_binary(Bool) ->
     yesno_io(binary_to_list(Bool), Choices);
+yesno(Bool, Choices) when is_binary(Choices) ->
+    yesno_io(Bool, binary_to_list(Choices));
 yesno(Bool, Choices) when is_list(Choices) ->
     yesno_io(Bool, Choices).
 
