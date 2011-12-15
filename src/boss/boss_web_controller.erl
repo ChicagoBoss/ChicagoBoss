@@ -409,11 +409,7 @@ process_result(_, {ok, Payload, Headers}) ->
     {200, [{"Content-Type", proplists:get_value("Content-Type", Headers, "text/html")}
             |proplists:delete("Content-Type", Headers)], Payload}.
 
-<<<<<<< HEAD
-load_and_execute(production, {Controller, _, _} = Location, AppInfo, Instance, Req, SessionID) ->
-=======
-load_and_execute(Mode, {Controller, _, _} = Location, AppInfo, Req, SessionID) when Mode =:= production; Mode =:= testing->
->>>>>>> 35647bade37ccab697e23b2256d0259c940e4b51
+load_and_execute(Mode, {Controller, _, _} = Location, AppInfo, Instance, Req, SessionID) when Mode =:= production; Mode =:= testing->
     case lists:member(boss_files:web_controller(AppInfo#boss_app_info.application, Controller), 
             AppInfo#boss_app_info.controller_modules) of
         true -> execute_action(Location, AppInfo, Instance, Req, SessionID);
