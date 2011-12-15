@@ -219,6 +219,7 @@ build_update_query(Record) ->
     {_, TableName, Id} = infer_type_from_id(Record:id()),
     Updates = lists:foldl(fun
             ({id, _}, Acc) -> Acc;
+            ({_, undefined}, Acc) -> Acc;
             ({A, V}, Acc) -> 
                 AString = atom_to_list(A),
                 Value = case lists:suffix("_id", AString) of
