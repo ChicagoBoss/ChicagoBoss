@@ -15,8 +15,8 @@ send_template(Application, Action, Args) ->
             send_message(Application, FromAddress, ToAddress, Action, HeaderFields, [], []);
         {ok, FromAddress, ToAddress, HeaderFields, Variables} -> 
             send_message(Application, FromAddress, ToAddress, Action, HeaderFields, Variables, []);
-        {ok, FromAddress, ToAddress, HeaderFields, Variables, Attachments} -> 
-            send_message(Application, FromAddress, ToAddress, Action, HeaderFields, Variables, Attachments);
+        {ok, FromAddress, ToAddress, HeaderFields, Variables, Options} -> 
+            send_message(Application, FromAddress, ToAddress, Action, HeaderFields, Variables, Options);
         nevermind ->
             ok
     end.
@@ -31,13 +31,15 @@ send(FromAddress, ToAddress, Subject, Body) ->
             {"From", FromAddress}], "text/plain"), 
     gen_server:call(boss_mail, {deliver, FromAddress, ToAddress, fun() -> [MessageHeader, "\r\n", Body] end}).
 
-send_message(App, FromAddress, ToAddress, Action, HeaderFields, Variables, Attachments) ->
-    BodyFun = fun() -> build_message(App, Action, HeaderFields, Variables, Attachments) end,
+send_message(App, FromAddress, ToAddress, Action, HeaderFields, Variables, Options) ->
+    BodyFun = fun() -> build_message(App, Action, HeaderFields, Variables, Options) end,
     gen_server:call(boss_mail, {deliver, FromAddress, ToAddress, BodyFun}).
 
-build_message(App, Action, HeaderFields, Variables, Attachments) ->
+build_message(App, Action, HeaderFields, Variables, Options) ->
     ContentLanguage = proplists:get_value("Content-Language", HeaderFields),
-    {MimeType, MessageBody} = build_message_body_attachments(App, Action, Variables, Attachments, ContentLanguage),
+    EffectiveAction = proplists:get_value(template, Options, Action),
+    Attachments = proplists:get_value(attachments, Options, []),
+    {MimeType, MessageBody} = build_message_body_attachments(App, EffectiveAction, Variables, Attachments, ContentLanguage),
     MessageHeader = build_message_header(HeaderFields, MimeType),
     [MessageHeader, "\r\n", MessageBody].
 

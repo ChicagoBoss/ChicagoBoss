@@ -80,7 +80,7 @@
 %%
 %% If you want to see what the transform produces, provide the flag '-E'.
 
-parse_transform(Forms, Opts) ->
+parse_transform(Forms, _Opts) ->
     %% Opts = compiler options
     M = get_module_name(Forms),
     forms(M, Forms).
@@ -99,13 +99,13 @@ forms(M, Forms0) ->
     Forms = simple_resolve_imports(Forms0),
     [ form(M, Form) || Form <- Forms ].
 
-form(M, {function, Line, F, A, _Clss} = Form) ->
+form(M, {function, _Line, F, A, _Clss} = Form) ->
     mapform0(
-      fun({function, Lf, F1, A1, []}=Form0) ->
+      fun({function, _Lf, _F1, _A1, []}=Form0) ->
 	      Form0;
 	 ({function, Lf, F1, A1, Clss}) ->
 	      smart_function(M, F1, A1, Lf, Clss);
-	 ({match, Lm, P, E}=Expr) ->
+	 ({match, Lm, P, E}=_Expr) ->
 	      smart_match(M, F, A, Lm, P, E);
 	 ({'case',Lc,E,Clss}) ->
 	      smart_case(M, F, A, Lc, E, Clss);
@@ -115,23 +115,23 @@ form(M, {function, Line, F, A, _Clss} = Form) ->
 	      smart_fun(M, F, A, Lf, Clss);
 	 ({'fun',Lf,{clauses,Clss}, Info}) ->
 	      smart_fun(M, F, A, Lf, Clss, Info);
-	 ({op,Lo,Op,E1,E2}=E) ->
+	 ({op,Lo,Op,E1,E2}=_E) ->
 	      smart_binop(M, F, A, Lo, Op, E1, E2);
-	 ({op,Lo,Op,E1}=E) ->
+	 ({op,Lo,Op,E1}=_E) ->
 	      smart_unop(M, F, A, Lo, Op, E1);
-	 ({call,Lc,{remote,Lr,{atom,Lm,erlang},{atom,Lf,exit}},[Rsn]}=E) ->
+	 ({call,Lc,{remote,_Lr,{atom,_Lm,erlang},{atom,_Lf,exit}},[Rsn]}=_E) ->
 	      smart_exit(M, F, A, Lc, Rsn);
-	 ({call,Lc,{remote,Lr,{atom,Lm,erlang},{atom,Lf,fault}},[Rsn]}=E) ->
+	 ({call,Lc,{remote,_Lr,{atom,_Lm,erlang},{atom,_Lf,fault}},[Rsn]}=_E) ->
 	      smart_fault(M, F, A, Lc, Rsn);
-	 ({call,Lc,{remote,Lr,{atom,Lm,erlang},{atom,Lf,error}},[Rsn]}=E) ->
+	 ({call,Lc,{remote,_Lr,{atom,_Lm,erlang},{atom,_Lf,error}},[Rsn]}=_E) ->
 	      smart_error(M, F, A, Lc, Rsn);
-	 ({call,Lc,{remote,Lr,{atom,Lm,erlang},{atom,Lf,throw}},[Rsn]}=E) ->
+	 ({call,_Lc,{remote,_Lr,{atom,_Lm,erlang},{atom,_Lf,throw}},[_Rsn]}=E) ->
 	      E;
-	 ({call,Lc,{atom,Lf,exit},[Rsn]}=E) ->
+	 ({call,Lc,{atom,_Lf,exit},[Rsn]}=_E) ->
 	      smart_exit(M, F, A, Lc, Rsn);
-	 ({call,Lc,{atom,Lf,throw},[Rsn]}=E) ->
+	 ({call,_Lc,{atom,_Lf,throw},[_Rsn]}=E) ->
 	      E;
-	 ({call,Lc,{remote,Lr,{atom,Lm,Mod},{atom,Lf,Fn}},As}=E) ->
+	 ({call,Lc,{remote,_Lr,{atom,_Lm,Mod},{atom,_Lf,Fn}},As}=E) ->
 	      case erlang:is_builtin(Mod, Fn, length(As)) of
 		  true ->
 		      smart_bif(M, F, A, Lc, 
@@ -139,14 +139,14 @@ form(M, {function, Line, F, A, _Clss} = Form) ->
 		  false ->
 		      E
 	      end;
-	 ({bin, Lb, BinElts}=E) ->
+	 ({bin, Lb, _BinElts}=E) ->
 	      smart_bin(M, F, A, Lb, E);
 	 (E) ->
 	      E
       end,
       Form
      );
-form(M, Form) ->
+form(_M, Form) ->
     Form.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -162,9 +162,9 @@ simple_resolve_imports(Forms) ->
     Imps_and_funcs = func_defs(Forms),
     resolve_calls(Forms, Imps_and_funcs).
 
-func_defs([{attribute, La, import, {M, FAs}}|Forms]) ->
+func_defs([{attribute, _La, import, {M, FAs}}|Forms]) ->
     [ {{F,A}, {import, M}} || {F,A} <- FAs ] ++ func_defs(Forms);
-func_defs([{function,Lf, F, A, Clss}|Forms]) ->
+func_defs([{function,_Lf, F, A, _Clss}|Forms]) ->
     [ {{F,A}, local} | func_defs(Forms) ];
 func_defs([_|Forms]) ->
     func_defs(Forms);
@@ -179,15 +179,15 @@ resolve_calls(Forms, FuncDefs) ->
 %% erlang:f(...). This is deliberate, since Erlang itself behaves that way.
 %% (Doing so also makes a mockery of scoping.)
 
-resolve_form({function, _Lf, Fn, Ar, _Clss} = Form, FuncDefs) ->
+resolve_form({function, Lf, _Fn, _Ar, _Clss} = Form, FuncDefs) ->
     mapform0(
-      fun({call, Lc, {atom, Lf, F}, As}=Expr) ->
+      fun({call, Lc, {atom, _Lf, F}, As}=Expr) ->
 	      FA = {F, A = length(As)},
 	      case erlang:is_builtin(erlang,F,A) of
 		  true ->
 		      %% if ALSO defined locally, should warn
 		      %% ?msg("Looking up ~p -> bif\n", [FA]),
-		      Lm = Lc,
+		      _Lm = Lc,
 		      mk_remote_call(erlang, F, As);
 		  false ->
 		      case lists:keysearch(FA, 1, FuncDefs) of
@@ -207,7 +207,7 @@ resolve_form({function, _Lf, Fn, Ar, _Clss} = Form, FuncDefs) ->
       end,
       Form
      );
-resolve_form(Form, FuncDefs) ->
+resolve_form(Form, _FuncDefs) ->
     Form.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -472,7 +472,7 @@ exn_tuple(Concs, Abs) ->
 %%   * something similar was optionally done in version 1.0 for BIFs
 %%   * left for "future work"
 
-smart_bin(M, F, A, Line, {bin, _Lb, BinElts}=Expr) ->
+smart_bin(M, F, A, Line, {bin, _Lb, _BinElts}=Expr) ->
     Rsn = new_var(),
     Exn_rsn = bin_error(Expr, Rsn),
     Exn_term = exn_term({M, F, A}, {line, Line}, Exn_rsn),
@@ -482,7 +482,7 @@ smart_bin(M, F, A, Line, {bin, _Lb, BinElts}=Expr) ->
 	   []).
 
 
-bin_error({bin, Lb, BinElts}=Expr, AbsRsn) ->
+bin_error({bin, _Lb, BinElts}=_Expr, AbsRsn) ->
     %% io:format("%% decorating ~w\n", [Expr]),
     {tuple, -1,
      lists:flatten(
@@ -495,11 +495,11 @@ bin_error({bin, Lb, BinElts}=Expr, AbsRsn) ->
 %% so we basically emit them at will and hope they are reasonably
 %% legible. [Improve as needed.]
 
-bin_indicator({var, Lx, X}=Var, Line, Width, Type) when X =/= '_' ->
+bin_indicator({var, _Lx, X}=Var, _Line, Width, Type) when X =/= '_' ->
     exn_tuple([X, bin_type_summary(Width, Type)], Var);
 bin_indicator({integer, _Lc, _C}, _Line, _Type, _Width) ->
     [];
-bin_indicator(P, Line, Type, Width) ->
+bin_indicator(_P, _Line, _Type, _Width) ->
     % io:format("%% bin_indicator: skipped unknown pattern" " ~w on line ~w\n", [P, Line]),
     [].
 
@@ -514,7 +514,7 @@ bin_indicator(P, Line, Type, Width) ->
 
 bin_type_summary(default, [binary]) ->
     binary;
-bin_type_summary({integer, Line, Width}, [binary]) ->
+bin_type_summary({integer, _Line, Width}, [binary]) ->
     {binary, Width};
 bin_type_summary({integer, _Line, Width}, default) ->
     {default_bin_type(), Width};
@@ -559,7 +559,7 @@ resolve_default_width(TypeWidth) ->
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-clauses_arity([{clause, _, H, G, B}|_]) ->
+clauses_arity([{clause, _, H, _G, _B}|_]) ->
     length(H).
 
 %%
@@ -600,7 +600,7 @@ counter(Name) ->
 %%   - introducing this may need some rewriting of sites where module name
 %%     is used, because of the use of vars vs. abstraction of ground terms
 
-get_module_name([{attribute,Lm,module,Mod}|Xs]) ->
+get_module_name([{attribute,_Lm,module,Mod}|_Xs]) ->
     Mod;
 %get_module_name([{attribute,Lm,module,Mod}|Xs]) ->
 %    case Mod of
@@ -614,9 +614,9 @@ get_module_name([_|Xs]) ->
 
 %%
 
-function_name({function, Lf, F, A, Clss}) ->
+function_name({function, _Lf, F, A, _Clss}) ->
     {F, A};
-function_name(Other) ->
+function_name(_Other) ->
     {not_a_function, no_name}.
 
 %%
@@ -651,7 +651,7 @@ mapform0(F, T) when is_tuple(T) ->
     F(list_to_tuple([ mapform0(F, Tsub) || Tsub <- tuple_to_list(T) ]));
 mapform0(F, Xs) when is_list(Xs) ->
     [ mapform0(F, X) || X <- Xs ];
-mapform0(F, C) when is_atom(C) ; is_number(C) ->
+mapform0(_F, C) when is_atom(C) ; is_number(C) ->
     C.
 
 %% detect + elide pattern in qualifier
@@ -680,7 +680,7 @@ vars_of(AbsTerm) ->
 
 vars_of({var, _, '_'}, Vs) ->
     Vs;
-vars_of({var, _, X}=V, Vs) ->
+vars_of({var, _, _X}=V, Vs) ->
     [V|Vs];
 vars_of(T, Vs0) when is_tuple(T) ->
     lists:foldl(
@@ -693,7 +693,7 @@ vars_of([X|Xs], Vs) ->
     vars_of(Xs, vars_of(X, Vs));
 vars_of([], Vs) ->
     Vs;
-vars_of(X, Vs) ->
+vars_of(_X, Vs) ->
     %% cannot be a variable or contain a variable
     Vs.
 

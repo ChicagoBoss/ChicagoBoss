@@ -180,6 +180,18 @@ before_(_) -&gt;<br />
 <p>Return <code>Data</code> to the client as a JSON object while setting additional HTTP <code>Headers</code>.</p>
 
 <div class="code spec">
+    {jsonp, Callback<span class="typevar">::string()</span>, Data<span class="typevar">::proplist()</span>}
+</div>
+
+<p>Returns <code>Data</code> as a JSONP method call to the client. Performs appropriate serialization if the values in Data contain a BossRecord or a list of BossRecords.</p>
+
+<div class="code spec">
+    {jsonp, Callback<span class="typevar">::string()</span>, Data<span class="typevar">::proplist()</span>, Headers<span class="typevar">::proplist()</span>}
+</div>
+
+<p>Return <code>Data</code> to the client as a JSONP method call (as above) while setting additional HTTP <code>Headers</code>.</p>
+
+<div class="code spec">
     not_found
 </div>
 
