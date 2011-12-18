@@ -65,10 +65,12 @@ view(<span class="atom">'GET'</span>, [Year, Month]) -&gt;<br />
 <p>A few examples:</p>
 
 <div class="code">
-    {"/", {"hello", "world"{{ "}}" }}.<br />
-    {"/signup", {"account", "create"{{ "}}" }}.<br />
-    {404, {"main", "not_found"{{ "}}" }}.
+    {"/", [{controller, "main"}, {action, "welcome"}]}.<br />
+    {"/signup", [{application, login_app}, {controller, "account"}, {"create"}]}.<br />
+    {404, [{controller, "main"}, {action, "not_found"}]}.
 </div>
+
+<p>Most routes directly render the specified action; however, routing across applications (as in the second example) results in a 302 redirect.</p>
 
 <p>To define a default action for a controller, simply add a <code>default_action</code> attribute to the controller like so:</p>
 

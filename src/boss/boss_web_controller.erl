@@ -348,12 +348,16 @@ process_request(AppInfo, Req, Mode, Url, SessionID) ->
             ok
     end,
     Location = case boss_router:route(RouterPid, Url) of
-        {ok, {Controller, Action, Tokens}} ->
+        {ok, {Application, Controller, Action, Tokens}} when Application =:= AppInfo#boss_app_info.application ->
             {Controller, Action, Tokens};
+        {ok, {OtherApplication, Controller, Action, Tokens}} ->
+            {redirect, {OtherApplication, Controller, Action, Tokens}};
         not_found ->
             case boss_router:handle(RouterPid, 404) of
-                {ok, {Controller, Action, Tokens}} ->
+                {ok, {Application, Controller, Action, Tokens}} when Application =:= AppInfo#boss_app_info.application ->
                     {Controller, Action, Tokens};
+                {ok, {OtherApplication, Controller, Action, Tokens}} ->
+                    {redirect, {OtherApplication, Controller, Action, Tokens}};
                 not_found ->
                     undefined
             end
@@ -361,6 +365,8 @@ process_request(AppInfo, Req, Mode, Url, SessionID) ->
     Result = case Location of
         undefined ->
             {not_found, "The requested page was not found. Additionally, no handler was found for processing 404 errors."};
+        {redirect, _} ->
+            Location;
         _ ->
             case catch load_and_execute(Mode, Location, AppInfo, Req, SessionID) of
                 {'EXIT', Reason} ->
@@ -566,8 +572,14 @@ process_action_result({{Controller, _, _}, Req, SessionID, LocationTrail}, {acti
     execute_action(process_location(Controller, OtherLocation, AppInfo), AppInfo, Req, SessionID, LocationTrail);
 
 process_action_result({_, Req, SessionID, LocationTrail}, not_found, AppInfo, _) ->
-    NotFoundLocation = boss_router:handle(AppInfo#boss_app_info.router_pid, 404),
-    execute_action(NotFoundLocation, AppInfo, Req, SessionID, LocationTrail);
+    case boss_router:handle(AppInfo#boss_app_info.router_pid, 404) of
+        {ok, {Application, Controller, Action, Params}} when Application =:= AppInfo#boss_app_info.application ->
+            execute_action({Controller, Action, Params}, AppInfo, Req, SessionID, LocationTrail);
+        {ok, {OtherApplication, Controller, Action, Params}} ->
+            {redirect, {OtherApplication, Controller, Action, Params}};
+        not_found ->
+            {not_found, "The requested page was not found. Additionally, no handler was found for processing 404 errors."}
+    end;
 
 process_action_result(Info, {redirect, Where}, AppInfo, AuthInfo) ->
     process_action_result(Info, {redirect, Where, []}, AppInfo, AuthInfo);

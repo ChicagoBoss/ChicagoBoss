@@ -2,19 +2,23 @@
 -compile(export_all).
 
 url(Variables, Options) ->
-    App = proplists:get_value(application, Variables, proplists:get_value(application, Options)),
-    Controller = proplists:get_value(controller, Variables, proplists:get_value(controller, Options)),
-    DefaultAction = case proplists:get_value(controller, Variables) of
+    ListVars = lists:map(fun 
+            ({K, V}) when is_binary(V) -> {K, binary_to_list(V)}; 
+            ({K, V}) -> {K, V} 
+        end, Variables),
+    App = proplists:get_value(application, ListVars, proplists:get_value(application, Options)),
+    Controller = proplists:get_value(controller, ListVars, proplists:get_value(controller, Options)),
+    DefaultAction = case proplists:get_value(controller, ListVars) of
         undefined ->
             proplists:get_value(action, Options);
         _ ->
             undefined
     end,
-    Action = proplists:get_value(action, Variables, DefaultAction),
+    Action = proplists:get_value(action, ListVars, DefaultAction),
 
     CleanVars = lists:foldl(fun(Key, Vars) ->
                 proplists:delete(Key, Vars)
-        end, Variables, [application, controller, action]),
+        end, ListVars, [application, controller, action]),
 
     NoUndefinedVars = lists:foldl(fun
             ({_, undefined}, Acc) ->
