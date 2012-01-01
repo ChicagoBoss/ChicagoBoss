@@ -98,11 +98,9 @@ build_message_body(App, Action, Variables, ContentLanguage) ->
 
 render_view(App, {Action, Extension}, Variables, ContentLanguage) ->
     ViewPath = boss_files:mail_view_path(Action, Extension),
-    ViewModule = boss_load:view_module(App, ViewPath),
     TranslatorPid = boss_web:translator_pid(App),
-    case filelib:is_file(ViewPath) orelse code:is_loaded(ViewModule) =/= false of
-        true ->
-            {ok, _} = boss_load:load_view_if_dev(App, ViewPath, TranslatorPid),
+    case boss_load:load_view_if_dev(App, ViewPath, TranslatorPid) of
+        {ok, ViewModule} ->
             TranslationFun = boss_translator:fun_for(TranslatorPid, ContentLanguage),
             ViewModule:render([{"_lang", ContentLanguage}|Variables], [{translation_fun, TranslationFun}, {locale, ContentLanguage}]);
         _ ->
