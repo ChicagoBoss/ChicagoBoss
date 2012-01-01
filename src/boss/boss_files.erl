@@ -11,6 +11,9 @@ root_priv_dir(App) ->
            code:priv_dir(App)
    end.
 
+app_src_dir(App) ->
+    code:lib_dir(App, src).
+
 web_view_path() ->
     filename:join([root_src_dir(), "view"]).
 web_view_path(Controller) -> 
@@ -19,11 +22,19 @@ web_view_path(Controller, Template) -> web_view_path(Controller, Template, "html
 web_view_path(Controller, Template, Extension) -> 
     filename:join([web_view_path(Controller), lists:concat([Template, ".", Extension])]).
 
+mail_view_app_path(AppSrcDir) ->
+    filename:join([AppSrcDir, "mail", "view"]).
+
+mail_view_filename(Template, Extension) ->
+    lists:concat([Template, ".", Extension]).
+
 mail_view_path() ->
-    filename:join([root_src_dir(), "mail", "view"]).
-mail_view_path(Template) -> mail_view_path(Template, "txt").
+    mail_view_app_path(root_src_dir()).
 mail_view_path(Template, Extension) -> 
-    filename:join([mail_view_path(), lists:concat([Template, ".", Extension])]).
+    filename:join([mail_view_path(), mail_view_filename(Template, Extension)]).
+mail_view_path(App, Template, Extension) ->
+    AppSrcDir = app_src_dir(App),
+    filename:join([mail_view_app_path(AppSrcDir), mail_view_filename(Template, Extension)]).
 
 model_path() -> [filename:join([root_src_dir(), "model"])].
 model_path(Model) -> filename:join([hd(model_path()), Model]).
