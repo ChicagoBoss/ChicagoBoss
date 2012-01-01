@@ -80,7 +80,9 @@ build_message_body(App, Action, Variables, ContentLanguage) ->
     case HtmlResult of
         undefined ->
             case TextResult of
-                undefined -> undefined;
+                undefined ->
+                    error_logger:warning_msg("No mail template found~n"),
+                    undefined;
                 {ok, TextView} ->
                     {"text/plain", TextView}
             end;
@@ -106,6 +108,7 @@ render_view(App, {Action, Extension}, Variables, ContentLanguage) ->
             TranslationFun = boss_translator:fun_for(TranslatorPid, ContentLanguage),
             ViewModule:render([{"_lang", ContentLanguage}|Variables], [{translation_fun, TranslationFun}, {locale, ContentLanguage}]);
         _ ->
+            error_logger:info_msg("Cannot find template ~p~n", [ViewPath]),
             undefined
     end.
 
