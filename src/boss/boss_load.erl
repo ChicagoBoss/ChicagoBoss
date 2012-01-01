@@ -83,10 +83,10 @@ load_dir(Dir, OutDir, Compiler) when is_function(Compiler) ->
             ("."++_, Acc) ->
                 Acc;
             (File, {Modules, Errors}) ->
-                AbsName = filename:join([Dir, File]),
-                case filelib:is_dir(AbsName) of
+                Filename = filename:join([Dir, File]),
+                case filelib:is_dir(Filename) of
                     true ->
-                        case load_dir(AbsName, OutDir, Compiler) of
+                        case load_dir(Filename, OutDir, Compiler) of
                             {ok, NewMods} ->
                                 {NewMods ++ Modules, Errors};
                             {error, NewErrs} ->
@@ -117,7 +117,7 @@ maybe_compile(Dir, File, OutDir, Compiler) ->
         true ->
             ModuleName = filename:basename(File, ".erl"),
             Module = list_to_atom(ModuleName),
-            AbsPath = filename:join([Dir, File]),
+            AbsPath = filename:absname(filename:join([Dir, File])),
             case OutDir of
                 undefined ->
                     case module_older_than(Module, [AbsPath]) of
@@ -293,8 +293,7 @@ module_older_than(CompileDate, [File|Rest]) ->
         filelib:last_modified(File)),
     (ModificationSeconds >= CompileSeconds) orelse module_older_than(CompileDate, Rest).
 
-view_module(Application, ViewPath) ->
-    RelativePath = lists:nthtail(length(boss_files:root_src_dir()) + 1, ViewPath),
+view_module(Application, RelativePath) ->
     Components = filename:split(RelativePath),
     Lc = string:to_lower(lists:concat([Application, "_", string:join(Components, "_")])),
     ModuleIOList = re:replace(Lc, "\\.", "_", [global]),
