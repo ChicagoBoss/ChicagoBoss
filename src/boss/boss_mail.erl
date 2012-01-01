@@ -99,7 +99,7 @@ build_message_body(App, Action, Variables, ContentLanguage) ->
     end.
 
 render_view(App, {Action, Extension}, Variables, ContentLanguage) ->
-    ViewPath = boss_files:mail_view_path(Action, Extension),
+    ViewPath = boss_files:mail_view_path(App, Action, Extension),
     ViewModule = boss_load:view_module(App, ViewPath),
     TranslatorPid = boss_web:translator_pid(App),
     case filelib:is_file(ViewPath) orelse code:is_loaded(ViewModule) =/= false of
