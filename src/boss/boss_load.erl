@@ -294,7 +294,7 @@ module_older_than(CompileDate, [File|Rest]) ->
     (ModificationSeconds >= CompileSeconds) orelse module_older_than(CompileDate, Rest).
 
 view_module(Application, RelativePath) ->
-    Components = filename:split(RelativePath),
+    Components = tl(filename:split(RelativePath)),
     Lc = string:to_lower(lists:concat([Application, "_", string:join(Components, "_")])),
     ModuleIOList = re:replace(Lc, "\\.", "_", [global]),
     list_to_atom(binary_to_list(iolist_to_binary(ModuleIOList))).
