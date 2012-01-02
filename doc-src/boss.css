@@ -1,7 +1,7 @@
 body {
     font-family: Arial;
-    text-align: center;
-    background-color: #9EC5D3;
+    text-align: left;
+    background-color: white;
 }
 div.equation {
     color: white;
@@ -26,17 +26,20 @@ span.bullet {
 div.quote {
     font-style: italic;
 }
+div.code.spec {
+    margin-top: 30px;
+}
 div.code {
-padding: 10px; font-family: Courier New; background-color: #CCC; color: black;
+padding: 10px;  font-family: Courier New; background-color: #EEE; color: black;
 }
 div.code span.attr {
-    color: #00FF1A;
+    color: #00991A;
 }
 div.code span.string {
     color: #F017FF;
 }
 div.code span.function {
-    color: #00DBFF;
+    color: #007799;
 }
 div.code span.bracket {
     color: #00DBFF;
@@ -61,7 +64,7 @@ div.code span.comment {
     color: #1249DB;
 }
 div.code span.atom {
-    color: #00FF1A;
+    color: #00991A;
 }
 div.nav {
     clear: both;
