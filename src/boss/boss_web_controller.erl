@@ -389,7 +389,12 @@ process_result(AppInfo, {redirect, "http://"++Where, Headers}) ->
 process_result(AppInfo, {redirect, "https://"++Where, Headers}) ->
     process_result(AppInfo, {redirect_external, "https://"++Where, Headers});
 process_result(AppInfo, {redirect, {Application, Controller, Action, Params}, Headers}) ->
-    RouterPid = AppInfo#boss_app_info.router_pid,
+    RouterPid = if 
+        AppInfo#boss_app_info.application =:= Application ->
+            AppInfo#boss_app_info.router_pid;
+        true ->
+            boss_web:router_pid(list_to_atom(lists:concat([Application])))
+    end,
     URL = boss_router:unroute(RouterPid, Controller, Action, Params),
     BaseURL = boss_web:base_url(list_to_atom(lists:concat([Application]))),
     {302, [{"Location", BaseURL ++ URL}, {"Cache-Control", "no-cache"}|Headers], ""};
