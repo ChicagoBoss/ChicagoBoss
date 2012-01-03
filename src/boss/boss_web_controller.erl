@@ -388,8 +388,8 @@ process_result(AppInfo, {redirect, "http://"++Where, Headers}) ->
     process_result(AppInfo, {redirect_external, "http://"++Where, Headers});
 process_result(AppInfo, {redirect, "https://"++Where, Headers}) ->
     process_result(AppInfo, {redirect_external, "https://"++Where, Headers});
-process_result(_AppInfo, {redirect, {Application, Controller, Action, Params}, Headers}) ->
-    RouterPid = boss_web:router_pid(list_to_atom(lists:concat([Application]))),
+process_result(AppInfo, {redirect, {Application, Controller, Action, Params}, Headers}) ->
+    RouterPid = AppInfo#boss_app_info.router_pid,
     URL = boss_router:unroute(RouterPid, Controller, Action, Params),
     BaseURL = boss_web:base_url(list_to_atom(lists:concat([Application]))),
     {302, [{"Location", BaseURL ++ URL}, {"Cache-Control", "no-cache"}|Headers], ""};
@@ -629,7 +629,8 @@ render_view({Controller, Template, _}, AppInfo, Req, SessionID, Variables, Heade
                     [{translation_fun, TranslationFun}, {locale, Lang},
                         {custom_tags_context, [{controller, Controller}, 
                                 {application, atom_to_list(AppInfo#boss_app_info.application)},
-                                {action, Template}]}]) of
+                                {action, Template},
+                                {router_pid, AppInfo#boss_app_info.router_pid}]}]) of
                 {ok, Payload} ->
                     {ok, Payload, Headers};
                 Err ->

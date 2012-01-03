@@ -99,10 +99,13 @@ build_message_body(App, Action, Variables, ContentLanguage) ->
 render_view(App, {Action, Extension}, Variables, ContentLanguage) ->
     ViewPath = boss_files:mail_view_path(Action, Extension),
     TranslatorPid = boss_web:translator_pid(App),
+    RouterPid = boss_web:router_pid(App),
     case boss_load:load_view_if_dev(App, ViewPath, TranslatorPid) of
         {ok, ViewModule} ->
             TranslationFun = boss_translator:fun_for(TranslatorPid, ContentLanguage),
-            ViewModule:render([{"_lang", ContentLanguage}|Variables], [{translation_fun, TranslationFun}, {locale, ContentLanguage}]);
+            ViewModule:render([{"_lang", ContentLanguage}|Variables], 
+                [{translation_fun, TranslationFun}, {locale, ContentLanguage}, 
+                    {custom_tags_context, [{application, App}, {router_pid, RouterPid}]}]);
         _ ->
             undefined
     end.
