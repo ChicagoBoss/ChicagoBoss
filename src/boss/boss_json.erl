@@ -9,6 +9,9 @@ encode([First|_] = Data, ModelList) ->
             mochijson2:encode(json_data1(Data, ModelList, []))
     end.
 
+encode([],_) ->
+    "".
+
 json_data1([], _, Acc) ->
     {struct, lists:reverse(Acc)};
 json_data1([{VariableName, [First|_] = Variable}|Rest], ModelList, Acc) when is_integer(First) ->
