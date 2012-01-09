@@ -7,7 +7,7 @@ encode([First|_] = Data, ModelList) ->
             mochijson2:encode(lists:map(fun boss_record_to_json/1, Data));
         false ->
             mochijson2:encode(json_data1(Data, ModelList, []))
-    end.
+    end;
 
 encode([],_) ->
     "".
