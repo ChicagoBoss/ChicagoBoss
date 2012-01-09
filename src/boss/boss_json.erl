@@ -1,10 +1,15 @@
 -module(boss_json).
 -export([encode/2]).
 
-encode([First|_] = Data, ModelList) ->
+encode([First|Rest] = Data, ModelList) ->
     case boss_record_lib:is_boss_record(First, ModelList) of
         true ->
-            mochijson2:encode(lists:map(fun boss_record_to_json/1, Data));
+            case Rest of
+                [] ->
+                    mochijson2:encode(boss_record_to_json(First));
+                _ ->
+                    mochijson2:encode(lists:map(fun boss_record_to_json/1, Data))
+            end;
         false ->
             mochijson2:encode(json_data1(Data, ModelList, []))
     end;
