@@ -7,6 +7,17 @@ encode([First|_] = Data, ModelList) ->
             mochijson2:encode(lists:map(fun boss_record_to_json/1, Data));
         false ->
             mochijson2:encode(json_data1(Data, ModelList, []))
+    end;
+
+encode([],_) ->
+    "";
+
+encode(Data, ModelList) ->
+    case boss_record_lib:is_boss_record(Data, ModelList) of
+        true ->
+            mochijson2:encode(boss_record_to_json(Data));
+        false ->
+            mochijson2:encode(json_data1(Data, ModelList, []))
     end.
 
 json_data1([], _, Acc) ->
