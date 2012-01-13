@@ -5,3 +5,4 @@ src/erlydtl/erlydtl_parser.erl
 src/protobuffs/protobuffs_parser.erl
 src/protobuffs/protobuffs_scanner.erl
 deps
+erl_crash.dump
