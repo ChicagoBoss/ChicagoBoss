@@ -28,7 +28,10 @@ uri(Req) ->
     Req:get(uri).
 
 peer_ip(Req) -> 
-    Req:get(peer_addr).
+    case Req:get(peer_addr) of
+        {ok, IP} -> IP;
+        IP -> IP
+    end.
 
 peer_port(Req) -> 
     Req:get(peer_port).
