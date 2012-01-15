@@ -6,13 +6,9 @@
     request_method/1, path/1, uri/1,
     peer_ip/1, peer_port/1,
     headers/1, header/2, cookies/1,
-    query_params/1, post_params/1, request_body/1
+    query_params/1, post_params/1, request_body/1,
+    socket/1, recv_from_socket/3
 ]).
-
-
-%% @todo could not figure out how to get the socket from misultin 
-%% so could not implement socket/1, recv_from_socket/3 that are 
-%% present in other request modules 
 
 init(Req) -> 
     Req.
@@ -28,7 +24,10 @@ uri(Req) ->
     Req:get(uri).
 
 peer_ip(Req) -> 
-    Req:get(peer_addr).
+    case Req:get(peer_addr) of
+        {ok, IP} -> IP;
+        IP -> IP
+    end.
 
 peer_port(Req) -> 
     Req:get(peer_port).
@@ -108,3 +107,15 @@ post_params(Req) ->
 
 request_body(Req) ->
     Req:get(body).
+
+socket(Req) -> 	
+    Req:get(socket).
+
+recv_from_socket(Length, Timeout, Req) -> 
+    Socket = socket(Req),
+    case gen_tcp:recv(Socket, Length, Timeout) of
+        {ok, Data} -> 
+            Data;
+        _Other -> 
+            exit(normal)
+    end.

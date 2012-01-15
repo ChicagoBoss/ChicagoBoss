@@ -4,3 +4,5 @@ src/aleppo/aleppo_parser.erl
 src/erlydtl/erlydtl_parser.erl
 src/protobuffs/protobuffs_parser.erl
 src/protobuffs/protobuffs_scanner.erl
+deps
+erl_crash.dump
