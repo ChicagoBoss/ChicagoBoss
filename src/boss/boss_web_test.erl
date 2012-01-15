@@ -198,6 +198,8 @@ find_link_with_text(LinkName, [{<<"a">>, Attrs, Children}|Rest]) ->
         LinkName -> proplists:get_value(<<"href">>, Attrs);
         _ -> find_link_with_text(LinkName, Rest)
     end;
+find_link_with_text(LinkName, [{_OtherTag, _Attrs}|Rest]) ->
+    find_link_with_text(LinkName, Rest);
 find_link_with_text(LinkName, [{_OtherTag, _Attrs, []}|Rest]) ->
     find_link_with_text(LinkName, Rest);
 find_link_with_text(LinkName, [{_OtherTag, _Attrs, Children}|Rest]) when is_list(Children) ->
