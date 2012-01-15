@@ -6,6 +6,8 @@ REBAR=./rebar
 DB_CONFIG_DIR=src/boss/db_adapters/test_config
 SESSION_CONFIG_DIR=src/boss/session_adapters/test_config
 
+.PHONY: deps get-deps
+
 all:
 	@$(REBAR) compile skip_deps=true
 	$(ERL) -pa ebin \
@@ -23,8 +25,11 @@ edoc:
 app:
 	@$(REBAR) create template=skel dest=$(DEST) src=$(PWD) appid=$(PROJECT) skip_deps=true
 
-deps:
+get-deps:
 	@$(REBAR) get-deps
+
+deps:
+	@$(REBAR) compile
 
 mongodb:
 	$(ERL) -make
