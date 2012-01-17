@@ -364,7 +364,9 @@ process_request(AppInfo, Req, Mode, Url, SessionID) ->
     end,
     Result = case Location of
         undefined ->
-            {not_found, "The requested page was not found. Additionally, no handler was found for processing 404 errors."};
+            {not_found, ["The requested page was not found. ",
+                    "Additionally, no handler was found for processing 404 errors. ",
+                    "You probably want to modify ", boss_files:routes_file(AppInfo#boss_app_info.application), " to prevent errors like this one."]};
         {redirect, _} ->
             Location;
         _ ->
