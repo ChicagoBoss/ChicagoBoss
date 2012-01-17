@@ -101,6 +101,7 @@
         timeuntil/1,
         timeuntil/2,
         title/1,
+        truncatechars/2,
         truncatewords/2,
         truncatewords_html/2,
         unordered_list/1,
@@ -748,6 +749,14 @@ title(Input) when is_binary(Input) ->
 title(Input) when is_list(Input) ->
     title(Input, []).
 
+%% @doc Truncates a string after a certain number of characters.
+truncatechars(_Input, Max) when Max =< 0 ->
+    "";
+truncatechars(Input, Max) when is_binary(Input) ->
+    list_to_binary(truncatechars(binary_to_list(Input), Max));
+truncatechars(Input, Max) ->
+    truncatechars(Input, Max, []).
+
 %% @doc Truncates a string after a certain number of words.
 truncatewords(_Input, Max) when Max =< 0 ->
     "";
@@ -974,6 +983,13 @@ title([Char | Rest], [$\  |_] = Acc) when Char >= $a, Char =< $z ->
     title(Rest, [Char + ($A - $a) | Acc]);
 title([Char | Rest], Acc) ->
     title(Rest, [Char | Acc]).
+
+truncatechars([], _CharsLeft, Acc) ->
+    lists:reverse(Acc);
+truncatechars(_Input, 0, Acc) ->
+    lists:reverse("..." ++ Acc);
+truncatechars([C|Rest], CharsLeft, Acc) ->
+    truncatechars(Rest, CharsLeft - 1, [C|Acc]).
 
 truncatewords([], _WordsLeft, Acc) ->
     lists:reverse(Acc);

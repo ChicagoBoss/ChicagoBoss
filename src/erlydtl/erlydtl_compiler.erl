@@ -118,17 +118,22 @@ compile_dir(Dir, Module, Options) ->
     Context = init_dtl_context_dir(Dir, Module, Options),
     Files = filelib:fold_files(Dir, ".*", true, fun(F1,Acc1) -> [F1 | Acc1] end, []),
     {ParserResults, ParserErrors} = lists:foldl(fun
-            ("."++_, Acc) -> Acc;
             (File, {ResultAcc, ErrorAcc}) ->
-                FilePath = filename:join([Dir, File]),
-                case filelib:is_dir(FilePath) of
-                    true ->
+                case filename:basename(File) of
+                    "."++_ ->
                         {ResultAcc, ErrorAcc};
-                    false ->
-                        case parse(FilePath, Context) of
-                            ok -> {ResultAcc, ErrorAcc};
-                            {ok, DjangoParseTree, CheckSum} -> {[{File, DjangoParseTree, CheckSum}|ResultAcc], ErrorAcc};
-                            Err -> {ResultAcc, [Err|ErrorAcc]}
+                    _ ->
+                        FilePath = filename:absname(File),
+                        case filelib:is_dir(FilePath) of
+                            true ->
+                                {ResultAcc, ErrorAcc};
+                            false ->
+                                case parse(FilePath, Context) of
+                                    ok -> {ResultAcc, ErrorAcc};
+                                    {ok, DjangoParseTree, CheckSum} -> 
+                                        {[{File, DjangoParseTree, CheckSum}|ResultAcc], ErrorAcc};
+                                    Err -> {ResultAcc, [Err|ErrorAcc]}
+                                end
                         end
                 end
         end, {[], []}, Files),
