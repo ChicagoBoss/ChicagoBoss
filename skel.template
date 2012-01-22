@@ -13,12 +13,10 @@
 {dir, "{{dest}}/src/model"}.
 {dir, "{{dest}}/src/controller"}.
 {dir, "{{dest}}/src/mail/view"}.
-{dir, "{{dest}}/src/test"}.
-{template, "skel/start-dev.sh", "{{dest}}/start-dev.sh"}.
-{template, "skel/start.sh", "{{dest}}/start.sh"}.
+{dir, "{{dest}}/src/test/eunit"}.
+{dir, "{{dest}}/src/test/functional"}.
 {template, "skel/start-server.bat", "{{dest}}/start-server.bat"}.
-{template, "skel/Makefile", "{{dest}}/Makefile"}.
-{template, "skel/project.app.src", "{{dest}}/{{appid}}.app.src"}.
+{template, "skel/src/project.app.src", "{{dest}}/src/{{appid}}.app.src"}.
 {template, "skel/boss.config", "{{dest}}/boss.config"}.
 {template, "skel/src/mail/outgoing_mail_controller.erl", "{{dest}}/src/mail/{{appid}}_outgoing_mail_controller.erl"}.
 {template, "skel/src/mail/incoming_mail_controller.erl", "{{dest}}/src/mail/{{appid}}_incoming_mail_controller.erl"}.
@@ -26,5 +24,9 @@
 {file, "skel/priv/static/chicago-boss.png", "{{dest}}/priv/static/chicago-boss.png"}.
 {file, "skel/priv/static/favicon.ico", "{{dest}}/priv/static/favicon.ico"}.
 {file, "skel/priv/boss.routes", "{{dest}}/priv/{{appid}}.routes"}.
-{chmod, 8#755, "{{dest}}/start-dev.sh"}.
-{chmod, 8#755, "{{dest}}/start.sh"}.
+{file, "skel/priv/rebar/boss_plugin.erl", "{{dest}}/priv/rebar/boss_plugin.erl"}.
+{file, "skel/init.sh", "{{dest}}/init.sh"}.
+{file, "skel/rebar", "{{dest}}/rebar"}.
+{file, "skel/rebar.config", "{{dest}}/rebar.config"}.
+{chmod, 8#755, "{{dest}}/init.sh"}.
+{chmod, 8#755, "{{dest}}/rebar"}.

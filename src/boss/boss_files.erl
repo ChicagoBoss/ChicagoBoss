@@ -42,7 +42,7 @@ web_controller_path() -> [filename:join([root_src_dir(), "controller"])].
 
 mail_controller_path() -> [filename:join([root_src_dir(), "mail"])].
 
-test_path() -> [filename:join([root_src_dir(), "test"])].
+test_path() -> [filename:join([root_src_dir(), "test", "functional"])].
 
 ebin_dir() -> filename:join([root_dir(), "ebin"]).
 
