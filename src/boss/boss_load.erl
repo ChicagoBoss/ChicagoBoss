@@ -23,7 +23,7 @@ load_all_modules_and_emit_app_file(AppName, OutDir) ->
     TranslatorPid = boss_translator:start([{application, AppName}]),
     {ok, ModulePropList} = load_all_modules(AppName, TranslatorPid, OutDir),
     AllModules = lists:foldr(fun({_, Mods}, Acc) -> Mods ++ Acc end, [], ModulePropList),
-    DotAppSrc = lists:concat([AppName, ".app.src"]),
+	DotAppSrc = boss_files:dot_app_src(AppName),
     {ok, [{application, AppName, AppData}]} = file:consult(DotAppSrc),
     AppData1 = lists:keyreplace(modules, 1, AppData, {modules, AllModules}),
     DefaultEnv = proplists:get_value(env, AppData1, []),
