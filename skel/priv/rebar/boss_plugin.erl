@@ -47,11 +47,7 @@ boss(RebarConf, AppFile) ->
 %%       Set's the ebin cb_apps and loads the connector 
 %% @end
 %%--------------------------------------------------------------------
-init(_RebarConf, Appfile) ->
-    %% add all cb_apps defined in boss.config to code path
-	%% including the deps ebin dirs
-	[code:add_path(CodePath) || CodePath <- all_ebin_dirs()],
-
+init(_RebarConf, AppFile) ->
     %% Compile and load the boss_rebar code, this can't be compiled
 	%% as a normal boss lib without the rebar source dep
 	%% The load of ./rebar boss:
@@ -60,8 +56,13 @@ init(_RebarConf, Appfile) ->
 	%% - This plugin compiles and loads the boss_rebar code in ["cb/priv/rebar"],
 	%%   so we can extend/bugfix/tweak the framework without the need of manually
 	%%   recopy code to user apps
-	BossPath = boss_config_value(boss, path),
-	RebarErls = rebar_utils:find_files(BossPath ++ "/priv/rebar", ".*\\.erl\$"),
+	BossPath = case boss_config_value(boss, path) of
+				   {error, _} ->
+					   io:format("FATAL: Failed to read boss=>path config in boss.config.~n"),
+					   halt(1);
+				   Val -> Val
+			   end,
+	RebarErls = rebar_utils:find_files(filename:join([BossPath, "priv", "rebar"]), ".*\\.erl\$"),
 	
 	rebar_log:log(debug, "Auto-loading boss rebar modules ~p~n", [RebarErls]),
 	
@@ -76,7 +77,13 @@ init(_RebarConf, Appfile) ->
 					  end
 			  end, RebarErls),
 
-	{ok, boss_config()}.
+    BossConf = boss_config(),
+
+	%% add all cb_apps defined in boss.config to code path
+	%% including the deps ebin dirs
+	[code:add_path(CodePath) || CodePath <- boss_rebar:all_ebin_dirs(BossConf, AppFile)],
+	
+	{ok, BossConf}.
 	
 %%--------------------------------------------------------------------
 %% @doc pre_compile hook
@@ -123,16 +130,6 @@ pre_eunit(RebarConf, AppFile) ->
 is_base_dir() ->
     rebar_utils:get_cwd() == rebar_config:get_global(base_dir, undefined).
 
-%% Gets all ebin dirs for the apps defined in boss.config
-all_ebin_dirs() ->
-	lists:foldl(fun({App, Config}, EbinDirs) ->
-						case lists:keyfind(path, 1, Config) of
-							false -> EbinDirs;
-							{path, Path} -> 
-								AddedEbin = [Path ++ "/deps/*/ebin"|EbinDirs], 
-								[Path ++ "/ebin"|AddedEbin]
-						end end, [], lists:reverse(boss_config())).
-
 %% Gets the boss.config central configuration file
 boss_config() ->
 	{ok, BossConfig} = file:consult(?BOSS_CONFIG),
@@ -147,11 +144,11 @@ boss_config() ->
 boss_config_value(App, Key) ->
 	case lists:keyfind(App, 1, boss_config()) of
 		false -> 
-			{error, io:format("Boss config app '~p' not found~n", [App])};
+			{error, boss_config_app_not_found};
 		{App, AppConfig} -> 
 			case lists:keyfind(Key, 1, AppConfig) of
 				false -> 
-					{error, io:format("Boss config app '~p' not found~n", [App])};
+					{error, boss_config_app_setting_not_found};
 				{Key, KeyConfig} ->
 					KeyConfig
 			end

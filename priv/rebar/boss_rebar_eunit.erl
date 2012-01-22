@@ -93,7 +93,7 @@ eunit(RebarConf, BossConf, AppFile) ->
 
     %% Obtain all the test modules for inclusion in the compile stage.
 	%% boss_change: compile only src/test/eunit tests
-    TestErls = rebar_utils:find_files("src/test/eunit", ".*\\.erl\$"),
+    TestErls = rebar_utils:find_files(filename:join(["src", "test", "eunit"]), ".*\\.erl\$"),
 
     %% Copy source files to eunit dir for cover in case they are not directly
     %% in src but in a subdirectory of src. Cover only looks in cwd and ../src

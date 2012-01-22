@@ -20,7 +20,8 @@
 		 boss_config_value/3,
 		 boss_config_value/4,
 		 boss_load/2,
-		 boss_start/1]).
+		 boss_start/1,
+		 all_ebin_dirs/2]).
 
 -define(COMMANDS, 
 		[{help,  "Lists all commands"},
@@ -104,7 +105,7 @@ test_functional(RebarConf, BossConf, AppFile) ->
 %%       Generate start shell command (production)
 %% @end
 %%--------------------------------------------------------------------
-start_cmd(RebarConf, BossConf, AppFile) ->
+start_cmd(_RebarConf, BossConf, AppFile) ->
 	rebar_log:log(info, "Generating dynamic start command~n", []),
 	
 	EbinDirs = all_ebin_dirs(BossConf, AppFile),
@@ -122,7 +123,7 @@ start_cmd(RebarConf, BossConf, AppFile) ->
 %%       Generate start-dev shell command (development)
 %% @end
 %%--------------------------------------------------------------------
-start_dev_cmd(RebarConf, BossConf, AppFile) ->
+start_dev_cmd(_RebarConf, BossConf, AppFile) ->
 	rebar_log:log(info, "Generating dynamic start-dev command~n", []),
 	
 	AppName = app_name(AppFile),
@@ -139,7 +140,7 @@ start_dev_cmd(RebarConf, BossConf, AppFile) ->
 %%       Generate stop shell command (production)
 %% @end
 %%--------------------------------------------------------------------
-stop_cmd(RebarConf, BossConf, AppFile) ->
+stop_cmd(_RebarConf, BossConf, AppFile) ->
 	rebar_log:log(info, "Generating dynamic stop command~n", []),
 	
 	SName = io_lib:format("~s@~s", [app_name(AppFile), host_name()]),
@@ -156,7 +157,7 @@ stop_cmd(RebarConf, BossConf, AppFile) ->
 %%       Generate hot reload shell command (production)
 %% @end
 %%--------------------------------------------------------------------
-reload_cmd(RebarConf, BossConf, AppFile) ->
+reload_cmd(_RebarConf, BossConf, AppFile) ->
 	rebar_log:log(info, "Generating dynamic reload command~n", []),
 	SName = io_lib:format("~s@~s", [app_name(AppFile), host_name()]),
 	Cookie = boss_config_value(BossConf, boss, vm_cookie, "abc123"),
@@ -221,11 +222,11 @@ boss_config_value(BossConf, App, Key, Default) ->
 boss_config_value(BossConf, App, Key) ->
 	case lists:keyfind(App, 1, BossConf) of
 		false -> 
-			{error, io:format("ERROR: Boss config app '~p' not found~n", [App])};
+			{error, boss_config_app_not_found};
 		{App, AppConf} -> 
 			case lists:keyfind(Key, 1, AppConf) of
 				false -> 
-					{error, io:format("ERROR: Boss config app '~p' not found~n", [App])};
+					{error, boss_config_app_setting_not_found};
 				{Key, KeyConf} ->
 					KeyConf
 			end
@@ -246,7 +247,7 @@ boss_load(BossConf, AppFile) ->
 			{false, _} -> 
 				Dirs;
 			{{path, Path}, true} ->
-				case filelib:is_regular("ebin/" ++ atom_to_list(App) ++ ".app") of
+				case filelib:is_regular(filename:join(["ebin", atom_to_list(App) ++ ".app"])) of
 					true -> Dirs;
 					false -> [Path|Dirs]
 				end;
@@ -266,6 +267,21 @@ boss_load(BossConf, AppFile) ->
 boss_start(_BossConf) ->
 	application:start(boss).
 
+%%--------------------------------------------------------------------
+%% @doc Start the boss app
+%% @spec all_ebin_dirs(BossConf, _AppFile)
+%%       Gets all ebin dirs for the apps defined in boss.config
+%% @end
+%%--------------------------------------------------------------------
+all_ebin_dirs(BossConf, _AppFile) ->
+	lists:foldl(fun({_App, Config}, EbinDirs) ->
+						case lists:keyfind(path, 1, Config) of
+							false -> EbinDirs;
+							{path, Path} -> 
+								AddedEbin = [ filename:join([Path, "deps", "*", "ebin"]) |EbinDirs],
+								[filename:join([Path, "ebin"])|AddedEbin]
+						end end, [], lists:reverse(BossConf)).
+
 %% ===================================================================
 %% Internal functions
 %% ===================================================================
@@ -277,16 +293,6 @@ app_config(AppFile) ->
 app_name(AppFile) ->
 	[{application, AppName, _}] = app_config(AppFile),
 	AppName.
-
-%% Gets all ebin dirs for the apps defined in boss.config
-all_ebin_dirs(BossConf, _AppFile) ->
-	lists:foldl(fun({App, Config}, EbinDirs) ->
-						case lists:keyfind(path, 1, Config) of
-							false -> EbinDirs;
-							{path, Path} -> 
-								AddedEbin = [Path ++ "/deps/*/ebin"|EbinDirs], 
-								[Path ++ "/ebin"|AddedEbin]
-						end end, [], lists:reverse(BossConf)).
 
 host_name() ->
 	{ok, Host} = inet:gethostname(),
