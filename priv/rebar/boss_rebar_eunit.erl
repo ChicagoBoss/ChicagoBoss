@@ -120,17 +120,20 @@ eunit(RebarConf, BossConf, AppFile) ->
     ok = rebar_file_utils:delete_each(lists:foldl(ToCleanUp, [], TestErls)),
     ok = rebar_file_utils:delete_each(lists:foldl(ToCleanUp, [], SrcErls)),
 	
-	%% boss_change
+    %% boss_change
     %ok = rebar_file_utils:cp_r(SrcErls ++ TestErls, ?EUNIT_DIR),
+
+    %% boss_change
+    %% Compilation (boss-way)
+    boss_rebar:compile(RebarConf, BossConf, AppFile, ?EUNIT_DIR),    
 
     %% Compile erlang code to ?EUNIT_DIR, using a tweaked config
     %% with appropriate defines for eunit, and include all the test modules
     %% as well.
-    rebar_erlc_compiler:doterl_compile(eunit_config(Config),
+
+	rebar_erlc_compiler:doterl_compile(eunit_config(Config),
                                        ?EUNIT_DIR, TestErls),
 	%% boss_change
-	%% Compilation (boss-way)
-	boss_rebar:compile(RebarConf, BossConf, AppFile, ?EUNIT_DIR),
 	%% Load all boss ebin dir and start boss
 	boss_rebar:boss_load(BossConf, AppFile),
 	boss_rebar:boss_start(BossConf),
