@@ -16,14 +16,14 @@ After downloading and extracting, type
     make
     make app PROJECT=mynewproject
     cd ../mynewproject
-    ./start-dev.sh
+    ./init-dev.sh
 
 Then visit http://localhost:8001/ in your browser. Congratulations, you have
 a web server. There will be a lot of PROGRESS REPORTs on your console but
 everything should be running smoothly.
 
 The project name should be a legal Erlang atom, i.e. start with a lowercase
-letter and contain only letters, digits, and underscores.
+letter and contain only letters, digits, and underscores (for easy compatibility is recommended name the project dir and app name the same).
 
 
 Dependencies
@@ -211,9 +211,9 @@ See the FAQ and API files located at
 
 <http://www.chicagoboss.org/>
 
-If you need help getting started, check out "An Evening With Chicago Boss":
+If you need help getting started, check the new pdf tutorial:
 
-<http://www.evanmiller.org/chicago-boss-guide.html>
+<http://www.chicagoboss.org/tutorial.pdf>
 
 There's also the mailing list:
 
