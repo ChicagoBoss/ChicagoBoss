@@ -1,3 +1,62 @@
+Upgrade: From 0.6 to 0.7
+------------------------
+
+In Chicago Boss 0.7, projects are now rebarified, boss.config is the central place for all configuration and eunit testing has been made easy,
+
+bc. ./rebar boss # (list of available commands)
+./init.sh # (list of available boot commands)
+
+h3. Migrate current cb apps
+
+In order to ease the task, a new make task has been created in the framework Makefile, just update your Chicago Boss and run:
+
+bc. make rebarize APPDIR=/path/to/app
+
+This will copy all new files in your app directory, move the app.src file to src, move the boss_web_tests (functionals) to src/test/functional and point you with instructions on what you need add to your boss.config.
+
+bc. make rebarize APPDIR=../my_app
+../my_app rebar-boss-ified
+WARNING: your boss.config have not been changed, you need to set:
+- in boss app section:
+---- {path, "/path/to/chicago_boss"}
+---- {vm_cookie, "my_secret_cookie"} % Optional, defaults to abc123
+- for each app defined:
+---- {path, "../path/to/app"}
+INFO: you can safely remove the Makefile and start* files from your app dir
+INFO: after the boss.config change, you can run:
+cd ../my_app
+./rebar boss # Shows all boss-rebar commands
+./init.sh # Shows the new boot system commands
+
+h3. Compilation
+
+Boss has non-standard-compatible-rebar-way of compiling code, the rebar plugin switches off standard compilation and calls the boss_load module.
+
+./rebar compile (works for compatibility mode)
+./rebar boss c=compile
+
+h3. Configuration
+
+Now the only file on a cb project you need to take care is boss.config, the new init.sh calls ./rebar boss commands that returns automatically generated erl -pa... commands and executes it.
+
+You now defines the path in boss.config for each app and (compilation, test launch, start, stop, reload, ...) works automatically.
+
+A new setting in boss.config called vm_cookie (optional) has been added, used in start/stop/reload commands (defaults to "abc123"):
+
+bc. [{boss, [ {path, "../ChicagoBoss"}, {vm_cookie, "abc123"}, ...
+
+h3. Tests
+
+Eunit testing compilation/setup works automatically, start writing unit tests, just place them in "src/test/eunit" and run ./rebar eunit or ./rebar boss c=test_eunit
+
+Functional tests lives now in src/test/functional (before was placed in src/test), just call ./rebar boss c=test_functional
+
+h3. Init
+
+The init.sh handles start, start-dev as before, but also stop, reload (hot for the node) and restart is implemented.
+
+Now we can tweak, change, make vm.args configurable (in boss.config) without force developers to handle this manually in their apps.
+
 Upgrade: From 0.5 to 0.6
 ------------------------
 
