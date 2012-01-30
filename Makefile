@@ -37,6 +37,9 @@ mongodb:
 riak:
 	@$(REBAR) compile
 
+test:
+	@$(REBAR) skip_deps=true eunit
+
 test_db_mock:
 	$(ERL) -pa ebin -run boss_db_test start -config $(DB_CONFIG_DIR)/mock -noshell
 
