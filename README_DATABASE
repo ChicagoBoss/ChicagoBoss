@@ -56,13 +56,6 @@ Notes:
 3. Open up boss.config and set db_adapter to mnesia
 
 
-Using MongoDB (EXPERIMENTAL)
-----------------------------
-
-The driver requires Erlang R14B or later. To build it, type
-
-    make mongodb
-
 Using Riak (EXPERIMENTAL)
 -------------------------
 
@@ -72,11 +65,6 @@ Riak is a NoSQL database developed by Basho Technologies.
 
 2. Start a Riak node with `sudo riak start`
 
-3. In this directory, type
-
-   make deps
-   make riak
-
-4. Open up boss.config and set db_adapter to riak.
+3. Open up boss.config and set db_adapter to riak.
 
 For query operations to work, you need to have Riak Search installed.

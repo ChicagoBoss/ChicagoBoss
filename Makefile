@@ -10,7 +10,7 @@ SESSION_CONFIG_DIR=src/boss/session_adapters/test_config
 
 all:
 	@$(REBAR) compile skip_deps=true
-	$(ERL) -pa ebin \
+	$(ERL) -pa ebin -pa deps/*/ebin \
 		-eval 'erlydtl:compile("src/boss/boss_html_error_template.dtl", boss_html_error_template, [{out_dir, "ebin"}])' \
 		-eval 'erlydtl:compile("src/boss/boss_html_doc_template.dtl", boss_html_doc_template, [{out_dir, "ebin"}])' \
 		-noshell -s init stop
@@ -29,12 +29,6 @@ get-deps:
 	@$(REBAR) get-deps
 
 deps:
-	@$(REBAR) compile
-
-mongodb:
-	$(ERL) -make
-
-riak:
 	@$(REBAR) compile
 
 test_db_mock:

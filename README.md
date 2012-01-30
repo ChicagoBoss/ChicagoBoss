@@ -29,7 +29,7 @@ letter and contain only letters, digits, and underscores (for easy compatibility
 Dependencies
 ------------
 
-* Erlang R13A or later -
+* Erlang R14B01 or later -
 
     <http://www.erlang.org/download.html>
 
