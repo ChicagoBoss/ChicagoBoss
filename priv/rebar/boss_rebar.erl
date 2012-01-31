@@ -66,7 +66,8 @@ compile(RebarConf, BossConf, AppFile) ->
 %%       Chicago Boss compilation, handling all cb special needs 
 %% @end
 %%--------------------------------------------------------------------
-compile(_RebarConf, _BossConf, AppFile, Dest) ->
+compile(_RebarConf, BossConf, AppFile, Dest) ->
+	boss_load(BossConf, AppFile),
 	AppName = app_name(AppFile),
 	Res = boss_load:load_all_modules_and_emit_app_file(AppName, Dest),
 	rebar_log:log(info, "Chicago Boss compilation of app ~s on ~s (~s)~n", 
