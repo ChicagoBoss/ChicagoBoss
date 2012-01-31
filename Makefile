@@ -9,8 +9,16 @@ SESSION_CONFIG_DIR=src/boss/session_adapters/test_config
 .PHONY: deps get-deps
 
 all:
-	@$(REBAR) compile skip_deps=true
+	@$(REBAR) get-deps
+	@$(REBAR) compile
 	$(ERL) -pa ebin -pa deps/*/ebin \
+		-eval 'erlydtl:compile("src/boss/boss_html_error_template.dtl", boss_html_error_template, [{out_dir, "ebin"}])' \
+		-eval 'erlydtl:compile("src/boss/boss_html_doc_template.dtl", boss_html_doc_template, [{out_dir, "ebin"}])' \
+		-noshell -s init stop
+
+boss:
+	@$(REBAR) compile skip_deps=true
+	 $(ERL) -pa ebin -pa deps/*/ebin \
 		-eval 'erlydtl:compile("src/boss/boss_html_error_template.dtl", boss_html_error_template, [{out_dir, "ebin"}])' \
 		-eval 'erlydtl:compile("src/boss/boss_html_doc_template.dtl", boss_html_doc_template, [{out_dir, "ebin"}])' \
 		-noshell -s init stop
