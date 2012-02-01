@@ -30,4 +30,5 @@
 {file, "skel/rebar", "{{dest}}/rebar"}.
 {file, "skel/rebar.config", "{{dest}}/rebar.config"}.
 {chmod, 8#755, "{{dest}}/init.sh"}.
+{chmod, 8#755, "{{dest}}/init-dev.sh"}.
 {chmod, 8#755, "{{dest}}/rebar"}.
