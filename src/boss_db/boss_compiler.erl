@@ -6,7 +6,8 @@ compile(File) ->
     compile(File, []).
 
 compile(File, Options) ->
-    case parse(File) of
+    IncludeDirs = proplists:get_value(include_dirs, Options, []),
+    case parse(File, IncludeDirs) of
         {ok, Forms} ->
             CompilerOptions = proplists:get_value(compiler_options, Options, 
                 [verbose, return_errors]),
@@ -16,10 +17,7 @@ compile(File, Options) ->
                 TransformFun when is_function(TransformFun) ->
                     TransformFun(Forms)
             end,
-            ParseTransforms = case boss_env:get_env(smart_exceptions, boss_env:boss_env() =:= development) of
-                true -> [boss_db_pt, smart_exceptions];
-                false -> [boss_db_pt]
-            end,
+            ParseTransforms = [boss_db_pt],
             RevertedForms = lists:foldl(fun(Mod, Acc) ->
                        Mod:parse_transform(Acc, CompilerOptions)
                end, erl_syntax:revert(NewForms), ParseTransforms),
@@ -52,17 +50,20 @@ compile_forms(Forms, File, Options) ->
     end.
 
 parse(File) ->
+    parse(File, []).
+
+parse(File, IncludeDirs) ->
     case file:read_file(File) of
         {ok, FileContents} ->
-            parse_text(File, FileContents);
+            parse_text(File, FileContents, IncludeDirs);
         Error ->
             Error
     end.
 
-parse_text(FileName, FileContents) ->
+parse_text(FileName, FileContents, IncludeDirs) ->
     case scan_transform(FileContents) of
         {ok, Tokens} ->
-            case aleppo:process_tokens(Tokens, [{file, FileName}, {include, [boss_files:include_dir()]}]) of
+            case aleppo:process_tokens(Tokens, [{file, FileName}, {include, IncludeDirs}]) of
                 {ok, ProcessedTokens} ->
                     {Forms, Errors} = parse_tokens(ProcessedTokens, FileName),
                     case length(Errors) of

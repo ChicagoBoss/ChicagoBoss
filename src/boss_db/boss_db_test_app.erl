@@ -4,26 +4,36 @@
 -export([start/2, stop/1]).
 
 start(_Type, _StartArgs) ->
-  boss_db:start(),
+    DBOptions = lists:foldl(fun(OptName, Acc) ->
+                case application:get_env(OptName) of
+                    {ok, Val} -> [{OptName, Val}|Acc];
+                    _ -> Acc
+                end
+        end, [], [db_port, db_host, db_username, db_password, db_database]),
+    DBAdapter = boss_env:get_env(db_adapter, mock),
+    DBShards = boss_env:get_env(db_shards, []),
+    CacheEnable = boss_env:get_env(cache_enable, false),
+    DBOptions1 = [{adapter, list_to_atom(lists:concat(["boss_db_adapter_", DBAdapter]))},
+        {cache_enable, CacheEnable}, {shards, DBShards}|DBOptions],
 
-  boss_mq:start(),
-  boss_news:start(),
+    boss_db:start(DBOptions1),
+    boss_news:start(),
 
-  run_setup(),
-  run_tests(),
-  erlang:halt().
+    run_setup(),
+    run_tests(),
+    erlang:halt().
 
 stop(_State) ->
   ok.
 
 run_setup() ->
-  ok = boss_record_compiler:compile("src/boss/db_adapters/test_models/boss_db_test_model.erl"),
-  ok = boss_record_compiler:compile("src/boss/db_adapters/test_models/boss_db_test_parent_model.erl"),
+    ok = boss_record_compiler:compile(filename:join(["priv", "test_models", "boss_db_test_model.erl"])),
+    ok = boss_record_compiler:compile(filename:join(["priv", "test_models", "boss_db_test_parent_model.erl"])),
   DBAdapter = case application:get_env(db_adapter) of
     {ok, Val} -> Val;
     _ -> mock
   end,
-  case file:read_file(lists:concat(["src/boss/db_adapters/test_sql/", DBAdapter, ".sql"])) of
+  case file:read_file(filename:join(["priv", "test_sql", lists:concat([DBAdapter, ".sql"])])) of
     {ok, FileContents} ->
       io:format("Running setup SQL...~n", []),
       lists:map(fun(Cmd) ->
@@ -201,7 +211,8 @@ run_tests() ->
     ]).
 
 do(Fun, Assertions, Continuations) ->
-  boss_test:process_assertions_and_continuations(Assertions, Continuations, Fun()).
+  boss_test:process_assertions_and_continuations(Assertions, Continuations, Fun(), 
+      fun boss_db:push/0, fun boss_db:pop/0, fun boss_db:dump/0).
 
 query_tests([Id1, Id2, Id3]) ->
   [

@@ -4,13 +4,15 @@
 -export([start/2, stop/1]).
 
 start(_Type, _StartArgs) ->
-  boss_db:start(),
+    CacheAdapter = boss_env:get_env(cache_adapter, memcached_bin),
+    CacheOptions = [{adapter, list_to_atom(lists:concat(["boss_cache_adapter_", CacheAdapter]))},
+        {cache_servers, boss_env:get_env(cache_servers, [{"127.0.0.1", 11211, 1}])}],
   case application:get_env(session_adapter) of
       {ok, mnesia} ->
           mnesia:stop(),
           mnesia:create_schema([node()]);		  
       {ok, cache} ->
-          boss_cache:start();
+          boss_cache:start(CacheOptions);
       _ -> ok
   end,
   boss_session:start(),

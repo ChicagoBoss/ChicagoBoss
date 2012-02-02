@@ -79,11 +79,7 @@ created(Id, NewAttrs) ->
     gen_server:call({global, ?MODULE}, {created, Id, NewAttrs}).
 
 reset() ->
-    gen_server:call({global, ?MODULE}, reset),
-    case boss_load:module_is_loaded(news) of
-        true -> news:init();
-        false -> ok
-    end.
+    gen_server:call({global, ?MODULE}, reset).
 
 dump() ->
     gen_server:call({global, ?MODULE}, dump).

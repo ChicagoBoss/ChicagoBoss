@@ -180,13 +180,13 @@ compile_view_erlydtl(Application, ViewPath, OutDir, TranslatorPid) ->
     end.
 
 compile_model(ModulePath, OutDir) ->
-    boss_record_compiler:compile(ModulePath, [{out_dir, OutDir}]).
+    boss_record_compiler:compile(ModulePath, [{out_dir, OutDir}, {include_dirs, [boss_files:include_dir()]}]).
 
 compile_controller(ModulePath, OutDir) ->
-    boss_controller_compiler:compile(ModulePath, [{out_dir, OutDir}]).
+    boss_controller_compiler:compile(ModulePath, [{out_dir, OutDir}, {include_dirs, [boss_files:include_dir()]}]).
 
 compile(ModulePath, OutDir) ->
-    boss_compiler:compile(ModulePath, [{out_dir, OutDir}]).
+    boss_compiler:compile(ModulePath, [{out_dir, OutDir}, {include_dirs, [boss_files:include_dir()]}]).
 
 load_view_lib(Application, OutDir, TranslatorPid) ->
     HelperModule = helper_module(Application),

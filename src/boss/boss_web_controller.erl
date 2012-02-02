@@ -53,11 +53,27 @@ init(Config) ->
     Env = boss_env:setup_boss_env(),
     error_logger:info_msg("Starting Boss in ~p mode....~n", [Env]),
 	
-    boss_db:start(),
+    DBOptions = lists:foldl(fun(OptName, Acc) ->
+                case application:get_env(OptName) of
+                    {ok, Val} -> [{OptName, Val}|Acc];
+                    _ -> Acc
+                end
+        end, [], [db_port, db_host, db_username, db_password, db_database]),
+    DBAdapter = boss_env:get_env(db_adapter, mock),
+    DBShards = boss_env:get_env(db_shards, []),
+    CacheEnable = boss_env:get_env(cache_enable, false),
+    DBOptions1 = [{adapter, list_to_atom(lists:concat(["boss_db_adapter_", DBAdapter]))},
+        {cache_enable, CacheEnable}, {shards, DBShards}|DBOptions],
 
-    case boss_env:get_env(cache_enable, false) of
+    boss_db:start(DBOptions1),
+
+    case CacheEnable of
         false -> ok;
-        true -> boss_cache:start()
+        true -> 
+            CacheAdapter = boss_env:get_env(cache_adapter, memcached_bin),
+            CacheOptions = [{adapter, list_to_atom(lists:concat(["boss_cache_adapter_", CacheAdapter]))},
+                            {cache_servers, boss_env:get_env(cache_servers, [{"127.0.0.1", 11211, 1}])}],
+            boss_cache:start(CacheOptions)
     end,
 
     boss_session:start(),
@@ -231,7 +247,7 @@ find_application_for_path(Path, Default, [App|Rest], LongestMatch) ->
 
 stop_init_scripts(Application, InitData) ->
     lists:foldr(fun(File, _) ->
-                case boss_compiler:compile(File, []) of
+                case boss_compiler:compile(File, [{include_dirs, [boss_files:include_dir()]}]) of
                     {ok, Module} ->
                         case proplists:get_value(Module, InitData, init_failed) of
                            init_failed ->
@@ -245,7 +261,7 @@ stop_init_scripts(Application, InitData) ->
 
 run_init_scripts(AppName) ->
     lists:foldl(fun(File, Acc) ->
-                case boss_compiler:compile(File, []) of
+                case boss_compiler:compile(File, [{include_dirs, [boss_files:include_dir()]}]) of
                     {ok, Module} ->
                         case catch Module:init() of
                             {ok, Info} ->

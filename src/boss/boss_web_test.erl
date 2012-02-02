@@ -12,15 +12,21 @@ start([Application, Adapter]) ->
     run_tests([Application, Adapter|boss_files:test_list()]).
 
 bootstrap_test_env(Application, Adapter) ->
-    AdapterMod = list_to_atom("boss_db_adapter_"++Adapter),
+    AdapterMod = list_to_atom(lists:concat(["boss_db_adapter_", Adapter])),
+    DBOptions = lists:foldl(fun(OptName, Acc) ->
+                case application:get_env(OptName) of
+                    {ok, Val} -> [{OptName, Val}|Acc];
+                    _ -> Acc
+                end
+        end, [], [db_port, db_host, db_username, db_password, db_database]),
     ok = application:start(Application),
     {ok, RouterSupPid} = boss_router:start([{application, Application}, 
             {controllers, boss_files:web_controller_list(Application)}]),
-    boss_db:start([{adapter, AdapterMod}]),
+    boss_db:start([{adapter, AdapterMod}|DBOptions]),
     boss_session:start(),
     boss_mq:start(),
     lists:map(fun(File) ->
-                {ok, _} = boss_compiler:compile(File, [])
+                {ok, _} = boss_compiler:compile(File, [{include_dirs, [boss_files:include_dir()]}])
         end, boss_files:init_file_list(Application)),
     boss_news:start(),
     boss_mail:start([{driver, boss_mail_driver_mock}]),
@@ -126,12 +132,22 @@ submit_form(FormName, FormValues, {_, Uri, _, ParseTree} = _Response, Assertions
 %% @doc This test retrieves the most recent email sent by the application to `ToAddress' with
 %% subject equal to `Subject'.
 read_email(ToAddress, Subject, Assertions, Continuations) ->
+    PushFun = fun() ->
+            boss_db:push(),
+            boss_mail_driver_mock:push()
+    end,
+    PopFun = fun() ->
+            boss_db:pop(),
+            boss_mail_driver_mock:pop()
+    end,
     case boss_mail_driver_mock:read(ToAddress, Subject) of
         undefined ->
-            boss_test:process_assertions_and_continuations(Assertions, Continuations, undefined);
+            boss_test:process_assertions_and_continuations(Assertions, Continuations, undefined, 
+                PushFun, PopFun, fun boss_db:dump/0);
         {Type, SubType, Headers, _, Body} ->
             {TextBody, HtmlBody} = parse_email_body(Type, SubType, Body),
-            boss_test:process_assertions_and_continuations(Assertions, Continuations, {Headers, TextBody, HtmlBody})
+            boss_test:process_assertions_and_continuations(Assertions, Continuations, {Headers, TextBody, HtmlBody}, 
+                PushFun, PopFun, fun boss_db:dump/0)
     end.
 
 % Internal
@@ -343,6 +359,14 @@ make_request(Method, Uri, Headers) ->
     simple_bridge:make_request(mochiweb_request_bridge, Req).
 
 receive_response(RequesterPid, Assertions, Continuations) ->
+    PushFun = fun() ->
+            boss_db:push(),
+            boss_mail_driver_mock:push()
+    end,
+    PopFun = fun() ->
+            boss_db:pop(),
+            boss_mail_driver_mock:pop()
+    end,
     receive
         {RequesterPid, Uri, {Status, ResponseHeaders, ResponseBody}} ->
             ParsedResponseBody = case ResponseBody of
@@ -351,7 +375,8 @@ receive_response(RequesterPid, Assertions, Continuations) ->
             end,
             exit(RequesterPid, kill),
             ParsedResponse = {Status, Uri, ResponseHeaders, ParsedResponseBody},
-            boss_test:process_assertions_and_continuations(Assertions, Continuations, ParsedResponse);
+            boss_test:process_assertions_and_continuations(Assertions, Continuations, ParsedResponse, 
+                PushFun, PopFun, fun boss_db:dump/0);
         {'EXIT', _From, normal} ->
             receive_response(RequesterPid, Assertions, Continuations);
         Other ->

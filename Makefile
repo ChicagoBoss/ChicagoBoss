@@ -3,8 +3,8 @@ PREFIX:=../
 DEST:=$(PREFIX)$(PROJECT)
 ERL=erl
 REBAR=./rebar
-DB_CONFIG_DIR=src/boss/db_adapters/test_config
-SESSION_CONFIG_DIR=src/boss/session_adapters/test_config
+DB_CONFIG_DIR=priv/test_db_config
+SESSION_CONFIG_DIR=priv/test_session_config
 
 .PHONY: deps get-deps
 
@@ -55,6 +55,9 @@ test_db_mongodb:
 	echo "db.boss_db_test_models.remove();"|mongo boss_test
 	$(ERL) -pa ebin -run boss_db_test start -config $(DB_CONFIG_DIR)/mongodb -noshell
 
+test_db_riak:
+	$(ERL) -pa ebin -pa deps/*/ebin -run boss_db_test start -config $(DB_CONFIG_DIR)/riak -noshell
+
 test_session_cache:
 	$(ERL) -pa ebin -run boss_session_test start -config $(SESSION_CONFIG_DIR)/cache -noshell
 
@@ -63,9 +66,6 @@ test_session_mnesia:
 
 test_session_mock:
 	$(ERL) -pa ebin -run boss_session_test start -config $(SESSION_CONFIG_DIR)/mock -noshell
-
-test_db_riak:
-	$(ERL) -pa ebin -pa deps/*/ebin -run boss_db_test start -config $(DB_CONFIG_DIR)/riak -noshell
 
 rebarize:
 	@mv $(APPDIR)/*.app.src $(APPDIR)/src

@@ -2,7 +2,7 @@
 
 -module(boss_db).
 
--export([start/0, start/1, stop/0]).
+-export([start/1, stop/0]).
 
 -export([
         find/1, 
@@ -29,20 +29,6 @@
         data_type/2]).
 
 -define(DEFAULT_TIMEOUT, (30 * 1000)).
-
-start() ->
-    DBOptions = lists:foldl(fun(OptName, Acc) ->
-                case application:get_env(OptName) of
-                    {ok, Val} -> [{OptName, Val}|Acc];
-                    _ -> Acc
-                end
-        end, [], [db_port, db_host, db_username, db_password, db_database]),
-    DBAdapter = boss_env:get_env(db_adapter, mock),
-    DBShards = boss_env:get_env(db_shards, []),
-    CacheEnable = boss_env:get_env(cache_enable, false),
-    DBOptions1 = [{adapter, list_to_atom("boss_db_adapter_"++atom_to_list(DBAdapter))},
-        {cache_enable, CacheEnable}, {shards, DBShards}|DBOptions],
-    start(DBOptions1).
 
 start(Options) ->
     boss_db_sup:start_link(Options).
