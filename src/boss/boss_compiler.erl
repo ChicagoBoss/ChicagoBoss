@@ -40,7 +40,7 @@ compile(File, Options) ->
     end.
 
 compile_forms(Forms, File, Options) ->
-    case compile:forms(Forms, Options) of
+    case compile:forms(Forms, [debug_info | Options]) of
         {ok, Module1, Bin} ->
             code:purge(Module1),
             case code:load_binary(Module1, File, Bin) of
