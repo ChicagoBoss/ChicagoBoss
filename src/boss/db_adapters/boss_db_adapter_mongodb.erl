@@ -130,32 +130,37 @@ delete(Conn, Id) when is_list(Id) ->
 save_record(Conn, Record) when is_tuple(Record) ->
     Type = element(1, Record),
     Collection = type_to_collection(Type),
-    Attributes = case Record:id() of
+    Res = case Record:id() of
         id ->
-            PropList = lists:map(fun({K,V}) -> 
-                            case is_id_attr(K) of
-                                true -> {K, pack_id(V)};
-                                false -> {K, pack_value(V)}
-                            end
-                end, 
-                                 Record:attributes()),
-            proplist_to_tuple(proplists:delete(id, PropList));
+            PropList = lists:foldr(fun
+                    ({id,_}, Acc) -> Acc;
+                    ({K,V}, Acc) ->
+                        PackedVal = case is_id_attr(K) of
+                            true -> pack_id(V);
+                            false -> pack_value(V)
+                        end,
+                        [{K, PackedVal}|Acc]
+                    end, [], Record:attributes()),
+            Doc = proplist_to_tuple(PropList),
+            execute(Conn, fun() ->
+                        mongo:insert(Collection, Doc)
+                end);
         DefinedId when is_list(DefinedId) ->
-            PropList = lists:map(fun({K,V}) ->
-                            case K of 
-                                id -> {'_id', pack_id(DefinedId)};
-                                _ -> 
-                                    case is_id_attr(K) of
-                                        true -> {K, pack_id(V)};
-                                        false -> {K, pack_value(V)}
-                                    end
-                            end
+            PackedId = pack_id(DefinedId),
+            PropList = lists:map(fun
+                    ({id,_}) -> {'_id', PackedId};
+                    ({K,V}) ->
+                        PackedVal = case is_id_attr(K) of
+                            true -> pack_id(V);
+                            false -> pack_value(V)
+                        end,
+                        {K, PackedVal}
                     end, Record:attributes()),
-            proplist_to_tuple(PropList)
+            Doc = proplist_to_tuple(PropList),
+            execute(Conn, fun() ->
+                        mongo:repsert(Collection, {'_id', PackedId}, Doc)
+                end)
     end,
-    Res = execute(Conn, fun() -> 
-                mongo:save(Collection, Attributes)
-        end),
     case Res of
         {ok, ok} -> {ok, Record};
         {ok, Id} -> 
