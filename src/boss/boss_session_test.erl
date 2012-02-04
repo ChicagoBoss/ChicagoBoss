@@ -1,5 +1,5 @@
 -module(boss_session_test).
--compile(export_all).
+-export([start/0, start/1, stop/0]).
 
 start() ->
     start([]).

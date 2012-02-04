@@ -1,5 +1,5 @@
 -module(boss_erlydtl_tags).
--compile(export_all).
+-export([url/2]).
 
 url(Variables, Options) ->
     ListVars = lists:map(fun 

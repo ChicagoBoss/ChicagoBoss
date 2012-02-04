@@ -1,6 +1,5 @@
 -module(boss_controller_compiler).
-
--compile(export_all).
+-export([compile/1, compile/2, add_routes_to_forms/1]).
 
 compile(File) ->
     compile(File, []).

@@ -2,7 +2,7 @@
 %% @doc Generate documentation for the Chicago Boss external API.
 
 -module(boss_doc).
--compile(export_all).
+-export([run/0, run/2]).
 -include("xmerl.hrl").
 
 run() ->

@@ -1,6 +1,16 @@
 -module(boss_web).
 
--compile(export_all).
+-export([reload_routes/0,
+        reload_translation/1,
+        reload_all_translations/0,
+        reload_init_scripts/0,
+        get_all_routes/0,
+        get_all_models/0,
+        get_all_applications/0,
+        base_url/1,
+        translator_pid/1,
+        router_pid/1,
+        application_info/1]).
 
 reload_routes() ->
     gen_server:call(boss_web, reload_routes).

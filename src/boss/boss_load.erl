@@ -1,5 +1,18 @@
 -module(boss_load).
--compile(export_all).
+-export([
+        incoming_mail_controller_module/1,
+        load_all_modules/2,
+        load_all_modules/3,
+        load_all_modules_and_emit_app_file/2,
+        load_libraries/0,
+        load_mail_controllers/0,
+        load_models/0,
+        load_view_if_dev/3,
+        load_web_controllers/0,
+        module_is_loaded/1,
+        reload_all/0
+    ]).
+
 -define(HELPER_MODULE_NAME, '_view_lib').
 
 load_all_modules(Application, TranslatorPid) ->
@@ -303,4 +316,4 @@ helper_module(Application) ->
     list_to_atom(lists:concat([Application, ?HELPER_MODULE_NAME])).
 
 incoming_mail_controller_module(Application) ->
-    list_to_atom(atom_to_list(Application) ++ "_incoming_mail_controller").
+    list_to_atom(lists:concat([Application, "_incoming_mail_controller"])).

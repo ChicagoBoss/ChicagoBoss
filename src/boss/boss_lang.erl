@@ -1,5 +1,13 @@
 -module(boss_lang).
--compile(export_all).
+-export([create_lang/2, 
+        delete_lang/2, 
+        extract_strings/1,
+        extract_strings/2,
+        extract_po_strings/2,
+        extract_po_blocks/3,
+        escape_quotes/1,
+        update_po/1,
+        update_po/4]).
 
 create_lang(App, Lang) ->
     LangFile = boss_files:lang_path(App, Lang),

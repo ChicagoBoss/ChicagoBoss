@@ -1,5 +1,29 @@
 -module(boss_files).
--compile(export_all).
+-export([
+        dot_app_src/1,
+        ebin_dir/0,
+        include_dir/0,
+        init_file_list/1,
+        lang_path/2,
+        language_list/1,
+        lib_path/0,
+        mail_controller_path/0,
+        mail_view_path/0,
+        mail_view_path/2,
+        model_list/1,
+        model_path/0,
+        model_path/1,
+        routes_file/1,
+        static_path/1,
+        test_list/0,
+        test_path/0,
+        view_file_list/0,
+        view_lib_path/0,
+        web_controller/2,
+        web_controller_list/1,
+        web_controller_path/0,
+        web_view_path/0,
+        web_view_path/2]).
 
 root_dir() -> filename:absname(""). %filename:join([filename:dirname(code:which(?MODULE)), ".."]).
 root_src_dir() -> "src".
@@ -21,14 +45,12 @@ web_view_path(Controller, Template, Extension) ->
 
 mail_view_path() ->
     filename:join([root_src_dir(), "mail", "view"]).
-mail_view_path(Template) -> mail_view_path(Template, "txt").
 mail_view_path(Template, Extension) -> 
     filename:join([mail_view_path(), lists:concat([Template, ".", Extension])]).
 
 model_path() -> [filename:join([root_src_dir(), "model"])].
 model_path(Model) -> filename:join([hd(model_path()), Model]).
 
-lang_path() -> filename:join([root_dir(), "priv", "lang"]).
 lang_path(App) -> filename:join([root_priv_dir(App), "lang"]).
 lang_path(App, Lang) -> filename:join([lang_path(App), lists:concat(["strings.", Lang, ".po"])]).
 
@@ -81,8 +103,6 @@ init_file_list(App) ->
 routes_file(App) ->
     filename:join([root_priv_dir(App), lists:concat([App, ".routes"])]).
 
-language_list() ->
-    language_list_dir(lang_path()).
 language_list(App) ->
     language_list_dir(lang_path(App)).
 

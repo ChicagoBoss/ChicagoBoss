@@ -62,8 +62,8 @@ init(Config) ->
     DBAdapter = boss_env:get_env(db_adapter, mock),
     DBShards = boss_env:get_env(db_shards, []),
     CacheEnable = boss_env:get_env(cache_enable, false),
-    DBOptions1 = [{adapter, list_to_atom(lists:concat(["boss_db_adapter_", DBAdapter]))},
-        {cache_enable, CacheEnable}, {shards, DBShards}|DBOptions],
+    DBOptions1 = [{adapter, DBAdapter}, {cache_enable, CacheEnable}, 
+        {shards, DBShards}|DBOptions],
 
     boss_db:start(DBOptions1),
 
@@ -71,7 +71,7 @@ init(Config) ->
         false -> ok;
         true -> 
             CacheAdapter = boss_env:get_env(cache_adapter, memcached_bin),
-            CacheOptions = [{adapter, list_to_atom(lists:concat(["boss_cache_adapter_", CacheAdapter]))},
+            CacheOptions = [{adapter, CacheAdapter},
                             {cache_servers, boss_env:get_env(cache_servers, [{"127.0.0.1", 11211, 1}])}],
             boss_cache:start(CacheOptions)
     end,
