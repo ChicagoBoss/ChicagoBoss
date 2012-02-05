@@ -186,7 +186,7 @@ compile_view_erlydtl(Application, ViewPath, OutDir, TranslatorPid) ->
                             undefined -> default;
                             Body -> list_to_binary(Body)
                         end
-                end}, {blocktrans_locales, boss_files:language_list()}]),
+                end}, {blocktrans_locales, boss_files:language_list(Application)}]),
     case Res of
         ok -> {ok, Module};
         Err -> Err
