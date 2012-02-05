@@ -62,8 +62,9 @@ init(Config) ->
     DBAdapter = boss_env:get_env(db_adapter, mock),
     DBShards = boss_env:get_env(db_shards, []),
     CacheEnable = boss_env:get_env(cache_enable, false),
+    IsMasterNode = boss_env:is_master_node(),
     DBOptions1 = [{adapter, DBAdapter}, {cache_enable, CacheEnable}, 
-        {shards, DBShards}|DBOptions],
+        {shards, DBShards}, {is_master_node, IsMasterNode}|DBOptions],
 
     boss_db:start(DBOptions1),
 
