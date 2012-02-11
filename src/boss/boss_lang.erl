@@ -112,7 +112,7 @@ extract_po_blocks(App, Lang, Mode) ->
 
 process_po_tokens([], Acc) ->
     lists:reverse(Acc);
-process_po_tokens([{comment, _MsgComment}, {id, _MsgId}, {str, _MsgStr}|Rest], Acc) ->
+process_po_tokens([{comment, _MsgComment}|Rest], Acc) ->
 	process_po_tokens(Rest, Acc);
 process_po_tokens([{id, MsgId}, {str, MsgStr}|Rest], Acc) ->
     process_po_tokens(Rest, [{MsgId, MsgStr}|Acc]);
