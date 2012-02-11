@@ -11,13 +11,11 @@ start_link() ->
     start_link([]).
 
 start_link(StartArgs) ->
-    supervisor:start_link({global, ?MODULE}, ?MODULE, StartArgs).
+    supervisor:start_link({local, ?MODULE}, ?MODULE, StartArgs).
 
 init(StartArgs) ->
-    {ok, {{one_for_one, 10, 10}, [
-                {session_controller, {boss_session_controller, start_link, [StartArgs]},
-                    permanent,
-                    2000,
-                    worker,
-                    [boss_session_controller]}
-                ]}}.
+    Args = [{name, {local, boss_session_pool}},
+        {worker_module, boss_session_controller},
+        {size, 20}, {max_overflow, 40}|StartArgs],
+    PoolSpec = {session_controller, {poolboy, start_link, [Args]}, permanent, 2000, worker, [poolboy]},
+    {ok, {{one_for_one, 10, 10}, [PoolSpec]}}.

@@ -1,6 +1,6 @@
 -module(boss_session_adapter_cache).
 -behaviour(boss_session_adapter).
--export([start/0, start/1, stop/1]).
+-export([start/0, start/1, stop/1, init/1]).
 
 -export([session_exists/2, create_session/3, lookup_session/2]).
 -export([lookup_session_value/3, set_session_value/4, delete_session/2, delete_session_value/3]).
@@ -17,6 +17,9 @@ start(_Options) ->
     {ok, #conn{ prefix = sess }}.
 
 stop(_Conn) ->
+    ok.
+
+init(_) ->
     ok.
 
 session_exists(_, undefined) ->

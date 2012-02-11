@@ -1,6 +1,6 @@
 -module(boss_session_adapter_mnesia).
 -behaviour(boss_session_adapter).
--export([start/0, start/1, stop/1]).
+-export([start/0, start/1, stop/1, init/1]).
 -export([session_exists/2, create_session/3, lookup_session/2]).
 -export([lookup_session_value/3, set_session_value/4, delete_session/2, delete_session_value/3]).
 
@@ -13,6 +13,12 @@ start() ->
     start([]).
 
 start(_Options) ->
+    {ok, undefined}.
+
+stop(_) ->
+    ok.
+
+init(_) ->
     error_logger:info_msg("Starting distributed session mnesia storage~n"),	
     mnesia:start(),
     %%Checks for table, after some time tries to recreate it
@@ -25,9 +31,6 @@ start(_Options) ->
     end,
 
     {ok, undefined}.
-
-stop(_) ->
-    ok.
 
 session_exists(_, SessionID) ->
     {atomic, Result} = mnesia:transaction(fun() -> mnesia:read({?TABLE, SessionID}) end),

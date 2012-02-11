@@ -1,26 +1,28 @@
 -module(boss_session_adapter_mock).
 -behaviour(boss_session_adapter).
--export([start/0, start/1, stop/1]).
+-export([start/0, start/1, stop/1, init/1]).
 -export([session_exists/2, create_session/3, lookup_session/2]).
 -export([lookup_session_value/3, set_session_value/4, delete_session/2, delete_session_value/3]).
 
 start() ->
     start([]).
 
-start(Options) ->
-    case boss_env:is_master_node() of
-        true ->
-            {ok, MockSup} = boss_session_mock_sup:start_link(Options),
-            {ok, MockSup};
-        false ->
-            {ok, undefined}
-    end.
+start(_Options) ->
+    {ok, undefined}.
 
 stop(undefined) ->
     ok;
 stop(MockSup) ->
     exit(MockSup),
     ok.
+
+init(Options) ->
+    case boss_env:is_master_node() of
+        true ->
+            boss_session_mock_sup:start_link(Options);
+        false ->
+            ok
+    end.
 
 session_exists(_, undefined) ->
     false;

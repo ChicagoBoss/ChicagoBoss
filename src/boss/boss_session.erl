@@ -7,7 +7,7 @@
 -export([new_session/1, get_session_data/1, get_session_data/2, set_session_data/3]).
 -export([remove_session_data/2, delete_session/1]).
 
--define(SERVER, ?MODULE).
+-define(POOLNAME, boss_session_pool).
 
 start() ->
     SessionOptions = lists:foldl(fun(OptName, Acc) ->
@@ -17,7 +17,9 @@ start() ->
                 end
         end, [], [session_key, session_exp_time]),
     SessionDriver = boss_env:get_env(session_adapter, mock),
-    SessionOptions1 = [{adapter, list_to_atom("boss_session_adapter_"++atom_to_list(SessionDriver))}|SessionOptions],
+    Adapter = list_to_atom(lists:concat(["boss_session_adapter_", SessionDriver])),
+    Adapter:init([]),
+    SessionOptions1 = [{adapter, Adapter}|SessionOptions],
     start(SessionOptions1).
 
 start(Options) ->
@@ -35,29 +37,29 @@ get_session_exp_time() ->
 %% @spec new_session(Cookie::string()) -> string | {error, Reason}
 %% @doc Starts new session with the specified `Cookie'.
 new_session(Cookie) ->
-    gen_server:call(?SERVER, {new_session, Cookie}).
+    boss_pool:call(?POOLNAME, {new_session, Cookie}).
 
 %% @spec get_session_data(SessionID) -> list | {error, Reason}
 %% @doc Get session data for the `SessionID'.
 get_session_data(SessionID) ->
-    gen_server:call(?SERVER, {get_session_data, SessionID}).
+    boss_pool:call(?POOLNAME, {get_session_data, SessionID}).
 
 %% @spec get_session_data(SessionID, Key) -> list | {error, Reason}
 %% @doc Get session data for the `SessionID' for a given `Key'.
 get_session_data(SessionID, Key) ->
-    gen_server:call(?SERVER ,{get_session_data, SessionID, Key}).
+    boss_pool:call(?POOLNAME, {get_session_data, SessionID, Key}).
 
 %% @spec set_session_data(SessionID, Key, Value) -> ok | {error, Reason}
 %% @doc Set session data for the `SessionID'.
 set_session_data(SessionID, Key, Value) ->
-    gen_server:call(?SERVER, {set_session_data, SessionID, Key, Value}).
+    boss_pool:call(?POOLNAME, {set_session_data, SessionID, Key, Value}).
 
 %% @spec delete_session(SessionID) -> ok | {error, Reason}
 %% @doc Delete session for given `SessionID'.
 delete_session(SessionID) ->
-    gen_server:call(?SERVER, {delete_session, SessionID}).
+    boss_pool:call(?POOLNAME, {delete_session, SessionID}).
 
 %% @spec remove_session_data(SessionID, Key) -> ok | {error, Reason}
 %% @doc Remove the Key from session data for the `SessionID'.
 remove_session_data(SessionID, Key) ->
-    gen_server:call(?SERVER, {remove_session_data, SessionID, Key}).
+    boss_pool:call(?POOLNAME, {remove_session_data, SessionID, Key}).
