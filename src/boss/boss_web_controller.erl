@@ -705,7 +705,7 @@ choose_language_from_qvalues(TranslatorPid, Strings, QValues) ->
                 TranslationCoverage = translation_coverage(Strings, ThisLang, TranslatorPid),
                 TranslationScore = ThisQValue * TranslationCoverage + 
                                     AssumedLocaleQValue * (1-TranslationCoverage),
-                case TranslationScore > BestTranslationScore of
+                case TranslationScore > BestTranslationScore andalso TranslationCoverage > 0.0 of
                     true -> {ThisLang, TranslationScore};
                     false -> {BestLang, BestTranslationScore}
                 end
