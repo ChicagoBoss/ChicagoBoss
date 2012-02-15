@@ -12,7 +12,6 @@ start([Application, Adapter]) ->
     run_tests([Application, Adapter|boss_files:test_list()]).
 
 bootstrap_test_env(Application, Adapter) ->
-    AdapterMod = list_to_atom(lists:concat(["boss_db_adapter_", Adapter])),
     DBOptions = lists:foldl(fun(OptName, Acc) ->
                 case application:get_env(OptName) of
                     {ok, Val} -> [{OptName, Val}|Acc];
@@ -22,7 +21,7 @@ bootstrap_test_env(Application, Adapter) ->
     ok = application:start(Application),
     {ok, RouterSupPid} = boss_router:start([{application, Application}, 
             {controllers, boss_files:web_controller_list(Application)}]),
-    boss_db:start([{adapter, AdapterMod}|DBOptions]),
+    boss_db:start([{adapter, Adapter}|DBOptions]),
     boss_session:start(),
     boss_mq:start(),
     lists:map(fun(File) ->
@@ -44,7 +43,7 @@ bootstrap_test_env(Application, Adapter) ->
 
 % This function deliberately takes one argument so it can be invoked from the command-line.
 run_tests([Application, Adapter|TestList]) ->
-    AppInfo = bootstrap_test_env(list_to_atom(Application), Adapter),
+    AppInfo = bootstrap_test_env(list_to_atom(Application), list_to_atom(Adapter)),
     Pid = erlang:spawn(fun() -> app_info_loop(AppInfo) end),
     register(app_info, Pid),
     io:format("~p~n", [TestList]),
