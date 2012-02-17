@@ -355,8 +355,7 @@ process_request(AppInfo, Req, development, "/doc/"++ModelName, SessionID) ->
             {not_found, "File not found"}
     end,
     process_result(AppInfo, Result);
-process_request(AppInfo, Req, Mode, Url, SessionID) ->
-    RouterPid = AppInfo#boss_app_info.router_pid,
+process_request(#boss_app_info{ router_pid = RouterPid } = AppInfo, Req, Mode, Url, SessionID) ->
     if 
         Mode =:= development ->
             ControllerList = boss_files:web_controller_list(AppInfo#boss_app_info.application),
@@ -364,43 +363,85 @@ process_request(AppInfo, Req, Mode, Url, SessionID) ->
         true ->
             ok
     end,
-    Location = case boss_router:route(RouterPid, Url) of
+    Result = case boss_router:route(RouterPid, Url) of
         {ok, {Application, Controller, Action, Tokens}} when Application =:= AppInfo#boss_app_info.application ->
-            {Controller, Action, Tokens};
+            Location = {Controller, Action, Tokens},
+            case catch load_and_execute(Mode, Location, AppInfo, Req, SessionID) of
+                {'EXIT', Reason} ->
+                    {error, Reason};
+                {not_found, Message} ->
+                    process_not_found(Message, AppInfo, Req, Mode, SessionID);
+                Ok ->
+                    Ok
+            end;
         {ok, {OtherApplication, Controller, Action, Tokens}} ->
             {redirect, {OtherApplication, Controller, Action, Tokens}};
         not_found ->
-            case boss_router:handle(RouterPid, 404) of
-                {ok, {Application, Controller, Action, Tokens}} when Application =:= AppInfo#boss_app_info.application ->
-                    {Controller, Action, Tokens};
-                {ok, {OtherApplication, Controller, Action, Tokens}} ->
-                    {redirect, {OtherApplication, Controller, Action, Tokens}};
-                not_found ->
-                    undefined
-            end
+            process_not_found("No routes matched the requested URL.", AppInfo, Req, Mode, SessionID)
     end,
-    Result = case Location of
-        undefined ->
-            {not_found, ["The requested page was not found. ",
-                    "Additionally, no handler was found for processing 404 errors. ",
-                    "You probably want to modify ", boss_files:routes_file(AppInfo#boss_app_info.application), " to prevent errors like this one."]};
-        {redirect, _} ->
-            Location;
+    FinalResult = case Result of
+        {error, Payload} ->
+            process_error(Payload, AppInfo, Req, Mode, SessionID);
         _ ->
+            Result
+    end,
+    process_result(AppInfo, FinalResult).
+
+process_not_found(Message, #boss_app_info{ router_pid = RouterPid } = AppInfo, _Req, development, _SessionID) ->
+    ExtraMessage = case boss_router:handle(RouterPid, 404) of
+        undefined ->
+            ["This message will appear in production; you may want to define a 404 handler in ", boss_files:routes_file(AppInfo#boss_app_info.application)];
+        _ ->
+            "(Don't worry, this message will not appear in production.)"
+    end,
+    {not_found, [Message, " ", ExtraMessage]};
+process_not_found(Message, #boss_app_info{ router_pid = RouterPid } = AppInfo, Req, Mode, SessionID) ->
+    case boss_router:handle(RouterPid, 404) of
+        {ok, {Application, Controller, Action, Tokens}} when Application =:= AppInfo#boss_app_info.application ->
+            Location = {Controller, Action, Tokens},
             case catch load_and_execute(Mode, Location, AppInfo, Req, SessionID) of
                 {'EXIT', Reason} ->
                     {error, Reason};
                 Ok ->
                     Ok
-            end
-    end,
-    process_result(AppInfo, Result).
+            end;
+        {ok, OtherLocation} ->
+            {redirect, OtherLocation};
+        not_found ->
+            {not_found, [Message, " ",
+                    "Additionally, no handler was found for processing 404 errors. ",
+                    "You probably want to modify ", boss_files:routes_file(AppInfo#boss_app_info.application), " to prevent errors like this one."]}
+    end.
 
-process_result(_, {error, Payload}) ->
+process_error(Payload, AppInfo, _Req, development, _SessionID) ->
     error_logger:error_report(Payload),
-    {500, [{"Content-Type", "text/html"}], "Error: <pre>" ++ io_lib:print(Payload) ++ "</pre>"};
-process_result(_, {not_found, Payload}) ->
-    {404, [{"Content-Type", "text/html"}], Payload};
+    ExtraMessage = case boss_router:handle(AppInfo#boss_app_info.router_pid, 500) of
+        undefined ->
+            ["This message will appear in production; you may want to define a 500 handler in ", boss_files:routes_file(AppInfo#boss_app_info.application)];
+        _ ->
+            "(Don't worry, this message will not appear in production.)"
+    end,
+    {error, ["Error: <pre>", io_lib:print(Payload), "</pre>", "<p>", ExtraMessage, "</p>"], []};
+process_error(Payload, #boss_app_info{ router_pid = RouterPid } = AppInfo, Req, Mode, SessionID) ->
+    error_logger:error_report(Payload),
+    case boss_router:handle(RouterPid, 500) of
+        {ok, {Application, Controller, Action, Tokens}} when Application =:= AppInfo#boss_app_info.application ->
+            ErrorLocation = {Controller, Action, Tokens},
+            case catch load_and_execute(Mode, ErrorLocation, AppInfo, Req, SessionID) of
+                {'EXIT', Reason} ->
+                    {error, ["Error in 500 handler: <pre>", io_lib:print(Reason), "</pre>"], []};
+                Ok ->
+                    Ok
+            end;
+        {ok, OtherLocation} ->
+            {redirect, OtherLocation};
+        not_found ->
+            {error, ["Error: <pre>", io_lib:print(Payload), "</pre>"], []}
+    end.
+
+process_result(_, {ok, Payload, Headers}) ->
+    {200, [{"Content-Type", proplists:get_value("Content-Type", Headers, "text/html")}
+            |proplists:delete("Content-Type", Headers)], Payload};
 process_result(AppInfo, {redirect, Where}) ->
 	process_result(AppInfo, {redirect, Where, []});
 process_result(AppInfo, {redirect, "http://"++Where, Headers}) ->
@@ -421,9 +462,14 @@ process_result(AppInfo, {redirect, Where, Headers}) ->
     {302, [{"Location", AppInfo#boss_app_info.base_url ++ Where}, {"Cache-Control", "no-cache"}|Headers], ""};
 process_result(_, {redirect_external, Where, Headers}) ->
     {302, [{"Location", Where}, {"Cache-Control", "no-cache"}|Headers], ""};
-process_result(_, {ok, Payload, Headers}) ->
-    {200, [{"Content-Type", proplists:get_value("Content-Type", Headers, "text/html")}
-            |proplists:delete("Content-Type", Headers)], Payload}.
+process_result(AppInfo, {not_found, Payload}) ->
+    process_result(AppInfo, {not_found, Payload, []});
+process_result(_, {not_found, Payload, Headers}) ->
+    {404, [{"Content-Type", proplists:get_value("Content-Type", Headers, "text/html")}
+        |proplists:delete("Content-Type", Headers)], Payload};
+process_result(_, {error, Payload, Headers}) ->
+    {500, [{"Content-Type", proplists:get_value("Content-Type", Headers, "text/html")}
+        |proplists:delete("Content-Type", Headers)], Payload}.
 
 load_and_execute(Mode, {Controller, _, _} = Location, AppInfo, Req, SessionID) when Mode =:= production; Mode =:= testing->
     case lists:member(boss_files:web_controller(AppInfo#boss_app_info.application, Controller), 
