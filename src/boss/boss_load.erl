@@ -165,7 +165,7 @@ compile_view_dir_erlydtl(LibPath, Module, OutDir, TranslatorPid) ->
         [{doc_root, view_doc_root(LibPath)}, {compiler_options, []}, 
             {out_dir, OutDir}, {custom_tags_modules, [boss_erlydtl_tags]},
             {blocktrans_fun, fun(BlockName, Locale) ->
-                    case boss_translator:lookup(TranslatorPid, BlockName, Locale) of
+                    case boss_translator:lookup(TranslatorPid, atom_to_list(BlockName), Locale) of
                         undefined -> default;
                         Body -> list_to_binary(Body)
                     end
@@ -182,7 +182,7 @@ compile_view_erlydtl(Application, ViewPath, OutDir, TranslatorPid) ->
         [{doc_root, view_doc_root(ViewPath)}, {custom_tags_modules, [boss_erlydtl_tags, HelperModule]},
             {compiler_options, []}, {out_dir, OutDir}, {blocktrans_fun,
                 fun(BlockName, Locale) ->
-                        case boss_translator:lookup(TranslatorPid, BlockName, Locale) of
+                        case boss_translator:lookup(TranslatorPid, atom_to_list(BlockName), Locale) of
                             undefined -> default;
                             Body -> list_to_binary(Body)
                         end
