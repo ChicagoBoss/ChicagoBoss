@@ -4,7 +4,6 @@
         extract_strings/1,
         extract_strings/2,
         extract_po_strings/2,
-        extract_po_blocks/3,
         escape_quotes/1,
         update_po/1,
         update_po/4]).
@@ -86,7 +85,7 @@ extract_strings(App) ->
 
 extract_strings(App, Lang) ->
     AllStrings = extract_strings(App),
-    PoStrings = extract_po_strings(App, Lang) ++ extract_po_blocks(App, Lang, id),
+    PoStrings = extract_po_strings(App, Lang),
     UntranslatedStrings = lists:filter(fun(S) -> 
                 ToCheck = case S of
                     [{identifier, _Identifier}, {string, String}] -> 
@@ -105,32 +104,14 @@ extract_po_strings(App, Lang) ->
     Tokens = po_scanner:scan(LangFile),
     process_po_tokens(Tokens, []).
 
-extract_po_blocks(App, Lang, Mode) ->
-    LangFile = boss_files:lang_path(App, Lang),
-    Tokens = po_scanner:scan(LangFile),
-    process_po_block_tokens(Tokens, Mode, []).
-
 process_po_tokens([], Acc) ->
     lists:reverse(Acc);
-process_po_tokens([{comment, _MsgComment}, {id, _MsgId}, {str, _MsgStr}|Rest], Acc) ->
+process_po_tokens([{comment, _MsgComment}|Rest], Acc) ->
 	process_po_tokens(Rest, Acc);
 process_po_tokens([{id, MsgId}, {str, MsgStr}|Rest], Acc) ->
     process_po_tokens(Rest, [{MsgId, MsgStr}|Acc]);
 process_po_tokens([_|Rest], Acc) ->
     process_po_tokens(Rest, Acc).
-
-process_po_block_tokens([], _Mode, Acc) ->
-    lists:reverse(Acc);
-process_po_block_tokens([{id, _MsgId}, {str, _MsgStr}|Rest], Mode, Acc) ->
-	process_po_block_tokens(Rest, Mode, Acc);	
-process_po_block_tokens([{comment, MsgComment}, {id, MsgId}, {str, MsgStr}|Rest], Mode, Acc) ->
-	Id = case Mode of
-			 id -> MsgId;
-			 comment -> string:substr(MsgComment, 3, string:len(MsgComment) - 2)
-		 end,
-    process_po_block_tokens(Rest, Mode, [{Id, MsgStr}|Acc]);
-process_po_block_tokens([_|Rest], Mode, Acc) ->
-    process_po_block_tokens(Rest, Mode, Acc).
 
 extract_model_strings(App) ->
     lists:foldl(fun(Type, Acc) ->
