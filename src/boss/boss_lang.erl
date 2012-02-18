@@ -61,7 +61,7 @@ lang_write_to_file(IODevice, Original, Translation) ->
 			file:write(IODevice, io_lib:format("\nmsgid \"~s\"\n", [""])),
 			lang_write_multiline_to_file(IODevice, OriginalLines);
         false ->
-			file:write(IODevice, io_lib:format("\nmsgid \"~ts\"\n",[OriginalEncoded])),
+			file:write(IODevice, io_lib:format("\nmsgid \"~ts\"\n",[OriginalEncoded]))
     end,
     case length(TranslationLines) > 0 of
         true ->
