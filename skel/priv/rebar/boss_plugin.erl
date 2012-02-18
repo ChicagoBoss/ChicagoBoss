@@ -95,9 +95,9 @@ init(_RebarConf, AppFile) ->
 %% @end
 %%--------------------------------------------------------------------
 pre_compile(RebarConf, AppFile) ->
-	{ok, BossConf} = init(RebarConf, AppFile),
 	case is_base_dir() of
 		true -> 
+			{ok, BossConf} = init(RebarConf, AppFile),
 			boss_rebar:run(compile, RebarConf, BossConf, AppFile),
 			halt(0);
 		false -> ok
@@ -113,9 +113,9 @@ pre_compile(RebarConf, AppFile) ->
 %% @end
 %%--------------------------------------------------------------------
 pre_eunit(RebarConf, AppFile) ->
-	{ok, BossConf} = init(RebarConf, AppFile),
 	case is_base_dir() of
 		true -> 
+			{ok, BossConf} = init(RebarConf, AppFile),
 			boss_rebar:run(test_eunit, RebarConf, BossConf, AppFile),
 			halt(0);
 		false -> ok
