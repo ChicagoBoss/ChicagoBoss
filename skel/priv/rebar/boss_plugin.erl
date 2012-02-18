@@ -24,9 +24,9 @@
 %% @end
 %%--------------------------------------------------------------------
 boss(RebarConf, AppFile) ->
-	{ok, BossConf} = init(RebarConf, AppFile),
 	case is_base_dir() of
 		true -> 
+			{ok, BossConf} = init(RebarConf, AppFile),
 			Command = rebar_config:get_global(c, "help"),
 			case boss_rebar:run(Command, RebarConf, BossConf, AppFile) of
 				{error, command_not_found} ->
