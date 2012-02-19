@@ -8,12 +8,13 @@
         load_mail_controllers/0,
         load_models/0,
         load_view_if_dev/3,
+        load_view_lib_modules/0,
         load_web_controllers/0,
         module_is_loaded/1,
         reload_all/0
     ]).
 
--define(HELPER_MODULE_NAME, '_view_lib').
+-define(CUSTOM_TAGS_DIR_MODULE, '_view_lib_tags').
 
 load_all_modules(Application, TranslatorPid) ->
     load_all_modules(Application, TranslatorPid, undefined).
@@ -24,12 +25,13 @@ load_all_modules(Application, TranslatorPid, OutDir) ->
     {ok, MailModules} = load_mail_controllers(OutDir),
     {ok, ControllerModules} = load_web_controllers(OutDir),
     {ok, ModelModules} = load_models(OutDir),
-    {ok, ViewLibModule} = load_view_lib(Application, OutDir, TranslatorPid),
+    {ok, ViewLibModules} = load_view_lib(Application, OutDir, TranslatorPid),
+    {ok, ViewHelperModules} = load_view_lib_modules(OutDir),
     {ok, ViewModules} = load_views(Application, OutDir, TranslatorPid),
     AllModules = [{test_modules, TestModules}, {lib_modules, LibModules},
         {mail_modules, MailModules}, {controller_modules, ControllerModules},
-        {model_modules, ModelModules}, {view_lib_modules, [ViewLibModule]},
-        {view_modules, ViewModules}],
+        {model_modules, ModelModules}, {view_lib_tags_modules, ViewLibModules},
+        {view_lib_helper_modules, ViewHelperModules}, {view_modules, ViewModules}],
     {ok, AllModules}.
 
 load_all_modules_and_emit_app_file(AppName, OutDir) ->
@@ -64,6 +66,11 @@ load_web_controllers() ->
     load_web_controllers(undefined).
 load_web_controllers(OutDir) ->
     load_dirs(boss_files:web_controller_path(), OutDir, fun compile_controller/2).
+
+load_view_lib_modules() ->
+    load_view_lib_modules(undefined).
+load_view_lib_modules(OutDir) ->
+    load_dirs(boss_files:view_lib_helpers_path(), OutDir, fun compile/2).
 
 load_models() ->
     load_models(undefined).
@@ -161,9 +168,10 @@ view_doc_root(ViewPath) ->
         [boss_files:web_view_path(), boss_files:mail_view_path()]).
 
 compile_view_dir_erlydtl(LibPath, Module, OutDir, TranslatorPid) ->
+    Helpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_lib_helper_list()),
     Res = erlydtl_compiler:compile_dir(LibPath, Module,
         [{doc_root, view_doc_root(LibPath)}, {compiler_options, []}, 
-            {out_dir, OutDir}, {custom_tags_modules, [boss_erlydtl_tags]},
+            {out_dir, OutDir}, {custom_tags_modules, lists:reverse([boss_erlydtl_tags | Helpers])},
             {blocktrans_fun, fun(BlockString, Locale) ->
                     case boss_translator:lookup(TranslatorPid, BlockString, Locale) of
                         undefined -> default;
@@ -176,10 +184,12 @@ compile_view_dir_erlydtl(LibPath, Module, OutDir, TranslatorPid) ->
     end.
 
 compile_view_erlydtl(Application, ViewPath, OutDir, TranslatorPid) ->
-    HelperModule = helper_module(Application),
+    HelperDirModule = view_custom_tags_dir_module(Application),
+    Helpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_lib_helper_list()),
     Module = view_module(Application, ViewPath),
     Res = erlydtl_compiler:compile(ViewPath, Module,
-        [{doc_root, view_doc_root(ViewPath)}, {custom_tags_modules, [boss_erlydtl_tags, HelperModule]},
+        [{doc_root, view_doc_root(ViewPath)}, {custom_tags_modules, 
+                lists:reverse([boss_erlydtl_tags, HelperDirModule | Helpers])},
             {compiler_options, []}, {out_dir, OutDir}, {blocktrans_fun,
                 fun(BlockString, Locale) ->
                         case boss_translator:lookup(TranslatorPid, BlockString, Locale) of
@@ -202,24 +212,26 @@ compile(ModulePath, OutDir) ->
     boss_compiler:compile(ModulePath, [{out_dir, OutDir}, {include_dirs, [boss_files:include_dir()]}]).
 
 load_view_lib(Application, OutDir, TranslatorPid) ->
-    HelperModule = helper_module(Application),
-    compile_view_dir_erlydtl(boss_files:view_lib_path(), HelperModule, OutDir, TranslatorPid).
+    {ok, HelperDirModule} = compile_view_dir_erlydtl(boss_files:view_lib_tags_path(), 
+        view_custom_tags_dir_module(Application), OutDir, TranslatorPid),
+    {ok, [HelperDirModule]}.
 
-load_view_lib_if_old(ViewLibPath, Module, TranslatorPid) ->
-    NeedCompile = case module_is_loaded(Module) of
+load_view_lib_if_old(Application, TranslatorPid) ->
+    HelperDirModule = view_custom_tags_dir_module(Application),
+    DirNeedsCompile = case module_is_loaded(HelperDirModule) of
         true ->
-            module_older_than(Module, lists:map(fun
+            module_older_than(HelperDirModule, lists:map(fun
                         ({File, _CheckSum}) -> File;
                         (File) -> File
-                    end, [Module:source_dir() | Module:dependencies()]));
+                    end, [HelperDirModule:source_dir() | HelperDirModule:dependencies()]));
         false ->
             true
     end,
-    case NeedCompile of
+    case DirNeedsCompile of
         true ->
-            compile_view_dir_erlydtl(ViewLibPath, Module, undefined, TranslatorPid);
+            load_view_lib(Application, undefined, TranslatorPid);
         false ->
-            {ok, Module}
+            {ok, [HelperDirModule]}
     end.
 
 load_views(Application, OutDir, TranslatorPid) ->
@@ -230,15 +242,16 @@ load_views(Application, OutDir, TranslatorPid) ->
     {ok, ModuleList}.
 
 load_view_if_old(Application, ViewPath, Module, TranslatorPid) ->
-    HelperModule = helper_module(Application),
-    case load_view_lib_if_old(boss_files:view_lib_path(), HelperModule, TranslatorPid) of
+    case load_view_lib_if_old(Application, TranslatorPid) of
         {ok, _} -> 
             NeedCompile = case module_is_loaded(Module) of
                 true ->
-                    module_older_than(Module, lists:map(fun
-                                ({File, _CheckSum}) -> File;
-                                (File) -> File
-                            end, [Module:source() | Module:dependencies()]));
+                    Dependencies = lists:map(fun
+                            ({File, _CheckSum}) -> File;
+                            (File) -> File
+                        end, [Module:source() | Module:dependencies()]),
+                    Helpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_lib_helper_list()),
+                    module_older_than(Module, Dependencies ++ Helpers);
                 false ->
                     true
             end,
@@ -300,10 +313,14 @@ module_older_than(Module, Files) when is_list(Module) ->
     end;
 module_older_than(_Date, []) ->
     false;
-module_older_than(CompileDate, [File|Rest]) ->
+module_older_than(CompileDate, [File|Rest]) when is_list(File) ->
+    module_older_than(CompileDate, [filelib:last_modified(File)|Rest]);
+module_older_than(CompileDate, [Module|Rest]) when is_atom(Module) ->
+    {file, Loaded} = code:is_loaded(Module),
+    module_older_than(CompileDate, [Loaded|Rest]);
+module_older_than(CompileDate, [CompareDate|Rest]) ->
     CompileSeconds = calendar:datetime_to_gregorian_seconds(CompileDate),
-    ModificationSeconds = calendar:datetime_to_gregorian_seconds(
-        filelib:last_modified(File)),
+    ModificationSeconds = calendar:datetime_to_gregorian_seconds(CompareDate),
     (ModificationSeconds >= CompileSeconds) orelse module_older_than(CompileDate, Rest).
 
 view_module(Application, RelativePath) ->
@@ -312,8 +329,8 @@ view_module(Application, RelativePath) ->
     ModuleIOList = re:replace(Lc, "\\.", "_", [global]),
     list_to_atom(binary_to_list(iolist_to_binary(ModuleIOList))).
 
-helper_module(Application) ->
-    list_to_atom(lists:concat([Application, ?HELPER_MODULE_NAME])).
+view_custom_tags_dir_module(Application) ->
+    list_to_atom(lists:concat([Application, ?CUSTOM_TAGS_DIR_MODULE])).
 
 incoming_mail_controller_module(Application) ->
     list_to_atom(lists:concat([Application, "_incoming_mail_controller"])).

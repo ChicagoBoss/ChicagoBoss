@@ -136,7 +136,7 @@ extract_view_strings(App) ->
             lists:foldl(
                 fun(Module, Acc) ->
                         Module:translatable_strings() ++ Module:translated_blocks() ++ Acc
-                end, [], boss_env:get_env(App, view_modules, []) ++ boss_env:get_env(App, view_lib_modules, []))
+                end, [], boss_env:get_env(App, view_modules, []) ++ boss_env:get_env(App, view_lib_tags_modules, []))
     end.
 
 process_view_file_blocks(ViewFile) ->

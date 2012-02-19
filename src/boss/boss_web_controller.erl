@@ -501,29 +501,32 @@ load_and_execute(development, {"doc", ModelName, _}, AppInfo, Req, _SessionID) -
             render_errors(ErrorList, AppInfo, Req)
     end;
 load_and_execute(development, {Controller, _, _} = Location, AppInfo, Req, SessionID) ->
-    case boss_load:load_mail_controllers() of
-        {ok, _} -> 
-            case boss_load:load_libraries() of
-                {ok, _} ->
-                    case boss_load:load_web_controllers() of
-                        {ok, Controllers} ->
-                            case lists:member(boss_files:web_controller(AppInfo#boss_app_info.application, Controller), 
-                                    lists:map(fun atom_to_list/1, Controllers)) of
-                                true ->
-                                    case boss_load:load_models() of
-                                        {ok, _} ->
-                                            execute_action(Location, AppInfo, Req, SessionID);
-                                        {error, ErrorList} ->
-                                            render_errors(ErrorList, AppInfo, Req)
-                                    end;
-                                false ->
-                                    render_view(Location, AppInfo, Req, SessionID)
-                            end;
-                        {error, ErrorList} when is_list(ErrorList) ->
+    Res1 = boss_load:load_mail_controllers(),
+    Res2 = case Res1 of
+        {ok, _} -> boss_load:load_libraries();
+        _ -> Res1
+    end,
+    Res3 = case Res2 of
+        {ok, _} -> boss_load:load_view_lib_modules();
+        _ -> Res2
+    end,
+    Res4 = case Res3 of
+        {ok, _} -> boss_load:load_web_controllers();
+        _ -> Res3
+    end,
+    case Res4 of
+        {ok, Controllers} ->
+            case lists:member(boss_files:web_controller(AppInfo#boss_app_info.application, Controller), 
+                    lists:map(fun atom_to_list/1, Controllers)) of
+                true ->
+                    case boss_load:load_models() of
+                        {ok, _} ->
+                            execute_action(Location, AppInfo, Req, SessionID);
+                        {error, ErrorList} ->
                             render_errors(ErrorList, AppInfo, Req)
                     end;
-                {error, ErrorList} ->
-                    render_errors(ErrorList, AppInfo, Req)
+                false ->
+                    render_view(Location, AppInfo, Req, SessionID)
             end;
         {error, ErrorList} ->
             render_errors(ErrorList, AppInfo, Req)

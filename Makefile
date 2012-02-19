@@ -26,7 +26,7 @@ clean:
 	@$(REBAR) clean
 
 edoc:
-	$(ERL) -pa ebin -run boss_doc run -noshell -s init stop
+	$(ERL) -pa ebin -pa deps/*/ebin -run boss_doc run -noshell -s init stop
 #$(ERL) -pa ebin -noshell -eval "boss_doc:run()" -s init stop
 
 app:
