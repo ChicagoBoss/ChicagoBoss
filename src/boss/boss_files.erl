@@ -18,9 +18,10 @@
         test_list/0,
         test_path/0,
         view_file_list/0,
-        view_lib_helpers_path/0,
-        view_lib_helper_list/0,
-        view_lib_tags_path/0,
+        view_helpers_path/0,
+        view_html_tags_path/0,
+        view_filter_helper_list/0,
+        view_tag_helper_list/0,
         web_controller/2,
         web_controller_list/1,
         web_controller_path/0,
@@ -62,11 +63,17 @@ lib_path() -> [filename:join([root_src_dir(), "lib"])].
 
 view_lib_path() -> filename:join([root_src_dir(), "view", "lib"]).
 
-view_lib_helpers_path() -> [filename:join([view_lib_path(), "helpers"])].
+view_tag_helper_path() -> filename:join([view_lib_path(), "tags"]).
 
-view_lib_tags_path() -> filename:join([view_lib_path(), "tags"]).
+view_filter_helper_path() -> filename:join([view_lib_path(), "filters"]).
 
-view_lib_helper_list() -> module_list(view_lib_helpers_path()).
+view_html_tags_path() -> filename:join([view_lib_path(), "html_tags"]).
+
+view_helpers_path() -> [view_tag_helper_path(), view_filter_helper_path()].
+
+view_tag_helper_list() -> module_list([view_tag_helper_path()]).
+
+view_filter_helper_list() -> module_list([view_filter_helper_path()]).
 
 web_controller_path() -> [filename:join([root_src_dir(), "controller"])].
 

@@ -70,7 +70,7 @@ load_web_controllers(OutDir) ->
 load_view_lib_modules() ->
     load_view_lib_modules(undefined).
 load_view_lib_modules(OutDir) ->
-    load_dirs(boss_files:view_lib_helpers_path(), OutDir, fun compile/2).
+    load_dirs(boss_files:view_helpers_path(), OutDir, fun compile/2).
 
 load_models() ->
     load_models(undefined).
@@ -168,10 +168,12 @@ view_doc_root(ViewPath) ->
         [boss_files:web_view_path(), boss_files:mail_view_path()]).
 
 compile_view_dir_erlydtl(LibPath, Module, OutDir, TranslatorPid) ->
-    Helpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_lib_helper_list()),
+    TagHelpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_tag_helper_list()),
+    FilterHelpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_filter_helper_list()),
     Res = erlydtl_compiler:compile_dir(LibPath, Module,
-        [{doc_root, view_doc_root(LibPath)}, {compiler_options, []}, 
-            {out_dir, OutDir}, {custom_tags_modules, lists:reverse([boss_erlydtl_tags | Helpers])},
+        [{doc_root, view_doc_root(LibPath)}, {compiler_options, []}, {out_dir, OutDir}, 
+            {custom_tags_modules, lists:reverse([boss_erlydtl_tags | TagHelpers])},
+            {custom_filters_modules, FilterHelpers},
             {blocktrans_fun, fun(BlockString, Locale) ->
                     case boss_translator:lookup(TranslatorPid, BlockString, Locale) of
                         undefined -> default;
@@ -185,11 +187,13 @@ compile_view_dir_erlydtl(LibPath, Module, OutDir, TranslatorPid) ->
 
 compile_view_erlydtl(Application, ViewPath, OutDir, TranslatorPid) ->
     HelperDirModule = view_custom_tags_dir_module(Application),
-    Helpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_lib_helper_list()),
+    TagHelpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_tag_helper_list()),
+    FilterHelpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_filter_helper_list()),
     Module = view_module(Application, ViewPath),
     Res = erlydtl_compiler:compile(ViewPath, Module,
-        [{doc_root, view_doc_root(ViewPath)}, {custom_tags_modules, 
-                lists:reverse([boss_erlydtl_tags, HelperDirModule | Helpers])},
+        [{doc_root, view_doc_root(ViewPath)}, 
+            {custom_tags_modules, lists:reverse([boss_erlydtl_tags, HelperDirModule | TagHelpers])},
+            {custom_filters_modules, FilterHelpers},
             {compiler_options, []}, {out_dir, OutDir}, {blocktrans_fun,
                 fun(BlockString, Locale) ->
                         case boss_translator:lookup(TranslatorPid, BlockString, Locale) of
@@ -212,7 +216,7 @@ compile(ModulePath, OutDir) ->
     boss_compiler:compile(ModulePath, [{out_dir, OutDir}, {include_dirs, [boss_files:include_dir()]}]).
 
 load_view_lib(Application, OutDir, TranslatorPid) ->
-    {ok, HelperDirModule} = compile_view_dir_erlydtl(boss_files:view_lib_tags_path(), 
+    {ok, HelperDirModule} = compile_view_dir_erlydtl(boss_files:view_html_tags_path(), 
         view_custom_tags_dir_module(Application), OutDir, TranslatorPid),
     {ok, [HelperDirModule]}.
 
@@ -250,8 +254,9 @@ load_view_if_old(Application, ViewPath, Module, TranslatorPid) ->
                             ({File, _CheckSum}) -> File;
                             (File) -> File
                         end, [Module:source() | Module:dependencies()]),
-                    Helpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_lib_helper_list()),
-                    module_older_than(Module, Dependencies ++ Helpers);
+                    TagHelpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_tag_helper_list()),
+                    FilterHelpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_filter_helper_list()),
+                    module_older_than(Module, Dependencies ++ TagHelpers ++ FilterHelpers);
                 false ->
                     true
             end,

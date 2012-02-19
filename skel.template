@@ -10,8 +10,9 @@
 {dir, "{{dest}}/src/lib"}.
 {dir, "{{dest}}/src/view"}.
 {dir, "{{dest}}/src/view/lib"}.
+{dir, "{{dest}}/src/view/lib/html_tags"}.
 {dir, "{{dest}}/src/view/lib/tags"}.
-{dir, "{{dest}}/src/view/lib/helpers"}.
+{dir, "{{dest}}/src/view/lib/filters"}.
 {dir, "{{dest}}/src/model"}.
 {dir, "{{dest}}/src/controller"}.
 {dir, "{{dest}}/src/mail/view"}.
@@ -19,7 +20,8 @@
 {dir, "{{dest}}/src/test/functional"}.
 {template, "skel/start-server.bat", "{{dest}}/start-server.bat"}.
 {template, "skel/src/project.app.src", "{{dest}}/src/{{appid}}.app.src"}.
-{template, "skel/src/view/lib/helpers/custom_tags.erl", "{{dest}}/src/view/lib/helpers/{{appid}}_custom_tags.erl"}.
+{template, "skel/src/view/lib/tags/custom_tags.erl", "{{dest}}/src/view/lib/tags/{{appid}}_custom_tags.erl"}.
+{template, "skel/src/view/lib/filters/custom_filters.erl", "{{dest}}/src/view/lib/filters/{{appid}}_custom_filters.erl"}.
 {template, "skel/boss.config", "{{dest}}/boss.config"}.
 {template, "skel/src/mail/outgoing_mail_controller.erl", "{{dest}}/src/mail/{{appid}}_outgoing_mail_controller.erl"}.
 {template, "skel/src/mail/incoming_mail_controller.erl", "{{dest}}/src/mail/{{appid}}_incoming_mail_controller.erl"}.

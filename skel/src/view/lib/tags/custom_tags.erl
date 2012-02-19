@@ -9,8 +9,3 @@
 % {% reverse string="hello" %} => "olleh"
 %
 % Variables are the passed-in vars in your template
-% Options is a proplist from CB containing:
-% - application (application name, an atom)
-% - controller (current controller name, an atom)
-% - action (current action name, an atom)
-% - router_pid (Pid of the router process, mainly used by the "url" tag)
