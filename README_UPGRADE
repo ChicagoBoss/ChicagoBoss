@@ -1,3 +1,9 @@
+Upgrade: From anything to 0.7.2
+-------------------------------
+
+Custom tags should be moved from view/lib/ to view/lib/tag_html.
+
+
 Upgrade: From 0.6 to 0.7
 ------------------------
 

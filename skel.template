@@ -30,6 +30,7 @@
 {file, "skel/priv/static/favicon.ico", "{{dest}}/priv/static/favicon.ico"}.
 {file, "skel/priv/boss.routes", "{{dest}}/priv/{{appid}}.routes"}.
 {file, "skel/priv/rebar/boss_plugin.erl", "{{dest}}/priv/rebar/boss_plugin.erl"}.
+{file, "skel/src/view/lib/README", "{{dest}}/src/view/lib/README"}.
 {file, "skel/init.sh", "{{dest}}/init.sh"}.
 {file, "skel/init-dev.sh", "{{dest}}/init-dev.sh"}.
 {file, "skel/rebar", "{{dest}}/rebar"}.

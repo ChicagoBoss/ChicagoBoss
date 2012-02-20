@@ -1,0 +1,22 @@
+This directory contains:
+
+* tag_html/ - template files which are compiled to tags. If you have a file
+called "foo.html" and then call {% foo bar=1 %} from another template, the
+contents of "foo.html" will be evaluated with the "bar" variable set to 1.
+
+* tag_modules/ - Erlang modules that export functions to implement tags. If
+a module in this directory exports foo/1, then {% foo bar=1 %} will call
+
+    Module:foo([{bar, 1}])
+
+* filter_modules/ - Erlang modules that export functions to implement filters.
+If a module in this directory exports foo/1, then {% "Example"|foo %} will call 
+
+    Module:foo(<<"Example">>)
+    
+If module in this directory exports foo/2, then {% "Example"|foo:42 %} will call
+
+    Module:foo(<<"Example">>, 42)
+
+You can specify external tag and filter modules in the configuration via the
+template_tag_modules and template_filter_modules options.
