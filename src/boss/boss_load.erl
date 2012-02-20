@@ -170,10 +170,12 @@ view_doc_root(ViewPath) ->
 compile_view_dir_erlydtl(LibPath, Module, OutDir, TranslatorPid) ->
     TagHelpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_tag_helper_list()),
     FilterHelpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_filter_helper_list()),
+    ExtraTagHelpers = boss_env:get_env(template_tag_modules, []),
+    ExtraFilterHelpers = boss_env:get_env(template_filter_modules, []),
     Res = erlydtl_compiler:compile_dir(LibPath, Module,
         [{doc_root, view_doc_root(LibPath)}, {compiler_options, []}, {out_dir, OutDir}, 
-            {custom_tags_modules, lists:reverse([boss_erlydtl_tags | TagHelpers])},
-            {custom_filters_modules, FilterHelpers},
+            {custom_tags_modules, TagHelpers ++ ExtraTagHelpers ++ [boss_erlydtl_tags]},
+            {custom_filters_modules, FilterHelpers ++ ExtraFilterHelpers},
             {blocktrans_fun, fun(BlockString, Locale) ->
                     case boss_translator:lookup(TranslatorPid, BlockString, Locale) of
                         undefined -> default;
@@ -189,11 +191,13 @@ compile_view_erlydtl(Application, ViewPath, OutDir, TranslatorPid) ->
     HelperDirModule = view_custom_tags_dir_module(Application),
     TagHelpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_tag_helper_list()),
     FilterHelpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_filter_helper_list()),
+    ExtraTagHelpers = boss_env:get_env(template_tag_modules, []),
+    ExtraFilterHelpers = boss_env:get_env(template_filter_modules, []),
     Module = view_module(Application, ViewPath),
     Res = erlydtl_compiler:compile(ViewPath, Module,
         [{doc_root, view_doc_root(ViewPath)}, 
-            {custom_tags_modules, lists:reverse([boss_erlydtl_tags, HelperDirModule | TagHelpers])},
-            {custom_filters_modules, FilterHelpers},
+            {custom_tags_modules, TagHelpers ++ ExtraTagHelpers ++ [boss_erlydtl_tags, HelperDirModule]},
+            {custom_filters_modules, FilterHelpers ++ ExtraFilterHelpers},
             {compiler_options, []}, {out_dir, OutDir}, {blocktrans_fun,
                 fun(BlockString, Locale) ->
                         case boss_translator:lookup(TranslatorPid, BlockString, Locale) of
@@ -256,7 +260,10 @@ load_view_if_old(Application, ViewPath, Module, TranslatorPid) ->
                         end, [Module:source() | Module:dependencies()]),
                     TagHelpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_tag_helper_list()),
                     FilterHelpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_filter_helper_list()),
-                    module_older_than(Module, Dependencies ++ TagHelpers ++ FilterHelpers);
+                    ExtraTagHelpers = boss_env:get_env(template_tag_modules, []),
+                    ExtraFilterHelpers = boss_env:get_env(template_filter_modules, []),
+                    module_older_than(Module, 
+                        Dependencies ++ TagHelpers ++ FilterHelpers ++ ExtraTagHelpers ++ ExtraFilterHelpers);
                 false ->
                     true
             end,
