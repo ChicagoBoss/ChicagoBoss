@@ -15,3 +15,6 @@
 
 % 404 File Not Found handler
 % {404, [{controller, "world"}, {action, "lost"}]}.
+
+% 500 Internal Error handler (only invoked in production)
+% {500, [{controller, "world"}, {action, "calamity"}]}.
