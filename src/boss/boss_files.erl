@@ -63,11 +63,11 @@ lib_path() -> [filename:join([root_src_dir(), "lib"])].
 
 view_lib_path() -> filename:join([root_src_dir(), "view", "lib"]).
 
-view_tag_helper_path() -> filename:join([view_lib_path(), "tags"]).
+view_tag_helper_path() -> filename:join([view_lib_path(), "tag_modules"]).
 
-view_filter_helper_path() -> filename:join([view_lib_path(), "filters"]).
+view_filter_helper_path() -> filename:join([view_lib_path(), "filter_modules"]).
 
-view_html_tags_path() -> filename:join([view_lib_path(), "html_tags"]).
+view_html_tags_path() -> filename:join([view_lib_path(), "tag_html"]).
 
 view_helpers_path() -> [view_tag_helper_path(), view_filter_helper_path()].
 
