@@ -9,14 +9,14 @@
 <p>100% of Django filters are supported. The only unsupported tag is csrf_token.</p>
 
 <h2>Custom tags</h2>
-<p>If you use repeated logic or template snippets, you can put helper templates into your project's src/view/lib/html_tags directory. The variables appearing in helper templates must be supplied by the caller. For example, if you have a file called "src/view/lib/tags/my_custom_tag.html" which uses a variable called "foo", you can invoke it from other templates like:</p>
+<p>If you use repeated logic or template snippets, you can put helper templates into your project's src/view/lib/tag_html directory. The variables appearing in helper templates must be supplied by the caller. For example, if you have a file called "src/view/lib/tag_html/my_custom_tag.html" which uses a variable called "foo", you can invoke it from other templates like:</p>
 <div class="code">
     {{ "{% " }}my_custom_tag foo="bar"{{ " %}" }}
 </div>
 <p>String literals or variables may be passed as arguments to custom tags.</p>
 <p>Another option for factoring out repeated logic is to use ErlyDTL's "include" tag. The difference between using an "include" tag and custom tags is that "include" will have access to all variables currently in the caller's scope, whereas custom tags only have access to the variables explicitly passed in. (In addition, custom tags are compiled only once for the entire project, but included files are compiled for each template that includes it.)</p>
 <h2>Helper modules for custom tags and filters</h2>
-<p>For more complicated processing, you can create helper modules. Tag helper modules reside in src/view/lib/tags, and export functions which take in a proplist of variables and return rendered HTML. Filter helper modules reside in src/view/lib/filters, and export functions which take in a binary string and return a filter iolist. See those directories in your project for examples.</p>
+<p>For more complicated processing, you can create helper modules. Tag helper modules reside in src/view/lib/tag_modules, and export functions which take in a proplist of variables and return rendered HTML. Filter helper modules reside in src/view/lib/filter_modules, and export functions which take in a binary string and return a filter iolist. See those directories in your project for examples.</p>
 <h2>Implicit variables</h2>
 <p>The following variables are automatically passed to your views without you doing any work:</p>
 <ul>

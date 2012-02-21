@@ -110,8 +110,8 @@ start_cmd(_RebarConf, BossConf, AppFile) ->
 	rebar_log:log(info, "Generating dynamic start command~n", []),
 	
 	EbinDirs = all_ebin_dirs(BossConf, AppFile),
-	SName = io_lib:format("~s@~s", [app_name(AppFile), host_name()]),
-	Cookie = boss_config_value(BossConf, boss, vm_cookie, "abc123"),
+	SName = sname(BossConf, AppFile),
+	Cookie = cookie(BossConf),
 
 	io:format("exec erl +K true -pa ~s -boot start_sasl -config boss -s boss -setcookie ~s -detached -sname ~s", 
 			  [string:join(EbinDirs, " -pa "), Cookie, SName]),
@@ -129,7 +129,7 @@ start_dev_cmd(_RebarConf, BossConf, AppFile) ->
 	
 	AppName = app_name(AppFile),
 	EbinDirs = all_ebin_dirs(BossConf, AppFile),
-	SName = io_lib:format("~s@~s", [app_name(AppFile), host_name()]),
+	SName = sname(BossConf, AppFile),
 
 	io:format("exec erl -pa ~s -boss developing_app ~s -boot start_sasl -config boss -s reloader -s boss -sname ~s", 
 			  [string:join(EbinDirs, " -pa "), AppName, SName]),
@@ -144,8 +144,8 @@ start_dev_cmd(_RebarConf, BossConf, AppFile) ->
 stop_cmd(_RebarConf, BossConf, AppFile) ->
 	rebar_log:log(info, "Generating dynamic stop command~n", []),
 	
-	SName = io_lib:format("~s@~s", [app_name(AppFile), host_name()]),
-	Cookie = boss_config_value(BossConf, boss, vm_cookie, "abc123"),
+	SName = sname(BossConf, AppFile),
+	Cookie = cookie(BossConf),
 	StopCommand = io_lib:format("rpc:call('~s', init, stop, []).", [SName]),
 	
 	io:format("erl -noshell -pa ebin -setcookie ~s -sname stopper_~s -eval \"~s\" -s init stop", 
@@ -160,8 +160,8 @@ stop_cmd(_RebarConf, BossConf, AppFile) ->
 %%--------------------------------------------------------------------
 reload_cmd(_RebarConf, BossConf, AppFile) ->
 	rebar_log:log(info, "Generating dynamic reload command~n", []),
-	SName = io_lib:format("~s@~s", [app_name(AppFile), host_name()]),
-	Cookie = boss_config_value(BossConf, boss, vm_cookie, "abc123"),
+	SName = sname(BossConf, AppFile),
+	Cookie = cookie(BossConf),
 	ReloadCode = io_lib:format("rpc:call('~s', boss_load, reload_all, [])", [SName]),
 	ReloadRoutes = io_lib:format("rpc:call('~s', boss_web, reload_routes, [])", [SName]),
 	ReloadLangs = io_lib:format("rpc:call('~s', boss_web, reload_all_translations, [])", [SName]),
@@ -298,3 +298,9 @@ app_name(AppFile) ->
 host_name() ->
 	{ok, Host} = inet:gethostname(),
 	Host.
+
+sname(BossConf, AppFile) ->
+    boss_config_value(BossConf, boss, vm_name, io_lib:format("~s@~s", [app_name(AppFile), host_name()])).
+
+cookie(BossConf) ->
+    boss_config_value(BossConf, boss, vm_cookie, "abc123").
