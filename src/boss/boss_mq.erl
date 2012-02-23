@@ -47,7 +47,7 @@ pull(Channel, Timestamp) ->
 
 %% @spec pull( Channel::string(), Since::integer() | last | now, Timeout::integer() ) -> {ok, Timestamp, [Message]} | {error, Reason}
 %% @doc Pull messages from the specified `Channel' after `Since' (a timestamp returned from a previous `pull'). If no such messages
-%% are in the queue, blocks until a message is pushed to the queue, or until `Timeout' milliseconds have elapsed.
+%% are in the queue, blocks until a message is pushed to the queue, or until `Timeout' seconds have elapsed.
 pull(Channel, {MegaSecs, Secs, MicroSecs}, Timeout) ->
     pull(Channel, 1000 * 1000 * (1000 * 1000 * MegaSecs + Secs) + MicroSecs, Timeout);
 pull(Channel, Timestamp, Timeout) when is_list(Channel) ->

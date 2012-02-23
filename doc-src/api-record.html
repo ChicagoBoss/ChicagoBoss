@@ -17,6 +17,18 @@ BossRecords are <em>specially compiled parameterized modules</em> that follow th
     e.g. <code>-module(foo, [Id, TheText])</code> will generate the getter functions 
     <code>id()</code> and <code>the_text()</code>.</p></li>
 
+    <li><p>Parameters can contain typespecs, e.g. <code>-module(foo, [Id, SomeString::string(), ...]).</code>. Valid types are:
+    <ul>
+        <li><code>string()</code></li>
+        <li><code>binary()</code></li>
+        <li><code>integer()</code></li>
+        <li><code>float()</code></li>
+        <li><code>datetime()</code></li>
+        <li><code>timestamp()</code></li>
+        <li><code>boolean()</code></li>
+    </ul></p>
+    <p>Types, while optional, are validated before saving to the database.</p></li>
+
     <li><p>BossRecords can be instantiated with either <code>my_module:new/N</code> (like any other parameterized module), or with <code>boss_record:new(my_module, Attributes)</code>, where <code>Attributes</code> is a proplist.</p></li>
 
     <li><p>To auto-generate an ID, pass the atom <code>'id'</code> as the first parameter to <code>my_module:new/N</code>. Alternatively, just use <code>boss_record:new/2</code>.</p></li>
