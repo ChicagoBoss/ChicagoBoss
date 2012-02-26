@@ -8,6 +8,7 @@
         get_all_models/0,
         get_all_applications/0,
         base_url/1,
+        domains/1,
         translator_pid/1,
         router_pid/1,
         application_info/1]).
@@ -35,6 +36,9 @@ get_all_applications() ->
 
 base_url(App) ->
     gen_server:call(boss_web, {base_url, App}).
+
+domains(App) ->
+    gen_server:call(boss_web, {domains, App}).
 
 translator_pid(AppName) ->
     gen_server:call(boss_web, {translator_pid, AppName}).

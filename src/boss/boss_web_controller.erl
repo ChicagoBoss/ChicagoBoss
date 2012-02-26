@@ -132,6 +132,7 @@ handle_info(timeout, State) ->
             (AppName) ->
                 application:start(AppName),
                 BaseURL = boss_env:get_env(AppName, base_url, "/"),
+                DomainList = boss_env:get_env(AppName, domains, all),
                 ModelList = boss_files:model_list(AppName),
                 ControllerList = boss_files:web_controller_list(AppName),
                 {ok, RouterSupPid} = boss_router:start([{application, AppName},
@@ -147,6 +148,7 @@ handle_info(timeout, State) ->
                     router_sup_pid = RouterSupPid,
                     translator_sup_pid = TranslatorSupPid,
                     base_url = (if BaseURL =:= "/" -> ""; true -> BaseURL end),
+                    domains = DomainList,
                     model_modules = ModelList,
                     controller_modules = ControllerList
                 }
@@ -221,7 +223,15 @@ handle_call({base_url, App}, _From, State) ->
             (_, Res) ->
                 Res
         end, "", State#state.applications),
-    {reply, BaseURL, State}.
+    {reply, BaseURL, State};
+handle_call({domains, App}, _From, State) ->
+    DomainList = lists:foldl(fun
+            (#boss_app_info{ application = App1, domains = Domains}, _) when App1 =:= App ->
+                Domains;
+            (_, Res) ->
+                Res
+        end, all, State#state.applications),
+    {reply, DomainList, State}.
 
 handle_cast(_Request, State) ->
     {noreply, State}.
@@ -229,22 +239,35 @@ handle_cast(_Request, State) ->
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
-find_application_for_path(Path, Applications) ->
-    find_application_for_path(Path, undefined, Applications, -1).
+find_application_for_path(Host, Path, Applications) ->
+    UseHost = case Host of
+        undefined -> undefined;
+        _ -> hd(re:split(Host, ":", [{return, list}]))
+    end,
+    find_application_for_path(UseHost, Path, undefined, Applications, -1).
 
-find_application_for_path(_Path, Default, [], _LongestMatch) ->
+find_application_for_path(_Host, _Path, Default, [], _MatchScore) ->
     Default;
-find_application_for_path(Path, Default, [App|Rest], LongestMatch) ->
+find_application_for_path(Host, Path, Default, [App|Rest], MatchScore) ->
+    DomainScore = case Host of
+        undefined -> 0;
+        _ ->
+            case boss_web:domains(App) of
+                all -> 0;
+                Domains ->
+                    case lists:member(Host, Domains) of
+                        true -> 1;
+                        false -> -1
+                    end
+            end
+    end,
     BaseURL = boss_web:base_url(App),
-    case length(BaseURL) > LongestMatch of
-        true ->
-            case lists:prefix(BaseURL, Path) of
-                true -> find_application_for_path(Path, App, Rest, length(BaseURL));
-                false -> find_application_for_path(Path, Default, Rest, LongestMatch)
-            end;
-        false ->
-            find_application_for_path(Path, Default, Rest, LongestMatch)
-    end.
+    PathScore = length(BaseURL),
+    {UseApp, UseScore} = case (DomainScore >= 0) andalso (1000 * DomainScore + PathScore > MatchScore) andalso lists:prefix(BaseURL, Path) of
+        true -> {App, DomainScore * 1000 + PathScore};
+        false -> {Default, MatchScore}
+    end,
+    find_application_for_path(Host, Path, UseApp, Rest, UseScore).
 
 stop_init_scripts(Application, InitData) ->
     lists:foldr(fun(File, _) ->
@@ -282,9 +305,13 @@ run_init_scripts(AppName) ->
 handle_request(Req, RequestMod, ResponseMod) ->
     LoadedApplications = boss_web:get_all_applications(),
     Request = simple_bridge:make_request(RequestMod, Req),
-    case Request:path() of
-        FullUrl ->
-            App = find_application_for_path(Request:path(), LoadedApplications),
+    FullUrl = Request:path(),
+    case find_application_for_path(Request:header(host), FullUrl, LoadedApplications) of
+        undefined ->
+            Response = simple_bridge:make_response(ResponseMod, {Req, undefined}),
+            Response1 = (Response:status_code(404)):data(["No application configured at this URL"]),
+            Response1:build_response();
+        App ->
             BaseURL = boss_web:base_url(App),
             DocRoot = boss_files:static_path(App),
             Url = lists:nthtail(length(BaseURL), FullUrl),
@@ -314,7 +341,7 @@ handle_request(Req, RequestMod, ResponseMod) ->
                         AppInfo#boss_app_info{ translator_pid = TranslatorPid, router_pid = RouterPid }, 
                         Request, Mode, Url, SessionID]),
                     ErrorFormat = "~s ~s [~p] ~p ~pms~n", 
-                    ErrorArgs = [Request:request_method(), Request:path(), App, StatusCode, Time div 1000],
+                    ErrorArgs = [Request:request_method(), FullUrl, App, StatusCode, Time div 1000],
                     case StatusCode of
                         500 -> error_logger:error_msg(ErrorFormat, ErrorArgs);
                         404 -> error_logger:warning_msg(ErrorFormat, ErrorArgs);
@@ -341,7 +368,7 @@ process_request(AppInfo, Req, development, "/doc", SessionID) ->
         Ok ->
             Ok
     end,
-    process_result(AppInfo, Result);
+    process_result(AppInfo, Req, Result);
 process_request(AppInfo, Req, development, "/doc/"++ModelName, SessionID) ->
     Result = case string:chr(ModelName, $.) of
         0 ->
@@ -354,7 +381,7 @@ process_request(AppInfo, Req, development, "/doc/"++ModelName, SessionID) ->
         _ ->
             {not_found, "File not found"}
     end,
-    process_result(AppInfo, Result);
+    process_result(AppInfo, Req, Result);
 process_request(#boss_app_info{ router_pid = RouterPid } = AppInfo, Req, Mode, Url, SessionID) ->
     if 
         Mode =:= development ->
@@ -385,7 +412,7 @@ process_request(#boss_app_info{ router_pid = RouterPid } = AppInfo, Req, Mode, U
         _ ->
             Result
     end,
-    process_result(AppInfo, FinalResult).
+    process_result(AppInfo, Req, FinalResult).
 
 process_not_found(Message, #boss_app_info{ router_pid = RouterPid } = AppInfo, _Req, development, _SessionID) ->
     ExtraMessage = case boss_router:handle(RouterPid, 404) of
@@ -439,35 +466,38 @@ process_error(Payload, #boss_app_info{ router_pid = RouterPid } = AppInfo, Req, 
             {error, ["Error: <pre>", io_lib:print(Payload), "</pre>"], []}
     end.
 
-process_result(_, {ok, Payload, Headers}) ->
+process_result(_, _, {ok, Payload, Headers}) ->
     {200, [{"Content-Type", proplists:get_value("Content-Type", Headers, "text/html")}
             |proplists:delete("Content-Type", Headers)], Payload};
-process_result(AppInfo, {redirect, Where}) ->
-	process_result(AppInfo, {redirect, Where, []});
-process_result(AppInfo, {redirect, "http://"++Where, Headers}) ->
-    process_result(AppInfo, {redirect_external, "http://"++Where, Headers});
-process_result(AppInfo, {redirect, "https://"++Where, Headers}) ->
-    process_result(AppInfo, {redirect_external, "https://"++Where, Headers});
-process_result(AppInfo, {redirect, {Application, Controller, Action, Params}, Headers}) ->
+process_result(AppInfo, Req, {redirect, Where}) ->
+	process_result(AppInfo, Req, {redirect, Where, []});
+process_result(AppInfo, Req, {redirect, "http://"++Where, Headers}) ->
+    process_result(AppInfo, Req, {redirect_external, "http://"++Where, Headers});
+process_result(AppInfo, Req, {redirect, "https://"++Where, Headers}) ->
+    process_result(AppInfo, Req, {redirect_external, "https://"++Where, Headers});
+process_result(AppInfo, Req, {redirect, {Application, Controller, Action, Params}, Headers}) ->
     RouterPid = if 
         AppInfo#boss_app_info.application =:= Application ->
             AppInfo#boss_app_info.router_pid;
         true ->
-            boss_web:router_pid(list_to_atom(lists:concat([Application])))
+            boss_web:router_pid(Application)
     end,
-    URL = boss_router:unroute(RouterPid, Controller, Action, Params),
-    BaseURL = boss_web:base_url(list_to_atom(lists:concat([Application]))),
-    {302, [{"Location", BaseURL ++ URL}, {"Cache-Control", "no-cache"}|Headers], ""};
-process_result(AppInfo, {redirect, Where, Headers}) ->
+    ExtraParams = [{application, Application}, {controller, Controller}, {action, Action}],
+    URL = boss_erlydtl_tags:url(ExtraParams ++ Params, [
+            {host, Req:header(host)},
+            {application, AppInfo#boss_app_info.application},
+            {router_pid, RouterPid}]),
+    {302, [{"Location", URL}, {"Cache-Control", "no-cache"}|Headers], ""};
+process_result(AppInfo, _, {redirect, Where, Headers}) ->
     {302, [{"Location", AppInfo#boss_app_info.base_url ++ Where}, {"Cache-Control", "no-cache"}|Headers], ""};
-process_result(_, {redirect_external, Where, Headers}) ->
+process_result(_, _, {redirect_external, Where, Headers}) ->
     {302, [{"Location", Where}, {"Cache-Control", "no-cache"}|Headers], ""};
-process_result(AppInfo, {not_found, Payload}) ->
-    process_result(AppInfo, {not_found, Payload, []});
-process_result(_, {not_found, Payload, Headers}) ->
+process_result(AppInfo, Req, {not_found, Payload}) ->
+    process_result(AppInfo, Req, {not_found, Payload, []});
+process_result(_, _, {not_found, Payload, Headers}) ->
     {404, [{"Content-Type", proplists:get_value("Content-Type", Headers, "text/html")}
         |proplists:delete("Content-Type", Headers)], Payload};
-process_result(_, {error, Payload, Headers}) ->
+process_result(_, _, {error, Payload, Headers}) ->
     {500, [{"Content-Type", proplists:get_value("Content-Type", Headers, "text/html")}
         |proplists:delete("Content-Type", Headers)], Payload}.
 
@@ -700,8 +730,10 @@ render_view({Controller, Template, _}, AppInfo, Req, SessionID, Variables, Heade
             case Module:render(lists:merge([{"_lang", Lang}, 
                             {"_base_url", AppInfo#boss_app_info.base_url}|Variables], BossFlash), 
                     [{translation_fun, TranslationFun}, {locale, Lang},
-                        {custom_tags_context, [{controller, Controller}, 
+                        {custom_tags_context, [
+                                {host, Req:header(host)},
                                 {application, atom_to_list(AppInfo#boss_app_info.application)},
+                                {controller, Controller}, 
                                 {action, Template},
                                 {router_pid, AppInfo#boss_app_info.router_pid}]}]) of
                 {ok, Payload} ->
