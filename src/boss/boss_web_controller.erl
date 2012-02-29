@@ -414,14 +414,6 @@ process_request(#boss_app_info{ router_pid = RouterPid } = AppInfo, Req, Mode, U
     end,
     process_result(AppInfo, Req, FinalResult).
 
-process_not_found(Message, #boss_app_info{ router_pid = RouterPid } = AppInfo, _Req, development, _SessionID) ->
-    ExtraMessage = case boss_router:handle(RouterPid, 404) of
-        undefined ->
-            ["This message will appear in production; you may want to define a 404 handler in ", boss_files:routes_file(AppInfo#boss_app_info.application)];
-        _ ->
-            "(Don't worry, this message will not appear in production.)"
-    end,
-    {not_found, [Message, " ", ExtraMessage]};
 process_not_found(Message, #boss_app_info{ router_pid = RouterPid } = AppInfo, Req, Mode, SessionID) ->
     case boss_router:handle(RouterPid, 404) of
         {ok, {Application, Controller, Action, Tokens}} when Application =:= AppInfo#boss_app_info.application ->
