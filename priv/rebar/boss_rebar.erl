@@ -21,7 +21,9 @@
 		 boss_config_value/4,
 		 boss_load/2,
 		 boss_start/1,
-		 all_ebin_dirs/2]).
+		 all_ebin_dirs/2,
+         init_conf/1,
+         init_conf_test/1]).
 
 -define(COMMANDS, 
 		[{help,  "Lists all commands"},
@@ -33,6 +35,8 @@
 		 {stop_cmd, "Generates the stop shell command"},
 		 {reload_cmd, "Generates the hot reload shell command"}
 		]).
+
+-define(BOSS_TEST_CONFIG, "boss.test.config").
 
 %%--------------------------------------------------------------------
 %% @doc run
@@ -67,7 +71,8 @@ compile(RebarConf, BossConf, AppFile) ->
 %% @end
 %%--------------------------------------------------------------------
 compile(_RebarConf, BossConf, AppFile, Dest) ->
-	boss_load(BossConf, AppFile),
+	init_conf(BossConf),
+    boss_load(BossConf, AppFile),
 	AppName = app_name(AppFile),
 	Res = boss_load:load_all_modules_and_emit_app_file(AppName, Dest),
 	rebar_log:log(info, "Chicago Boss compilation of app ~s on ~s (~s)~n", 
@@ -93,6 +98,7 @@ test_eunit(RebarConf, BossConf, AppFile) ->
 %%--------------------------------------------------------------------
 test_functional(RebarConf, BossConf, AppFile) ->
 	%% Compile, load all boss ebin dir and start boss
+    init_conf_test(BossConf),
 	boss_rebar:compile(RebarConf, BossConf, AppFile),
 	boss_rebar:boss_load(BossConf, AppFile),
 	boss_rebar:boss_start(BossConf),
@@ -255,10 +261,17 @@ boss_load(BossConf, AppFile) ->
 			{{path, Path}, _} -> [Path|Dirs]
 		end end, [], lists:reverse(BossConf)),
 
-	lists:map(fun(Dir) ->
-					  [code:load_abs(string:substr(B, 1, string:len(B) - string:len(".beam"))) || 
-						B <- rebar_utils:beams(Dir)]
-			  end, AllDirs).
+    lists:map(fun(Dir) ->
+                      lists:map(fun(B) ->
+                                        F = string:substr(B, 1, string:len(B) - string:len(".beam")),
+                                        case code:is_loaded(list_to_atom(filename:basename(F))) of
+                                            false ->
+                                                code:load_abs(F);
+                                            {file, _} ->
+                                                ok
+                                        end 
+                                 end, rebar_utils:beams(Dir))
+              end, AllDirs).
 
 %%--------------------------------------------------------------------
 %% @doc Start the boss app
@@ -266,7 +279,31 @@ boss_load(BossConf, AppFile) ->
 %% @end
 %%--------------------------------------------------------------------
 boss_start(_BossConf) ->
-	application:start(boss).
+    io:format("Starting boss and waiting all apps to initilize...~n"),
+    ok = boss:start(),
+    BossApps = boss_env:get_env(applications, []),
+    timer:sleep(50),
+    boss_start_wait(BossApps),
+    rebar_log:log(info, "All Boss Apps started~n", []),
+    ok.
+
+%%--------------------------------------------------------------------
+%% @doc Checks that all boss apps (not core) is started
+%% @spec boss_start_wait(BossApps::list())
+%% @end
+%%--------------------------------------------------------------------
+boss_start_wait([]) -> ok;
+boss_start_wait([App|Rest]) ->
+    CurrentApps = application:which_applications(),
+    case lists:keyfind(App, 1, CurrentApps) of
+        false ->
+            rebar_log:log(info, "Boss App ~p still not started, waiting...~n", [App]),
+            timer:sleep(50),
+            boss_start_wait([App|Rest]);
+        _ ->
+            rebar_log:log(info, "Boss App ~p started~n", [App]),
+            boss_start_wait(Rest)
+    end.
 
 %%--------------------------------------------------------------------
 %% @doc Start the boss app
@@ -282,6 +319,33 @@ all_ebin_dirs(BossConf, _AppFile) ->
 								AddedEbin = [ filename:join([Path, "deps", "*", "ebin"]) |EbinDirs],
 								[filename:join([Path, "ebin"])|AddedEbin]
 						end end, [], lists:reverse(BossConf)).
+
+%%--------------------------------------------------------------------
+%% @doc Injects the boss.conf configuration to the boss application
+%% @spec init_conf(BossConf)
+%% @end
+%%--------------------------------------------------------------------
+init_conf(BossConf) ->
+    lists:map(fun(AppLine) ->
+                      {App, AppConf} = AppLine, 
+                      lists:map(fun({Conf, Val}) ->
+                                        application:set_env(App, Conf, Val)
+                                end, AppConf)
+              end, BossConf).
+
+%%--------------------------------------------------------------------
+%% @doc Injects the boss.test.conf configuration file if test file exists
+%% @spec init_conf_test(BossConf)
+%% @end
+%%--------------------------------------------------------------------
+init_conf_test(BossConf) ->
+    case file:consult(?BOSS_TEST_CONFIG) of
+        {error,enoent} ->
+            io:format("WARNING: ~p not found, using default boss.config.~n", [?BOSS_TEST_CONFIG]),
+            init_conf(BossConf);
+        {ok, [BossTestConfig]} ->
+            init_conf(BossTestConfig)
+    end.
 
 %% ===================================================================
 %% Internal functions
