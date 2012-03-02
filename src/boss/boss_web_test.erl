@@ -18,7 +18,7 @@ bootstrap_test_env(Application, Adapter) ->
                     _ -> Acc
                 end
         end, [], [db_port, db_host, db_username, db_password, db_database]),
-    ok = application:start(Application),
+    %ok = application:start(Application),
     {ok, RouterSupPid} = boss_router:start([{application, Application}, 
             {controllers, boss_files:web_controller_list(Application)}]),
     boss_db:start([{adapter, Adapter}|DBOptions]),
