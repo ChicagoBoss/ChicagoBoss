@@ -52,4 +52,4 @@ process_continuations([Name, Fun | Rest], Response, PushFun, PopFun, Depth, {Num
     {TheseSuccesses, TheseFailureMessages} = Fun(Response),
     put(boss_test_depth, Depth),
     PopFun(),
-    process_continuations(Rest, Response, PushFun, PopFun, {NumSuccesses + TheseSuccesses, TheseFailureMessages ++ FailureMessages}).
+    process_continuations(Rest, Response, PushFun, PopFun, Depth, {NumSuccesses + TheseSuccesses, TheseFailureMessages ++ FailureMessages}).
