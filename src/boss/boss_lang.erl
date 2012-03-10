@@ -118,8 +118,12 @@ extract_model_strings(App) ->
                 case lists:member({validation_tests, 1}, Exports) of
                     true ->
                         DummyRecord = boss_record_lib:dummy_record(TypeAtom),
-                        Messages = lists:map(fun({_TestFun, TestMsg}) -> TestMsg end, 
-                            DummyRecord:validation_tests()),
+                        Messages = lists:map(fun({_TestFun, TestMsg}) -> 
+                                                     case TestMsg of
+                                                         {_, CodeMsg} -> CodeMsg;
+                                                         _ -> TestMsg
+                                                     end
+                                             end, DummyRecord:validation_tests()),
                         Messages ++ Acc;
                     false ->
                         Acc
