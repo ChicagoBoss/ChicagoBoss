@@ -82,7 +82,7 @@ header(Header, Req) ->
 headers(Req) ->
     Headers1 = [ connection, accept, host, if_modified_since, 
         if_match, if_none_match, if_range, if_unmodified_since, 
-        range, referer, user_agent, accept_ranges, cookie, 
+        range, referer, user_agent, accept_language, accept_ranges, cookie, 
         keep_alive, location, content_length, content_type, 
         content_encoding, authorization, x_forwarded_for, transfer_encoding
     ],
