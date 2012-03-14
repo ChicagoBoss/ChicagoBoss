@@ -219,6 +219,21 @@ before_(_) -&gt;<br />
 </div>
 <p>Returns a 200 OK response to the client with <code>Payload</code> as the HTTP body, and sets additional HTTP <code>Headers</code>.</p>
 <br />
+<div class="code spec">
+    {unauthorized, Payload<span class="typevar">::iolist()</span>, Headers<span class="typevar">::proplist()</span>}
+</div>
+<p>Returns a 401 Unauthorized response to the client with <code>Payload</code> as the HTTP body, and sets additional HTTP <code>Headers</code>.</p>
+<br />
+<div class="code spec">
+    {not_found, Payload<span class="typevar">::iolist()</span>, Headers<span class="typevar">::proplist()</span>}
+</div>
+<p>Returns a 404 Not Found response to the client with <code>Payload</code> as the HTTP body, and sets additional HTTP <code>Headers</code>.</p>
+<br />
+<div class="code spec">
+    {error, Payload<span class="typevar">::iolist()</span>, Headers<span class="typevar">::proplist()</span>}
+</div>
+<p>Returns a 500 Internal Error response to the client with <code>Payload</code> as the HTTP body, and sets additional HTTP <code>Headers</code>.</p>
+<br />
 <a name="simplebridge"></a>
 <h3>SimpleBridge</h3>
 
