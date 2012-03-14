@@ -312,14 +312,30 @@ boss_start_wait([App|Rest]) ->
 %% @end
 %%--------------------------------------------------------------------
 all_ebin_dirs(BossConf, _AppFile) ->
-	lists:foldl(fun({_App, Config}, EbinDirs) ->
-						case lists:keyfind(path, 1, Config) of
+  	lists:foldl(fun({_App, Config}, EbinDirs) ->
+                        case lists:keyfind(path, 1, Config) of
 							false -> EbinDirs;
-							{path, Path} -> 
-								AddedEbin = [ filename:join([Path, "deps", "*", "ebin"]) |EbinDirs],
-								[filename:join([Path, "ebin"])|AddedEbin]
+							{path, Path} ->
+                                is_ebin_created(Path),
+                                AddedEbin = [ filename:join([Path, "deps", "*", "ebin"]) |EbinDirs],
+                                [filename:join([Path, "ebin"])|AddedEbin]
 						end end, [], lists:reverse(BossConf)).
 
+%%--------------------------------------------------------------------
+%% @doc Start the boss app
+%% @spec is_ebin_created(Path)
+%%       Check if there is a ebin directory in Path, if it is not it
+%%       will be created
+%% @end
+%%--------------------------------------------------------------------
+is_ebin_created(Path) ->
+    NewPath = filename:join([Path, "ebin"]),
+    case filelib:is_dir(NewPath) of
+        true ->
+            ok;
+        false ->
+            os:cmd("mkdir "++NewPath)
+    end.
 %%--------------------------------------------------------------------
 %% @doc Injects the boss.conf configuration to the boss application
 %% @spec init_conf(BossConf)
