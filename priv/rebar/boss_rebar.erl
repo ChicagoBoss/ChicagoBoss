@@ -317,7 +317,7 @@ all_ebin_dirs(BossConf, _AppFile) ->
 							false -> EbinDirs;
 							{path, Path} -> 
 								MainEbin = filename:join([Path, "ebin"]),
-								filelib:ensure_dir(MainEbin),
+								filelib:ensure_dir(filename:join([MainEbin, "foobar"])),
 								DepsEbin = filename:join([Path, "deps", "*", "ebin"]),
 								[MainEbin, DepsEbin | EbinDirs]
 						end end, [], lists:reverse(BossConf)).
