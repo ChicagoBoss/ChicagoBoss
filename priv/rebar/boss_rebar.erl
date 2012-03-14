@@ -316,8 +316,10 @@ all_ebin_dirs(BossConf, _AppFile) ->
 						case lists:keyfind(path, 1, Config) of
 							false -> EbinDirs;
 							{path, Path} -> 
-								AddedEbin = [ filename:join([Path, "deps", "*", "ebin"]) |EbinDirs],
-								[filename:join([Path, "ebin"])|AddedEbin]
+								MainEbin = filename:join([Path, "ebin"]),
+								filelib:ensure_dir(MainEbin),
+								DepsEbin = filename:join([Path, "deps", "*", "ebin"]),
+								[MainEbin, DepsEbin | EbinDirs]
 						end end, [], lists:reverse(BossConf)).
 
 %%--------------------------------------------------------------------
