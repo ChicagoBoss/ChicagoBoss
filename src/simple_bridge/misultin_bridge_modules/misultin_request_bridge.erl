@@ -104,10 +104,10 @@ cookies(Req) ->
     [F(X) || X <- string:tokens(CookieData, ";")].
 
 query_params(Req) ->
-    Req:parse_qs().	
+    Req:parse_qs(unicode).
 
 post_params(Req) ->
-    Req:parse_post().
+    Req:parse_post(unicode).
 
 request_body(Req) ->
     Req:get(body).
