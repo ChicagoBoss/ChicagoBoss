@@ -458,11 +458,11 @@ process_error(Payload, #boss_app_info{ router_pid = RouterPid } = AppInfo, Req, 
             {error, ["Error: <pre>", io_lib:print(Payload), "</pre>"], []}
     end.
 
+process_result(AppInfo, Req, {Status, Payload}) ->
+    process_result(AppInfo, Req, {Status, Payload, []});
 process_result(_, _, {ok, Payload, Headers}) ->
     {200, [{"Content-Type", proplists:get_value("Content-Type", Headers, "text/html")}
             |proplists:delete("Content-Type", Headers)], Payload};
-process_result(AppInfo, Req, {redirect, Where}) ->
-	process_result(AppInfo, Req, {redirect, Where, []});
 process_result(AppInfo, Req, {redirect, "http://"++Where, Headers}) ->
     process_result(AppInfo, Req, {redirect_external, "http://"++Where, Headers});
 process_result(AppInfo, Req, {redirect, "https://"++Where, Headers}) ->
@@ -484,8 +484,9 @@ process_result(AppInfo, _, {redirect, Where, Headers}) ->
     {302, [{"Location", AppInfo#boss_app_info.base_url ++ Where}, {"Cache-Control", "no-cache"}|Headers], ""};
 process_result(_, _, {redirect_external, Where, Headers}) ->
     {302, [{"Location", Where}, {"Cache-Control", "no-cache"}|Headers], ""};
-process_result(AppInfo, Req, {not_found, Payload}) ->
-    process_result(AppInfo, Req, {not_found, Payload, []});
+process_result(_, _, {unauthorized, Payload, Headers}) ->
+    {401, [{"Content-Type", proplists:get_value("Content-Type", Headers, "text/html")}
+        |proplists:delete("Content-Type", Headers)], Payload};
 process_result(_, _, {not_found, Payload, Headers}) ->
     {404, [{"Content-Type", proplists:get_value("Content-Type", Headers, "text/html")}
         |proplists:delete("Content-Type", Headers)], Payload};
