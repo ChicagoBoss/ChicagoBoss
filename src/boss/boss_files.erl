@@ -122,12 +122,16 @@ language_list(App) ->
     language_list_dir(lang_path(App)).
 
 language_list_dir(Path) ->
-    {ok, Files} = file:list_dir(Path),
-    lists:sort(lists:map(fun("strings."++Lang) -> filename:basename(Lang, ".po") end,
-            lists:filter(fun
-                    ("strings."++_Lang) -> true;
-                    (_) -> false
-                end, Files))).
+    case file:list_dir(Path) of
+        {ok, Files} ->
+            lists:sort(lists:map(fun("strings."++Lang) -> filename:basename(Lang, ".po") end,
+                    lists:filter(fun
+                            ("strings."++_Lang) -> true;
+                            (_) -> false
+                        end, Files)));
+        {error, enoent} ->
+            []
+    end.
 
 module_list(Dirs) ->
     module_list1(Dirs, []).
