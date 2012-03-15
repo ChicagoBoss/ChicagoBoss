@@ -116,11 +116,12 @@ start_cmd(_RebarConf, BossConf, AppFile) ->
 	rebar_log:log(info, "Generating dynamic start command~n", []),
 	
 	EbinDirs = all_ebin_dirs(BossConf, AppFile),
+	MaxProcesses = max_processes(BossConf),
 	SName = sname(BossConf, AppFile),
 	Cookie = cookie(BossConf),
 
-	io:format("exec erl +K true -pa ~s -boot start_sasl -config boss -s boss -setcookie ~s -detached -sname ~s", 
-			  [string:join(EbinDirs, " -pa "), Cookie, SName]),
+	io:format("exec erl +K true +P ~B -pa ~s -boot start_sasl -config boss -s boss -setcookie ~s -detached -sname ~s", 
+			  [MaxProcesses, string:join(EbinDirs, " -pa "), Cookie, SName]),
 	ok.
 
 %%--------------------------------------------------------------------
@@ -370,3 +371,6 @@ sname(BossConf, AppFile) ->
 
 cookie(BossConf) ->
     boss_config_value(BossConf, boss, vm_cookie, "abc123").
+
+max_processes(BossConf) ->
+    boss_config_value(BossConf, boss, vm_max_processes, 134217727).
