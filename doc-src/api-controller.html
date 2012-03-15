@@ -4,6 +4,7 @@
 &nbsp; <a href="#routes">Routes</a> 
 &nbsp; <a href="#auth">Authorization</a> 
 &nbsp; <a href="#return_values">Return values</a> 
+&nbsp; <a href="#lang">Content-Language</a> 
 &nbsp; <a href="#filter">Post-processing</a> 
 &nbsp; <a href="#simplebridge">SimpleBridge request object</a></p>
 <p>Chicago Boss associates each URL with a function of a controller. 
@@ -200,6 +201,21 @@ before_(_) -&gt;<br />
 <p>Invoke the 404 File Not Found handler.</p>
 
 <br />
+
+<a name="lang"></a>
+<h3>Content-Language</h3>
+<p>CB application views can be multi-lingual. By default, the language served to the client is chosen by comparing the incoming Accept-Language header to the available translations in a given view (see <a href="https://github.com/evanmiller/ChicagoBoss/wiki/How-Chicago-Boss-Chooses-Which-Language-To-Serve">"How Chicago Boss Chooses Which Language To Serve"</a>. This can be overridden in two ways:</p>
+<ol>
+    <li>Returning [{"Content-Language", Lang}] from each action in your controller
+    <li>Defining a <code>lang_</code> function in your controller which returns the chosen language
+</ol>
+<p>The <code>lang_</code> function will be passed the name of the current action, and optionally the result of the <code>before_</code> filter. This function should return one of:</p>
+<ul>
+    <li><code>auto</code> - automatically choose a language based on the Accept-Language header
+    <li>A string indicating the language choice ("en", "fr", etc.)
+</ul>
+<br />
+
 <a name="filter"></a>
 <h3>Post-processing</h3>
 <p>If it exists, a function called <code>after_</code> in your controller will be passed the result that is about to be returned to the client. The 'after_' function takes two or three arguments:</p>

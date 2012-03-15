@@ -616,7 +616,19 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
                     end,
                     Result = case ActionResult of
                         undefined ->
-                            render_view(Location, AppInfo, Req, SessionID, [{"_before", Info}]);
+                            LangResult = case proplists:get_value("lang_", ExportStrings) of
+                                2 ->
+                                    ControllerInstance:lang_(Action);
+                                3 ->
+                                    ControllerInstance:lang_(Action, Info);
+                                _ ->
+                                    auto
+                            end,
+                            Headers = case LangResult of
+                                auto -> [];
+                                _ -> [{"Content-Language", LangResult}]
+                            end,
+                            render_view(Location, AppInfo, Req, SessionID, [{"_before", Info}], Headers);
                         ActionResult ->
                             process_action_result({Location, Req, SessionID, [Location|LocationTrail]}, 
                                 ActionResult, AppInfo, Info)
