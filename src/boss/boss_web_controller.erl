@@ -492,6 +492,9 @@ process_result(_, _, {not_found, Payload, Headers}) ->
         |proplists:delete("Content-Type", Headers)], Payload};
 process_result(_, _, {error, Payload, Headers}) ->
     {500, [{"Content-Type", proplists:get_value("Content-Type", Headers, "text/html")}
+        |proplists:delete("Content-Type", Headers)], Payload};
+process_result(_, _, {StatusCode, Payload, Headers}) when is_integer(StatusCode) ->
+    {StatusCode, [{"Content-Type", proplists:get_value("Content-Type", Headers, "text/html")}
         |proplists:delete("Content-Type", Headers)], Payload}.
 
 load_and_execute(Mode, {Controller, _, _} = Location, AppInfo, Req, SessionID) when Mode =:= production; Mode =:= testing->
