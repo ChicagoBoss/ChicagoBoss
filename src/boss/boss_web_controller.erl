@@ -464,8 +464,7 @@ process_error(Payload, #boss_app_info{ router_pid = RouterPid } = AppInfo, Req, 
 process_result(AppInfo, Req, {Status, Payload}) ->
     process_result(AppInfo, Req, {Status, Payload, []});
 process_result(_, _, {ok, Payload, Headers}) ->
-    {200, [{"Content-Type", proplists:get_value("Content-Type", Headers, "text/html")}
-            |proplists:delete("Content-Type", Headers)], Payload};
+    {200, merge_headers(Headers, [{"Content-Type", "text/html"}]), Payload};
 process_result(AppInfo, Req, {redirect, "http://"++Where, Headers}) ->
     process_result(AppInfo, Req, {redirect_external, "http://"++Where, Headers});
 process_result(AppInfo, Req, {redirect, "https://"++Where, Headers}) ->
@@ -488,17 +487,13 @@ process_result(AppInfo, _, {redirect, Where, Headers}) ->
 process_result(_, _, {redirect_external, Where, Headers}) ->
     {302, [{"Location", Where}, {"Cache-Control", "no-cache"}|Headers], ""};
 process_result(_, _, {unauthorized, Payload, Headers}) ->
-    {401, [{"Content-Type", proplists:get_value("Content-Type", Headers, "text/html")}
-        |proplists:delete("Content-Type", Headers)], Payload};
+    {401, merge_headers(Headers, [{"Content-Type", "text/html"}]), Payload};
 process_result(_, _, {not_found, Payload, Headers}) ->
-    {404, [{"Content-Type", proplists:get_value("Content-Type", Headers, "text/html")}
-        |proplists:delete("Content-Type", Headers)], Payload};
+    {404, merge_headers(Headers, [{"Content-Type", "text/html"}]), Payload};
 process_result(_, _, {error, Payload, Headers}) ->
-    {500, [{"Content-Type", proplists:get_value("Content-Type", Headers, "text/html")}
-        |proplists:delete("Content-Type", Headers)], Payload};
+    {500, merge_headers(Headers, [{"Content-Type", "text/html"}]), Payload};
 process_result(_, _, {StatusCode, Payload, Headers}) when is_integer(StatusCode) ->
-    {StatusCode, [{"Content-Type", proplists:get_value("Content-Type", Headers, "text/html")}
-        |proplists:delete("Content-Type", Headers)], Payload}.
+    {StatusCode, merge_headers(Headers, [{"Content-Type", "text/html"}]), Payload}.
 
 load_and_execute(Mode, {Controller, _, _} = Location, AppInfo, Req, SessionID) when Mode =:= production; Mode =:= testing->
     case lists:member(boss_files:web_controller(AppInfo#boss_app_info.application, Controller), 
@@ -617,24 +612,24 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
                         _ ->
                             undefined
                     end,
+                    LangResult = case proplists:get_value("lang_", ExportStrings) of
+                        2 ->
+                            ControllerInstance:lang_(Action);
+                        3 ->
+                            ControllerInstance:lang_(Action, Info);
+                        _ ->
+                            auto
+                    end,
+                    LangHeaders = case LangResult of
+                        auto -> [];
+                        _ -> [{"Content-Language", LangResult}]
+                    end,
                     Result = case ActionResult of
                         undefined ->
-                            LangResult = case proplists:get_value("lang_", ExportStrings) of
-                                2 ->
-                                    ControllerInstance:lang_(Action);
-                                3 ->
-                                    ControllerInstance:lang_(Action, Info);
-                                _ ->
-                                    auto
-                            end,
-                            Headers = case LangResult of
-                                auto -> [];
-                                _ -> [{"Content-Language", LangResult}]
-                            end,
-                            render_view(Location, AppInfo, Req, SessionID, [{"_before", Info}], Headers);
+                            render_view(Location, AppInfo, Req, SessionID, [{"_before", Info}], LangHeaders);
                         ActionResult ->
                             process_action_result({Location, Req, SessionID, [Location|LocationTrail]}, 
-                                ActionResult, AppInfo, Info)
+                                ActionResult, LangHeaders, AppInfo, Info)
                     end,
                     case proplists:get_value("after_", ExportStrings) of
                         3 ->
@@ -667,25 +662,25 @@ process_redirect(Controller, [{_, _}|_] = Where, AppInfo) ->
 process_redirect(_, Where, _) ->
     Where.
 
-process_action_result(Info, ok, AppInfo, AuthInfo) ->
-    process_action_result(Info, {ok, []}, AppInfo, AuthInfo);
-process_action_result(Info, {ok, Data}, AppInfo, AuthInfo) ->
-    process_action_result(Info, {ok, Data, []}, AppInfo, AuthInfo);
-process_action_result({Location, Req, SessionID, _}, {ok, Data, Headers}, AppInfo, AuthInfo) ->
-    render_view(Location, AppInfo, Req, SessionID, [{"_before", AuthInfo}|Data], Headers);
+process_action_result(Info, ok, ExtraHeaders, AppInfo, AuthInfo) ->
+    process_action_result(Info, {ok, []}, ExtraHeaders, AppInfo, AuthInfo);
+process_action_result(Info, {ok, Data}, ExtraHeaders, AppInfo, AuthInfo) ->
+    process_action_result(Info, {ok, Data, []}, ExtraHeaders, AppInfo, AuthInfo);
+process_action_result({Location, Req, SessionID, _}, {ok, Data, Headers}, ExtraHeaders, AppInfo, AuthInfo) ->
+    render_view(Location, AppInfo, Req, SessionID, [{"_before", AuthInfo}|Data], merge_headers(Headers, ExtraHeaders));
 
-process_action_result(Info, {render_other, OtherLocation}, AppInfo, AuthInfo) ->
-    process_action_result(Info, {render_other, OtherLocation, []}, AppInfo, AuthInfo);
-process_action_result(Info, {render_other, OtherLocation, Data}, AppInfo, AuthInfo) ->
-    process_action_result(Info, {render_other, OtherLocation, Data, []}, AppInfo, AuthInfo);
-process_action_result({{Controller, _, _}, Req, SessionID, _}, {render_other, OtherLocation, Data, Headers}, AppInfo, AuthInfo) ->
+process_action_result(Info, {render_other, OtherLocation}, ExtraHeaders, AppInfo, AuthInfo) ->
+    process_action_result(Info, {render_other, OtherLocation, []}, ExtraHeaders, AppInfo, AuthInfo);
+process_action_result(Info, {render_other, OtherLocation, Data}, ExtraHeaders, AppInfo, AuthInfo) ->
+    process_action_result(Info, {render_other, OtherLocation, Data, []}, ExtraHeaders, AppInfo, AuthInfo);
+process_action_result({{Controller, _, _}, Req, SessionID, _}, {render_other, OtherLocation, Data, Headers}, ExtraHeaders, AppInfo, AuthInfo) ->
     render_view(process_location(Controller, OtherLocation, AppInfo),
-        AppInfo, Req, SessionID, [{"_before", AuthInfo}|Data], Headers);
+        AppInfo, Req, SessionID, [{"_before", AuthInfo}|Data], merge_headers(Headers, ExtraHeaders));
 
-process_action_result({{Controller, _, _}, Req, SessionID, LocationTrail}, {action_other, OtherLocation}, AppInfo, _) ->
+process_action_result({{Controller, _, _}, Req, SessionID, LocationTrail}, {action_other, OtherLocation}, _, AppInfo, _) ->
     execute_action(process_location(Controller, OtherLocation, AppInfo), AppInfo, Req, SessionID, LocationTrail);
 
-process_action_result({_, Req, SessionID, LocationTrail}, not_found, AppInfo, _) ->
+process_action_result({_, Req, SessionID, LocationTrail}, not_found, _, AppInfo, _) ->
     case boss_router:handle(AppInfo#boss_app_info.router_pid, 404) of
         {ok, {Application, Controller, Action, Params}} when Application =:= AppInfo#boss_app_info.application ->
             execute_action({Controller, Action, Params}, AppInfo, Req, SessionID, LocationTrail);
@@ -695,32 +690,30 @@ process_action_result({_, Req, SessionID, LocationTrail}, not_found, AppInfo, _)
             {not_found, "The requested page was not found. Additionally, no handler was found for processing 404 errors."}
     end;
 
-process_action_result(Info, {redirect, Where}, AppInfo, AuthInfo) ->
-    process_action_result(Info, {redirect, Where, []}, AppInfo, AuthInfo);
-process_action_result({{Controller, _, _}, _, _, _}, {redirect, Where, Headers}, AppInfo, _) ->
-    {redirect, process_redirect(Controller, Where, AppInfo), Headers};
+process_action_result(Info, {redirect, Where}, ExtraHeaders, AppInfo, AuthInfo) ->
+    process_action_result(Info, {redirect, Where, []}, ExtraHeaders, AppInfo, AuthInfo);
+process_action_result({{Controller, _, _}, _, _, _}, {redirect, Where, Headers}, ExtraHeaders, AppInfo, _) ->
+    {redirect, process_redirect(Controller, Where, AppInfo), merge_headers(Headers, ExtraHeaders)};
 
-process_action_result(Info, {json, Data}, AppInfo, AuthInfo) ->
-    process_action_result(Info, {json, Data, []}, AppInfo, AuthInfo);
-process_action_result(Info, {json, Data, Headers}, AppInfo, AuthInfo) ->
+process_action_result(Info, {json, Data}, ExtraHeaders, AppInfo, AuthInfo) ->
+    process_action_result(Info, {json, Data, []}, ExtraHeaders, AppInfo, AuthInfo);
+process_action_result(Info, {json, Data, Headers}, ExtraHeaders, AppInfo, AuthInfo) ->
     process_action_result(Info, {output, boss_json:encode(Data, AppInfo#boss_app_info.model_modules),
-            [{"Content-Type", proplists:get_value("Content-Type", Headers, "application/json")}
-                |proplists:delete("Content-Type", Headers)]}, AppInfo, AuthInfo);
+            merge_headers(Headers, [{"Content-Type", "application/json"}])}, ExtraHeaders, AppInfo, AuthInfo);
 
-process_action_result(Info, {jsonp, Callback, Data}, AppInfo, AuthInfo) ->
-    process_action_result(Info, {jsonp, Callback, Data, []}, AppInfo, AuthInfo);
-process_action_result(Info, {jsonp, Callback, Data, Headers}, AppInfo, AuthInfo) ->
+process_action_result(Info, {jsonp, Callback, Data}, ExtraHeaders, AppInfo, AuthInfo) ->
+    process_action_result(Info, {jsonp, Callback, Data, []}, ExtraHeaders, AppInfo, AuthInfo);
+process_action_result(Info, {jsonp, Callback, Data, Headers}, ExtraHeaders, AppInfo, AuthInfo) ->
     JsonData  = boss_json:encode(Data, AppInfo#boss_app_info.model_modules),
     process_action_result(Info, {output, Callback ++ "(" ++ JsonData ++ ");",
-            [{"Content-Type", proplists:get_value("Content-Type", Headers, "application/javascript")}
-                |proplists:delete("Content-Type", Headers)]}, AppInfo, AuthInfo);
+            merge_headers(Headers, [{"Content-Type", "application/javascript"}])}, ExtraHeaders, AppInfo, AuthInfo);
 
-process_action_result(Info, {output, Payload}, AppInfo, AuthInfo) ->
-    process_action_result(Info, {output, Payload, []}, AppInfo, AuthInfo);
-process_action_result(_, {output, Payload, Headers}, _, _) ->
-    {ok, Payload, Headers};
+process_action_result(Info, {output, Payload}, ExtraHeaders, AppInfo, AuthInfo) ->
+    process_action_result(Info, {output, Payload, []}, ExtraHeaders, AppInfo, AuthInfo);
+process_action_result(_, {output, Payload, Headers}, ExtraHeaders, _, _) ->
+    {ok, Payload, merge_headers(Headers, ExtraHeaders)};
 
-process_action_result(_, Else, _, _) ->
+process_action_result(_, Else, _, _, _) ->
     Else.
 
 render_view(Location, AppInfo, Req, SessionID) ->
@@ -817,6 +810,17 @@ translation_coverage(Strings, Locale, TranslatorPid) ->
         false ->
             0.0
     end.
+
+merge_headers(Headers1, Headers2) ->
+    HeadersToAdd = lists:foldl(fun(Key, Acc) ->
+                case proplists:is_defined(Key, Headers1) of
+                    true ->
+                        Acc;
+                    false ->
+                        proplists:lookup_all(Key, Headers2) ++ Acc
+                end
+        end, [], proplists:get_keys(Headers2)),
+    HeadersToAdd ++ Headers1.
 
 make_log_file_name(Dir) ->
     {{Y, M, D}, {Hour, Min, Sec}} = calendar:local_time(), 
