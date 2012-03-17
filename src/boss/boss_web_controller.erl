@@ -614,24 +614,34 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
                         _ ->
                             undefined
                     end,
+                    LangHeader = header_lang_for_action(ControllerInstance, Action, Info, ExportStrings),
                     Result = case ActionResult of
                         undefined ->
-                            LangResult = case proplists:get_value("lang_", ExportStrings) of
-                                2 ->
-                                    ControllerInstance:lang_(Action);
-                                3 ->
-                                    ControllerInstance:lang_(Action, Info);
-                                _ ->
-                                    auto
-                            end,
-                            Headers = case LangResult of
-                                auto -> [];
-                                _ -> [{"Content-Language", LangResult}]
-                            end,
-                            render_view(Location, AppInfo, Req, SessionID, [{"_before", Info}], Headers);
+                            render_view(Location, AppInfo, Req, SessionID, [{"_before", Info}], LangHeader);
                         ActionResult ->
+                            ActionResult2 = case LangHeader =:= [] of
+                                true -> ActionResult;
+                                _ ->
+                                    case ActionResult of
+                                        ok -> {ok, [], LangHeader};
+                                        {ok, V} -> {ok, V, LangHeader};
+                                        {ok, V, Headers} -> {ok, V, add_header_lang(Headers, LangHeader)};
+                                        {redirect, _} -> ActionResult;
+                                        {redirect, _, _} -> ActionResult;
+                                        {render_other, L} -> {render_other, L, LangHeader};
+                                        {render_other, L, V} -> {render_other, L, V, LangHeader};
+                                        {render_other, L, V, Headers} -> {render_other, L, V, add_header_lang(Headers, LangHeader)};
+                                        {output, D} -> {output, D, LangHeader};
+                                        {output, D, Headers} -> {output, D, add_header_lang(Headers, LangHeader)};
+                                        {json, D} -> {json, D, LangHeader};
+                                        {json, D, Headers} -> {json, D, add_header_lang(Headers, LangHeader)};
+                                        {jsonp, C, D} -> {jsonp, C, D, LangHeader};
+                                        {jsonp, C, D, Headers} -> {jsonp, C, D, add_header_lang(Headers, LangHeader)};
+                                        _ -> ActionResult
+                                    end
+                            end,
                             process_action_result({Location, Req, SessionID, [Location|LocationTrail]}, 
-                                ActionResult, AppInfo, Info)
+                                ActionResult2, AppInfo, Info)
                     end,
                     case proplists:get_value("after_", ExportStrings) of
                         3 ->
@@ -840,3 +850,23 @@ mk_win_dir_syslink(LinkName, DestDir, LinkTarget) ->
     S = (list_to_atom(lists:append(["cd ", DestDir, "& mklink ", LinkName, " \"", LinkTarget, "\""]))),
     os:cmd(S),
     ok.
+
+header_lang_for_action(ControllerInstance, Action, Info, ExportStrings) ->
+    LangResult = case proplists:get_value("lang_", ExportStrings) of
+        2 ->
+            ControllerInstance:lang_(Action);
+        3 ->
+            ControllerInstance:lang_(Action, Info);
+        _ ->
+            auto
+    end,
+    case LangResult of
+        auto -> [];
+        _ -> [{"Content-Language", LangResult}]
+    end.
+
+add_header_lang(Headers, LangHeader) ->
+    case proplists:get_value("Content-Language", Headers) of
+        undefined -> lists:merge(Headers, LangHeader);
+        _ -> Headers
+    end.
