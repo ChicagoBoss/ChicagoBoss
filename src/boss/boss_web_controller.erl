@@ -53,7 +53,7 @@ init(Config) ->
 
     Env = boss_env:setup_boss_env(),
     error_logger:info_msg("Starting Boss in ~p mode....~n", [Env]),
-	
+
     DBOptions = lists:foldl(fun(OptName, Acc) ->
                 case application:get_env(OptName) of
                     {ok, Val} -> [{OptName, Val}|Acc];
@@ -64,14 +64,14 @@ init(Config) ->
     DBShards = boss_env:get_env(db_shards, []),
     CacheEnable = boss_env:get_env(cache_enable, false),
     IsMasterNode = boss_env:is_master_node(),
-    DBOptions1 = [{adapter, DBAdapter}, {cache_enable, CacheEnable}, 
+    DBOptions1 = [{adapter, DBAdapter}, {cache_enable, CacheEnable},
         {shards, DBShards}, {is_master_node, IsMasterNode}|DBOptions],
 
     boss_db:start(DBOptions1),
 
     case CacheEnable of
         false -> ok;
-        true -> 
+        true ->
             CacheAdapter = boss_env:get_env(cache_adapter, memcached_bin),
             CacheOptions = [{adapter, CacheAdapter},
                             {cache_servers, boss_env:get_env(cache_servers, [{"127.0.0.1", 11211, 1}])}],
@@ -104,7 +104,7 @@ init(Config) ->
             error_logger:info_msg("Pinging master node ~p from ~p~n", [MasterNode, ThisNode]),
             pong = net_adm:ping(MasterNode)
     end,
-	
+
     MailDriver = boss_env:get_env(mail_driver, boss_mail_driver_smtp),
     boss_mail:start([{driver, MailDriver}]),
 
@@ -114,12 +114,12 @@ init(Config) ->
     end,
     SSLEnable = boss_env:get_env(ssl_enable, false),
     SSLOptions = boss_env:get_env(ssl_options, []),
-    ServerConfig = [{loop, fun(Req) -> 
+    ServerConfig = [{loop, fun(Req) ->
                     ?MODULE:handle_request(Req, RequestMod, ResponseMod)
             end} | Config],
     Pid = case ServerMod of
         mochiweb_http -> mochiweb_http:start([{ssl, SSLEnable}, {ssl_opts, SSLOptions} | ServerConfig]);
-        misultin -> 
+        misultin ->
             case SSLEnable of
                 true -> misultin:start_link([{ssl, SSLOptions} | ServerConfig]);
                 false -> misultin:start_link(ServerConfig)
@@ -143,7 +143,7 @@ handle_info(timeout, State) ->
                     true -> boss_load:load_all_modules(AppName, TranslatorSupPid);
                     false -> ok
                 end,
-                InitData = run_init_scripts(AppName), 
+                InitData = run_init_scripts(AppName),
                 #boss_app_info{ application = AppName,
                     init_data = InitData,
                     router_sup_pid = RouterSupPid,
@@ -320,10 +320,10 @@ handle_request(Req, RequestMod, ResponseMod) ->
                 "/favicon.ico" = File ->
                     Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
                     (Response:file(File)):build_response();
-                "/static/"++File -> 
+                "/static/"++File ->
                     Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
                     (Response:file([$/|File])):build_response();
-                _ -> 
+                _ ->
                     SessionKey = boss_session:get_session_key(),
                     SessionID = case boss_env:get_env(session_enable, true) of
                         true ->
@@ -339,9 +339,9 @@ handle_request(Req, RequestMod, ResponseMod) ->
                     TranslatorPid = boss_web:translator_pid(App),
                     RouterPid = boss_web:router_pid(App),
                     {Time, {StatusCode, Headers, Payload}} = timer:tc(?MODULE, process_request, [
-                        AppInfo#boss_app_info{ translator_pid = TranslatorPid, router_pid = RouterPid }, 
+                        AppInfo#boss_app_info{ translator_pid = TranslatorPid, router_pid = RouterPid },
                         Request, Mode, Url, SessionID]),
-                    ErrorFormat = "~s ~s [~p] ~p ~pms~n", 
+                    ErrorFormat = "~s ~s [~p] ~p ~pms~n",
                     ErrorArgs = [Request:request_method(), FullUrl, App, StatusCode, Time div 1000],
                     case StatusCode of
                         500 -> error_logger:error_msg(ErrorFormat, ErrorArgs);
@@ -384,7 +384,7 @@ process_request(AppInfo, Req, development, "/doc/"++ModelName, SessionID) ->
     end,
     process_result(AppInfo, Req, Result);
 process_request(#boss_app_info{ router_pid = RouterPid } = AppInfo, Req, Mode, Url, SessionID) ->
-    if 
+    if
         Mode =:= development ->
             ControllerList = boss_files:web_controller_list(AppInfo#boss_app_info.application),
             boss_router:set_controllers(RouterPid, ControllerList);
@@ -468,7 +468,7 @@ process_result(AppInfo, Req, {redirect, "http://"++Where, Headers}) ->
 process_result(AppInfo, Req, {redirect, "https://"++Where, Headers}) ->
     process_result(AppInfo, Req, {redirect_external, "https://"++Where, Headers});
 process_result(AppInfo, Req, {redirect, {Application, Controller, Action, Params}, Headers}) ->
-    RouterPid = if 
+    RouterPid = if
         AppInfo#boss_app_info.application =:= Application ->
             AppInfo#boss_app_info.router_pid;
         true ->
@@ -494,7 +494,7 @@ process_result(_, _, {StatusCode, Payload, Headers}) when is_integer(StatusCode)
     {StatusCode, merge_headers(Headers, [{"Content-Type", "text/html"}]), Payload}.
 
 load_and_execute(Mode, {Controller, _, _} = Location, AppInfo, Req, SessionID) when Mode =:= production; Mode =:= testing->
-    case lists:member(boss_files:web_controller(AppInfo#boss_app_info.application, Controller), 
+    case lists:member(boss_files:web_controller(AppInfo#boss_app_info.application, Controller),
             AppInfo#boss_app_info.controller_modules) of
         true -> execute_action(Location, AppInfo, Req, SessionID);
         false -> render_view(Location, AppInfo, Req, SessionID)
@@ -538,7 +538,7 @@ load_and_execute(development, {Controller, _, _} = Location, AppInfo, Req, Sessi
     end,
     case Res4 of
         {ok, Controllers} ->
-            case lists:member(boss_files:web_controller(AppInfo#boss_app_info.application, Controller), 
+            case lists:member(boss_files:web_controller(AppInfo#boss_app_info.application, Controller),
                     lists:map(fun atom_to_list/1, Controllers)) of
                 true ->
                     case boss_load:load_models() of
@@ -555,7 +555,7 @@ load_and_execute(development, {Controller, _, _} = Location, AppInfo, Req, Sessi
     end.
 
 render_errors(ErrorList, AppInfo, Req) ->
-    case boss_html_error_template:render([{errors, ErrorList}, {request, Req}, 
+    case boss_html_error_template:render([{errors, ErrorList}, {request, Req},
                 {application, AppInfo#boss_app_info.application}]) of
         {ok, Payload} ->
             {ok, Payload, []};
@@ -582,20 +582,20 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
                 fun({Function, Arity}) -> {atom_to_list(Function), Arity} end,
                 Module:module_info(exports)),
             ControllerInstance = case proplists:get_value("new", ExportStrings) of
-                1 -> 
+                1 ->
                     Module:new(Req);
                 2 ->
                     Module:new(Req, SessionID)
             end,
             AuthInfo = case lists:member({"before_", 2}, ExportStrings) of
-                true -> 
+                true ->
                     case ControllerInstance:before_(Action) of
                         ok ->
                             {ok, undefined};
                         OtherInfo ->
                             OtherInfo
                     end;
-                false -> 
+                false ->
                     {ok, undefined}
             end,
             case AuthInfo of
@@ -626,7 +626,7 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
                         undefined ->
                             render_view(Location, AppInfo, Req, SessionID, [{"_before", Info}], LangHeaders);
                         ActionResult ->
-                            process_action_result({Location, Req, SessionID, [Location|LocationTrail]}, 
+                            process_action_result({Location, Req, SessionID, [Location|LocationTrail]},
                                 ActionResult, LangHeaders, AppInfo, Info)
                     end,
                     case proplists:get_value("after_", ExportStrings) of
@@ -726,16 +726,16 @@ render_view({Controller, Template, _}, AppInfo, Req, SessionID, Variables, Heade
     BossFlash = boss_flash:get_and_clear(SessionID),
     case LoadResult of
         {ok, Module} ->
-            {Lang, TranslationFun} = choose_translation_fun(AppInfo#boss_app_info.translator_pid, 
-                Module:translatable_strings(), Req:header(accept_language), 
+            {Lang, TranslationFun} = choose_translation_fun(AppInfo#boss_app_info.translator_pid,
+                Module:translatable_strings(), Req:header(accept_language),
                 proplists:get_value("Content-Language", Headers)),
-            case Module:render(lists:merge([{"_lang", Lang}, 
-                            {"_base_url", AppInfo#boss_app_info.base_url}|Variables], BossFlash), 
+            case Module:render(lists:merge([{"_lang", Lang},
+                            {"_base_url", AppInfo#boss_app_info.base_url}|Variables], BossFlash),
                     [{translation_fun, TranslationFun}, {locale, Lang},
                         {custom_tags_context, [
                                 {host, Req:header(host)},
                                 {application, atom_to_list(AppInfo#boss_app_info.application)},
-                                {controller, Controller}, 
+                                {controller, Controller},
                                 {action, Template},
                                 {router_pid, AppInfo#boss_app_info.router_pid}]}]) of
                 {ok, Payload} ->
@@ -747,7 +747,7 @@ render_view({Controller, Template, _}, AppInfo, Req, SessionID, Variables, Heade
             {not_found, io_lib:format("The requested template (~p) was not found.", [ViewPath]) };
         {error, {File, [{0, _Module, "Failed to read file"}]}} ->
             {not_found, io_lib:format("The requested template (~p) was not found.", [File]) };
-        {error, Error}-> 
+        {error, Error}->
             render_errors([Error], AppInfo, Req)
     end.
 
@@ -786,7 +786,7 @@ choose_language_from_qvalues(TranslatorPid, Strings, QValues) ->
                 {ThisLang, ThisQValue}; % translation coverage is 100%
             ({ThisLang, ThisQValue}, {BestLang, BestTranslationScore}) ->
                 TranslationCoverage = translation_coverage(Strings, ThisLang, TranslatorPid),
-                TranslationScore = ThisQValue * TranslationCoverage + 
+                TranslationScore = ThisQValue * TranslationCoverage +
                                     AssumedLocaleQValue * (1-TranslationCoverage),
                 case TranslationScore > BestTranslationScore andalso TranslationCoverage > 0.0 of
                     true -> {ThisLang, TranslationScore};
@@ -821,10 +821,13 @@ merge_headers(Headers1, Headers2) ->
     HeadersToAdd ++ Headers1.
 
 make_log_file_name(Dir) ->
-    {{Y, M, D}, {Hour, Min, Sec}} = calendar:local_time(), 
-    filename:join([Dir, 
-            lists:flatten(io_lib:format("boss_error-~4..0B-~2..0B-~2..0B.~2..0B-~2..0B-~2..0B.log", 
-                    [Y, M, D, Hour, Min, Sec]))]).
+    erlang:display(Dir),
+    {{Y, M, D}, {Hour, Min, Sec}} = calendar:local_time(),
+    F = filename:join([Dir,
+            lists:flatten(io_lib:format("boss_error-~4..0B-~2..0B-~2..0B.~2..0B-~2..0B-~2..0B.log",
+                                        [Y, M, D, Hour, Min, Sec]))]),
+    filelib:ensure_dir(F),
+    F.
 
 
 make_log_file_symlink(LogFile) ->
@@ -845,3 +848,4 @@ mk_win_dir_syslink(LinkName, DestDir, LinkTarget) ->
     S = (list_to_atom(lists:append(["cd ", DestDir, "& mklink ", LinkName, " \"", LinkTarget, "\""]))),
     os:cmd(S),
     ok.
+
