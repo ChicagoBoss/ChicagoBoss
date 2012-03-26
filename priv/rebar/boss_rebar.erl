@@ -373,4 +373,4 @@ cookie(BossConf) ->
     boss_config_value(BossConf, boss, vm_cookie, "abc123").
 
 max_processes(BossConf) ->
-    boss_config_value(BossConf, boss, vm_max_processes, 134217727).
+    boss_config_value(BossConf, boss, vm_max_processes, 32768).
