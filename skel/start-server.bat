@@ -1,2 +1,3 @@
-make
-erl -pa ebin -boot start_sasl -config boss -s reloader -s boss
+@ECHO OFF
+FOR /F "tokens=*" %%i in ('"rebar.cmd boss c=start_dev_cmd ^| findstr werl"') do set myvar=%%i
+START "Erlang Window" %myvar%
