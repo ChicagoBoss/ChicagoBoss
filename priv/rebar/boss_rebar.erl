@@ -135,11 +135,20 @@ start_dev_cmd(_RebarConf, BossConf, AppFile) ->
 	rebar_log:log(info, "Generating dynamic start-dev command~n", []),
 	
 	AppName = app_name(AppFile),
-	EbinDirs = all_ebin_dirs(BossConf, AppFile),
 	SName = sname(BossConf, AppFile),
+    case os:type() of
+        {win32, _ } -> 
+                EbinDirs = all_ebin_dirs(windows, BossConf, AppFile),
+                Dirs = io_lib:format("~p", [lists:flatten(EbinDirs)]), %EbinDirs come back as a list of lists [[],[],[]]
+                Cmd = io_lib:format("werl -pa ~s -boss developing_app ~s -boot start_sasl -config boss -s reloader -s boss -sname ~s", 
+                    [string:join(lists:append(EbinDirs), " -pa "), AppName, SName]),
+                io:format("~s~n", [Cmd]);
+        _ ->
+                EbinDirs = all_ebin_dirs(BossConf, AppFile),
+	            io:format("exec erl -pa ~s -boss developing_app ~s -boot start_sasl -config boss -s reloader -s boss -sname ~s", 
+			              [string:join(EbinDirs, " -pa "), AppName, SName])
 
-	io:format("exec erl -pa ~s -boss developing_app ~s -boot start_sasl -config boss -s reloader -s boss -sname ~s", 
-			  [string:join(EbinDirs, " -pa "), AppName, SName]),
+    end,
 	ok.
 
 %%--------------------------------------------------------------------
@@ -321,6 +330,27 @@ all_ebin_dirs(BossConf, _AppFile) ->
 								filelib:ensure_dir(filename:join([MainEbin, "foobar"])),
 								DepsEbin = filename:join([Path, "deps", "*", "ebin"]),
 								[MainEbin, DepsEbin | EbinDirs]
+						end end, [], lists:reverse(BossConf)).
+
+%%--------------------------------------------------------------------
+%% @doc Start the boss app
+%% @spec all_ebin_dirs(windows, BossConf, _AppFile)
+%%       Gets the exact path name of all deps ebin dirs
+%%       for the apps defined in boss.config for Windows
+%% @end
+%%--------------------------------------------------------------------
+all_ebin_dirs(windows, BossConf, _AppFile) ->
+	lists:foldl(fun({_App, Config}, EbinDirs) ->
+						case lists:keyfind(path, 1, Config) of
+							false -> EbinDirs;
+							{path, Path} -> 
+								MainEbin = filename:join([Path, "ebin"]),
+								filelib:ensure_dir(filename:join([MainEbin, "foobar"])),
+								DepsEbins =  case file:list_dir(Path++"/deps") of
+                                                {ok, Dirs} -> lists:map(fun(Dir) -> Path ++ "/deps/" ++ Dir ++ "/ebin" end, Dirs);
+                                                {error, _Reason} -> []
+                                            end,
+                                [lists:append([MainEbin] , DepsEbins) | EbinDirs] % DepsEbins is a list, while MainEbin is a string
 						end end, [], lists:reverse(BossConf)).
 
 %%--------------------------------------------------------------------
