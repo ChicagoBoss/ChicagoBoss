@@ -110,8 +110,7 @@ init(Config) ->
 
     {ServerMod, RequestMod, ResponseMod} = case boss_env:get_env(server, misultin) of
         mochiweb -> {mochiweb_http, mochiweb_request_bridge, mochiweb_response_bridge};
-        misultin -> {misultin, misultin_request_bridge, misultin_response_bridge};
-        yaws ->     {yaws, yaws_request_bridge, yaws_response_bridge}
+        misultin -> {misultin, misultin_request_bridge, misultin_response_bridge}
     end,
     SSLEnable = boss_env:get_env(ssl_enable, false),
     SSLOptions = boss_env:get_env(ssl_options, []),
@@ -124,8 +123,7 @@ init(Config) ->
             case SSLEnable of
                 true -> misultin:start_link([{ssl, SSLOptions} | ServerConfig]);
                 false -> misultin:start_link(ServerConfig)
-            end;
-	yaws -> {ok, Sup} = ybed_sup:start_link(boss_env:get_env(port, 8080)), Sup
+            end
     end,
     {ok, #state{ http_pid = Pid, is_master_node = (ThisNode =:= MasterNode) }, 0}.
 
