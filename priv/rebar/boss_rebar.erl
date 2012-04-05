@@ -119,9 +119,10 @@ start_cmd(_RebarConf, BossConf, AppFile) ->
 	MaxProcesses = max_processes(BossConf),
 	SName = sname(BossConf, AppFile),
 	Cookie = cookie(BossConf),
+    ErlCmd = erl_command(),
 
-	io:format("exec erl +K true +P ~B -pa ~s -boot start_sasl -config boss -s boss -setcookie ~s -detached -sname ~s", 
-			  [MaxProcesses, string:join(EbinDirs, " -pa "), Cookie, SName]),
+	io:format("~s +K true +P ~B -pa ~s -boot start_sasl -config boss -s boss -setcookie ~s -detached -sname ~s~n", 
+        [ErlCmd, MaxProcesses, string:join(EbinDirs, " -pa "), Cookie, SName]),
 	ok.
 
 %%--------------------------------------------------------------------
@@ -136,19 +137,10 @@ start_dev_cmd(_RebarConf, BossConf, AppFile) ->
 	
 	AppName = app_name(AppFile),
 	SName = sname(BossConf, AppFile),
-    case os:type() of
-        {win32, _ } -> 
-                EbinDirs = all_ebin_dirs(windows, BossConf, AppFile),
-                Dirs = io_lib:format("~p", [lists:flatten(EbinDirs)]), %EbinDirs come back as a list of lists [[],[],[]]
-                Cmd = io_lib:format("werl -pa ~s -boss developing_app ~s -boot start_sasl -config boss -s reloader -s boss -sname ~s", 
-                    [string:join(lists:append(EbinDirs), " -pa "), AppName, SName]),
-                io:format("~s~n", [Cmd]);
-        _ ->
-                EbinDirs = all_ebin_dirs(BossConf, AppFile),
-	            io:format("exec erl -pa ~s -boss developing_app ~s -boot start_sasl -config boss -s reloader -s boss -sname ~s", 
-			              [string:join(EbinDirs, " -pa "), AppName, SName])
-
-    end,
+    ErlCmd = erl_command(), 
+    EbinDirs = all_ebin_dirs(BossConf, AppFile),
+    io:format("~s -pa ~s -boss developing_app ~s -boot start_sasl -config boss -s reloader -s boss -sname ~s~n", 
+        [ErlCmd, string:join(EbinDirs, " -pa "), AppName, SName]),
 	ok.
 
 %%--------------------------------------------------------------------
@@ -328,29 +320,17 @@ all_ebin_dirs(BossConf, _AppFile) ->
 							{path, Path} -> 
 								MainEbin = filename:join([Path, "ebin"]),
 								filelib:ensure_dir(filename:join([MainEbin, "foobar"])),
-								DepsEbin = filename:join([Path, "deps", "*", "ebin"]),
-								[MainEbin, DepsEbin | EbinDirs]
-						end end, [], lists:reverse(BossConf)).
-
-%%--------------------------------------------------------------------
-%% @doc Start the boss app
-%% @spec all_ebin_dirs(windows, BossConf, _AppFile)
-%%       Gets the exact path name of all deps ebin dirs
-%%       for the apps defined in boss.config for Windows
-%% @end
-%%--------------------------------------------------------------------
-all_ebin_dirs(windows, BossConf, _AppFile) ->
-	lists:foldl(fun({_App, Config}, EbinDirs) ->
-						case lists:keyfind(path, 1, Config) of
-							false -> EbinDirs;
-							{path, Path} -> 
-								MainEbin = filename:join([Path, "ebin"]),
-								filelib:ensure_dir(filename:join([MainEbin, "foobar"])),
-								DepsEbins =  case file:list_dir(Path++"/deps") of
-                                                {ok, Dirs} -> lists:map(fun(Dir) -> Path ++ "/deps/" ++ Dir ++ "/ebin" end, Dirs);
-                                                {error, _Reason} -> []
-                                            end,
-                                [lists:append([MainEbin] , DepsEbins) | EbinDirs] % DepsEbins is a list, while MainEbin is a string
+                                DepsEbins = case os:type() of
+                                    {win32, _} ->
+                                        case file:list_dir(filename:join([Path, "deps"])) of
+                                            {ok, Dirs} -> lists:map(fun(Dir) -> 
+                                                            filename:join([Path, "deps", Dir, "ebin"])
+                                                    end, Dirs);
+                                            {error, _Reason} -> []
+                                        end;
+                                    _ -> [filename:join([Path, "deps", "*", "ebin"])]
+                                end,
+                                [MainEbin | DepsEbins] ++ EbinDirs
 						end end, [], lists:reverse(BossConf)).
 
 %%--------------------------------------------------------------------
@@ -404,3 +384,9 @@ cookie(BossConf) ->
 
 max_processes(BossConf) ->
     boss_config_value(BossConf, boss, vm_max_processes, 32768).
+
+erl_command() ->
+    case os:type() of 
+        {win32, _} -> "werl";
+        _ -> "exec erl"
+    end.
