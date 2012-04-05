@@ -17,6 +17,13 @@ After downloading and extracting, type
     make app PROJECT=mynewproject
     cd ../mynewproject
     ./init-dev.sh
+    
+For Windows, type
+    
+    windows-make.bat
+    windows-make.bat app PROJECT=mynewproject
+    cd ..\mynewproject
+    start-server.bat
 
 Then visit http://localhost:8001/ in your browser. Congratulations, you have
 a web server. There will be a lot of PROGRESS REPORTs on your console but
@@ -38,8 +45,7 @@ Dependencies
 
 * On Windows Vista or Windows 7 -
 
-    1. you need install win openSSl (http://www.slproweb.com/products/Win32OpenSSL.html)
-    2. make mochiweb with msys or cygwin
+  * Erlang bin directory must be in PATH.
 
 
 Admin Interface

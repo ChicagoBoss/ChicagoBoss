@@ -10,17 +10,9 @@ SESSION_CONFIG_DIR=priv/test_session_config
 all:
 	@$(REBAR) get-deps
 	@$(REBAR) compile
-	$(ERL) -pa ebin -pa deps/*/ebin \
-		-eval 'erlydtl:compile("src/boss/boss_html_error_template.dtl", boss_html_error_template, [{out_dir, "ebin"}])' \
-		-eval 'erlydtl:compile("src/boss/boss_html_doc_template.dtl", boss_html_doc_template, [{out_dir, "ebin"}])' \
-		-noshell -s init stop
 
 boss:
 	@$(REBAR) compile skip_deps=true
-	 $(ERL) -pa ebin -pa deps/*/ebin \
-		-eval 'erlydtl:compile("src/boss/boss_html_error_template.dtl", boss_html_error_template, [{out_dir, "ebin"}])' \
-		-eval 'erlydtl:compile("src/boss/boss_html_doc_template.dtl", boss_html_doc_template, [{out_dir, "ebin"}])' \
-		-noshell -s init stop
 
 clean:
 	@$(REBAR) clean
