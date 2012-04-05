@@ -22,7 +22,7 @@ For Windows, type
     
     windows-make.bat
     windows-make.bat app PROJECT=mynewproject
-    cd ../mynewproject
+    cd ..\mynewproject
     start-server.bat
 
 Then visit http://localhost:8001/ in your browser. Congratulations, you have
