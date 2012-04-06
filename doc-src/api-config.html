@@ -33,7 +33,7 @@
     <li><code>mail_relay_username</code> - The username used for connecting to the SMTP relay (if needed).</li>
     <li><code>mail_relay_password</code> - The password used for connecting to the SMTP relay (if needed).</li>
     <li><code>master_node</code> - For distributed configurations, the name of the master node. The master node runs global services (incoming mail, message queue, events, sessions). Should be an atom, e.g. <code>somenode@somehost</code>. The node name is specified in the <code>-sname</code> or <code>-name</code> argument in the startup script.</li>
-    <li><code>port</code> - The port to run the HTTP server on. Defaults to 8001.</li>
+    <li><code>port</code> - The port to run the HTTP server on, or a tuple of the format {env, "PORTVAR"} (where PORTVAR is the name of an environment variable containing the port number). Defaults to 8001.</li>
     <li><code>server</code> - The HTTP server to use. Valid values are:
     <ul>
         <li><code>mochiweb</code> - The <a href="http://code.google.com/p/mochiweb/">Mochiweb</a> Web Server</li>
