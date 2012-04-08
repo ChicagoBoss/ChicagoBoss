@@ -306,32 +306,30 @@ run_init_scripts(AppName) ->
                 end
         end, [], boss_files:init_file_list(AppName)).
 
-handle_request(ReqCowboy, RequestMod, ResponseMod) ->
+handle_request(Req, RequestMod, ResponseMod) ->
     LoadedApplications = boss_web:get_all_applications(),
-    DocRoot1 = "./priv/static",
-    Request = simple_bridge:make_request(cowboy_request_bridge, {ReqCowboy, DocRoot1}),
-    FullUrl = Request:path(),
-    io:format("FULL URL ~p~n", [FullUrl]),
-    case find_application_for_path(Request:header(host), FullUrl, LoadedApplications) of
+    % DocRoot is undefined because we do not know what CB application request is to
+    % until we look at the request path
+    RequestRouter = simple_bridge:make_request(RequestMod, {Req, undefined}),
+    FullUrl = RequestRouter:path(),
+    case find_application_for_path(RequestRouter:header(host), FullUrl, LoadedApplications) of
         undefined ->
-            Response = simple_bridge:make_response(ResponseMod, {ReqCowboy, undefined}),
+            Response = simple_bridge:make_response(ResponseMod, {Req, undefined}),
             Response1 = (Response:status_code(404)):data(["No application configured at this URL"]),
             Response1:build_response();
         App ->
-        	io:format("XXXXXXXXXXXXXXXXXXXXX~n"),
             BaseURL = boss_web:base_url(App),
             DocRoot = boss_files:static_path(App),
-            io:format("BaseURL ~p~n", [BaseURL]),
             Url = lists:nthtail(length(BaseURL), FullUrl),
-            io:format("URL IS: ~p~n", [Url]),
+            Request = simple_bridge:make_request(RequestMod, {Req, DocRoot}),
             case Url of
                 "/favicon.ico" = File ->
-                    Response = simple_bridge:make_response(ResponseMod, {ReqCowboy, DocRoot}),
+                    Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
                     (Response:file(File)):build_response();
-                "/static/"++File -> 
-                    Response = simple_bridge:make_response(ResponseMod, {ReqCowboy, DocRoot}),
+                "/static/"++File ->
+                    Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
                     (Response:file([$/|File])):build_response();
-                _ -> 
+                _ ->
                     SessionKey = boss_session:get_session_key(),
                     SessionID = case boss_env:get_env(session_enable, true) of
                         true ->
@@ -347,50 +345,26 @@ handle_request(ReqCowboy, RequestMod, ResponseMod) ->
                     TranslatorPid = boss_web:translator_pid(App),
                     RouterPid = boss_web:router_pid(App),
                     {Time, {StatusCode, Headers, Payload}} = timer:tc(?MODULE, process_request, [
-                        AppInfo#boss_app_info{ translator_pid = TranslatorPid, router_pid = RouterPid }, 
+                        AppInfo#boss_app_info{ translator_pid = TranslatorPid, router_pid = RouterPid },
                         Request, Mode, Url, SessionID]),
-                    ErrorFormat = "~s ~s [~p] ~p ~pms~n", 
+                    ErrorFormat = "~s ~s [~p] ~p ~pms~n",
                     ErrorArgs = [Request:request_method(), FullUrl, App, StatusCode, Time div 1000],
                     case StatusCode of
                         500 -> error_logger:error_msg(ErrorFormat, ErrorArgs);
                         404 -> error_logger:warning_msg(ErrorFormat, ErrorArgs);
                         _ -> error_logger:info_msg(ErrorFormat, ErrorArgs)
                     end,
-
-
-io:format("UUUUUUUUUUUUUUUUU"),
-	ResponseBridge = simple_bridge:make_response(cowboy_response_bridge, Request),
-
-    Response1 = ResponseBridge:status_code(200),
-
-    Response2 = Response1:header("Content-Type", "text/html"),
-
-
-	Response3 = Response2:data("HELLO WORLD"),
-
-    
-    Response3:build_response()
-
-
-
-
-
-                    % Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
-                   % Response = simple_bridge:make_response(ResponseMod, Request),
-
-                    %Response1 = (Response:status_code(StatusCode)):data(Payload),
-                    %Response2 = case SessionID of
-                    %    undefined ->
-                    %        Response1;
-                    %    _ ->
-                    %        SessionExpTime = boss_session:get_session_exp_time(),
-                    %        Response1:cookie(SessionKey, SessionID, "/", SessionExpTime)
-                    %end,
-                    %Response3 = lists:foldl(fun({K, V}, Acc) -> Acc:header(K, V) end, Response2, Headers),
-
-                    %{ok, R} = Response3:build_response(),
-                    %io:format("BOTTOM~n"),
-                    %{ok, R}
+                    Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
+                    Response1 = (Response:status_code(StatusCode)):data(Payload),
+                    Response2 = case SessionID of
+                        undefined ->
+                            Response1;
+                        _ ->
+                            SessionExpTime = boss_session:get_session_exp_time(),
+                            Response1:cookie(SessionKey, SessionID, "/", SessionExpTime)
+                    end,
+                    Response3 = lists:foldl(fun({K, V}, Acc) -> Acc:header(K, V) end, Response2, Headers),
+                    Response3:build_response()
             end
     end.
 

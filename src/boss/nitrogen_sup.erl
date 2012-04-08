@@ -26,7 +26,7 @@ init([]) ->
     %% Start Cowboy...
     application:start(cowboy),
     {ok, BindAddress} = {ok, "0.0.0.0"},
-    {ok, Port} = {ok, 8080},
+    {ok, Port} = {ok, 8001},
     {ok, ServerName} = {ok, nitrogen},
     {ok, DocRoot} = {ok, "./priv/static"},
     {ok, StaticPaths} = {ok, ["js/","images/","css/","nitrogen/"]},
