@@ -121,7 +121,7 @@ start_cmd(_RebarConf, BossConf, AppFile) ->
         undefined ->
             "";
         SName ->
-            io_lib:format("-s ~s", [SName])
+            io_lib:format("-sname ~s", [SName])
     end,
 	Cookie = cookie(BossConf),
     ErlCmd = erl_command(),
@@ -145,7 +145,7 @@ start_dev_cmd(_RebarConf, BossConf, AppFile) ->
         undefined ->
             "";
         SName ->
-            io_lib:format("-s ~s", [SName])
+            io_lib:format("-sname ~s", [SName])
     end,
     ErlCmd = erl_command(), 
     EbinDirs = all_ebin_dirs(BossConf, AppFile),
