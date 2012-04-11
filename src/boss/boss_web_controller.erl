@@ -125,7 +125,7 @@ init(Config) ->
                 true -> misultin:start_link([{ssl, SSLOptions} | ServerConfig]);
                 false -> misultin:start_link(ServerConfig)
             end;
-        cowboy -> {ok, Sup} = nitrogen_sup:start_link(), 
+        cowboy -> {ok, Sup} = boss_web_cowboy_sup:start_link(Config), 
 				Sup
     end,
     {ok, #state{ http_pid = Pid, is_master_node = (ThisNode =:= MasterNode) }, 0}.
@@ -311,7 +311,9 @@ handle_request(Req, RequestMod, ResponseMod) ->
     % DocRoot is undefined because we do not know what CB application request is to
     % until we look at the request path
     RequestRouter = simple_bridge:make_request(RequestMod, {Req, undefined}),
-    FullUrl = RequestRouter:path(),
+    FullUrl = RequestRouter:path(),  %mochiweb returns "/admin" and cowboy returns "admin"
+    io:format("Full Url ~p~n", [FullUrl]),
+    io:format("Header host ~p~n", [RequestRouter:header(host)]),
     case find_application_for_path(RequestRouter:header(host), FullUrl, LoadedApplications) of
         undefined ->
             Response = simple_bridge:make_response(ResponseMod, {Req, undefined}),
@@ -327,6 +329,7 @@ handle_request(Req, RequestMod, ResponseMod) ->
                     Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
                     (Response:file(File)):build_response();
                 "/static/"++File ->
+                	io:format("STATIC ~p~n", [File]),
                     Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
                     (Response:file([$/|File])):build_response();
                 _ ->

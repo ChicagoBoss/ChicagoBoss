@@ -1,9 +1,9 @@
 %% -*- mode: nitrogen -*-
 %% vim: ts=4 sw=4 et
--module(nitrogen_sup).
+-module(boss_web_cowboy_sup).
 -behaviour(supervisor).
 -export([
-    start_link/0,
+    start_link/1,
     init/1
 ]).
 
@@ -14,39 +14,39 @@
 %% API functions
 %% ===================================================================
 
-start_link() ->
-    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+start_link(Config) ->
+    %io:format("CONFIG: ~p~n", [Config]),
+    supervisor:start_link({local, ?MODULE}, ?MODULE, [Config]).
 
 %% ===================================================================
 %% Supervisor callbacks
 %% ===================================================================
 
-init([]) ->
+init([Config]) ->
 
     %% Start Cowboy...
     application:start(cowboy),
-    {ok, BindAddress} = {ok, "0.0.0.0"},
-    {ok, Port} = {ok, 8001},
-    {ok, ServerName} = {ok, nitrogen},
-    {ok, DocRoot} = {ok, "./priv/static"},
-    {ok, StaticPaths} = {ok, ["js/","images/","css/","nitrogen/"]},
-    DocRootBin = list_to_binary(DocRoot),
+    BindAddress = proplists:get_value(ip, Config),
+    {ok, Ip} = inet_parse:address(BindAddress),
+    Port = proplists:get_value(port, Config),
+    
+    %% Static file serving will be handled by CB because we need to accomodate Mochiweb
+    %% DocRoot =  "./priv/static",
+    %% StaticPaths = ["static/"],
+    %% DocRootBin = list_to_binary(DocRoot),
 
-    io:format("Starting Cowboy Server (~s) on ~s:~p, root: '~s'~n",
-              [ServerName, BindAddress, Port, DocRoot]),
-
-    StaticDispatches = lists:map(fun(Dir) ->
-        Path = reformat_path(Dir),
-        Handler = cowboy_http_static,
-        Opts = [
-            {directory, filename:join([DocRootBin | Path])},
-            {mimetypes, {fun mimetypes:path_to_mimes/2, default}}
-        ],
-        {Path ++ ['...'],Handler,Opts}
-    end,StaticPaths),
+    %% StaticDispatches = lists:map(fun(Dir) ->
+    %%    Path = reformat_path(Dir),
+    %%    Handler = cowboy_http_static,
+    %%    Opts = [
+    %%        {directory, filename:join([DocRootBin | Path])},
+    %%        {mimetypes, {fun mimetypes:path_to_mimes/2, default}}
+    %%    ],
+    %%    {Path ++ ['...'],Handler,Opts}
+    %% end,StaticPaths),
 
     %% HandlerModule will end up calling HandlerModule:handle(Req,HandlerOpts)
-    HandlerModule = nitrogen_cowboy,
+    HandlerModule = boss_web_cowboy,
     HandlerOpts = [],
 
     %% Start Cowboy...
@@ -56,15 +56,18 @@ init([]) ->
     %% handler at all. In general, your best bet is to include the directory in
     %% the static_paths section of cowboy.config
     Dispatch = [
-        %% Nitrogen will handle everything that's not handled in the StaticDispatches
-        {'_', StaticDispatches ++ [{'_',HandlerModule , HandlerOpts}]}
+        %% ChicagoBoss will handle everything that's not handled in the StaticDispatches
+        %% {'_', StaticDispatches ++ [{'_',HandlerModule , HandlerOpts}]}
+        %% But instead, we make ChicagoBoss handle everything
+        {'_', [{'_',HandlerModule , HandlerOpts}]}
     ],
     HttpOpts = [{max_keepalive, 50}, {dispatch, Dispatch}],
     cowboy:start_listener(http, 100,
-                          cowboy_tcp_transport, [{port, Port}],
+                          cowboy_tcp_transport, [{ip, Ip}, {port, Port}],
                           cowboy_http_protocol, HttpOpts),
 
-    {ok, { {one_for_one, 5, 10}, []} }.
+
+    {ok, { {one_for_one, 0, 10}, []} }.
 
 %% If the path is a string, it's going to get split on / and switched to the binary
 %% format that cowboy expects
