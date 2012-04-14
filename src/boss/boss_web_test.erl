@@ -370,7 +370,7 @@ receive_response(RequesterPid, Assertions, Continuations) ->
         {RequesterPid, Uri, {Status, ResponseHeaders, ResponseBody}} ->
             ParsedResponseBody = case ResponseBody of
                 [] -> [];
-                Other -> mochiweb_html:parse(Other)
+                Other -> parse(ResponseHeaders, Other)
             end,
             exit(RequesterPid, kill),
             ParsedResponse = {Status, Uri, ResponseHeaders, ParsedResponseBody},
@@ -381,4 +381,12 @@ receive_response(RequesterPid, Assertions, Continuations) ->
         Other ->
             error_logger:error_msg("Unexpected message in receive_response: ~p~n", [Other]),
             receive_response(RequesterPid, Assertions, Continuations)
+    end.
+
+parse([], Body) ->
+    mochiweb_html:parse(Body);
+parse([Head|Tail], Body) ->
+    case Head of
+        {"Content-Type", "application/json"} -> mochijson2:decode(Body);
+        _ -> parse(Tail, Body)
     end.
