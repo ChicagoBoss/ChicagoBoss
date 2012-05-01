@@ -211,7 +211,7 @@ compile_view_erlydtl(Application, ViewPath, OutDir, TranslatorPid) ->
     end.
 
 compile_model(ModulePath, OutDir) ->
-    boss_record_compiler:compile(ModulePath, [{out_dir, OutDir}, {include_dirs, [boss_files:include_dir()]}]).
+    boss_model_manager:compile(ModulePath, [{out_dir, OutDir}, {include_dirs, [boss_files:include_dir()]}]).
 
 compile_controller(ModulePath, OutDir) ->
     boss_controller_compiler:compile(ModulePath, [{out_dir, OutDir}, {include_dirs, [boss_files:include_dir()]}]).
