@@ -505,7 +505,7 @@ load_and_execute(development, {"doc", ModelName, _}, AppInfo, Req, _SessionID) -
             case lists:member(ModelName, lists:map(fun atom_to_list/1, ModelModules)) of
                 true ->
                     Model = list_to_atom(ModelName),
-                    {Model, Edoc} = boss_record_compiler:edoc_module(
+                    {Model, Edoc} = boss_model_manager:edoc_module(
                         boss_files:model_path(ModelName++".erl"), [{private, true}]),
                     {ok, edoc:layout(Edoc), []};
                 false ->

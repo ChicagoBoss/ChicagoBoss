@@ -56,6 +56,9 @@ get_vars("api-view.html", _InDir) ->
     Functions = extract_function_docs(EDoc),
     [{filters, Functions}];
 get_vars("api-record.html", InDir) ->
+    %% NOTE: it is question if we really want to make edoc
+    %% from trivial_boss_record by boss_model_manager or
+    %% via boss_record_compiler...
     {boss_record, EDoc} = boss_record_compiler:edoc_module(filename:join([InDir, "trivial_boss_record.erl"]), 
         [{private, true}, {hidden, true}]),
     [{functions, extract_function_docs(EDoc)}];

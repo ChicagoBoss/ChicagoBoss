@@ -117,7 +117,7 @@ extract_model_strings(App) ->
                 Exports = TypeAtom:module_info(exports),
                 case lists:member({validation_tests, 1}, Exports) of
                     true ->
-                        DummyRecord = boss_record_lib:dummy_record(TypeAtom),
+                        DummyRecord = boss_model_manager:dummy_instance(TypeAtom),
                         Messages = lists:map(fun({_TestFun, TestMsg}) -> 
                                                      case TestMsg of
                                                          {_, CodeMsg} -> CodeMsg;
