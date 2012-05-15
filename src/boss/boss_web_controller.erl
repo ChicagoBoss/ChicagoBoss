@@ -587,11 +587,11 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
                 2 ->
                     Module:new(Req, SessionID)
             end,
-            AuthInfoRaw = case proplists:get_value("before_", ExportStrings) of
-                %% NOTE: we expect that more arguments means/allows more
-                %% restrictive before_ decisions (since before_ is used
-                %% mostly for authentication) -- so that's the reason
-                %% why we are getting higher arity first
+            AuthInfoRaw = case lists:max (proplists:get_all_values ("before_", ExportStrings)) of
+                %% NOTE: just for the case of multiple before_ definitions,
+                %% we expect that more arguments means/allows more restrictive
+                %% before_ decisions -- that's the reason why we are getting
+                %% higher arity first
                 4 -> ControllerInstance:before_ (Action, Req:request_method (), Tokens);
                 3 -> ControllerInstance:before_ (Action, Req:request_method ());
                 2 -> ControllerInstance:before_ (Action);
