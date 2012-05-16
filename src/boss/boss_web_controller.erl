@@ -587,7 +587,7 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
                 2 ->
                     Module:new(Req, SessionID)
             end,
-            AuthInfoRaw = case lists:max (proplists:get_all_values ("before_", ExportStrings)) of
+            AuthInfoRaw = case lists:max ([-1|proplists:get_all_values ("before_", ExportStrings)]) of
                 %% NOTE: just for the case of multiple before_ definitions,
                 %% we expect that more arguments means/allows more restrictive
                 %% before_ decisions -- that's the reason why we are getting
