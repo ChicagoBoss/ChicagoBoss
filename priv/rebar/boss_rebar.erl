@@ -117,11 +117,17 @@ start_cmd(_RebarConf, BossConf, AppFile) ->
 	
 	EbinDirs = all_ebin_dirs(BossConf, AppFile),
 	MaxProcesses = max_processes(BossConf),
-	SName = sname(BossConf, AppFile),
+	SNameArg = case sname(BossConf, AppFile) of
+        undefined ->
+            "";
+        SName ->
+            io_lib:format("-sname ~s", [SName])
+    end,
 	Cookie = cookie(BossConf),
+    ErlCmd = erl_command(),
 
-	io:format("exec erl +K true +P ~B -pa ~s -boot start_sasl -config boss -s boss -setcookie ~s -detached -sname ~s", 
-			  [MaxProcesses, string:join(EbinDirs, " -pa "), Cookie, SName]),
+	io:format("~s +K true +P ~B -pa ~s -boot start_sasl -config boss -s boss -setcookie ~s -detached ~s~n", 
+        [ErlCmd, MaxProcesses, string:join(EbinDirs, " -pa "), Cookie, SNameArg]),
 	ok.
 
 %%--------------------------------------------------------------------
@@ -135,11 +141,16 @@ start_dev_cmd(_RebarConf, BossConf, AppFile) ->
 	rebar_log:log(info, "Generating dynamic start-dev command~n", []),
 	
 	AppName = app_name(AppFile),
-	EbinDirs = all_ebin_dirs(BossConf, AppFile),
-	SName = sname(BossConf, AppFile),
-
-	io:format("exec erl -pa ~s -boss developing_app ~s -boot start_sasl -config boss -s reloader -s boss -sname ~s", 
-			  [string:join(EbinDirs, " -pa "), AppName, SName]),
+	SNameArg = case sname(BossConf, AppFile) of
+        undefined ->
+            "";
+        SName ->
+            io_lib:format("-sname ~s", [SName])
+    end,
+    ErlCmd = erl_command(), 
+    EbinDirs = all_ebin_dirs(BossConf, AppFile),
+    io:format("~s -pa ~s -boss developing_app ~s -boot start_sasl -config boss -s reloader -s boss ~s~n", 
+        [ErlCmd, string:join(EbinDirs, " -pa "), AppName, SNameArg]),
 	ok.
 
 %%--------------------------------------------------------------------
@@ -151,12 +162,16 @@ start_dev_cmd(_RebarConf, BossConf, AppFile) ->
 stop_cmd(_RebarConf, BossConf, AppFile) ->
 	rebar_log:log(info, "Generating dynamic stop command~n", []),
 	
-	SName = sname(BossConf, AppFile),
-	Cookie = cookie(BossConf),
-	StopCommand = io_lib:format("rpc:call('~s', init, stop, []).", [SName]),
-	
-	io:format("erl -noshell -pa ebin -setcookie ~s -sname stopper_~s -eval \"~s\" -s init stop", 
-			  [Cookie, SName, StopCommand]),
+    case sname(BossConf, AppFile) of
+        undefined ->
+            io:format("echo 'The stop command requires a vm_name in boss.config'", []);
+        SName ->
+            Cookie = cookie(BossConf),
+            StopCommand = io_lib:format("rpc:call('~s', init, stop, []).", [SName]),
+
+            io:format("erl -noshell -pa ebin -setcookie ~s -sname stopper_~s -eval \"~s\" -s init stop", 
+                [Cookie, SName, StopCommand])
+    end,
 	ok.
 
 %%--------------------------------------------------------------------
@@ -167,13 +182,17 @@ stop_cmd(_RebarConf, BossConf, AppFile) ->
 %%--------------------------------------------------------------------
 reload_cmd(_RebarConf, BossConf, AppFile) ->
 	rebar_log:log(info, "Generating dynamic reload command~n", []),
-	SName = sname(BossConf, AppFile),
-	Cookie = cookie(BossConf),
-	ReloadCode = io_lib:format("rpc:call('~s', boss_load, reload_all, [])", [SName]),
-	ReloadRoutes = io_lib:format("rpc:call('~s', boss_web, reload_routes, [])", [SName]),
-	ReloadLangs = io_lib:format("rpc:call('~s', boss_web, reload_all_translations, [])", [SName]),
-	io:format("erl -noshell -pa ebin -setcookie ~s -sname reloader_~s -eval \"~s, ~s, ~s.\" -s init stop", 
-			  [Cookie, SName, ReloadCode, ReloadRoutes, ReloadLangs]),
+    case sname(BossConf, AppFile) of
+        undefined ->
+            io:format("echo 'The reload command requires a vm_name in boss.config'", []);
+        SName ->
+            Cookie = cookie(BossConf),
+            ReloadCode = io_lib:format("rpc:call('~s', boss_load, reload_all, [])", [SName]),
+            ReloadRoutes = io_lib:format("rpc:call('~s', boss_web, reload_routes, [])", [SName]),
+            ReloadLangs = io_lib:format("rpc:call('~s', boss_web, reload_all_translations, [])", [SName]),
+            io:format("erl -noshell -pa ebin -setcookie ~s -sname reloader_~s -eval \"~s, ~s, ~s.\" -s init stop", 
+                [Cookie, SName, ReloadCode, ReloadRoutes, ReloadLangs])
+    end,
 	ok.
 
 %%--------------------------------------------------------------------
@@ -319,8 +338,17 @@ all_ebin_dirs(BossConf, _AppFile) ->
 							{path, Path} -> 
 								MainEbin = filename:join([Path, "ebin"]),
 								filelib:ensure_dir(filename:join([MainEbin, "foobar"])),
-								DepsEbin = filename:join([Path, "deps", "*", "ebin"]),
-								[MainEbin, DepsEbin | EbinDirs]
+                                DepsEbins = case os:type() of
+                                    {win32, _} ->
+                                        case file:list_dir(filename:join([Path, "deps"])) of
+                                            {ok, Dirs} -> lists:map(fun(Dir) -> 
+                                                            filename:join([Path, "deps", Dir, "ebin"])
+                                                    end, Dirs);
+                                            {error, _Reason} -> []
+                                        end;
+                                    _ -> [filename:join([Path, "deps", "*", "ebin"])]
+                                end,
+                                [MainEbin | DepsEbins] ++ EbinDirs
 						end end, [], lists:reverse(BossConf)).
 
 %%--------------------------------------------------------------------
@@ -373,4 +401,10 @@ cookie(BossConf) ->
     boss_config_value(BossConf, boss, vm_cookie, "abc123").
 
 max_processes(BossConf) ->
-    boss_config_value(BossConf, boss, vm_max_processes, 134217727).
+    boss_config_value(BossConf, boss, vm_max_processes, 32768).
+
+erl_command() ->
+    case os:type() of 
+        {win32, _} -> "werl";
+        _ -> "exec erl"
+    end.

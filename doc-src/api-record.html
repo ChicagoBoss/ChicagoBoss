@@ -78,7 +78,7 @@ BossRecords are <em>specially compiled parameterized modules</em> that follow th
 <div class="code spec">
     <span class="attr">-has</span>({bar, 1}).<br />
     <span class="attr">-has</span>({bars, Count}). % Count &gt; 1<br />
-    <span class="attr">-has</span>({bars, many}). % alias for 1 million<br />
+    <span class="attr">-has</span>({bars, many}).<br />
 </div>
 
 <p>Generates a function <code>bar()</code> or <code>bars()</code> which returns up to <code>Count</code> "bar" BossRecords with <code>FooId</code> equal to this BossRecord's ID. If Count is greater than 1, also creates <code>first_bar()</code> and <code>last_bar()</code> which return the first and last items in the association.</p>
