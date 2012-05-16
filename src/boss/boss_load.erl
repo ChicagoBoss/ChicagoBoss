@@ -42,7 +42,11 @@ load_all_modules_and_emit_app_file(AppName, OutDir) ->
     {ok, [{application, AppName, AppData}]} = file:consult(DotAppSrc),
     AppData1 = lists:keyreplace(modules, 1, AppData, {modules, AllModules}),
     Vsn = proplists:get_value(vsn, AppData1, []),
-    AppData2 = lists:keyreplace(vsn, 1, AppData1, {vsn, os:cmd(vcs_vsn_cmd(Vsn))}),
+    ComputedVsn = case vcs_vsn_cmd(Vsn) of
+        {unknown, Val} -> Val;
+        Cmd -> os:cmd(Cmd)
+    end,
+    AppData2 = lists:keyreplace(vsn, 1, AppData1, {vsn, ComputedVsn}),
     DefaultEnv = proplists:get_value(env, AppData2, []),
     AppData3 = lists:keyreplace(env, 1, AppData2, {env, ModulePropList ++ DefaultEnv}),
 
@@ -373,5 +377,5 @@ vcs_vsn_cmd(hg)  -> "hg identify -i";
 vcs_vsn_cmd(bzr) -> "bzr revno";
 vcs_vsn_cmd(svn) -> "svnversion";
 vcs_vsn_cmd({cmd, _Cmd}=Custom) -> Custom;
-vcs_vsn_cmd(Version) -> Version.
+vcs_vsn_cmd(Version) -> {unknown, Version}.
 
