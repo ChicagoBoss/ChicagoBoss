@@ -41,10 +41,18 @@ load_all_modules_and_emit_app_file(AppName, OutDir) ->
 	DotAppSrc = boss_files:dot_app_src(AppName),
     {ok, [{application, AppName, AppData}]} = file:consult(DotAppSrc),
     AppData1 = lists:keyreplace(modules, 1, AppData, {modules, AllModules}),
-    DefaultEnv = proplists:get_value(env, AppData1, []),
-    AppData2 = lists:keyreplace(env, 1, AppData1, {env, ModulePropList ++ DefaultEnv}),
+    Vsn = proplists:get_value(vsn, AppData1, []),
+    ComputedVsn = case vcs_vsn_cmd(Vsn) of
+        {unknown, Val} -> Val;
+        Cmd ->
+            VsnString = os:cmd(Cmd),
+            string:strip(VsnString, right, $\n)
+    end,
+    AppData2 = lists:keyreplace(vsn, 1, AppData1, {vsn, ComputedVsn}),
+    DefaultEnv = proplists:get_value(env, AppData2, []),
+    AppData3 = lists:keyreplace(env, 1, AppData2, {env, ModulePropList ++ DefaultEnv}),
 
-    IOList = io_lib:format("~p.~n", [{application, AppName, AppData2}]),
+    IOList = io_lib:format("~p.~n", [{application, AppName, AppData3}]),
     AppFile = filename:join([OutDir, lists:concat([AppName, ".app"])]),
     file:write_file(AppFile, IOList).
 
@@ -346,3 +354,30 @@ view_custom_tags_dir_module(Application) ->
 
 incoming_mail_controller_module(Application) ->
     list_to_atom(lists:concat([Application, "_incoming_mail_controller"])).
+
+vcs_vsn_cmd(git) ->
+    case rebar_rel_utils:is_rel_dir() of
+        false ->
+            %% git describe the last commit that touched CWD to make
+            %% sure we use local (CWD) history.
+            %% Required for correct versioning of apps in subdirs,
+            %% such as apps/app1.
+            case os:type() of
+                {win32,nt} ->
+                    "FOR /F \"usebackq tokens=* delims=\" %i in "
+                        "(`git log -n 1 \"--pretty=format:%h\" .`) do "
+                        "@git describe --always --tags %i";
+                _ ->
+                    "git describe --always --tags "
+                        "`git log -n 1 --pretty=format:%h .`"
+            end;
+        {true, _} ->
+            %% Use global history (not CWD) git describe if in a rel_dir
+            "git describe --always --tags"
+    end;
+vcs_vsn_cmd(hg)  -> "hg identify -i";
+vcs_vsn_cmd(bzr) -> "bzr revno";
+vcs_vsn_cmd(svn) -> "svnversion";
+vcs_vsn_cmd({cmd, _Cmd}=Custom) -> Custom;
+vcs_vsn_cmd(Version) -> {unknown, Version}.
+
