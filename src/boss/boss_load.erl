@@ -356,24 +356,14 @@ incoming_mail_controller_module(Application) ->
     list_to_atom(lists:concat([Application, "_incoming_mail_controller"])).
 
 vcs_vsn_cmd(git) ->
-    case rebar_rel_utils:is_rel_dir() of
-        false ->
-            %% git describe the last commit that touched CWD to make
-            %% sure we use local (CWD) history.
-            %% Required for correct versioning of apps in subdirs,
-            %% such as apps/app1.
-            case os:type() of
-                {win32,nt} ->
-                    "FOR /F \"usebackq tokens=* delims=\" %i in "
-                        "(`git log -n 1 \"--pretty=format:%h\" .`) do "
-                        "@git describe --always --tags %i";
-                _ ->
-                    "git describe --always --tags "
-                        "`git log -n 1 --pretty=format:%h .`"
-            end;
-        {true, _} ->
-            %% Use global history (not CWD) git describe if in a rel_dir
-            "git describe --always --tags"
+    case os:type() of
+        {win32,nt} ->
+            "FOR /F \"usebackq tokens=* delims=\" %i in "
+            "(`git log -n 1 \"--pretty=format:%h\" .`) do "
+            "@git describe --always --tags %i";
+        _ ->
+            "git describe --always --tags "
+            "`git log -n 1 --pretty=format:%h .`"
     end;
 vcs_vsn_cmd(hg)  -> "hg identify -i";
 vcs_vsn_cmd(bzr) -> "bzr revno";
