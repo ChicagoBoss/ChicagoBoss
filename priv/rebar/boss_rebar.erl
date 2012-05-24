@@ -147,10 +147,11 @@ start_dev_cmd(_RebarConf, BossConf, AppFile) ->
         SName ->
             io_lib:format("-sname ~s", [SName])
     end,
+    Cookie = cookie(BossConf),
     ErlCmd = erl_command(), 
     EbinDirs = all_ebin_dirs(BossConf, AppFile),
-    io:format("~s -pa ~s -boss developing_app ~s -boot start_sasl -config boss -s reloader -s boss ~s~n", 
-        [ErlCmd, string:join(EbinDirs, " -pa "), AppName, SNameArg]),
+    io:format("~s -pa ~s -boss developing_app ~s -boot start_sasl -config boss -setcookie ~s -s reloader -s boss ~s~n", 
+        [ErlCmd, string:join(EbinDirs, " -pa "), AppName, Cookie, SNameArg]),
 	ok.
 
 %%--------------------------------------------------------------------
