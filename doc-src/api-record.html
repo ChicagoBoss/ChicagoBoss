@@ -33,10 +33,7 @@ BossRecords are <em>specially compiled parameterized modules</em> that follow th
 
     <li><p>To auto-generate an ID, pass the atom <code>'id'</code> as the first parameter to <code>my_module:new/N</code>. Alternatively, just use <code>boss_record:new/2</code>.</p></li>
 
-    <li><p>Call <code>my_module:new/N</code> with strings, floats, integers, atoms, or binaries for all other parameters</p></li>
-
-    <li><p>Parameters that end in "Time" (e.g., <code>CreationTime</code>, <code>UpdateTime</code>) should be
-    passed either <code>erlang:now()</code> or a DateTime tuple.</p></li>
+    <li><p>Call <code>my_module:new/N</code> with strings, binaries, integers, floats, <code>erlang:now()</code> tuples, DateTime tuples, or atoms for all other parameters</p></li>
 
     <li><p>You can add your own functions to a BossRecord module, which will have access to the generated functions described below.</p></li>
 
