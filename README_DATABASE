@@ -44,8 +44,8 @@ Tokyo Tyrant is a non-relational database developed by FAL Labs.
 3. Open up boss.config and set db_adapter to tyrant
 
 
-Using Mnesia (EXPERIMENTAL)
----------------------------
+Using Mnesia
+------------
 
 Notes:
 
@@ -75,3 +75,8 @@ Riak installation for each model:
 E.g. if you have a "greeting" model the command should be
    
    bin/search-cmd install greetings
+
+In addition, before adding any records to the database, you need to ensure that
+search is enabled in your Riak configuration:
+
+   {riak_search, [{enabled, true}]}
