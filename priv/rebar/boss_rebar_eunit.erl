@@ -205,13 +205,13 @@ perform_eunit(Config, Modules) ->
 
     %% Move down into ?EUNIT_DIR while we run tests so any generated files
     %% are created there (versus in the source dir)
-    Cwd = rebar_utils:get_cwd(),
-    ok = file:set_cwd(?EUNIT_DIR),
+    %%Cwd = rebar_utils:get_cwd(),
+    %%ok = file:set_cwd(?EUNIT_DIR),
 
     EunitResult = perform_eunit(EunitOpts, Modules, Suite),
 
     %% Return to original working dir
-    ok = file:set_cwd(Cwd),
+    %%ok = file:set_cwd(Cwd),
 
     EunitResult.
 
