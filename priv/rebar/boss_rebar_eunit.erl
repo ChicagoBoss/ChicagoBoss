@@ -136,7 +136,6 @@ eunit(RebarConf, BossConf, AppFile) ->
 	%% boss_change
 	%% Load all boss ebin dir and start boss
 	boss_rebar:boss_load(BossConf, AppFile),
-    boss_rebar:init_conf_test(BossConf),
 	boss_rebar:boss_start(BossConf),
 
     %% Build a list of all the .beams in ?EUNIT_DIR -- use this for
