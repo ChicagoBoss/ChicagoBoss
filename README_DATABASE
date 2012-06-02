@@ -44,8 +44,8 @@ Tokyo Tyrant is a non-relational database developed by FAL Labs.
 3. Open up boss.config and set db_adapter to tyrant
 
 
-Using Mnesia (EXPERIMENTAL)
----------------------------
+Using Mnesia
+------------
 
 Notes:
 
@@ -67,4 +67,15 @@ Riak is a NoSQL database developed by Basho Technologies.
 
 3. Open up boss.config and set db_adapter to riak.
 
-For query operations to work, you need to have Riak Search installed.
+For query operations to work, you first need to ensure that search is enabled
+in your Riak configuration:
+
+   {riak_search, [{enabled, true}]}
+    
+Then run the following command in your Riak installation for each model:
+
+   bin/search-cmd install <plural model name>
+
+E.g. if you have a "greeting" model the command should be
+   
+   bin/search-cmd install greetings
