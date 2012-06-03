@@ -410,5 +410,5 @@ erl_command() ->
     end.
 
 report_bad_client_version_and_exit(BossConf) ->
-    io:format("ERROR: Your boss_rebar plugin is outdated, please copy it again from your updated ChicagoBoss installation:~nGuessed command: cp ~s/skel/priv/rebar/boss_plugin.erl priv/rebar/boss_plugin.erl~n", [boss_config_value(BossConf, boss, path)]), 
+    io:format("ERROR: Your boss_rebar plugin is outdated~nPlease copy it again from your updated ChicagoBoss installation:~nGuessed command:~ncp ~s/skel/priv/rebar/boss_plugin.erl priv/rebar/boss_plugin.erl~n", [boss_config_value(BossConf, boss, path)]), 
     halt(1).
