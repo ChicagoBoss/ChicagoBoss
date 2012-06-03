@@ -136,7 +136,6 @@ eunit(RebarConf, BossConf, AppFile) ->
 	%% boss_change
 	%% Load all boss ebin dir and start boss
 	boss_rebar:boss_load(BossConf, AppFile),
-    boss_rebar:init_conf_test(BossConf),
 	boss_rebar:boss_start(BossConf),
 
     %% Build a list of all the .beams in ?EUNIT_DIR -- use this for
@@ -206,13 +205,13 @@ perform_eunit(Config, Modules) ->
 
     %% Move down into ?EUNIT_DIR while we run tests so any generated files
     %% are created there (versus in the source dir)
-    Cwd = rebar_utils:get_cwd(),
-    ok = file:set_cwd(?EUNIT_DIR),
+    %%Cwd = rebar_utils:get_cwd(),
+    %%ok = file:set_cwd(?EUNIT_DIR),
 
     EunitResult = perform_eunit(EunitOpts, Modules, Suite),
 
     %% Return to original working dir
-    ok = file:set_cwd(Cwd),
+    %%ok = file:set_cwd(Cwd),
 
     EunitResult.
 
