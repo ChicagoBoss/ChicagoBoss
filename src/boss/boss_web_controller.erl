@@ -351,20 +351,20 @@ handle_request(Req, RequestMod, ResponseMod) ->
                     Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
                     Response1 = (Response:status_code(StatusCode)):data(Payload),
                     Headers2 = case SessionID of
-						undefined ->
-							Headers;
-						_ ->
-							SessionExpTime = boss_session:get_session_exp_time(),
-							CookieOptions = [{path, "/"}, {max_age, SessionExpTime}],
-							CookieOptions2 = case boss_env:get_env(session_domain, undefined) of
-								undefined -> 
-									CookieOptions;
-								CookieDomain -> 
-									lists:merge(CookieOptions, [{domain, CookieDomain}])
-							end,
-							lists:merge(Headers, [ mochiweb_cookies:cookie(SessionKey, SessionID, CookieOptions2) ])
-					end,
-					Response2 = lists:foldl(fun({K, V}, Acc) -> Acc:header(K, V) end, Response1, Headers2),
+                        undefined ->
+                            Headers;
+                        _ ->
+                            SessionExpTime = boss_session:get_session_exp_time(),
+                            CookieOptions = [{path, "/"}, {max_age, SessionExpTime}],
+                            CookieOptions2 = case boss_env:get_env(session_domain, undefined) of
+                                undefined ->
+                                    CookieOptions;
+                                CookieDomain ->
+                                    lists:merge(CookieOptions, [{domain, CookieDomain}])
+                            end,
+                            lists:merge(Headers, [ mochiweb_cookies:cookie(SessionKey, SessionID, CookieOptions2) ])
+                    end,
+                    Response2 = lists:foldl(fun({K, V}, Acc) -> Acc:header(K, V) end, Response1, Headers2),
                     Response2:build_response()
             end
     end.
