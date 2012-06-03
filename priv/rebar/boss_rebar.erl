@@ -6,7 +6,8 @@
 %%%-------------------------------------------------------------------
 -module(boss_rebar).
 
--export([run/4, 
+-export([run/4,
+         run/5, 
 		 help/0, 
 		 help/3,
 		 compile/3,
@@ -22,8 +23,8 @@
 		 boss_load/2,
 		 boss_start/1,
 		 all_ebin_dirs/2,
-         init_conf/1,
-         init_conf_test/1]).
+         init_conf/1
+        ]).
 
 -define(COMMANDS, 
 		[{help,  "Lists all commands"},
@@ -36,7 +37,7 @@
 		 {reload_cmd, "Generates the hot reload shell command"}
 		]).
 
--define(BOSS_TEST_CONFIG, "boss.test.config").
+-define(BOSS_PLUGIN_VERSION, 1).
 
 %%--------------------------------------------------------------------
 %% @doc run
@@ -44,16 +45,24 @@
 %%       Rebar Commands Router
 %% @end
 %%--------------------------------------------------------------------
-run(Command, RebarConf, BossConf, AppFile) when is_list(Command)->
-	run(list_to_atom(Command), RebarConf, BossConf, AppFile);
-run(Command, RebarConf, BossConf, AppFile) ->
-	rebar_log:log(debug, "About to run command '~s'~n", [Command]),
-	case lists:keyfind(Command, 1, ?COMMANDS) of
-		false -> 
-			{error, command_not_found};
-		_ -> 
-			apply(boss_rebar, Command, [RebarConf, BossConf, AppFile])
-	end.
+run(_,_,BossConf,_) ->
+    report_bad_client_version_and_exit(BossConf).
+run(Version, Command, RebarConf, BossConf, AppFile) when is_list(Command)->
+	run(Version, list_to_atom(Command), RebarConf, BossConf, AppFile);
+run(Version, Command, RebarConf, BossConf, AppFile) ->
+	rebar_log:log(debug, "Checking rebar plugin client version '~s'~n", [Command]),
+    case Version =:= ?BOSS_PLUGIN_VERSION of
+        false ->
+            report_bad_client_version_and_exit(BossConf);
+        true ->
+            rebar_log:log(debug, "About to run command '~s'~n", [Command]),
+        	case lists:keyfind(Command, 1, ?COMMANDS) of
+        		false -> 
+        			{error, command_not_found};
+        		_ -> 
+        			apply(boss_rebar, Command, [RebarConf, BossConf, AppFile])
+        	end
+    end.
 
 %%--------------------------------------------------------------------
 %% @doc compile
@@ -71,7 +80,6 @@ compile(RebarConf, BossConf, AppFile) ->
 %% @end
 %%--------------------------------------------------------------------
 compile(_RebarConf, BossConf, AppFile, Dest) ->
-	init_conf(BossConf),
     boss_load(BossConf, AppFile),
 	AppName = app_name(AppFile),
 	Res = boss_load:load_all_modules_and_emit_app_file(AppName, Dest),
@@ -98,7 +106,6 @@ test_eunit(RebarConf, BossConf, AppFile) ->
 %%--------------------------------------------------------------------
 test_functional(RebarConf, BossConf, AppFile) ->
 	%% Compile, load all boss ebin dir and start boss
-    init_conf_test(BossConf),
 	boss_rebar:compile(RebarConf, BossConf, AppFile),
 	boss_rebar:boss_load(BossConf, AppFile),
 	boss_rebar:boss_start(BossConf),
@@ -149,8 +156,15 @@ start_dev_cmd(_RebarConf, BossConf, AppFile) ->
     end,
     ErlCmd = erl_command(), 
     EbinDirs = all_ebin_dirs(BossConf, AppFile),
-    io:format("~s -pa ~s -boss developing_app ~s -boot start_sasl -config boss -s reloader -s boss ~s~n", 
-        [ErlCmd, string:join(EbinDirs, " -pa "), AppName, SNameArg]),
+    %% Only enable cookie if specified in boss.config (vm_cookie_dev)
+    case boss_config_value(BossConf, boss, vm_cookie_dev, undefined) of
+        undefined ->
+            io:format("~s -pa ~s -boss developing_app ~s -boot start_sasl -config boss -s reloader -s boss ~s~n", 
+                [ErlCmd, string:join(EbinDirs, " -pa "), AppName, SNameArg]);
+        Cookie ->
+            io:format("~s -pa ~s -boss developing_app ~s -boot start_sasl -config boss -setcookie ~s -s reloader -s boss ~s~n", 
+                [ErlCmd, string:join(EbinDirs, " -pa "), AppName, Cookie, SNameArg])
+    end,
 	ok.
 
 %%--------------------------------------------------------------------
@@ -364,20 +378,6 @@ init_conf(BossConf) ->
                                 end, AppConf)
               end, BossConf).
 
-%%--------------------------------------------------------------------
-%% @doc Injects the boss.test.conf configuration file if test file exists
-%% @spec init_conf_test(BossConf)
-%% @end
-%%--------------------------------------------------------------------
-init_conf_test(BossConf) ->
-    case file:consult(?BOSS_TEST_CONFIG) of
-        {error,enoent} ->
-            io:format("WARNING: ~p not found, using default boss.config.~n", [?BOSS_TEST_CONFIG]),
-            init_conf(BossConf);
-        {ok, [BossTestConfig]} ->
-            init_conf(BossTestConfig)
-    end.
-
 %% ===================================================================
 %% Internal functions
 %% ===================================================================
@@ -408,3 +408,7 @@ erl_command() ->
         {win32, _} -> "werl";
         _ -> "exec erl"
     end.
+
+report_bad_client_version_and_exit(BossConf) ->
+    io:format("ERROR: Your boss_rebar plugin is outdated~nPlease copy it again from your updated ChicagoBoss installation:~nGuessed command:~ncp ~s/skel/priv/rebar/boss_plugin.erl priv/rebar/boss_plugin.erl~n", [boss_config_value(BossConf, boss, path)]), 
+    halt(1).
