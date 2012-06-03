@@ -130,11 +130,11 @@ start_cmd(_RebarConf, BossConf, AppFile) ->
         SName ->
             io_lib:format("-sname ~s", [SName])
     end,
-	Cookie = cookie(BossConf),
+    CookieOpt = cookie_option(BossConf),
     ErlCmd = erl_command(),
 
-	io:format("~s +K true +P ~B -pa ~s -boot start_sasl -config boss -s boss -setcookie ~s -detached ~s~n", 
-        [ErlCmd, MaxProcesses, string:join(EbinDirs, " -pa "), Cookie, SNameArg]),
+    io:format("~s +K true +P ~B -pa ~s -boot start_sasl -config boss -s boss ~s -detached ~s~n", 
+        [ErlCmd, MaxProcesses, string:join(EbinDirs, " -pa "), CookieOpt, SNameArg]),
 	ok.
 
 %%--------------------------------------------------------------------
@@ -156,15 +156,9 @@ start_dev_cmd(_RebarConf, BossConf, AppFile) ->
     end,
     ErlCmd = erl_command(), 
     EbinDirs = all_ebin_dirs(BossConf, AppFile),
-    %% Only enable cookie if specified in boss.config (vm_cookie_dev)
-    case boss_config_value(BossConf, boss, vm_cookie_dev, undefined) of
-        undefined ->
-            io:format("~s -pa ~s -boss developing_app ~s -boot start_sasl -config boss -s reloader -s boss ~s~n", 
-                [ErlCmd, string:join(EbinDirs, " -pa "), AppName, SNameArg]);
-        Cookie ->
-            io:format("~s -pa ~s -boss developing_app ~s -boot start_sasl -config boss -setcookie ~s -s reloader -s boss ~s~n", 
-                [ErlCmd, string:join(EbinDirs, " -pa "), AppName, Cookie, SNameArg])
-    end,
+    CookieOpt = cookie_option(BossConf),
+    io:format("~s -pa ~s -boss developing_app ~s -boot start_sasl -config boss ~s -s reloader -s boss ~s~n", 
+        [ErlCmd, string:join(EbinDirs, " -pa "), AppName, CookieOpt, SNameArg]),
 	ok.
 
 %%--------------------------------------------------------------------
@@ -180,11 +174,11 @@ stop_cmd(_RebarConf, BossConf, AppFile) ->
         undefined ->
             io:format("echo 'The stop command requires a vm_name in boss.config'", []);
         SName ->
-            Cookie = cookie(BossConf),
+            CookieOpt = cookie_option(BossConf),
             StopCommand = io_lib:format("rpc:call('~s', init, stop, []).", [SName]),
 
-            io:format("erl -noshell -pa ebin -setcookie ~s -sname stopper_~s -eval \"~s\" -s init stop", 
-                [Cookie, SName, StopCommand])
+            io:format("erl -noshell -pa ebin ~s -sname stopper_~s -eval \"~s\" -s init stop", 
+                [CookieOpt, SName, StopCommand])
     end,
 	ok.
 
@@ -200,12 +194,12 @@ reload_cmd(_RebarConf, BossConf, AppFile) ->
         undefined ->
             io:format("echo 'The reload command requires a vm_name in boss.config'", []);
         SName ->
-            Cookie = cookie(BossConf),
+            CookieOpt = cookie_option(BossConf),
             ReloadCode = io_lib:format("rpc:call('~s', boss_load, reload_all, [])", [SName]),
             ReloadRoutes = io_lib:format("rpc:call('~s', boss_web, reload_routes, [])", [SName]),
             ReloadLangs = io_lib:format("rpc:call('~s', boss_web, reload_all_translations, [])", [SName]),
-            io:format("erl -noshell -pa ebin -setcookie ~s -sname reloader_~s -eval \"~s, ~s, ~s.\" -s init stop", 
-                [Cookie, SName, ReloadCode, ReloadRoutes, ReloadLangs])
+            io:format("erl -noshell -pa ebin ~s -sname reloader_~s -eval \"~s, ~s, ~s.\" -s init stop", 
+                [CookieOpt, SName, ReloadCode, ReloadRoutes, ReloadLangs])
     end,
 	ok.
 
@@ -397,8 +391,13 @@ host_name() ->
 sname(BossConf, AppFile) ->
     boss_config_value(BossConf, boss, vm_name, io_lib:format("~s@~s", [app_name(AppFile), host_name()])).
 
-cookie(BossConf) ->
-    boss_config_value(BossConf, boss, vm_cookie, "abc123").
+cookie_option(BossConf) ->
+    case boss_config_value(BossConf, boss, vm_cookie) of
+        undefined ->
+            "";
+        Cookie ->
+            "-setcookie "++Cookie
+    end.
 
 max_processes(BossConf) ->
     boss_config_value(BossConf, boss, vm_max_processes, 32768).
