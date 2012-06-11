@@ -393,7 +393,7 @@ sname(BossConf, AppFile) ->
 
 cookie_option(BossConf) ->
     case boss_config_value(BossConf, boss, vm_cookie) of
-        undefined ->
+        {error, _} ->
             "";
         Cookie ->
             "-setcookie "++Cookie
