@@ -132,9 +132,10 @@ start_cmd(_RebarConf, BossConf, AppFile) ->
     end,
     CookieOpt = cookie_option(BossConf),
     ErlCmd = erl_command(),
+	KernelParams = kernel_param(BossConf),
 
-    io:format("~s +K true +P ~B -pa ~s -boot start_sasl -config boss -s boss ~s -detached ~s~n", 
-        [ErlCmd, MaxProcesses, string:join(EbinDirs, " -pa "), CookieOpt, SNameArg]),
+    io:format("~s +K true +P ~B -pa ~s -boot start_sasl -config boss -s boss ~s -detached ~s ~s~n", 
+        [ErlCmd, MaxProcesses, string:join(EbinDirs, " -pa "), CookieOpt, SNameArg, KernelParams]),
 	ok.
 
 %%--------------------------------------------------------------------
@@ -155,10 +156,11 @@ start_dev_cmd(_RebarConf, BossConf, AppFile) ->
             io_lib:format("-sname ~s", [SName])
     end,
     ErlCmd = erl_command(), 
+	KernelParams = kernel_param(BossConf),
     EbinDirs = all_ebin_dirs(BossConf, AppFile),
     CookieOpt = cookie_option(BossConf),
-    io:format("~s -pa ~s -boss developing_app ~s -boot start_sasl -config boss ~s -s reloader -s boss ~s~n", 
-        [ErlCmd, string:join(EbinDirs, " -pa "), AppName, CookieOpt, SNameArg]),
+    io:format("~s -pa ~s -boss developing_app ~s -boot start_sasl -config boss ~s -s reloader -s boss ~s ~s~n", 
+        [ErlCmd, string:join(EbinDirs, " -pa "), AppName, CookieOpt, SNameArg, KernelParams]),
 	ok.
 
 %%--------------------------------------------------------------------
@@ -401,6 +403,20 @@ cookie_option(BossConf) ->
 
 max_processes(BossConf) ->
     boss_config_value(BossConf, boss, vm_max_processes, 32768).
+
+kernel_param(BossConf) ->
+	case boss_config_value(BossConf, boss, kernel) of
+		{error, _} ->
+			"";
+		KernelParams ->
+			FormattedParams = kernel_params(KernelParams, []),
+			io:format("rumbera~n~p~n", [FormattedParams]),
+			"-kernel " ++ string:join(FormattedParams, " ")
+	end.
+
+kernel_params([], Acc) -> Acc;
+kernel_params([{KP, KV}|R], Acc) ->
+	kernel_params(R, lists:merge(Acc, [io_lib:format("~p ~p", [KP, KV])])).
 
 erl_command() ->
     case os:type() of 
