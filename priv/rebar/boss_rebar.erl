@@ -410,7 +410,6 @@ kernel_param(BossConf) ->
             "";
         KernelParams ->
             FormattedParams = kernel_params(KernelParams, []),
-            io:format("rumbera~n~p~n", [FormattedParams]),
             "-kernel " ++ string:join(FormattedParams, " ")
     end.
 
