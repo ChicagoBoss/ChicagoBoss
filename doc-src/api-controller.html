@@ -82,7 +82,7 @@ profile('GET', [UserId]) -&gt;
     ...
 </div>
 
-<p>Then the location <code>[{controller, "user"}, {action, "profile"}, {user_id, "123"}]</code> will invoke the "profile" action of <code>user_controller</code> and pass in "123" as the only token (that is, <code>UesrId</code>). If a location parameter does not match any variables in the token list, it will be passed in as a query parameter (e.g. <code>?user_id=123</code>).</p>
+<p>Then the location <code>[{controller, "user"}, {action, "profile"}, {user_id, "123"}]</code> will invoke the "profile" action of <code>user_controller</code> and pass in "123" as the only token (that is, <code>UserId</code>). If a location parameter does not match any variables in the token list, it will be passed in as a query parameter (e.g. <code>?user_id=123</code>).</p>
 
 <p>To define a default action for a controller, simply add a <code>default_action</code> attribute to the controller like so:</p>
 
