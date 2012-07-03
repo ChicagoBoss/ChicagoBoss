@@ -84,6 +84,20 @@ profile('GET', [UserId]) -&gt;
 
 <p>Then the location <code>[{controller, "user"}, {action, "profile"}, {user_id, "123"}]</code> will invoke the "profile" action of <code>user_controller</code> and pass in "123" as the only token (that is, <code>UserId</code>). If a location parameter does not match any variables in the token list, it will be passed in as a query parameter (e.g. <code>?user_id=123</code>).</p>
 
+<p>Routing URLs may contain regular expresssions. For example, the following route will match all URLs that start with a digit:</p>
+
+<div class="code">
+    {"/[0-9].*, [...]}.
+</div>
+
+<p>Sub-expressions can be captured using parentheses and substituted with the atoms <code>'$1'</code>, <code>'$2'</code>, etc. For example, the following route will capture a string of digits and pass them in as the <code>coupon_id</code> parameter:</p>
+
+<div class="code">
+    {"/([0-9]+)", [{controller, "coupon"}, {action, "redeem}, {coupon_id, '$1'}]}.
+</div>
+
+<p>The route expressions must match the entire URL. That is, the expressions are implicitly bookended with ^ and $.</p>
+
 <p>To define a default action for a controller, simply add a <code>default_action</code> attribute to the controller like so:</p>
 
 <div class="code">
