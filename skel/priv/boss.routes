@@ -1,12 +1,15 @@
 % Routes file.
 
 % Formats: 
-%     {"/some/route", [{controller, "Controller"}, {action, "Action"}]}.
-%     {"/some/route", [{controller, "Controller"}, {action, "Action"}, {id, "42"}]}.
-%     {"/some/route", [{application, some_app}, {controller, "Controller"}, {action, "Action"}, {id, "42"}]}.
-%     {404, [{controller, "Controller"}, {action, "Action"}]}.
-%     {404, [{controller, "Controller"}, {action, "Action"}, {id, "42"}]}.
-%     {404, [{application, some_app}, {controller, "Controller"}, {action, "Action"}, {id, "42"}]}.
+%   {"/some/route", [{controller, "Controller"}, {action, "Action"}]}.
+%   {"/some/route", [{controller, "Controller"}, {action, "Action"}, {id, "42"}]}.
+%   {"/(some|any)/route/(\\d+)", [{controller, '$1'}, {action, "Action"}, {id, '$2'}]}.
+%   {"/some/route/(?<route_id>\\d+)", [{controller, "Controller"}, {action, "Action"}, {id, '$route_id'}]}.
+%   {"/some/route", [{application, some_app}, {controller, "Controller"}, {action, "Action"}, {id, "42"}]}.
+%
+%   {404, [{controller, "Controller"}, {action, "Action"}]}.
+%   {404, [{controller, "Controller"}, {action, "Action"}, {id, "42"}]}.
+%   {404, [{application, some_app}, {controller, "Controller"}, {action, "Action"}, {id, "42"}]}.
 %
 % Note that routing across applications results in a 302 redirect.
 
