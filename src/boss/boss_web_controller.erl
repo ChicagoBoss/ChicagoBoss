@@ -394,7 +394,8 @@ process_request(#boss_app_info{ router_pid = RouterPid } = AppInfo, Req, Mode, U
     if 
         Mode =:= development ->
             ControllerList = boss_files:web_controller_list(AppInfo#boss_app_info.application),
-            boss_router:set_controllers(RouterPid, ControllerList);
+            boss_router:set_controllers(RouterPid, ControllerList),
+            boss_router:reload(RouterPid);
         true ->
             ok
     end,

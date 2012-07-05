@@ -96,6 +96,12 @@ profile('GET', [UserId]) -&gt;
     {"/([0-9]+)", [{controller, "coupon"}, {action, "redeem}, {coupon_id, '$1'}]}.
 </div>
 
+<p>Alternatively, named groups may be used to identify captured sub-expressions. For example, the following route is equivalent to the one above:</p>
+
+<div class="code">
+    {"/(?&lt;id&gt;[0-9]+)", [{controller, "coupon"}, {action, "redeem}, {coupon_id, '$id'}]}.
+</div>
+
 <p>The route expressions must match the entire URL. That is, the expressions are implicitly bookended with ^ and $.</p>
 
 <p>To define a default action for a controller, simply add a <code>default_action</code> attribute to the controller like so:</p>

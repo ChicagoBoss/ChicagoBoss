@@ -193,22 +193,33 @@ substitute_params(Params, Matches) ->
 
 substitute_params([], _Matches, FinalParams) ->
     lists:reverse(FinalParams);
-substitute_params([{Key, Value}|Rest], Matches, FinalParams) when is_atom(Value) ->
-    case atom_to_list(Value) of
-        "$"++Number ->
-            substitute_params(Rest, Matches, [{Key, lists:nth(list_to_integer(Number), Matches)}|FinalParams]);
-        _ ->
-            substitute_params(Rest, Matches, [{Key, Value}|FinalParams])
-    end;
+substitute_params([{Key, Value}|Rest], Matches, FinalParams) when is_integer(Value) ->
+    substitute_params(Rest, Matches, [{Key, lists:nth(Value, Matches)}|FinalParams]);
 substitute_params([{Key, Value}|Rest], Matches, FinalParams) ->
     substitute_params(Rest, Matches, [{Key, Value}|FinalParams]).
 
 get_match(_, []) ->
     undefined;
 get_match(Url, [Route = #boss_route{pattern = MP}|T]) ->
-    case re:run(Url, MP, [{capture, all_but_first, list}]) of
+    Params = Route#boss_route.params,
+    {IndexedParams, Vars} = lists:mapfoldr(fun
+            ({Key, Value}, Acc) when is_atom(Value) ->
+                case atom_to_list(Value) of
+                    [$$, C | Rest] when C >= $0, C =< $9 ->
+                        {{Key, length(Acc)+1}, [list_to_integer([C|Rest])|Acc]};
+                    "$"++VarName ->
+                        {{Key, length(Acc)+1}, [VarName|Acc]};
+                    _ ->
+                        {{Key, Value}, Acc}
+                end;
+            ({Key, Value}, Acc) ->
+                {{Key, Value}, Acc}
+        end, [], Params),
+    case re:run(Url, MP, [{capture, lists:reverse(Vars), list}]) of
         {match, Matches} ->
-            Route#boss_route{ params = substitute_params(Route#boss_route.params, Matches) };
+            Route#boss_route{ params = substitute_params(IndexedParams, Matches) };
+        match ->
+            Route;
         _ ->
             get_match(Url, T)
     end.
