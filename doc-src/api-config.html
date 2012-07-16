@@ -37,8 +37,9 @@
     <li><code>port</code> - The port to run the HTTP server on, or a tuple of the format {env, "PORTVAR"} (where PORTVAR is the name of an environment variable containing the port number). Defaults to 8001.</li>
     <li><code>server</code> - The HTTP server to use. Valid values are:
     <ul>
-        <li><code>mochiweb</code> - The <a href="http://code.google.com/p/mochiweb/">Mochiweb</a> Web Server</li>
+        <li><code>cowboy</code> - The <a href="https://github.com/extend/cowboy/">Cowboy</a> Web Server</li>
         <li><code>misultin</code> - The <a href="http://code.google.com/p/misultin/">Misultin</a> Web Server</li>
+        <li><code>mochiweb</code> - The <a href="http://code.google.com/p/mochiweb/">Mochiweb</a> Web Server</li>
     </ul>
     <li><code>base_url</code>Sets the base_url passed to the views (for deployments on suburl's)</li>
     <li><code>session_adapter</code> Selects the session driver to use. Valid values:</li>
