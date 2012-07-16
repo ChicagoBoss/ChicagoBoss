@@ -110,7 +110,8 @@ init(Config) ->
 
     {ServerMod, RequestMod, ResponseMod} = case boss_env:get_env(server, misultin) of
         mochiweb -> {mochiweb_http, mochiweb_request_bridge, mochiweb_response_bridge};
-        misultin -> {misultin, misultin_request_bridge, misultin_response_bridge}
+        misultin -> {misultin, misultin_request_bridge, misultin_response_bridge};
+	cowboy -> {cowboy, mochiweb_request_bridge, mochiweb_response_bridge}
     end,
     SSLEnable = boss_env:get_env(ssl_enable, false),
     SSLOptions = boss_env:get_env(ssl_options, []),
@@ -123,7 +124,35 @@ init(Config) ->
             case SSLEnable of
                 true -> misultin:start_link([{ssl, SSLOptions} | ServerConfig]);
                 false -> misultin:start_link(ServerConfig)
-            end
+            end;
+	cowboy ->
+		  Dispatch = [
+			      {'_', [
+				     {'_', boss_mochicow_handler, [{loop, {boss_mochicow_handler, loop}}]}]}
+			     ],
+		  error_logger:info_msg("Starting cowboy... on ~p~n", [MasterNode]),
+		  application:start(cowboy),
+		  HttpPort = boss_env:get_env(port, 8001),
+                  case SSLEnable of 
+		      false -> 
+			  error_logger:info_msg("Starting http listener... on ~p ~n", [HttpPort]),
+			  cowboy:start_listener(boss_http_listener, 100,
+						cowboy_tcp_transport, [{port, HttpPort}],
+						cowboy_http_protocol, [{dispatch, Dispatch}]);
+		      true ->
+			  error_logger:info_msg("Starting https listener... on ~p ~n", [HttpPort]),
+			  cowboy:start_listener(boss_https_listener, 100,
+						cowboy_ssl_transport, [
+								       {port, HttpPort}, 
+								       SSLOptions
+								       %{certfile, "priv/ssl/cert.pem"},
+								       %{keyfile, "priv/ssl/key.pem"}, 
+								       %{password, "cowboy"}
+								      ],
+						cowboy_http_protocol, [{dispatch, Dispatch}]
+					       )
+		  end
+		  
     end,
     {ok, #state{ http_pid = Pid, is_master_node = (ThisNode =:= MasterNode) }, 0}.
 
