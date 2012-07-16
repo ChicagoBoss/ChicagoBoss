@@ -115,6 +115,7 @@ init(Config) ->
     end,
     SSLEnable = boss_env:get_env(ssl_enable, false),
     SSLOptions = boss_env:get_env(ssl_options, []),
+    error_logger:info_msg("SSL:~p~n", [SSLOptions]),
     ServerConfig = [{loop, fun(Req) -> 
                     ?MODULE:handle_request(Req, RequestMod, ResponseMod)
             end} | Config],
@@ -141,14 +142,9 @@ init(Config) ->
 						cowboy_http_protocol, [{dispatch, Dispatch}]);
 		      true ->
 			  error_logger:info_msg("Starting https listener... on ~p ~n", [HttpPort]),
+			  SSLConfig = [{port, HttpPort}]++SSLOptions, 
 			  cowboy:start_listener(boss_https_listener, 100,
-						cowboy_ssl_transport, [
-								       {port, HttpPort}, 
-								       SSLOptions
-								       %{certfile, "priv/ssl/cert.pem"},
-								       %{keyfile, "priv/ssl/key.pem"}, 
-								       %{password, "cowboy"}
-								      ],
+						cowboy_ssl_transport, SSLConfig,
 						cowboy_http_protocol, [{dispatch, Dispatch}]
 					       )
 		  end

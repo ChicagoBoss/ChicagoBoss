@@ -1,6 +1,9 @@
 -module(boss_mochicow_handler).
 -export([init/3, loop/1]).
 
+init({ssl, http}, _Req, _Opts) ->
+	{upgrade, protocol, mochicow_upgrade};
+
 init({tcp, http}, _Req, _Opts) ->
 	{upgrade, protocol, mochicow_upgrade}.
 
