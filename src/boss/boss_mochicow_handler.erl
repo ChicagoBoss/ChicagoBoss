@@ -19,10 +19,11 @@ terminate(_Req, _State) ->
     ok.
 
 websocket_init(_Any, Req, _Opts) ->
-    {ok, Req, undefined, hibernate}.
+    State = undefined,
+    {ok, Req, State, hibernate}.
 
 websocket_handle({text, Msg}, Req, State) ->
-    error_logger:info_msg("websocket: message:~p WebsocketPid ~p~nState=~p~n", 
+    error_logger:info_msg("websocket#message:~p~nWebsocketPid ~p~nState=~p~n", 
 			  [Msg, erlang:pid_to_list(self()), State]),    
     {reply, {text, "copy" }, Req, State, hibernate};
 
