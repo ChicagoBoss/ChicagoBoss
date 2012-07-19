@@ -130,16 +130,7 @@ init(Config) ->
 	cowboy ->
                   %SessionKey = boss_env:get_env(session_key, "_boss_session"),
 		  boss_service_sup:start_link(),
-		  Dispatch = [
-			      {'_', [
-				     {'_', 
-				      boss_mochicow_handler, 
-				      [{loop, {boss_mochicow_handler, loop}}
-				       %,{session_key, SessionKey}
-				      ]
-				     }]
-			      }
-			     ],
+		  Dispatch = [{'_', [{'_', boss_mochicow_handler, [{loop, {boss_mochicow_handler, loop}}]}]}],
 		  error_logger:info_msg("Starting cowboy... on ~p~n", [MasterNode]),
 		  application:start(cowboy),
 		  HttpPort = boss_env:get_env(port, 8001),

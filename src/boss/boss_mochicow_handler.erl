@@ -22,7 +22,7 @@ terminate(_Req, _State) ->
 
 websocket_init(_Any, Req, _Opts) ->
     SessionKey = boss_env:get_env(session_key, "_boss_session"),
-    {ServiceName, _Req1} = cowboy_http_req:path(Req),
+    {[ServiceName], _Req1} = cowboy_http_req:path(Req),
     {SessionId, _Req2}  = cowboy_http_req:cookie(list_to_binary(SessionKey), Req),
     WebsocketId = self(),
     State= #state{websocket_id=WebsocketId, 
@@ -32,7 +32,7 @@ websocket_init(_Any, Req, _Opts) ->
     {ok, Req, State, hibernate}.
 
 websocket_handle({text, Msg}, Req, State) ->
-    error_logger:info_msg("State:~p~nincoming:~p~n",[State, Msg]),    
+    %error_logger:info_msg("State:~p~nincoming:~p~n",[State, Msg]),    
     #state{websocket_id=WebsocketId, 
 	   session_id=SessionId, 
 	   service_name=ServiceName } = State,
@@ -53,6 +53,6 @@ websocket_terminate(_Reason, _Req, State) ->
     #state{websocket_id=WebsocketId, 
 	   session_id=SessionId, 
 	   service_name=ServiceName } = State,
-    error_logger:info_msg("websocket terminate~nState=~p~n", [State]),
+    %error_logger:info_msg("websocket terminate~nState=~p~n", [State]),
     boss_service:terminate(ServiceName, WebsocketId, SessionId),
     ok.

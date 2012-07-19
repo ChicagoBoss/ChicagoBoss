@@ -19,7 +19,9 @@
 	 unregister/2,
 	 join/3,
 	 terminate/3,
-	 incoming/4
+	 incoming/4,
+	 service/1,
+	 services/0
 	]).
 
 %% gen_server callbacks
@@ -73,6 +75,12 @@ register(ServiceName, ServiceId) ->
 unregister(ServiceName, ServiceId) ->
     gen_server:call(?SERVER, {unregister_service, ServiceName, ServiceId}).
 
+service(ServiceName) ->
+    gen_server:call(?SERVER, {get_service, ServiceName}).
+services() ->
+    gen_server:call(?SERVER, {get_all_service}).
+    
+
 %async
 join(ServiceName, WebSocketId, SessionId) ->
     gen_server:cast(?SERVER, {join_service, ServiceName, WebSocketId, SessionId}).
@@ -82,8 +90,10 @@ terminate(ServiceName, WebSocketId, SessionId) ->
 
 incoming(ServiceName, WebSocketId, SessionId, Message) ->
     gen_server:cast(?SERVER, {incoming_msg, ServiceName, WebSocketId, SessionId, Message}).
-    
 
+%% ??
+%% broadcast/1 -> broadcast a message to all consummer
+%% broadcast/2 -> broadcast a message to  all consummer for a particular service
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -111,7 +121,7 @@ init([]) ->
 	    mnesia:create_table(boss_consummers, [{attributes, 
 						    record_info(fields, boss_consummers)},
 					     {type, bag},
-					     {disc_copies, [node()]}])
+					     {ram_copies, [node()]}])
     end,    
     try
 	mnesia:table_info(boss_services, type)
@@ -119,7 +129,7 @@ init([]) ->
 	exit: _ ->
 	    mnesia:create_table(boss_services, [{attributes, record_info(fields, boss_services)},
 					     {type, bag},
-					     {disc_copies, [node()]}])
+					     {ram_copies, [node()]}])
     end,    
     {ok, #state{nb_consummer = 0, nb_service = 0}}.
 
@@ -137,6 +147,18 @@ init([]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+%% get_service(ServiceName) ->
+%%     gen_server:call(?SERVER, {get_service, ServiceName}).
+%% get_services() ->
+%%     gen_server:call(?SERVER, get_all_service).
+handle_call({get_service, ServiceName}, _From, State) ->
+    Reply = get_service(ServiceName),
+    {reply, Reply, State};
+
+handle_call({get_all_service}, _From, State) ->
+    Reply = get_all_service(),
+    {reply, Reply, State};
+
 
 handle_call({register_service, ServiceName, ServiceId}, _From, State) ->
     Reply = register_service(ServiceName, ServiceId),
@@ -180,10 +202,11 @@ handle_call(_Request, _From, State) ->
 handle_cast({join_service, ServiceName, WebSocketId, SessionId}, State) ->
     case get_service(ServiceName) of
 	[{boss_services, _, ServiceId, _}] ->
-	    
-	    ServiceId ! {join_service, WebSocketId, SessionId};
+	    %% error_logger:info_msg("{~p,~p} join Service (~p)~nMailbox:~p~n", 
+	    %% 			  [WebSocketId, SessionId, ServiceName, ServiceId]),	    
+	    ServiceId ! {join_service, ServiceName, WebSocketId, SessionId};
 	Unknow ->
-	    error_logger:info_msg("unknow Service (~p)~n", [ServiceName]),
+	    %% error_logger:info_msg("unknow Service (~p)~n", [ServiceName]),
 	    Unknow	    
     end,
     register_consummer(ServiceName, WebSocketId, SessionId),
@@ -192,9 +215,11 @@ handle_cast({join_service, ServiceName, WebSocketId, SessionId}, State) ->
 handle_cast({incoming_msg, ServiceName, WebSocketId, SessionId, Msg}, State) ->
     case get_service(ServiceName) of
 	[{boss_services, _, ServiceId, _}] ->
-	    ServiceId ! {incoming_msg, WebSocketId, SessionId, Msg};
+	    %% error_logger:info_msg("From {~p,~p} incoming_msg to (~p)~nMailbox:~p~n", 
+	    %% 			  [WebSocketId, SessionId, ServiceName, ServiceId]),	    
+	    ServiceId ! {incoming_msg, ServiceName, WebSocketId, SessionId, Msg};
 	Unknow ->
-	    error_logger:info_msg("unknow Service (~p)~n", [ServiceName]),
+	    %% error_logger:info_msg("unknow Service (~p)~n", [ServiceName]),
 	    Unknow	    
     end,
     {noreply, State};
@@ -202,9 +227,11 @@ handle_cast({incoming_msg, ServiceName, WebSocketId, SessionId, Msg}, State) ->
 handle_cast({terminate, ServiceName, WebSocketId, SessionId}, State) ->
     case get_service(ServiceName) of
 	[{boss_services, _, ServiceId, _}] ->
+	    %% error_logger:info_msg("From {~p,~p} incoming_msg to (~p)~nMailBox:~p", 
+	    %% 			  [WebSocketId, SessionId, ServiceName, ServiceId]),	    
 	    ServiceId ! {terminate_service, WebSocketId, SessionId};
 	Unknow ->
-	    error_logger:info_msg("unknow Service (~p)~n", [ServiceName]),
+	    %% error_logger:info_msg("unknow Service (~p)~n", [ServiceName]),
 	    Unknow	    
     end,
 
@@ -280,11 +307,25 @@ get_service(ServiceName) ->
 		Query = qlc:q([M || M <- mnesia:table(boss_services),
 				    M#boss_services.service_name =:= ServiceName
 			      ]),
-		Results = qlc:e(Query),
+		Order = fun(A,B) ->
+			       A#boss_services.created_on > B#boss_services.created_on
+			end,
+		Results = qlc:e(qlc:sort(Query, {order, Order})),
+		%Results = qlc:e(Query),
 		Results
 	end,
   {atomic, Service} = mnesia:transaction(F),
   Service.
+
+get_all_service() ->
+    F = fun() ->
+		Query = qlc:q([M || M <- mnesia:table(boss_services)
+			      ]),
+		Results = qlc:e(Query),
+		Results
+	end,
+  {atomic, Services} = mnesia:transaction(F),
+  Services.
 
 
 register_consummer(ServiceName, WebsocketId, SessionId) ->
