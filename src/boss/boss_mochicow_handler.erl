@@ -28,11 +28,12 @@ websocket_init(_Any, Req, _Opts) ->
     State= #state{websocket_id=WebsocketId, 
 		  session_id=SessionId,
 		  service_name=ServiceName},
+    %error_logger:info_msg("State:~p~n",[State]),    
     boss_service:join(ServiceName, WebsocketId, SessionId),
     {ok, Req, State, hibernate}.
 
 websocket_handle({text, Msg}, Req, State) ->
-    %error_logger:info_msg("State:~p~nincoming:~p~n",[State, Msg]),    
+    %%error_logger:info_msg("State:~p~nincoming:~p~n",[State, Msg]),    
     #state{websocket_id=WebsocketId, 
 	   session_id=SessionId, 
 	   service_name=ServiceName } = State,
@@ -43,7 +44,7 @@ websocket_handle(_Any, Req, State) ->
     {ok, Req, State}.
 
 websocket_info({text, Msg}, Req, State) ->
-    error_logger:info_msg("State~p~nsend:~p~n", [State,Msg]),
+    %%error_logger:info_msg("State~p~nsend:~p~n", [State,Msg]),
     {reply, {text, Msg}, Req, State};
 
 websocket_info(_Info, Req, State) ->
@@ -53,6 +54,6 @@ websocket_terminate(_Reason, _Req, State) ->
     #state{websocket_id=WebsocketId, 
 	   session_id=SessionId, 
 	   service_name=ServiceName } = State,
-    %error_logger:info_msg("websocket terminate~nState=~p~n", [State]),
+    %%error_logger:info_msg("websocket terminate~nState=~p~n", [State]),
     boss_service:terminate(ServiceName, WebsocketId, SessionId),
     ok.

@@ -31,7 +31,7 @@
 -define(SERVER, ?MODULE). 
 
 
--record(boss_consummers, 
+-record(boss_consumers, 
 	{
 	  websocket_id,   % gateway to send message to consummer
           session_id,     % the session id to link and user
@@ -79,6 +79,7 @@ service(ServiceName) ->
     gen_server:call(?SERVER, {get_service, ServiceName}).
 services() ->
     gen_server:call(?SERVER, {get_all_service}).
+
     
 
 %async
@@ -118,8 +119,8 @@ init([]) ->
 	mnesia:table_info(boss_consummers, type)
     catch
 	exit: _ ->
-	    mnesia:create_table(boss_consummers, [{attributes, 
-						    record_info(fields, boss_consummers)},
+	    mnesia:create_table(boss_consumers, [{attributes, 
+						    record_info(fields, boss_consumers)},
 					     {type, bag},
 					     {ram_copies, [node()]}])
     end,    
@@ -201,12 +202,9 @@ handle_call(_Request, _From, State) ->
 %%     {noreply,  #state{nb_ws=Nb}};
 handle_cast({join_service, ServiceName, WebSocketId, SessionId}, State) ->
     case get_service(ServiceName) of
-	[{boss_services, _, ServiceId, _}] ->
-	    %% error_logger:info_msg("{~p,~p} join Service (~p)~nMailbox:~p~n", 
-	    %% 			  [WebSocketId, SessionId, ServiceName, ServiceId]),	    
-	    ServiceId ! {join_service, ServiceName, WebSocketId, SessionId};
+	[{_, _, ServiceId, _}] ->
+	   ServiceId:join(ServiceName, WebSocketId, SessionId);
 	Unknow ->
-	    %% error_logger:info_msg("unknow Service (~p)~n", [ServiceName]),
 	    Unknow	    
     end,
     register_consummer(ServiceName, WebSocketId, SessionId),
@@ -214,27 +212,21 @@ handle_cast({join_service, ServiceName, WebSocketId, SessionId}, State) ->
 
 handle_cast({incoming_msg, ServiceName, WebSocketId, SessionId, Msg}, State) ->
     case get_service(ServiceName) of
-	[{boss_services, _, ServiceId, _}] ->
-	    %% error_logger:info_msg("From {~p,~p} incoming_msg to (~p)~nMailbox:~p~n", 
-	    %% 			  [WebSocketId, SessionId, ServiceName, ServiceId]),	    
-	    ServiceId ! {incoming_msg, ServiceName, WebSocketId, SessionId, Msg};
+	[{_, _, ServiceId, _}] ->
+	    ServiceId:incoming(ServiceName, WebSocketId, SessionId, Msg);
 	Unknow ->
-	    %% error_logger:info_msg("unknow Service (~p)~n", [ServiceName]),
 	    Unknow	    
     end,
     {noreply, State};
 
-handle_cast({terminate, ServiceName, WebSocketId, SessionId}, State) ->
+handle_cast({terminate_service, ServiceName, WebSocketId, SessionId}, State) ->
     case get_service(ServiceName) of
-	[{boss_services, _, ServiceId, _}] ->
-	    %% error_logger:info_msg("From {~p,~p} incoming_msg to (~p)~nMailBox:~p", 
-	    %% 			  [WebSocketId, SessionId, ServiceName, ServiceId]),	    
-	    ServiceId ! {terminate_service, WebSocketId, SessionId};
+	[{_, _, ServiceId, _}] ->
+	    ServiceId:close(WebSocketId, SessionId);
 	Unknow ->
-	    %% error_logger:info_msg("unknow Service (~p)~n", [ServiceName]),
 	    Unknow	    
     end,
-
+    
     unregister_consummer([{boss_consummers, 
 			   WebSocketId,  
 			   SessionId,    
@@ -301,17 +293,16 @@ unregister_service(Services) ->
 	  lists:foreach(fun(Msg) -> mnesia:delete_object(Msg) end, Services) end,
   mnesia:transaction(F).
 
-
 get_service(ServiceName) ->
     F = fun() ->
 		Query = qlc:q([M || M <- mnesia:table(boss_services),
 				    M#boss_services.service_name =:= ServiceName
 			      ]),
-		Order = fun(A,B) ->
-			       A#boss_services.created_on > B#boss_services.created_on
-			end,
-		Results = qlc:e(qlc:sort(Query, {order, Order})),
-		%Results = qlc:e(Query),
+		%% Order = fun(A,B) ->
+		%% 	       A#boss_services.created_on > B#boss_services.created_on
+		%% 	end,
+		%% Results = qlc:e(qlc:sort(Query, {order, Order})),
+		Results = qlc:e(Query),
 		Results
 	end,
   {atomic, Service} = mnesia:transaction(F),
@@ -331,7 +322,7 @@ get_all_service() ->
 register_consummer(ServiceName, WebsocketId, SessionId) ->
     F = fun() ->
 		{_, CreatedOn, _} = erlang:now(),
-		mnesia:write(#boss_consummers{
+		mnesia:write(#boss_consumers{
 					     service_name=ServiceName, 
 					     websocket_id=WebsocketId,
 				             session_id=SessionId,
@@ -342,9 +333,3 @@ unregister_consummer(Consummers) ->
   F = fun() ->
 	  lists:foreach(fun(Msg) -> mnesia:delete_object(Msg) end, Consummers) end,
   mnesia:transaction(F).
-
-
-
-
-
-
