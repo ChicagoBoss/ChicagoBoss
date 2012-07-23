@@ -11,7 +11,7 @@
 -behaviour(supervisor).
 
 %% API
--export([start_link/0]).
+-export([start_link/0, start_services/2]).
 
 %% Supervisor callbacks
 -export([init/1]).
@@ -49,21 +49,32 @@ start_link() ->
 %%                     {error, Reason}
 %% @end
 %%--------------------------------------------------------------------
-init([]) ->    
-    RestartStrategy = one_for_one,
-    MaxRestarts = 5,
-    MaxSecondsBetweenRestarts = 30,
 
-    SupFlags = {RestartStrategy, MaxRestarts, MaxSecondsBetweenRestarts},
+start_services(SupPid, boss_websocket_router) ->
+    {ok, BossWebSocketRouterPid} = 
+	supervisor:start_child(SupPid,
+			       {boss_websocket_router, {boss_websocket_router, start_link, []},
+				permanent, 5000, worker, [boss_websocket_router]}),
+    {ok, BossWebSocketRouterPid};
 
-    Restart = permanent,
-    Shutdown = 2000,
-    Type = worker,
 
-    Service = {boss_service, {boss_service, start_link, []},
-	      Restart, Shutdown, Type, [boss_service]},
+start_services(SupPid, Services) ->
+    lists:foldl(
+      fun([], Acc) -> Acc ;
+	 ({ServiceName, Service}, Acc) ->
+	      {ok, ServicePid} = 
+		  supervisor:start_child(SupPid,
+					 {Service, {boss_service_worker, start_link, [Service]},
+					  permanent, 5000, worker, [Service]}),
+	      boss_websocket_router:register(ServiceName, Service),
+	      Acc ++ {ok, ServicePid}
+      end, 
+      [], 
+      Services ),
+    {ok, SupPid}.
 
-    {ok, {SupFlags, [Service]}}.
+init([]) ->
+    {ok, {{one_for_all, 10, 10}, []}}.
 
 %%%===================================================================
 %%% Internal functions

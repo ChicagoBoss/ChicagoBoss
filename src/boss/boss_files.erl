@@ -1,5 +1,6 @@
 -module(boss_files).
 -export([
+	websocket_dir_path/0,
         dot_app_src/1,
         ebin_dir/0,
         include_dir/0,
@@ -38,6 +39,7 @@ root_priv_dir(App) ->
            code:priv_dir(App)
    end.
 
+
 web_view_path() ->
     filename:join([root_src_dir(), "view"]).
 web_view_path(Controller) -> 
@@ -60,6 +62,8 @@ lang_path(App, Lang) -> filename:join([lang_path(App), lists:concat(["strings.",
 static_path(App) -> filename:join([root_priv_dir(App), "static"]).
 
 lib_path() -> [filename:join([root_src_dir(), "lib"])].
+
+websocket_dir_path() -> [filename:join([root_src_dir(), "websocket"])].
 
 view_lib_path() -> filename:join([root_src_dir(), "view", "lib"]).
 

@@ -5,6 +5,7 @@
         load_all_modules/3,
         load_all_modules_and_emit_app_file/2,
         load_libraries/0,
+        load_services_websockets/0,
         load_mail_controllers/0,
         load_models/0,
         load_view_if_dev/3,
@@ -22,19 +23,22 @@ load_all_modules(Application, TranslatorPid) ->
 load_all_modules(Application, TranslatorPid, OutDir) ->
     {ok, TestModules} = load_dirs(boss_files:test_path(), OutDir, fun compile/2),
     {ok, LibModules} = load_libraries(OutDir),
+    {ok, WebSocketModules} = load_services_websockets(OutDir),
     {ok, MailModules} = load_mail_controllers(OutDir),
     {ok, ControllerModules} = load_web_controllers(OutDir),
     {ok, ModelModules} = load_models(OutDir),
     {ok, ViewHelperModules} = load_view_lib_modules(OutDir),
     {ok, ViewLibModules} = load_view_lib(Application, OutDir, TranslatorPid),
     {ok, ViewModules} = load_views(Application, OutDir, TranslatorPid),
-    AllModules = [{test_modules, TestModules}, {lib_modules, LibModules},
-        {mail_modules, MailModules}, {controller_modules, ControllerModules},
-        {model_modules, ModelModules}, {view_lib_tags_modules, ViewLibModules},
-        {view_lib_helper_modules, ViewHelperModules}, {view_modules, ViewModules}],
+    AllModules = [{test_modules, TestModules}, 
+		  {lib_modules, LibModules}, {websocket_modules, WebSocketModules},
+		  {mail_modules, MailModules}, {controller_modules, ControllerModules},
+		  {model_modules, ModelModules}, {view_lib_tags_modules, ViewLibModules},
+		  {view_lib_helper_modules, ViewHelperModules}, {view_modules, ViewModules}],
     {ok, AllModules}.
 
 load_all_modules_and_emit_app_file(AppName, OutDir) ->
+    error_logger:info_msg("load_all_modules_and_emit_app_file: OutDir:~p~n", [OutDir]),
     TranslatorPid = boss_translator:start([{application, AppName}]),
     {ok, ModulePropList} = load_all_modules(AppName, TranslatorPid, OutDir),
     AllModules = lists:foldr(fun({_, Mods}, Acc) -> Mods ++ Acc end, [], ModulePropList),
@@ -64,6 +68,13 @@ load_libraries() ->
     load_libraries(undefined).
 load_libraries(OutDir) ->
     load_dirs(boss_files:lib_path(), OutDir, fun compile/2).
+
+load_services_websockets() ->
+    OutDir = boss_files:ebin_dir(),
+    error_logger:info_msg("websockets_service: outdir:~p~n", [OutDir]),
+    load_services_websockets(OutDir).
+load_services_websockets(OutDir) ->
+    load_dirs(boss_files:websocket_dir_path(), OutDir, fun compile/2).
 
 load_mail_controllers() ->
     load_mail_controllers(undefined).
