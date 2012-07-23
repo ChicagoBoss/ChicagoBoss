@@ -166,11 +166,15 @@ handle_info(timeout, State) ->
                 BaseURL = boss_env:get_env(AppName, base_url, "/"),
                 DomainList = boss_env:get_env(AppName, domains, all),
                 ModelList = boss_files:model_list(AppName),
-		case boss_env:get_env(AppName, websocket_services, []) of
-		    [] -> [];
-		    Services ->
-			boss_service_sup:start_services(ServicesSupPid, Services)			
-		end,		
+		case boss_env:get_env(server, misultin) of
+		    cowboy ->
+			case boss_env:get_env(AppName, websocket_services, []) of
+			    [] -> [];
+			    Services ->
+				boss_service_sup:start_services(ServicesSupPid, Services)			
+			end;
+		    _Any -> _Any
+		end,
                 ControllerList = boss_files:web_controller_list(AppName),
                 {ok, RouterSupPid} = boss_router:start([{application, AppName},
                         {controllers, ControllerList}]),
