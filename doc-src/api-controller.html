@@ -202,6 +202,18 @@ before_(_) -&gt;<br />
 <p>Skip views altogether and return <code>Output</code> to the client while setting additional HTTP <code>Headers</code>.</p>
 
 <div class="code spec">
+    {stream, Generator<span class="typevar">::function()</span>, Acc0}
+</div>
+
+<p>Stream a response to the client using HTTP chunked encoding. For each chunk, the <code>Generator</code> function is passed an accumulator (initally <code>Acc0</code>) and should return either <code>{output, Data, Acc1}</code> or <code>done</code>.</p>
+
+<div class="code spec">
+    {stream, Generator<span class="typevar">::function()</span>, Acc0, Headers<span class="typevar">::proplist()</span>}
+</div>
+
+<p>Same as above, but set additional HTTP <code>Headers</code>.</p>
+
+<div class="code spec">
     {json, Data<span class="typevar">::proplist()</span>}
 </div>
 

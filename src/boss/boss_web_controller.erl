@@ -401,7 +401,14 @@ handle_request(Req, RequestMod, ResponseMod) ->
                             lists:merge(Headers, [ mochiweb_cookies:cookie(SessionKey, SessionID, CookieOptions2) ])
                     end,
                     Response2 = lists:foldl(fun({K, V}, Acc) -> Acc:header(K, V) end, Response1, Headers2),
-                    Response2:build_response()
+                    case Payload of
+                        {stream, Generator, Acc0} ->
+                            Response3 = Response2:data(chunked),
+                            Response3:build_response(),
+                            process_chunk_generator(Request, Generator, Acc0);
+                        _ ->
+                            (Response2:data(Payload)):build_response()
+                    end
             end
     end.
 
@@ -503,10 +510,25 @@ process_error(Payload, #boss_app_info{ router_pid = RouterPid } = AppInfo, Req, 
             {error, ["Error: <pre>", io_lib:print(Payload), "</pre>"], []}
     end.
 
+process_chunk_generator(Req, Generator, Acc) ->
+    case Generator(Acc) of
+        {output, Data, Acc1} ->
+            Length = iolist_size(Data),
+            mochiweb_socket:send(Req:socket(), [io_lib:format("~.16b\r\n", [Length]), Data, <<"\r\n">>]),
+            process_chunk_generator(Req, Generator, Acc1);
+        done ->
+            mochiweb_socket:send(Req:socket(), ["0\r\n\r\n"]),
+            ok
+    end.
+
 process_result(AppInfo, Req, {Status, Payload}) ->
     process_result(AppInfo, Req, {Status, Payload, []});
 process_result(_, _, {ok, Payload, Headers}) ->
     {200, merge_headers(Headers, [{"Content-Type", "text/html"}]), Payload};
+process_result(AppInfo, Req, {stream, Generator, Acc0}) ->
+    process_result(AppInfo, Req, {stream, Generator, Acc0, []});
+process_result(_, _, {stream, Generator, Acc0, Headers}) ->
+    {200, merge_headers(Headers, [{"Content-Type", "text/html"}]), {stream, Generator, Acc0}};
 process_result(AppInfo, Req, {redirect, "http://"++Where, Headers}) ->
     process_result(AppInfo, Req, {redirect_external, "http://"++Where, Headers});
 process_result(AppInfo, Req, {redirect, "https://"++Where, Headers}) ->
