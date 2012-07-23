@@ -8,7 +8,7 @@
 
 -define(BOSS_ROUTES_TABLE, boss_routes).
 -define(BOSS_HANDLERS_TABLE, boss_handlers).
--record(boss_route, {url, application, controller, action, params = []}).
+-record(boss_route, {url, pattern, application, controller, action, params = []}).
 -record(boss_handler, {status_code, application, controller, action, params = []}).
 
 -record(state, {
@@ -52,8 +52,8 @@ handle_call({handle, StatusCode}, _From, State) ->
 handle_call({route, ""}, From, State) ->
     handle_call({route, "/"}, From, State);
 handle_call({route, Url}, _From, State) ->
-    Route = case ets:lookup(State#state.routes_table_id, Url) of
-        [] -> 
+    Route = case get_match(Url, ets:tab2list(State#state.routes_table_id)) of
+        undefined -> 
             case string:tokens(Url, "/") of
                 [Controller] -> 
                     case is_controller(State, Controller) of
@@ -68,7 +68,7 @@ handle_call({route, Url}, _From, State) ->
                 _ ->
                     not_found
             end;
-        [#boss_route{ application = App, controller = C, action = A, params = P }] -> 
+        #boss_route{ application = App, controller = C, action = A, params = P } -> 
             ControllerModule = list_to_atom(boss_files:web_controller(App, C)),
             {Tokens, []} = boss_controller_lib:convert_params_to_tokens(P, ControllerModule, list_to_atom(A)),
             {ok, {App, C, A, Tokens}}
@@ -148,8 +148,10 @@ load(State) ->
                             end, Proplist, [application, controller, action]),
                         case UrlOrStatusCode of
                             Url when is_list(Url) ->
+                                {ok, MP} = re:compile("^"++Url++"$"),
                                 NewRoute = #boss_route{ 
                                     url = Url, 
+                                    pattern = MP,
                                     application = TheApplication, 
                                     controller = TheController, 
                                     action = TheAction, 
@@ -186,3 +188,38 @@ default_action(State, Controller) ->
             "index"
     end.
 
+substitute_params(Params, Matches) ->
+    substitute_params(Params, Matches, []).
+
+substitute_params([], _Matches, FinalParams) ->
+    lists:reverse(FinalParams);
+substitute_params([{Key, Value}|Rest], Matches, FinalParams) when is_integer(Value) ->
+    substitute_params(Rest, Matches, [{Key, lists:nth(Value, Matches)}|FinalParams]);
+substitute_params([{Key, Value}|Rest], Matches, FinalParams) ->
+    substitute_params(Rest, Matches, [{Key, Value}|FinalParams]).
+
+get_match(_, []) ->
+    undefined;
+get_match(Url, [Route = #boss_route{pattern = MP}|T]) ->
+    Params = Route#boss_route.params,
+    {IndexedParams, Vars} = lists:mapfoldr(fun
+            ({Key, Value}, Acc) when is_atom(Value) ->
+                case atom_to_list(Value) of
+                    [$$, C | Rest] when C >= $0, C =< $9 ->
+                        {{Key, length(Acc)+1}, [list_to_integer([C|Rest])|Acc]};
+                    "$"++VarName ->
+                        {{Key, length(Acc)+1}, [VarName|Acc]};
+                    _ ->
+                        {{Key, Value}, Acc}
+                end;
+            ({Key, Value}, Acc) ->
+                {{Key, Value}, Acc}
+        end, [], Params),
+    case re:run(Url, MP, [{capture, lists:reverse(Vars), list}]) of
+        {match, Matches} ->
+            Route#boss_route{ params = substitute_params(IndexedParams, Matches) };
+        match ->
+            Route;
+        _ ->
+            get_match(Url, T)
+    end.

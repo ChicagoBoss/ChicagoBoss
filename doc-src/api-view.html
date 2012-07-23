@@ -20,8 +20,9 @@
 <h2>Implicit variables</h2>
 <p>The following variables are automatically passed to your views without you doing any work:</p>
 <ul>
-    <li><code>_lang</code> - The content language of the rendered view</li>
-    <li><code>_before</code> - The result of the authorization filter, if present</li>
     <li><code>_base_url</code> - The value of the config setting "base_url" or blank if not set</li>
+    <li><code>_before</code> - The result of the authorization filter, if present</li>
+    <li><code>_lang</code> - The content language of the rendered view</li>
+    <li><code>_session</code> - Key/value pairs from the current session, if it exists</li>
 </ul>
 {% endblock %}

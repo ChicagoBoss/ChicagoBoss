@@ -33,10 +33,7 @@ BossRecords are <em>specially compiled parameterized modules</em> that follow th
 
     <li><p>To auto-generate an ID, pass the atom <code>'id'</code> as the first parameter to <code>my_module:new/N</code>. Alternatively, just use <code>boss_record:new/2</code>.</p></li>
 
-    <li><p>Call <code>my_module:new/N</code> with strings, floats, integers, atoms, or binaries for all other parameters</p></li>
-
-    <li><p>Parameters that end in "Time" (e.g., <code>CreationTime</code>, <code>UpdateTime</code>) should be
-    passed either <code>erlang:now()</code> or a DateTime tuple.</p></li>
+    <li><p>Call <code>my_module:new/N</code> with strings, binaries, integers, floats, <code>erlang:now()</code> tuples, DateTime tuples, or atoms for all other parameters</p></li>
 
     <li><p>You can add your own functions to a BossRecord module, which will have access to the generated functions described below.</p></li>
 
@@ -86,19 +83,13 @@ BossRecords are <em>specially compiled parameterized modules</em> that follow th
 <p>When <code>Count</code> is not equal to 1, <code>has</code> can also take a proplist of options as the third element in the tuple:</p>
 
 <div class="code spec">
-    <span class="attr">-has</span>({bars, many, [{sort_by, first_name}]}).</span>
+    <span class="attr">-has</span>({bars, many, [{order_by, first_name}]}).</span>
 </div>
 
 <p>Valid options are:</p>
 <ul>
-    <li><code>sort_by</code> - attribute to sort on. Defaults to 'id'</li>
-    <li><code>sort_order</code> - whether to sort numerically or as a string, and ascending or descending. Valid values are:
-    <ul>
-        <li><code>str_ascending</code> - As string in dictionary order A-Z</li>
-        <li><code>str_descending</code> - As string in reverse dictionary order Z-A</li>
-        <li><code>num_ascending</code> - As number, low numbers first</li>
-        <li><code>num_descending</code> - As number, high numbers first</li>
-    </ul>
+    <li><code>order_by</code> - attribute to sort on. Defaults to 'id'</li>
+    <li><code>descending</code> - whether to values from high to low (a boolean).</li>
     <li><code>module</code> - If the assocation name is different than the underlying module, use this option to specify the underlying module.</li>
     <li><code>foreign_key</code> - If the associated module uses something unexpected for the foreign key, use this option to specify the foreign key (e.g. <code>person_id</code>).</li>
 </ul>

@@ -61,17 +61,48 @@ view(<span class="atom">'GET'</span>, [Year, Month]) -&gt;<br />
 <a name="routes"></a>
 <h3>Routes</h3>
 
-<p>Most routing takes place in the controller pattern-matching code. You can define additional routes in <code>priv/my_application.routes</code>. The file contains a list of erlang terms, one per line finished with a dot. Each term is a tuple with a URL or an HTTP status code as the first term, and a <code>{Controller::string(), Action::string()}</code> or <code>{Controller::string(), Action::string(), Parameters::proplist()}</code> tuple as the second term.</p>
+<p>Most routing takes place in the controller pattern-matching code. You can define additional routes in <code>priv/my_application.routes</code>. The file contains a list of erlang terms, one per line finished with a dot. Each term is a tuple with a URL or an HTTP status code as the first term, and a <code>Location::proplist()</code> as the second term.</p>
 
-<p>A few examples:</p>
+<p>The <code>Location</code> proplist must contain keys for <code>controller</code> and <code>action</code>. An optional <code>application</code> key will route requests across applications.</p>
+
+<p>A few examples of routes:</p>
 
 <div class="code">
     {"/", [{controller, "main"}, {action, "welcome"}]}.<br />
-    {"/signup", [{application, login_app}, {controller, "account"}, {"create"}]}.<br />
+    {"/signup", [{application, login_app}, {controller, "account"}, {action, "create"}]}.<br />
     {404, [{controller, "main"}, {action, "not_found"}]}.
 </div>
 
-<p>Most routes directly render the specified action; however, routing across applications (as in the second example) results in a 302 redirect.</p>
+<p>Most routes directly render the specified action; however, routing across applications (as in the second example) results in a 302 redirect. Note that the <code>{{ '{% url %}' }}</code> template tag will use the routes file to generate "pretty" URLs where appropriate.</p>
+
+<p>Additional <code>Location</code> parameters will be matched against the variable names of the controller's token list. For example, if <code>user_controller.erl</code> contains:</p>
+
+<div class="code">
+profile('GET', [UserId]) -&gt;
+    ...
+</div>
+
+<p>Then the location <code>[{controller, "user"}, {action, "profile"}, {user_id, "123"}]</code> will invoke the "profile" action of <code>user_controller</code> and pass in "123" as the only token (that is, <code>UserId</code>). If a location parameter does not match any variables in the token list, it will be passed in as a query parameter (e.g. <code>?user_id=123</code>).</p>
+
+<p>Routing URLs may contain regular expresssions. For example, the following route will match all URLs that start with a digit:</p>
+
+<div class="code">
+    {"/[0-9].*, [...]}.
+</div>
+
+<p>Sub-expressions can be captured using parentheses and substituted with the atoms <code>'$1'</code>, <code>'$2'</code>, etc. For example, the following route will capture a string of digits and pass them in as the <code>coupon_id</code> parameter:</p>
+
+<div class="code">
+    {"/([0-9]+)", [{controller, "coupon"}, {action, "redeem}, {coupon_id, '$1'}]}.
+</div>
+
+<p>Alternatively, named groups may be used to identify captured sub-expressions. For example, the following route is equivalent to the one above:</p>
+
+<div class="code">
+    {"/(?&lt;id&gt;[0-9]+)", [{controller, "coupon"}, {action, "redeem}, {coupon_id, '$id'}]}.
+</div>
+
+<p>The route expressions must match the entire URL. That is, the expressions are implicitly bookended with ^ and $.</p>
 
 <p>To define a default action for a controller, simply add a <code>default_action</code> attribute to the controller like so:</p>
 
@@ -169,6 +200,18 @@ before_(_) -&gt;<br />
 </div>
 
 <p>Skip views altogether and return <code>Output</code> to the client while setting additional HTTP <code>Headers</code>.</p>
+
+<div class="code spec">
+    {stream, Generator<span class="typevar">::function()</span>, Acc0}
+</div>
+
+<p>Stream a response to the client using HTTP chunked encoding. For each chunk, the <code>Generator</code> function is passed an accumulator (initally <code>Acc0</code>) and should return either <code>{output, Data, Acc1}</code> or <code>done</code>.</p>
+
+<div class="code spec">
+    {stream, Generator<span class="typevar">::function()</span>, Acc0, Headers<span class="typevar">::proplist()</span>}
+</div>
+
+<p>Same as above, but set additional HTTP <code>Headers</code>.</p>
 
 <div class="code spec">
     {json, Data<span class="typevar">::proplist()</span>}

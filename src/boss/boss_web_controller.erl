@@ -110,10 +110,12 @@ init(Config) ->
 
     {ServerMod, RequestMod, ResponseMod} = case boss_env:get_env(server, misultin) of
         mochiweb -> {mochiweb_http, mochiweb_request_bridge, mochiweb_response_bridge};
-        misultin -> {misultin, misultin_request_bridge, misultin_response_bridge}
+        misultin -> {misultin, misultin_request_bridge, misultin_response_bridge};
+	cowboy -> {cowboy, mochiweb_request_bridge, mochiweb_response_bridge}
     end,
     SSLEnable = boss_env:get_env(ssl_enable, false),
     SSLOptions = boss_env:get_env(ssl_options, []),
+    error_logger:info_msg("SSL:~p~n", [SSLOptions]),
     ServerConfig = [{loop, fun(Req) -> 
                     ?MODULE:handle_request(Req, RequestMod, ResponseMod)
             end} | Config],
@@ -123,7 +125,30 @@ init(Config) ->
             case SSLEnable of
                 true -> misultin:start_link([{ssl, SSLOptions} | ServerConfig]);
                 false -> misultin:start_link(ServerConfig)
-            end
+            end;
+	cowboy ->
+		  Dispatch = [
+			      {'_', [
+				     {'_', boss_mochicow_handler, [{loop, {boss_mochicow_handler, loop}}]}]}
+			     ],
+		  error_logger:info_msg("Starting cowboy... on ~p~n", [MasterNode]),
+		  application:start(cowboy),
+		  HttpPort = boss_env:get_env(port, 8001),
+                  case SSLEnable of 
+		      false -> 
+			  error_logger:info_msg("Starting http listener... on ~p ~n", [HttpPort]),
+			  cowboy:start_listener(boss_http_listener, 100,
+						cowboy_tcp_transport, [{port, HttpPort}],
+						cowboy_http_protocol, [{dispatch, Dispatch}]);
+		      true ->
+			  error_logger:info_msg("Starting https listener... on ~p ~n", [HttpPort]),
+			  SSLConfig = [{port, HttpPort}]++SSLOptions, 
+			  cowboy:start_listener(boss_https_listener, 100,
+						cowboy_ssl_transport, SSLConfig,
+						cowboy_http_protocol, [{dispatch, Dispatch}]
+					       )
+		  end
+		  
     end,
     {ok, #state{ http_pid = Pid, is_master_node = (ThisNode =:= MasterNode) }, 0}.
 
@@ -350,15 +375,29 @@ handle_request(Req, RequestMod, ResponseMod) ->
                     end,
                     Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
                     Response1 = (Response:status_code(StatusCode)):data(Payload),
-                    Response2 = case SessionID of
+                    Headers2 = case SessionID of
                         undefined ->
-                            Response1;
+                            Headers;
                         _ ->
                             SessionExpTime = boss_session:get_session_exp_time(),
-                            Response1:cookie(SessionKey, SessionID, "/", SessionExpTime)
+                            CookieOptions = [{path, "/"}, {max_age, SessionExpTime}],
+                            CookieOptions2 = case boss_env:get_env(session_domain, undefined) of
+                                undefined ->
+                                    CookieOptions;
+                                CookieDomain ->
+                                    lists:merge(CookieOptions, [{domain, CookieDomain}])
+                            end,
+                            lists:merge(Headers, [ mochiweb_cookies:cookie(SessionKey, SessionID, CookieOptions2) ])
                     end,
-                    Response3 = lists:foldl(fun({K, V}, Acc) -> Acc:header(K, V) end, Response2, Headers),
-                    Response3:build_response()
+                    Response2 = lists:foldl(fun({K, V}, Acc) -> Acc:header(K, V) end, Response1, Headers2),
+                    case Payload of
+                        {stream, Generator, Acc0} ->
+                            Response3 = Response2:data(chunked),
+                            Response3:build_response(),
+                            process_chunk_generator(Request, Generator, Acc0);
+                        _ ->
+                            (Response2:data(Payload)):build_response()
+                    end
             end
     end.
 
@@ -387,7 +426,8 @@ process_request(#boss_app_info{ router_pid = RouterPid } = AppInfo, Req, Mode, U
     if 
         Mode =:= development ->
             ControllerList = boss_files:web_controller_list(AppInfo#boss_app_info.application),
-            boss_router:set_controllers(RouterPid, ControllerList);
+            boss_router:set_controllers(RouterPid, ControllerList),
+            boss_router:reload(RouterPid);
         true ->
             ok
     end,
@@ -459,10 +499,25 @@ process_error(Payload, #boss_app_info{ router_pid = RouterPid } = AppInfo, Req, 
             {error, ["Error: <pre>", io_lib:print(Payload), "</pre>"], []}
     end.
 
+process_chunk_generator(Req, Generator, Acc) ->
+    case Generator(Acc) of
+        {output, Data, Acc1} ->
+            Length = iolist_size(Data),
+            mochiweb_socket:send(Req:socket(), [io_lib:format("~.16b\r\n", [Length]), Data, <<"\r\n">>]),
+            process_chunk_generator(Req, Generator, Acc1);
+        done ->
+            mochiweb_socket:send(Req:socket(), ["0\r\n\r\n"]),
+            ok
+    end.
+
 process_result(AppInfo, Req, {Status, Payload}) ->
     process_result(AppInfo, Req, {Status, Payload, []});
 process_result(_, _, {ok, Payload, Headers}) ->
     {200, merge_headers(Headers, [{"Content-Type", "text/html"}]), Payload};
+process_result(AppInfo, Req, {stream, Generator, Acc0}) ->
+    process_result(AppInfo, Req, {stream, Generator, Acc0, []});
+process_result(_, _, {stream, Generator, Acc0, Headers}) ->
+    {200, merge_headers(Headers, [{"Content-Type", "text/html"}]), {stream, Generator, Acc0}};
 process_result(AppInfo, Req, {redirect, "http://"++Where, Headers}) ->
     process_result(AppInfo, Req, {redirect_external, "http://"++Where, Headers});
 process_result(AppInfo, Req, {redirect, "https://"++Where, Headers}) ->
@@ -727,12 +782,13 @@ render_view({Controller, Template, _}, AppInfo, Req, SessionID, Variables, Heade
     ViewPath = boss_files:web_view_path(Controller, Template),
     LoadResult = boss_load:load_view_if_dev(AppInfo#boss_app_info.application, ViewPath, AppInfo#boss_app_info.translator_pid),
     BossFlash = boss_flash:get_and_clear(SessionID),
+    SessionData = boss_session:get_session_data(SessionID),
     case LoadResult of
         {ok, Module} ->
             {Lang, TranslationFun} = choose_translation_fun(AppInfo#boss_app_info.translator_pid, 
                 Module:translatable_strings(), Req:header(accept_language), 
                 proplists:get_value("Content-Language", Headers)),
-            case Module:render(lists:merge([{"_lang", Lang}, 
+            case Module:render(lists:merge([{"_lang", Lang}, {"_session", SessionData},
                             {"_base_url", AppInfo#boss_app_info.base_url}|Variables], BossFlash), 
                     [{translation_fun, TranslationFun}, {locale, Lang},
                         {custom_tags_context, [
