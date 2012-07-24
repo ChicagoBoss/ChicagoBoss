@@ -1,6 +1,8 @@
 -module(boss_files).
 -export([
-	websocket_dir_path/0,
+	websocket_path/0,
+	websocket_list/1,
+	websocket_mapping/2,
         dot_app_src/1,
         ebin_dir/0,
         include_dir/0,
@@ -63,7 +65,18 @@ static_path(App) -> filename:join([root_priv_dir(App), "static"]).
 
 lib_path() -> [filename:join([root_src_dir(), "lib"])].
 
-websocket_dir_path() -> [filename:join([root_src_dir(), "websocket"])].
+websocket_path() -> [filename:join([root_src_dir(), "websocket"])].
+websocket_mapping(AppName, Modules) ->
+    lists:foldl(fun([], Acc) -> Acc;
+		   (M, Acc) -> 
+			L1 = string:len(AppName) + 1,
+		        L2 = string:len(M),
+			L3 = string:len("_websocket"),
+			Url = string:substr(M, 
+				      L1 + 1, 
+				      L2 - (L1+L3)),
+			Acc ++ [{list_to_binary(Url), list_to_atom(M)}]			
+		end, [], Modules).
 
 view_lib_path() -> filename:join([root_src_dir(), "view", "lib"]).
 
@@ -92,6 +105,14 @@ include_dir() -> filename:join([root_dir(), "include"]).
 test_list() ->
     module_list(test_path()).
 
+websocket_list(AppName) ->
+    case boss_env:is_developing_app(AppName) of
+        true ->
+            module_list(websocket_path());
+        false ->
+            lists:map(fun atom_to_list/1, boss_env:get_env(AppName, websocket_modules, []))
+    end.
+
 model_list(AppName) ->
     case boss_env:is_developing_app(AppName) of
         true ->
@@ -110,6 +131,7 @@ web_controller_list(AppName) ->
 
 web_controller(AppName, Controller) ->
     lists:concat([AppName, "_", Controller, "_controller"]).
+
 
 view_file_list() ->
     ViewFiles = filelib:fold_files(filename:join([root_src_dir(), "view"]), ".*\\.(html|txt)$", true, fun(F1,Acc1) -> [F1 | Acc1] end, []),

@@ -69,11 +69,9 @@ load_libraries(OutDir) ->
     load_dirs(boss_files:lib_path(), OutDir, fun compile/2).
 
 load_services_websockets() ->
-    OutDir = boss_files:ebin_dir(),
-    error_logger:info_msg("websockets_service: outdir:~p~n", [OutDir]),
-    load_services_websockets(OutDir).
+    load_services_websockets(boss_files:ebin_dir()).
 load_services_websockets(OutDir) ->
-    load_dirs(boss_files:websocket_dir_path(), OutDir, fun compile/2).
+    load_dirs(boss_files:websocket_path(), OutDir, fun compile/2).
 
 load_mail_controllers() ->
     load_mail_controllers(undefined).

@@ -67,7 +67,7 @@ start_services(SupPid, Services) ->
 					 {Service, {boss_service_worker, start_link, [Service]},
 					  permanent, 5000, worker, [Service]}),
 	      boss_websocket_router:register(ServiceName, Service),
-	      Acc ++ {ok, ServicePid}
+	      Acc ++ [{ok, ServicePid}]
       end, 
       [], 
       Services ),
