@@ -518,6 +518,27 @@ process_result(AppInfo, Req, {stream, Generator, Acc0}) ->
     process_result(AppInfo, Req, {stream, Generator, Acc0, []});
 process_result(_, _, {stream, Generator, Acc0, Headers}) ->
     {200, merge_headers(Headers, [{"Content-Type", "text/html"}]), {stream, Generator, Acc0}};
+process_result(AppInfo, Req, {moved, "http://"++Where, Headers}) ->
+    process_result(AppInfo, Req, {moved_external, "http://"++Where, Headers});
+process_result(AppInfo, Req, {moved, "https://"++Where, Headers}) ->
+    process_result(AppInfo, Req, {moved_external, "https://"++Where, Headers});
+process_result(AppInfo, Req, {moved, {Application, Controller, Action, Params}, Headers}) ->
+    RouterPid = if
+        AppInfo#boss_app_info.application =:= Application ->
+            AppInfo#boss_app_info.router_pid;
+        true ->
+            boss_web:router_pid(Application)
+    end,
+    ExtraParams = [{application, Application}, {controller, Controller}, {action, Action}],
+    URL = boss_erlydtl_tags:url(ExtraParams ++ Params, [
+            {host, Req:header(host)},
+            {application, AppInfo#boss_app_info.application},
+            {router_pid, RouterPid}]),
+    {301, [{"Location", URL}, {"Cache-Control", "no-cache"}|Headers], ""};
+process_result(AppInfo, _, {moved, Where, Headers}) ->
+    {301, [{"Location", AppInfo#boss_app_info.base_url ++ Where}, {"Cache-Control", "no-cache"}|Headers], ""};
+process_result(_, _, {moved_external, Where, Headers}) ->
+    {301, [{"Location", Where}, {"Cache-Control", "no-cache"}|Headers], ""};
 process_result(AppInfo, Req, {redirect, "http://"++Where, Headers}) ->
     process_result(AppInfo, Req, {redirect_external, "http://"++Where, Headers});
 process_result(AppInfo, Req, {redirect, "https://"++Where, Headers}) ->
