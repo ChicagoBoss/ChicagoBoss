@@ -736,7 +736,12 @@ process_action_result({{Controller, _, _}, Req, SessionID, LocationTrail}, {acti
 process_action_result({_, Req, SessionID, LocationTrail}, not_found, _, AppInfo, _) ->
     case boss_router:handle(AppInfo#boss_app_info.router_pid, 404) of
         {ok, {Application, Controller, Action, Params}} when Application =:= AppInfo#boss_app_info.application ->
-            execute_action({Controller, Action, Params}, AppInfo, Req, SessionID, LocationTrail);
+            case execute_action({Controller, Action, Params}, AppInfo, Req, SessionID, LocationTrail) of
+                {ok, Payload, Headers} ->
+                    {not_found, Payload, Headers};
+                Other ->
+                    Other
+            end;
         {ok, {OtherApplication, Controller, Action, Params}} ->
             {redirect, {OtherApplication, Controller, Action, Params}};
         not_found ->
