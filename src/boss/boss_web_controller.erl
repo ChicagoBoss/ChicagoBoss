@@ -169,9 +169,9 @@ handle_info(timeout, State) ->
 		case boss_env:get_env(server, misultin) of
 		    cowboy ->
 			WebSocketModules = boss_files:websocket_list(AppName),
-			Services      = boss_files:websocket_mapping(atom_to_list(AppName), 
+			MappingServices  = boss_files:websocket_mapping(atom_to_list(AppName), 
 								     WebSocketModules),
-			boss_service_sup:start_services(ServicesSupPid, Services);
+			boss_service_sup:start_services(ServicesSupPid, MappingServices);
 		    _Any ->
 			_Any
 		end,						

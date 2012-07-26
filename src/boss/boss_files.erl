@@ -72,9 +72,10 @@ websocket_mapping(AppName, Modules) ->
 			L1 = string:len(AppName) + 1,
 		        L2 = string:len(M),
 			L3 = string:len("_websocket"),
-			Url = string:substr(M, 
+			Service = string:substr(M, 
 				      L1 + 1, 
 				      L2 - (L1+L3)),
+			Url = string:join([string:concat("/",AppName), "websocket", Service],"/"),                        
 			Acc ++ [{list_to_binary(Url), list_to_atom(M)}]			
 		end, [], Modules).
 
