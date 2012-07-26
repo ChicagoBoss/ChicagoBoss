@@ -2,7 +2,7 @@
 -export([
 	websocket_path/0,
 	websocket_list/1,
-	websocket_mapping/2,
+	websocket_mapping/3,
         dot_app_src/1,
         ebin_dir/0,
         include_dir/0,
@@ -66,7 +66,7 @@ static_path(App) -> filename:join([root_priv_dir(App), "static"]).
 lib_path() -> [filename:join([root_src_dir(), "lib"])].
 
 websocket_path() -> [filename:join([root_src_dir(), "websocket"])].
-websocket_mapping(AppName, Modules) ->
+websocket_mapping(BaseURL, AppName, Modules) ->
     lists:foldl(fun([], Acc) -> Acc;
 		   (M, Acc) -> 
 			L1 = string:len(AppName) + 1,
@@ -75,7 +75,12 @@ websocket_mapping(AppName, Modules) ->
 			Service = string:substr(M, 
 				      L1 + 1, 
 				      L2 - (L1+L3)),
-			Url = string:join([string:concat("/",AppName), "websocket", Service],"/"),                        
+			Url = case BaseURL of
+				  "/" ->
+				      string:join(["/websocket", Service],"/");
+				  _ ->
+				      string:join([BaseURL, "websocket", Service],"/")
+			      end,			
 			Acc ++ [{list_to_binary(Url), list_to_atom(M)}]			
 		end, [], Modules).
 
