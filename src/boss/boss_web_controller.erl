@@ -6,6 +6,7 @@
 
 -record(state, {
         applications = [],
+        service_sup_pid,
         http_pid,
         smtp_pid,
         is_master_node = false
@@ -80,6 +81,7 @@ init(Config) ->
 
     boss_session:start(),
 
+
     ThisNode = erlang:node(),
     MasterNode = boss_env:get_env(master_node, ThisNode),
     if MasterNode =:= ThisNode ->
@@ -116,6 +118,10 @@ init(Config) ->
     SSLEnable = boss_env:get_env(ssl_enable, false),
     SSLOptions = boss_env:get_env(ssl_options, []),
     error_logger:info_msg("SSL:~p~n", [SSLOptions]),
+
+    %service supervisor
+    {ok, ServicesSupPid} = boss_service_sup:start_link(),
+
     ServerConfig = [{loop, fun(Req) -> 
                     ?MODULE:handle_request(Req, RequestMod, ResponseMod)
             end} | Config],
@@ -127,10 +133,7 @@ init(Config) ->
                 false -> misultin:start_link(ServerConfig)
             end;
 	cowboy ->
-		  Dispatch = [
-			      {'_', [
-				     {'_', boss_mochicow_handler, [{loop, {boss_mochicow_handler, loop}}]}]}
-			     ],
+		  Dispatch = [{'_', [{'_', boss_mochicow_handler, [{loop, {boss_mochicow_handler, loop}}]}]}],
 		  error_logger:info_msg("Starting cowboy... on ~p~n", [MasterNode]),
 		  application:start(cowboy),
 		  HttpPort = boss_env:get_env(port, 8001),
@@ -147,21 +150,34 @@ init(Config) ->
 						cowboy_ssl_transport, SSLConfig,
 						cowboy_http_protocol, [{dispatch, Dispatch}]
 					       )
-		  end
+		  end,
+		  boss_service_sup:start_services(ServicesSupPid, boss_websocket_router),		  
+		  boss_load:load_services_websockets()
 		  
-    end,
-    {ok, #state{ http_pid = Pid, is_master_node = (ThisNode =:= MasterNode) }, 0}.
+	  end,
+    {ok, #state{ service_sup_pid = ServicesSupPid, http_pid = Pid, is_master_node = (ThisNode =:= MasterNode) }, 0}.
 
 handle_info(timeout, State) ->
     Applications = boss_env:get_env(applications, []),
+    ServicesSupPid = State#state.service_sup_pid,
     AppInfoList = lists:map(fun
             (AppName) ->
                 application:start(AppName),
                 BaseURL = boss_env:get_env(AppName, base_url, "/"),
                 DomainList = boss_env:get_env(AppName, domains, all),
                 ModelList = boss_files:model_list(AppName),
-                ControllerList = boss_files:web_controller_list(AppName),
-                {ok, RouterSupPid} = boss_router:start([{application, AppName},
+		case boss_env:get_env(server, misultin) of
+		    cowboy ->
+			WebSocketModules = boss_files:websocket_list(AppName),
+			MappingServices  = boss_files:websocket_mapping(BaseURL,
+									atom_to_list(AppName), 
+									WebSocketModules),
+			boss_service_sup:start_services(ServicesSupPid, MappingServices);
+		    _Any ->
+			_Any
+		end,						
+		ControllerList = boss_files:web_controller_list(AppName),
+		{ok, RouterSupPid} = boss_router:start([{application, AppName},
                         {controllers, ControllerList}]),
                 {ok, TranslatorSupPid} = boss_translator:start([{application, AppName}]),
                 case boss_env:is_developing_app(AppName) of
