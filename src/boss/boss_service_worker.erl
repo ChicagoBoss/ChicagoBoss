@@ -126,7 +126,7 @@ handle_call({terminate_service, ServiceUrl, WebSocketId, SessionId}, _From,  Sta
     try Handler:handle_close(ServiceUrl, WebSocketId, SessionId, Internal) of
 	{reply, Reply, NewInternal} ->
 	    {reply, Reply, #state{handler=Handler, internal=NewInternal}};
-	{reply, Reply, State, NewInternal, Timeout} ->
+	{reply, Reply, NewInternal, Timeout} ->
 	    {reply, Reply, #state{handler=Handler, internal=NewInternal}, Timeout};
 	
 	{noreply, NewInternal} ->
@@ -174,7 +174,7 @@ handle_cast({incoming_msg, ServiceUrl, WebSocketId, SessionId, Message}, State) 
 	{noreply, NewInternal, Timeout} ->
 	    {noreply, #state{handler=Handler, internal=NewInternal}, Timeout};
 	{stop, _Reason, NewInternal} ->
-	    {noreply, _Reason, #state{handler=Handler, internal=NewInternal}}		
+	    {stop, _Reason, #state{handler=Handler, internal=NewInternal}}		
     catch Class:Reason ->
 	    error_logger:error_msg(
 	      "** Boss Service Handler ~p terminating in handle_incoming/4~n"

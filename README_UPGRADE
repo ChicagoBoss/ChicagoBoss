@@ -1,3 +1,14 @@
+Upgrade: From 0.7 to 0.8
+------------------------
+
+Calls to boss_db:find/3-6 need to be replaced with the new boss_db:find/3 API.
+The third argument should a proplist with options for 'limit', 'offset',
+'order_by', and 'descending'.
+
+The 'sort_by' option to the -has BossRecord attribute has been renamed
+'order_by'.
+
+
 Upgrade: From anything to 0.7.2
 -------------------------------
 
