@@ -21,7 +21,8 @@
 	 close/3,
 	 incoming/4,
 	 service/1,
-	 services/0
+	 services/0,
+	 consumers/0
 	]).
 
 %% gen_server callbacks
@@ -31,28 +32,22 @@
 -define(SERVER, ?MODULE). 
 
 
--record(boss_consumers, 
-	{
-	  websocket_id,   % gateway to send message to consummer
-          session_id,     % the session id to link and user
-	  service_name,   % service name
-          created_on      % date of creation
-        }).
+%% -record(boss_consumers, 
+%% 	{
+%% 	  websocket_id,   % gateway to send message to consummer
+%%           session_id,     % the session id to link and user
+%% 	  service_name,   % service name
+%%           created_on      % date of creation
+%%         }).
 
--record(boss_services, 
-	{
-	  service_name,   % service name
-          service_id,     % the session id 
-          created_on      % date of creation
-        }).
+%% -record(boss_services, 
+%% 	{
+%% 	  service_name,   % service name
+%%           service_id,     % the session id 
+%%           created_on      % date of creation
+%%         }).
 
--record(state, 
-	{
-	  adapter,   
-          conn,     
-          nb_consummer,
-	  nb_service
-        }).
+-record(state, {consumers, services, nb_consumer}).
           
 %%%===================================================================
 %%% API
@@ -66,31 +61,36 @@
 %% @end
 %%--------------------------------------------------------------------
 start_link() ->
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+    gen_server:start_link({global, ?SERVER}, ?MODULE, [], []).
 
 %sync
-register(ServiceName, ServiceId) ->
-    gen_server:call(?SERVER, {register_service, ServiceName, ServiceId}).
+register(ServiceUrl, ServiceId) ->
+    gen_server:call({global, ?SERVER}, {register_service, ServiceUrl, ServiceId}).
 
-unregister(ServiceName, ServiceId) ->
-    gen_server:call(?SERVER, {unregister_service, ServiceName, ServiceId}).
+unregister(ServiceUrl, ServiceId) ->
+    gen_server:call({global, ?SERVER}, {unregister_service, ServiceUrl, ServiceId}).
 
-service(ServiceName) ->
-    gen_server:call(?SERVER, {get_service, ServiceName}).
+service(ServiceUrl) ->
+    gen_server:call({global, ?SERVER}, {get_service, ServiceUrl}).
+
 services() ->
-    gen_server:call(?SERVER, {get_all_service}).
+    gen_server:call({global, ?SERVER}, {get_all_service}).
+
+consumers() ->
+    gen_server:call({global, ?SERVER}, {get_consumers}).
+    
 
     
 
 %async
-join(ServiceName, WebSocketId, SessionId) ->
-    gen_server:cast(?SERVER, {join_service, ServiceName, WebSocketId, SessionId}).
+join(ServiceUrl, WebSocketId, SessionId) ->
+    gen_server:cast({global, ?SERVER}, {join_service, ServiceUrl, WebSocketId, SessionId}).
 
-close(ServiceName, WebSocketId, SessionId) ->
-    gen_server:cast(?SERVER, {terminate_service, ServiceName, WebSocketId, SessionId}).
+close(ServiceUrl, WebSocketId, SessionId) ->
+    gen_server:cast({global, ?SERVER}, {terminate_service, ServiceUrl, WebSocketId, SessionId}).
 
-incoming(ServiceName, WebSocketId, SessionId, Message) ->
-    gen_server:cast(?SERVER, {incoming_msg, ServiceName, WebSocketId, SessionId, Message}).
+incoming(ServiceUrl, WebSocketId, SessionId, Message) ->
+    gen_server:cast({global, ?SERVER}, {incoming_msg, ServiceUrl, WebSocketId, SessionId, Message}).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -109,27 +109,7 @@ incoming(ServiceName, WebSocketId, SessionId, Message) ->
 %%--------------------------------------------------------------------
 
 init([]) ->
-    mnesia:create_schema([node()]),
-    mnesia:start(),
-    
-    try
-	mnesia:table_info(boss_consummers, type)
-    catch
-	exit: _ ->
-	    mnesia:create_table(boss_consumers, [{attributes, 
-						    record_info(fields, boss_consumers)},
-					     {type, bag},
-					     {ram_copies, [node()]}])
-    end,    
-    try
-	mnesia:table_info(boss_services, type)
-    catch
-	exit: _ ->
-	    mnesia:create_table(boss_services, [{attributes, record_info(fields, boss_services)},
-					     {type, bag},
-					     {ram_copies, [node()]}])
-    end,    
-    {ok, #state{nb_consummer = 0, nb_service = 0}}.
+    {ok, #state{consumers=dict:new(), services=dict:new(), nb_consumer=0}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -145,34 +125,32 @@ init([]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-%% get_service(ServiceName) ->
-%%     gen_server:call(?SERVER, {get_service, ServiceName}).
-%% get_services() ->
-%%     gen_server:call(?SERVER, get_all_service).
-handle_call({get_service, ServiceName}, _From, State) ->
-    Reply = get_service(ServiceName),
+
+handle_call({get_service, ServiceUrl}, _From, State) ->
+    #state{services=Services} = State,    
+    Reply = dict:fetch(ServiceUrl, Services),
     {reply, Reply, State};
 
 handle_call({get_all_service}, _From, State) ->
-    Reply = get_all_service(),
+    #state{services=Services} = State,    
+    Reply = dict:fetch_keys(Services),
     {reply, Reply, State};
 
-
-handle_call({register_service, ServiceName, ServiceId}, _From, State) ->
-    Reply = register_service(ServiceName, ServiceId),
+handle_call({get_consumers}, _From, State) ->
+    #state{consumers=Consumers} = State,    
+    Reply = dict:fetch_keys(Consumers),
     {reply, Reply, State};
 
-handle_call({unregister_service, ServiceName}, _From, State) ->
-    Services = get_service(ServiceName),
-    Reply = unregister_service(Services),
- %%
- %%  maybe should terminate all consumer who register to this service ???
- %%  (part of programmer, in there loop, my point)
- %%  foreach consummer !{text, "service close"} 
- %%  exit(consummer)
- %% 
-    {reply, Reply, State};
+handle_call({register_service, ServiceUrl, ServiceId}, _From, State) ->
+    #state{consumers=ConsumersStore, services=ServicesStore, nb_consumer=NbConsumer} = State,    
+    NewServicesStore = dict:store(ServiceUrl, ServiceId, ServicesStore),
+    NewState = #state{consumers=ConsumersStore, services=NewServicesStore,nb_consumer=NbConsumer},
+    {reply, ok, NewState};
 
+handle_call({unregister_service, ServiceUrl}, _From, State) ->
+    #state{consumers=Consumers, services=ServicesStore, nb_consumer=NbConsumer} = State,    
+    NewServices = dict:erase(ServiceUrl, ServicesStore),
+    {reply, ok, #state{consumers=Consumers, services=NewServices, nb_consumer=NbConsumer}};
 
 handle_call(_Request, _From, State) ->
     Reply = ok,
@@ -188,48 +166,28 @@ handle_call(_Request, _From, State) ->
 %%                                  {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-%% handle_cast({ws_close, WsId, SessionId}, State) ->
-%%     Nb = State#state.nb_ws - 1,
-%%     Messages = get_message(WsId, SessionId),
-%%     %error_logger:info_msg("Msg to delete:~p~n",[Messages]),    
-%%     del_message(Messages),
-%%     Objs = get_websocket(WsId, SessionId),
-%%     %error_logger:info_msg("WebSocket to delete:~p~n",[Objs]),
-%%     del_websocket(Objs),
-%%     {noreply,  #state{nb_ws=Nb}};
-handle_cast({join_service, ServiceName, WebSocketId, SessionId}, State) ->
-    case get_service(ServiceName) of
-	[{boss_services, _, ServiceId, _CreatedOn}] ->
-	   boss_service_worker:join(ServiceId, ServiceName, WebSocketId, SessionId);
-	Unknow ->
-	    Unknow	    
-    end,
-    register_consummer(ServiceName, WebSocketId, SessionId),
+
+handle_cast({join_service, ServiceUrl, WebSocketId, SessionId}, State) ->
+    #state{consumers=Consumers, services=Services, nb_consumer=NbConsumer} = State,    
+    ServiceId = dict:fetch(ServiceUrl, Services),
+    boss_service_worker:join(ServiceId, ServiceUrl, WebSocketId, SessionId),
+    NewConsumers = dict:store(WebSocketId, [ServiceId, SessionId], Consumers),
+    NewState = #state{consumers=NewConsumers, services=Services,nb_consumer=NbConsumer+1},
+    {noreply, NewState};
+
+handle_cast({incoming_msg, ServiceUrl, WebSocketId, SessionId, Msg}, State) ->
+    #state{services=Services} = State,    
+    ServiceId = dict:fetch(ServiceUrl, Services),
+    boss_service_worker:incoming(ServiceId, ServiceUrl, WebSocketId, SessionId, Msg),
     {noreply, State};
 
-handle_cast({incoming_msg, ServiceName, WebSocketId, SessionId, Msg}, State) ->
-    case get_service(ServiceName) of
-	[{boss_services, _, ServiceId, _CreatedOn}] ->
-	    boss_service_worker:incoming(ServiceId, ServiceName, WebSocketId, SessionId, Msg);
-	Unknow ->
-	    Unknow	    
-    end,
-    {noreply, State};
-
-handle_cast({terminate_service, ServiceName, WebSocketId, SessionId}, State) ->
-    case get_service(ServiceName) of
-	[{boss_services, _, ServiceId, _CreatedOn}] ->
-	    boss_service_worker:close(ServiceId, ServiceName, WebSocketId, SessionId);
-	Unknow ->
-	    Unknow	    
-    end,
-    
-    unregister_consummer([{boss_consummers, 
-			   WebSocketId,  
-			   SessionId,    
-			   ServiceName   
-			  }]),
-    {noreply, State};
+handle_cast({terminate_service, ServiceUrl, WebSocketId, SessionId}, State) ->
+    #state{consumers=Consumers, services=Services, nb_consumer=NbConsumer} = State,    
+    ServiceId = dict:fetch(ServiceUrl, Services),
+    boss_service_worker:close(ServiceId, ServiceUrl, WebSocketId, SessionId),
+    NewConsumers = dict:erase(WebSocketId, Consumers),
+    NewState = #state{consumers=NewConsumers, services=Services, nb_consumer=NbConsumer-1},
+    {noreply, NewState};
 
 handle_cast(_Msg, State) ->
     {noreply, State}.
@@ -276,57 +234,3 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
-%% Internal functions
-register_service(ServiceName, ServiceId) ->
-    F = fun() ->
-		{_, CreatedOn, _} = erlang:now(),
-		mnesia:write(#boss_services{service_id=ServiceId,
-					    service_name=ServiceName, 
-					    created_on=CreatedOn}) end,
-    mnesia:transaction(F).
-
-unregister_service(Services) ->
-  F = fun() ->
-	  lists:foreach(fun(Msg) -> mnesia:delete_object(Msg) end, Services) end,
-  mnesia:transaction(F).
-
-get_service(ServiceName) ->
-    F = fun() ->
-		Query = qlc:q([M || M <- mnesia:table(boss_services),
-				    M#boss_services.service_name =:= ServiceName
-			      ]),
-		%% Order = fun(A,B) ->
-		%% 	       A#boss_services.created_on > B#boss_services.created_on
-		%% 	end,
-		%% Results = qlc:e(qlc:sort(Query, {order, Order})),
-		Results = qlc:e(Query),
-		Results
-	end,
-  {atomic, Service} = mnesia:transaction(F),
-  Service.
-
-get_all_service() ->
-    F = fun() ->
-		Query = qlc:q([M || M <- mnesia:table(boss_services)
-			      ]),
-		Results = qlc:e(Query),
-		Results
-	end,
-  {atomic, Services} = mnesia:transaction(F),
-  Services.
-
-
-register_consummer(ServiceName, WebsocketId, SessionId) ->
-    F = fun() ->
-		{_, CreatedOn, _} = erlang:now(),
-		mnesia:write(#boss_consumers{
-					     service_name=ServiceName, 
-					     websocket_id=WebsocketId,
-				             session_id=SessionId,
-					     created_on=CreatedOn}) end,
-    mnesia:transaction(F).
-
-unregister_consummer(Consummers) ->
-  F = fun() ->
-	  lists:foreach(fun(Msg) -> mnesia:delete_object(Msg) end, Consummers) end,
-  mnesia:transaction(F).

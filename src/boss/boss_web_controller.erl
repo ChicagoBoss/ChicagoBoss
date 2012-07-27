@@ -151,8 +151,10 @@ init(Config) ->
 						cowboy_http_protocol, [{dispatch, Dispatch}]
 					       )
 		  end,
-		  boss_service_sup:start_services(ServicesSupPid, boss_websocket_router),		  
-		  boss_load:load_services_websockets()
+		  if MasterNode =:= ThisNode ->
+			  boss_service_sup:start_services(ServicesSupPid, boss_websocket_router),		  
+			  boss_load:load_services_websockets()			    				
+		  end
 		  
 	  end,
     {ok, #state{ service_sup_pid = ServicesSupPid, http_pid = Pid, is_master_node = (ThisNode =:= MasterNode) }, 0}.
@@ -166,16 +168,20 @@ handle_info(timeout, State) ->
                 BaseURL = boss_env:get_env(AppName, base_url, "/"),
                 DomainList = boss_env:get_env(AppName, domains, all),
                 ModelList = boss_files:model_list(AppName),
-		case boss_env:get_env(server, misultin) of
-		    cowboy ->
-			WebSocketModules = boss_files:websocket_list(AppName),
-			MappingServices  = boss_files:websocket_mapping(BaseURL,
-									atom_to_list(AppName), 
-									WebSocketModules),
-			boss_service_sup:start_services(ServicesSupPid, MappingServices);
-		    _Any ->
-			_Any
-		end,						
+	        ThisNode = erlang:node(),
+		MasterNode = boss_env:get_env(master_node, ThisNode),
+		if MasterNode =:= ThisNode ->
+		    case boss_env:get_env(server, misultin) of
+			cowboy ->
+			    WebSocketModules = boss_files:websocket_list(AppName),
+			    MappingServices  = boss_files:websocket_mapping(BaseURL,
+									    atom_to_list(AppName), 
+									    WebSocketModules),
+			    boss_service_sup:start_services(ServicesSupPid, MappingServices);
+			_Any ->
+			    _Any
+		    end
+		end,				    				    
 		ControllerList = boss_files:web_controller_list(AppName),
 		{ok, RouterSupPid} = boss_router:start([{application, AppName},
                         {controllers, ControllerList}]),

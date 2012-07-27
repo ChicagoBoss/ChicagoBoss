@@ -34,16 +34,16 @@
 %% @end
 %%--------------------------------------------------------------------
 start_link(Handler) when is_atom(Handler)->
-    gen_server:start_link({local, Handler}, ?MODULE, [Handler], []).
+    gen_server:start_link({global, Handler}, ?MODULE, [Handler], []).
 
 incoming(Service, ServiceName, WebSocketId, SessionId, Msg) ->
-    gen_server:cast(Service, {incoming_msg, ServiceName, WebSocketId, SessionId, Msg}).
+    gen_server:cast({global, Service}, {incoming_msg, ServiceName, WebSocketId, SessionId, Msg}).
 
 join(Service, ServiceName, WebSocketId, SessionId) ->
-    gen_server:call(Service, {join_service, ServiceName, WebSocketId, SessionId }).
+    gen_server:call({global, Service}, {join_service, ServiceName, WebSocketId, SessionId }).
 
-close(Service, ServiceName, WebSocketId,SessionId) ->
-    gen_server:call(Service, {terminate_service, WebSocketId, SessionId}).
+close(Service, ServiceName, WebSocketId, SessionId) ->
+    gen_server:call({global, Service}, {terminate_service, ServiceName, WebSocketId, SessionId}).
 
 %%%===================================================================
 %%% gen_server callbacks
