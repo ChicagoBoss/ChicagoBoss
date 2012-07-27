@@ -170,7 +170,7 @@ handle_call(_Request, _From, State) ->
 handle_cast({join_service, ServiceUrl, WebSocketId, SessionId}, State) ->
     #state{consumers=Consumers, services=Services, nb_consumer=NbConsumer} = State,    
     ServiceId = dict:fetch(ServiceUrl, Services),
-    boss_service_worker:join(ServiceId, ServiceUrl, WebSocketId, SessionId),
+    boss_service_worker:join(ServiceId, binary_to_list(ServiceUrl), WebSocketId, SessionId),
     NewConsumers = dict:store(WebSocketId, [ServiceId, SessionId], Consumers),
     NewState = #state{consumers=NewConsumers, services=Services,nb_consumer=NbConsumer+1},
     {noreply, NewState};
@@ -178,13 +178,13 @@ handle_cast({join_service, ServiceUrl, WebSocketId, SessionId}, State) ->
 handle_cast({incoming_msg, ServiceUrl, WebSocketId, SessionId, Msg}, State) ->
     #state{services=Services} = State,    
     ServiceId = dict:fetch(ServiceUrl, Services),
-    boss_service_worker:incoming(ServiceId, ServiceUrl, WebSocketId, SessionId, Msg),
+    boss_service_worker:incoming(ServiceId, binary_to_list(ServiceUrl), WebSocketId, SessionId, Msg),
     {noreply, State};
 
 handle_cast({terminate_service, ServiceUrl, WebSocketId, SessionId}, State) ->
     #state{consumers=Consumers, services=Services, nb_consumer=NbConsumer} = State,    
     ServiceId = dict:fetch(ServiceUrl, Services),
-    boss_service_worker:close(ServiceId, ServiceUrl, WebSocketId, SessionId),
+    boss_service_worker:close(ServiceId, binary_to_list(ServiceUrl), WebSocketId, SessionId),
     NewConsumers = dict:erase(WebSocketId, Consumers),
     NewState = #state{consumers=NewConsumers, services=Services, nb_consumer=NbConsumer-1},
     {noreply, NewState};

@@ -61,12 +61,12 @@ start_services(SupPid, boss_websocket_router) ->
 start_services(SupPid, Services) ->
     lists:foldl(
       fun([], Acc) -> Acc ;
-	 ({ServiceName, Service}, Acc) ->
+	 ({ServiceUrl, Service}, Acc) ->
 	      {ok, ServicePid} = 
 		  supervisor:start_child(SupPid,
 					 {Service, {boss_service_worker, start_link, [Service]},
 					  permanent, 5000, worker, [Service]}),
-	      boss_websocket_router:register(ServiceName, Service),
+	      boss_websocket_router:register(ServiceUrl, Service),
 	      Acc ++ [{ok, ServicePid}]
       end, 
       [], 
