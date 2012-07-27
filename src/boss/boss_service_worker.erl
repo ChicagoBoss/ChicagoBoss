@@ -36,14 +36,14 @@
 start_link(Handler) when is_atom(Handler)->
     gen_server:start_link({global, Handler}, ?MODULE, [Handler], []).
 
-incoming(Service, ServiceName, WebSocketId, SessionId, Msg) ->
-    gen_server:cast({global, Service}, {incoming_msg, ServiceName, WebSocketId, SessionId, Msg}).
+incoming(Service, ServiceUrl, WebSocketId, SessionId, Msg) ->
+    gen_server:cast({global, Service}, {incoming_msg, ServiceUrl, WebSocketId, SessionId, Msg}).
 
-join(Service, ServiceName, WebSocketId, SessionId) ->
-    gen_server:call({global, Service}, {join_service, ServiceName, WebSocketId, SessionId }).
+join(Service, ServiceUrl, WebSocketId, SessionId) ->
+    gen_server:call({global, Service}, {join_service, ServiceUrl, WebSocketId, SessionId }).
 
-close(Service, ServiceName, WebSocketId, SessionId) ->
-    gen_server:call({global, Service}, {terminate_service, ServiceName, WebSocketId, SessionId}).
+close(Service, ServiceUrl, WebSocketId, SessionId) ->
+    gen_server:call({global, Service}, {terminate_service, ServiceUrl, WebSocketId, SessionId}).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -88,10 +88,10 @@ init([Handler]) when is_atom(Handler) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call({join_service, ServiceName, WebSocketId, SessionId}, _From, State) ->
+handle_call({join_service, ServiceUrl, WebSocketId, SessionId}, _From, State) ->
     #state{handler=Handler, internal=Internal} = State,
     try 
-	Handler:handle_join(ServiceName, WebSocketId, SessionId, Internal) of
+	Handler:handle_join(ServiceUrl, WebSocketId, SessionId, Internal) of
 	{reply, Reply, NewInternal} ->
 	    {reply, Reply, #state{handler=Handler, internal=NewInternal}};
 	{reply, Reply, State, NewInternal, Timeout} ->
@@ -111,19 +111,19 @@ handle_call({join_service, ServiceName, WebSocketId, SessionId}, _From, State) -
 		error_logger:error_msg(
 		  "** Boss Service Handler ~p terminating in join/0~n"
 		  "   for the reason ~p:~p~n"
-  		  "ServiceName: ~p~n"
+  		  "ServiceUrl: ~p~n"
   		  "WebSocketId: ~p~n"
   		  "SessionId  : ~p~n"
   		  "State    : ~p~n"
 		  "** Stacktrace: ~p~n~n",
-		  [Handler, Class, Reason, ServiceName, WebSocketId,
+		  [Handler, Class, Reason, ServiceUrl, WebSocketId,
 		   SessionId, Internal, erlang:get_stacktrace()])
 	end;
 
 
-handle_call({terminate_service, ServiceName, WebSocketId, SessionId}, _From,  State) ->   
+handle_call({terminate_service, ServiceUrl, WebSocketId, SessionId}, _From,  State) ->   
     #state{handler=Handler, internal=Internal} = State,    
-    try Handler:handle_close(ServiceName, WebSocketId, SessionId, Internal) of
+    try Handler:handle_close(ServiceUrl, WebSocketId, SessionId, Internal) of
 	{reply, Reply, NewInternal} ->
 	    {reply, Reply, #state{handler=Handler, internal=NewInternal}};
 	{reply, Reply, State, NewInternal, Timeout} ->
@@ -143,12 +143,12 @@ handle_call({terminate_service, ServiceName, WebSocketId, SessionId}, _From,  St
 	    error_logger:error_msg(
 	      "** Handler ~p terminating in init/0~n"
 	      "   for the reason ~p:~p~n"
-	      "ServiceName: ~p~n"
+	      "ServiceUrl: ~p~n"
 	      "WebSocketId: ~p~n"
 	      "SessionId  : ~p~n"
 	      "State    : ~p~n"
 	      "** Stacktrace: ~p~n~n",
-	      [Handler, Class, Reason, ServiceName, WebSocketId,
+	      [Handler, Class, Reason, ServiceUrl, WebSocketId,
 	       SessionId, Internal, erlang:get_stacktrace()])	
     end;
 
@@ -166,9 +166,9 @@ handle_call(_Request, _From, State) ->
 %%                                  {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_cast({incoming_msg, ServiceName, WebSocketId, SessionId, Message}, State) ->
+handle_cast({incoming_msg, ServiceUrl, WebSocketId, SessionId, Message}, State) ->
     #state{handler=Handler, internal=Internal} = State,
-    try Handler:handle_incoming(ServiceName, WebSocketId, SessionId, Message, Internal) of
+    try Handler:handle_incoming(ServiceUrl, WebSocketId, SessionId, Message, Internal) of
 	{noreply, NewInternal} ->
 	    {noreply, #state{handler=Handler, internal=NewInternal}};
 	{noreply, NewInternal, Timeout} ->
@@ -179,13 +179,13 @@ handle_cast({incoming_msg, ServiceName, WebSocketId, SessionId, Message}, State)
 	    error_logger:error_msg(
 	      "** Boss Service Handler ~p terminating in handle_incoming/4~n"
 	      "   for the reason ~p:~p~n"
-	      "ServiceName: ~p~n"
+	      "ServiceUrl: ~p~n"
 	      "WebSocketId: ~p~n"
 	      "SessionId  : ~p~n"
 	      "Message    : ~p~n"
 	      "State    : ~p~n"
 	      "** Stacktrace: ~p~n~n",
-	      [Handler, Class, Reason, ServiceName, WebSocketId,
+	      [Handler, Class, Reason, ServiceUrl, WebSocketId,
 	       SessionId, Message, Internal, erlang:get_stacktrace()])	
     end;
 
