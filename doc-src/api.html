@@ -36,9 +36,15 @@
     {% endifequal %}
     &nbsp; | &nbsp;
     {% ifequal this_page "api-mq.html" %}
-    <strong>BossMQ (Comet)</strong>
+    <strong>BossMQ</strong>
     {% else %}
-    <a href="api-mq.html">BossMQ (Comet)</a>
+    <a href="api-mq.html">BossMQ</a>
+    {% endifequal %}
+    &nbsp; | &nbsp; 
+    {% ifequal this_page "api-websocket.html" %}
+    <strong>WebSockets</strong>
+    {% else %}
+    <a href="api-websocket.html">WebSockets</a>
     {% endifequal %}
     &nbsp; | &nbsp; 
     {% ifequal this_page "api-session.html" %}
