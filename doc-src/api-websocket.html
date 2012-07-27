@@ -4,7 +4,7 @@
 <h2>Server code</h2>
 <p>The server WebSocket API is based around Erlang message-passing; to send a message to a particular client, simply send it a message like:</p>
 <div class="code">
-    WebSocketId ! {text, &lt;&lt;"some text"&gt;&gt;}
+    WebSocket ! {text, &lt;&lt;"some text"&gt;&gt;}
 </div>
 <p>To handle incoming messages from clients, you'll need to create WebSocket controllers in your project's <code>src/websocket</code> directory. Each controller module should have a name of the form <code>&lt;app name&gt;_&lt;service name&gt;_websocket.erl</code> and implement the <code>boss_service_handler</code> behavior. The <code>boss_service_handler</code> behavior consists of the following six functions:</p>
 <div class="code spec">
@@ -13,7 +13,7 @@
 <p>Initialize the service.</p>
 
 <div class="code spec">
-    handle_join(ServiceName, WebSocketId::pid(), SessionId::string(), State) -&gt; <br>
+    handle_join(ServiceURL::string(), WebSocket::pid(), SessionId::string(), State) -&gt; <br>
     &nbsp;&nbsp;{reply, Reply, NewState} |<br>
     &nbsp;&nbsp;{reply, Reply, NewState, Timeout} |<br>
     &nbsp;&nbsp;{noreply, NewState} |<br>
@@ -24,7 +24,7 @@
 <p>Handle a client joining a service.</p>
 
 <div class="code spec">
-    handle_close(ServiceName, WebSocketId::pid(), SessionId::string(), State) -&gt; <br>
+    handle_close(ServiceURL::string(), WebSocket::pid(), SessionId::string(), State) -&gt; <br>
     &nbsp;&nbsp;{reply, Reply, NewState} |<br>
     &nbsp;&nbsp;{reply, Reply, NewState, Timeout} |<br>
     &nbsp;&nbsp;{noreply, NewState} |<br>
@@ -35,7 +35,7 @@
 <p>Handle a client leaving a service.</p>
 
 <div class="code spec">
-    handle_incoming(ServiceName, WebSocketId::pid(), SessionId::string(), Message, State) -&gt;<br>
+    handle_incoming(ServiceURL::string(), WebSocket::pid(), SessionId::string(), Message, State) -&gt;<br>
     &nbsp;&nbsp;{noreply, NewState} |<br>
     &nbsp;&nbsp;{noreply, NewState, Timeout} |<br>
     &nbsp;&nbsp;{stop, Reason, NewState}
