@@ -389,7 +389,8 @@ handle_request(Req, RequestMod, ResponseMod) ->
                         AppInfo#boss_app_info{ translator_pid = TranslatorPid, router_pid = RouterPid }, 
                         Request, Mode, Url, SessionID]),
                     ErrorFormat = "~s ~s [~p] ~p ~pms~n", 
-                    ErrorArgs = [Request:request_method(), FullUrl, App, StatusCode, Time div 1000],
+                    RequestMethod = Request:request_method(),
+                    ErrorArgs = [RequestMethod, FullUrl, App, StatusCode, Time div 1000],
                     case StatusCode of
                         500 -> error_logger:error_msg(ErrorFormat, ErrorArgs);
                         404 -> error_logger:warning_msg(ErrorFormat, ErrorArgs);
@@ -416,7 +417,7 @@ handle_request(Req, RequestMod, ResponseMod) ->
                         {stream, Generator, Acc0} ->
                             Response3 = Response2:data(chunked),
                             Response3:build_response(),
-                            process_chunk_generator(Request, Generator, Acc0);
+                            process_chunk_generator(Request, RequestMethod, Generator, Acc0);
                         _ ->
                             (Response2:data(Payload)):build_response()
                     end
@@ -521,12 +522,14 @@ process_error(Payload, #boss_app_info{ router_pid = RouterPid } = AppInfo, Req, 
             {error, ["Error: <pre>", io_lib:print(Payload), "</pre>"], []}
     end.
 
-process_chunk_generator(Req, Generator, Acc) ->
+process_chunk_generator(_Req, 'HEAD', _Generator, _Acc) ->
+    ok;
+process_chunk_generator(Req, Method, Generator, Acc) ->
     case Generator(Acc) of
         {output, Data, Acc1} ->
             Length = iolist_size(Data),
             mochiweb_socket:send(Req:socket(), [io_lib:format("~.16b\r\n", [Length]), Data, <<"\r\n">>]),
-            process_chunk_generator(Req, Generator, Acc1);
+            process_chunk_generator(Req, Method, Generator, Acc1);
         done ->
             mochiweb_socket:send(Req:socket(), ["0\r\n\r\n"]),
             ok
@@ -698,13 +701,17 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
             end,
             case AuthInfo of
                 {ok, Info} ->
+                    EffectiveRequestMethod = case Req:request_method() of
+                        'HEAD' -> 'GET';
+                        Method -> Method
+                    end,
                    ActionResult = case proplists:get_value(Action, ExportStrings) of
                         3 ->
                             ActionAtom = list_to_atom(Action),
-                            ControllerInstance:ActionAtom(Req:request_method(), Tokens);
+                            ControllerInstance:ActionAtom(EffectiveRequestMethod, Tokens);
                         4 ->
                             ActionAtom = list_to_atom(Action),
-                            ControllerInstance:ActionAtom(Req:request_method(), Tokens, Info);
+                            ControllerInstance:ActionAtom(EffectiveRequestMethod, Tokens, Info);
                         _ ->
                             undefined
                     end,
