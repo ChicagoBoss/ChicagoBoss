@@ -15,6 +15,7 @@
 {dir, "{{dest}}/src/view/lib/filter_modules"}.
 {dir, "{{dest}}/src/model"}.
 {dir, "{{dest}}/src/controller"}.
+{dir, "{{dest}}/src/websocket"}.
 {dir, "{{dest}}/src/mail/view"}.
 {dir, "{{dest}}/src/test/eunit"}.
 {dir, "{{dest}}/src/test/functional"}.

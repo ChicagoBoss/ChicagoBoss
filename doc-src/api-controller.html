@@ -169,6 +169,16 @@ before_(_) -&gt;<br />
 <p>Perform a 302 HTTP redirect to <code>Location</code> and set additional HTTP <code>Headers</code>.</p>
 
 <div class="code spec">
+    {moved, Location}
+</div>
+<p><code>Location = string() | [{action, Value<span class="typevar">::string()</span>}, ...]</code></p>
+<p>Perform a 301 HTTP redirect to <code>Location</code>, which may be a URL string or a proplist of parameters that will be converted to a URL using the routes system.</p>
+<div class="code spec">
+    {moved, Location, Headers<span class="typevar">::proplist()</span>}
+</div>
+<p>Perform a 301 HTTP redirect to <code>Location</code> and set additional HTTP <code>Headers</code>.</p>
+
+<div class="code spec">
     {action_other, OtherLocation}
 </div>
 
