@@ -29,7 +29,8 @@ send(FromAddress, ToAddress, Subject, Body) ->
             {"Subject", Subject},
             {"To", ToAddress},
             {"From", FromAddress}], "text/plain"), 
-    gen_server:call(boss_mail, {deliver, FromAddress, ToAddress, fun() -> [MessageHeader, "\r\n", Body] end}).
+    gen_server:call(boss_mail, {deliver, FromAddress, ToAddress, 
+            fun() -> [MessageHeader, "\r\n", convert_unix_newlines_to_dos(Body)] end}).
 
 send_message(App, FromAddress, ToAddress, Action, HeaderFields, Variables, Options) ->
     BodyFun = fun() -> build_message(App, Action, HeaderFields, Variables, Options) end,
@@ -41,7 +42,23 @@ build_message(App, Action, HeaderFields, Variables, Options) ->
     Attachments = proplists:get_value(attachments, Options, []),
     {MimeType, MessageBody} = build_message_body_attachments(App, EffectiveAction, Variables, Attachments, ContentLanguage),
     MessageHeader = build_message_header(HeaderFields, MimeType),
-    [MessageHeader, "\r\n", MessageBody].
+    [MessageHeader, "\r\n", convert_unix_newlines_to_dos(MessageBody)].
+
+convert_unix_newlines_to_dos(Body) when is_binary(Body) ->
+    convert_unix_newlines_to_dos(binary_to_list(Body));
+convert_unix_newlines_to_dos(Body) when is_list(Body) ->
+    convert_unix_newlines_to_dos(Body, []).
+
+convert_unix_newlines_to_dos([], Acc) ->
+    lists:reverse(Acc);
+convert_unix_newlines_to_dos([$\r, $\n|Rest], Acc) ->
+    convert_unix_newlines_to_dos(Rest, [$\n, $\r|Acc]);
+convert_unix_newlines_to_dos([$\n|Rest], Acc) ->
+    convert_unix_newlines_to_dos(Rest, [$\n, $\r|Acc]);
+convert_unix_newlines_to_dos([H|T], Acc) when is_binary(H); is_list(H) ->
+    convert_unix_newlines_to_dos(T, [convert_unix_newlines_to_dos(H)|Acc]);
+convert_unix_newlines_to_dos([H|T], Acc) ->
+    convert_unix_newlines_to_dos(T, [H|Acc]).
 
 build_message_header(HeaderFields, DefaultMimeType) ->
     MessageID = case proplists:get_value("Message-ID", HeaderFields) of
