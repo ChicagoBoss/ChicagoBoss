@@ -485,8 +485,8 @@ process_not_found(Message, #boss_app_info{ router_pid = RouterPid } = AppInfo, R
             case catch load_and_execute(Mode, Location, AppInfo, Req, SessionID) of
                 {'EXIT', Reason} ->
                     {error, Reason};
-                Ok ->
-                    Ok
+                {ok, Payload, Headers} ->
+                    {not_found, Payload, Headers}
             end;
         {ok, OtherLocation} ->
             {redirect, OtherLocation};
