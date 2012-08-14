@@ -18,6 +18,7 @@ ensure_started(App) ->
 %% @spec start() -> ok
 %% @doc Start the boss server.
 start() ->
+    ensure_started(mimetypes),
     ensure_started(crypto),
     ensure_started(public_key),
     ensure_started(ssl),
@@ -30,4 +31,5 @@ stop() ->
     application:stop(ssl),
     application:stop(public_key),
     application:stop(crypto),
+    application:stop(mimetypes),
     Res.

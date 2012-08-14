@@ -16,6 +16,7 @@
 {dir, "{{dest}}/src/model"}.
 {dir, "{{dest}}/src/controller"}.
 {dir, "{{dest}}/src/websocket"}.
+{dir, "{{dest}}/priv/util"}.
 {dir, "{{dest}}/src/mail/view"}.
 {dir, "{{dest}}/src/test/eunit"}.
 {dir, "{{dest}}/src/test/functional"}.
@@ -37,6 +38,11 @@
 {file, "skel/rebar", "{{dest}}/rebar"}.
 {file, "skel/rebar.cmd", "{{dest}}/rebar.cmd"}.
 {file, "skel/rebar.config", "{{dest}}/rebar.config"}.
+{template, "skel/gzip.sh", "{{dest}}/priv/util/gzip.sh"}.
+{template, "skel/deflate.sh", "{{dest}}/priv/util/deflate.sh"}.
+{template, "skel/Makefile", "{{dest}}/Makefile"}.
+{chmod, 8#755, "{{dest}}/priv/util/gzip.sh"}.
+{chmod, 8#755, "{{dest}}/priv/util/deflate.sh"}.
 {chmod, 8#755, "{{dest}}/init.sh"}.
 {chmod, 8#755, "{{dest}}/init-dev.sh"}.
 {chmod, 8#755, "{{dest}}/rebar"}.

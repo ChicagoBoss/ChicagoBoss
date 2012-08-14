@@ -133,7 +133,6 @@ init(Config) ->
                 false -> misultin:start_link(ServerConfig)
             end;
 	cowboy ->
-		  Dispatch = [{'_', [{'_', boss_mochicow_handler, [{loop, {boss_mochicow_handler, loop}}]}]}],
 		  error_logger:info_msg("Starting cowboy... on ~p~n", [MasterNode]),
 		  application:start(cowboy),
 		  HttpPort = boss_env:get_env(port, 8001),
@@ -142,14 +141,13 @@ init(Config) ->
 			  error_logger:info_msg("Starting http listener... on ~p ~n", [HttpPort]),
 			  cowboy:start_listener(boss_http_listener, 100,
 						cowboy_tcp_transport, [{port, HttpPort}],
-						cowboy_http_protocol, [{dispatch, Dispatch}]);
+						cowboy_http_protocol, []);
 		      true ->
 			  error_logger:info_msg("Starting https listener... on ~p ~n", [HttpPort]),
 			  SSLConfig = [{port, HttpPort}]++SSLOptions, 
 			  cowboy:start_listener(boss_https_listener, 100,
 						cowboy_ssl_transport, SSLConfig,
-						cowboy_http_protocol, [{dispatch, Dispatch}]
-					       )
+						cowboy_http_protocol, [])
 		  end,
 		  if MasterNode =:= ThisNode ->
 			  boss_service_sup:start_services(ServicesSupPid, boss_websocket_router),		  
@@ -173,6 +171,8 @@ handle_info(timeout, State) ->
 		if MasterNode =:= ThisNode ->
 		    case boss_env:get_env(server, misultin) of
 			cowboy ->
+			    
+
 			    WebSocketModules = boss_files:websocket_list(AppName),
 			    MappingServices  = boss_files:websocket_mapping(BaseURL,
 									    atom_to_list(AppName), 
@@ -202,6 +202,42 @@ handle_info(timeout, State) ->
                 }
         end, Applications),
 
+    case boss_env:get_env(server, misultin) of	    
+	cowboy ->
+	    AppStaticDispatches = lists:map(
+				    fun(AppName) ->
+					    AppPath = boss_env:get_env(AppName, path, "./"),  
+					    BaseURL = boss_env:get_env(AppName, base_url, "/"),
+					    %% error_logger:info_msg("AppName=~p~n"
+					    %% 			  "BaseURL=~p~n"
+					    %% 			  "AppPath=~p~n", [AppName, BaseURL, AppPath]),
+					    
+					    Path = reformat_path(BaseURL++"/static"),
+					    Handler = boss_http_static,
+					    Opts = [
+						    {directory, list_to_binary(AppPath ++ "/priv/static")},
+						    {mimetypes, {fun mimetypes:path_to_mimes/2, default}}
+						   ],
+					    {Path ++ ['...'], Handler, Opts}
+				    end, Applications),
+		  
+		  BossDispatch = [{'_', boss_mochicow_handler, 
+				   [
+				    {loop, {boss_mochicow_handler, loop}}
+				    ,{websocket, {protocol, <<"wamp">>}}
+				   ]
+				  }],
+		  
+		  %% error_logger:info_msg("StaticDispatches=~p~n",
+		  %% 			[AppStaticDispatches]),
+
+	    Dispatch = Dispatch = [{'_', AppStaticDispatches ++ BossDispatch}],
+	    ProtoOpts = [{dispatch, Dispatch}],
+	    %%error_logger:info_msg("set cowboy dispatch handler...", []),
+	    cowboy:set_protocol_options(boss_http_listener, ProtoOpts);
+        true -> 		       
+	    true
+    end,
     {noreply, State#state{ applications = AppInfoList }}.
 
 handle_call({reload_translation, Locale}, _From, State) ->
@@ -368,8 +404,49 @@ handle_request(Req, RequestMod, ResponseMod) ->
                     Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
                     (Response:file(File)):build_response();
                 "/static/"++File -> 
-                    Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
-                    (Response:file([$/|File])):build_response();
+		    %% error_logger:info_msg("none Encoding:GET ~p~n", [FullUrl]),
+		    %% Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
+		    %% (Response:file([$/|File])):build_response();
+		    error_logger:info_msg("AcceptEncoding:~p~n", [Request:headers()]),
+		    AcceptEncoding = string:tokens(Request:header(accept_encoding), ","),
+		    MSIE = case re:run(Request:header(user_agent), "(MSIE 6.0|MSIE 5.5)") of
+		    	       nomatch -> "/";
+		    	       _ -> "_msie/"
+		    	   end,
+		    FunCheck = fun(S) ->
+		    		       PathToCheck = DocRoot ++ "_" ++ S ++ MSIE,
+		    		       case file:read_file_info(PathToCheck++File) of
+		    			   {ok, _FileInfop} -> true;
+		    			   _ -> false
+		    		       end
+		    	       end,
+
+		    Encoding = [{X, DocRoot ++ "_" ++ X }||X<-AcceptEncoding, FunCheck(X)],
+		    %error_logger:info_msg("Encoding:~p~n", [Encoding]),
+		    case Encoding of 
+		    	[] ->	    
+		    	    error_logger:info_msg("none Encoding:GET ~p~n", ["/static/"++File]),
+		    	    Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
+		    	    (Response:file([$/|File])):build_response();
+		    	Other ->
+		    	    case lists:keyfind("gzip", 1, Other) of %% gzip first, better ratio compression ??
+		    		{_,_} ->
+		    		    error_logger:info_msg("gzip found ~p",[DocRoot++"_gzip"++MSIE++File]),
+		    		    Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot++"_gzip"++MSIE}),
+		    		    (Response:file(gzip, [$/|File])):build_response();
+		    		false ->
+		    		    case lists:keyfind("deflate", 1, Other) of %% deflate second
+		    			{_,_} ->
+		    			    error_logger:info_msg("deflate found ~p",[DocRoot++"_deflate"++MSIE++File]),
+		    			    Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot++"_deflate"++MSIE}),
+		    			    (Response:file(deflate, [$/|File])):build_response();
+		    			false ->
+		    			    error_logger:info_msg("none Encoding:GET ~p~n", ["/static/"++File]),
+		    			    Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
+		    			    (Response:file([$/|File])):build_response()
+		    		    end
+		    	    end
+		    end;
                 _ -> 
                     SessionKey = boss_session:get_session_key(),
                     SessionID = case boss_env:get_env(session_enable, true) of
@@ -956,3 +1033,14 @@ mk_win_dir_syslink(LinkName, DestDir, LinkTarget) ->
     S = (list_to_atom(lists:append(["cd ", DestDir, "& mklink ", LinkName, " \"", LinkTarget, "\""]))),
     os:cmd(S),
     ok.
+
+
+reformat_path(Path) when is_list(Path) andalso is_integer(hd(Path)) ->
+  TokenizedPath = string:tokens(Path,"/"),
+  [list_to_binary(Part) || Part <- TokenizedPath];
+%% If path is just a binary, let's make it a string and treat it as such
+reformat_path(Path) when is_binary(Path) ->
+  reformat_path(binary_to_list(Path));
+%% If path is a list of binaries, then we assumed it's formatted for cowboy format already
+reformat_path(Path) when is_list(Path) andalso is_binary(hd(Path)) ->
+  Path.
