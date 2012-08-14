@@ -117,7 +117,7 @@ init(Config) ->
     end,
     SSLEnable = boss_env:get_env(ssl_enable, false),
     SSLOptions = boss_env:get_env(ssl_options, []),
-    error_logger:info_msg("SSL:~p~n", [SSLOptions]),
+    %error_logger:info_msg("SSL:~p~n", [SSLOptions]),
 
     %service supervisor
     {ok, ServicesSupPid} = boss_service_sup:start_link(),
@@ -126,13 +126,13 @@ init(Config) ->
                     ?MODULE:handle_request(Req, RequestMod, ResponseMod)
             end} | Config],
     Pid = case ServerMod of
-        mochiweb_http -> mochiweb_http:start([{ssl, SSLEnable}, {ssl_opts, SSLOptions} | ServerConfig]);
-        misultin -> 
-            case SSLEnable of
-                true -> misultin:start_link([{ssl, SSLOptions} | ServerConfig]);
-                false -> misultin:start_link(ServerConfig)
-            end;
-	cowboy ->
+	      mochiweb_http -> mochiweb_http:start([{ssl, SSLEnable}, {ssl_opts, SSLOptions} | ServerConfig]);
+	      misultin -> 
+		  case SSLEnable of
+		      true -> misultin:start_link([{ssl, SSLOptions} | ServerConfig]);
+		      false -> misultin:start_link(ServerConfig)
+		  end;
+	      cowboy ->
 		  error_logger:info_msg("Starting cowboy... on ~p~n", [MasterNode]),
 		  application:start(cowboy),
 		  HttpPort = boss_env:get_env(port, 8001),
@@ -153,7 +153,7 @@ init(Config) ->
 			  boss_service_sup:start_services(ServicesSupPid, boss_websocket_router),		  
 			  boss_load:load_services_websockets()			    				
 		  end
-		  
+		      
 	  end,
     {ok, #state{ service_sup_pid = ServicesSupPid, http_pid = Pid, is_master_node = (ThisNode =:= MasterNode) }, 0}.
 
@@ -235,8 +235,8 @@ handle_info(timeout, State) ->
 	    ProtoOpts = [{dispatch, Dispatch}],
 	    %%error_logger:info_msg("set cowboy dispatch handler...", []),
 	    cowboy:set_protocol_options(boss_http_listener, ProtoOpts);
-        true -> 		       
-	    true
+        _Oops -> 		       
+	    _Oops
     end,
     {noreply, State#state{ applications = AppInfoList }}.
 
@@ -407,7 +407,7 @@ handle_request(Req, RequestMod, ResponseMod) ->
 		    %% error_logger:info_msg("none Encoding:GET ~p~n", [FullUrl]),
 		    %% Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
 		    %% (Response:file([$/|File])):build_response();
-		    error_logger:info_msg("AcceptEncoding:~p~n", [Request:headers()]),
+		    %%error_logger:info_msg("AcceptEncoding:~p~n", [Request:headers()]),
 		    AcceptEncoding = string:tokens(Request:header(accept_encoding), ","),
 		    MSIE = case re:run(Request:header(user_agent), "(MSIE 6.0|MSIE 5.5)") of
 		    	       nomatch -> "/";

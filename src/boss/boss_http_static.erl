@@ -257,7 +257,7 @@ rest_init(Req, Opts) ->
 				  [] ->
 				      File = join_paths(Directory1, Filepath),
 				      error_logger:info_msg("GET ~p~n", [File]),				       
-				      {none, File};
+				      {identity, File};						    
 				  Other ->
 				      case lists:keyfind("gzip", 1, Other) of %% gzip first, better ratio compression ??
 					  {_,_Path} ->
@@ -272,7 +272,7 @@ rest_init(Req, Opts) ->
 						      {deflate, join_paths(list_to_binary(_Path1), Filepath)};
 						  false ->
 						      error_logger:info_msg("none:GET ~p~n", [Filepath]),
-						      {none, join_paths(Directory1, Filepath)}
+						      {identity, join_paths(Directory1, Filepath)}
 					      end
 				      end
 			      end,
@@ -281,19 +281,13 @@ rest_init(Req, Opts) ->
 			       etag_fun=ETagFunction}
 		end,
 
-    case State#state.encoding of
-    	none ->
-    	    {ok, Req1, State};	
-    	_Any ->
-    	    error_logger:info_msg("Encoding:~p~n",[State#state.encoding]),
-    	    {ok, Req2} = cowboy_http_req:set_resp_header(
-    			   <<"Content-Encoding">>, 
-    			   list_to_binary(atom_to_list(State#state.encoding)), 
-    			   Req1),
-    	    {ok, Req2, State}
-    end.
-
-
+    {ok, Req2} = cowboy_http_req:set_resp_header(
+		   <<"Content-Encoding">>, 
+		   list_to_binary(atom_to_list(State#state.encoding)), 
+		   Req1),
+    {ok, Req2, State}.
+	
+	
 %% @private Only allow GET and HEAD requests on files.
 -spec allowed_methods(#http_req{}, #state{}) ->
 		{[atom()], #http_req{}, #state{}}.
