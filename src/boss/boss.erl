@@ -19,11 +19,13 @@ ensure_started(App) ->
 %% @doc Start the boss server.
 start() ->
     ensure_started(crypto),
+    ensure_started(mimetypes),
     application:start(boss).
 
 %% @spec stop() -> ok
 %% @doc Stop the boss server.
 stop() ->
-    Res = application:stop(boss),
+    Res = application:stop(boss),    
+    application:stop(mimetypes),    
     application:stop(crypto),
     Res.

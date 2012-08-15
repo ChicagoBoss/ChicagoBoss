@@ -133,7 +133,7 @@ init(Config) ->
                 false -> misultin:start_link(ServerConfig)
             end;
 	cowboy ->
-		  Dispatch = [{'_', [{'_', boss_mochicow_handler, [{loop, {boss_mochicow_handler, loop}}]}]}],
+		  %Dispatch = [{'_', [{'_', boss_mochicow_handler, [{loop, {boss_mochicow_handler, loop}}]}]}],
 		  error_logger:info_msg("Starting cowboy... on ~p~n", [MasterNode]),
 		  application:start(cowboy),
 		  HttpPort = boss_env:get_env(port, 8001),
@@ -142,14 +142,13 @@ init(Config) ->
 			  error_logger:info_msg("Starting http listener... on ~p ~n", [HttpPort]),
 			  cowboy:start_listener(boss_http_listener, 100,
 						cowboy_tcp_transport, [{port, HttpPort}],
-						cowboy_http_protocol, [{dispatch, Dispatch}]);
+						cowboy_http_protocol, []);
 		      true ->
 			  error_logger:info_msg("Starting https listener... on ~p ~n", [HttpPort]),
 			  SSLConfig = [{port, HttpPort}]++SSLOptions, 
 			  cowboy:start_listener(boss_https_listener, 100,
 						cowboy_ssl_transport, SSLConfig,
-						cowboy_http_protocol, [{dispatch, Dispatch}]
-					       )
+						cowboy_http_protocol, [])
 		  end,
 		  if MasterNode =:= ThisNode ->
 			  boss_service_sup:start_services(ServicesSupPid, boss_websocket_router),		  
@@ -202,6 +201,32 @@ handle_info(timeout, State) ->
                 }
         end, Applications),
 
+    %% cowboy dispatch rule for static content
+    case boss_env:get_env(server, misultin) of	    
+	cowboy ->
+	    AppStaticDispatches = lists:map(
+				    fun(AppName) ->
+					    AppPath = boss_env:get_env(AppName, path, "./"),  
+					    BaseURL = boss_env:get_env(AppName, base_url, "/"),					    
+					    Path = reformat_path(BaseURL++"/static"),
+					    Handler = cowboy_http_static,
+					    Opts = [
+						    {directory, list_to_binary(AppPath ++ "/priv/static")},
+						    {mimetypes, {fun mimetypes:path_to_mimes/2, default}}
+						   ],
+					    {Path ++ ['...'], Handler, Opts}
+				    end, Applications),
+
+	    BossDispatch = [{'_', boss_mochicow_handler, 
+			     [{loop, {boss_mochicow_handler, loop}}]
+			    }],
+
+	    Dispatch = Dispatch = [{'_', AppStaticDispatches ++ BossDispatch}],
+	    ProtoOpts = [{dispatch, Dispatch}],
+	    cowboy:set_protocol_options(boss_http_listener, ProtoOpts);
+        _Oops -> 		       
+	    _Oops
+    end,
     {noreply, State#state{ applications = AppInfoList }}.
 
 handle_call({reload_translation, Locale}, _From, State) ->
@@ -956,3 +981,14 @@ mk_win_dir_syslink(LinkName, DestDir, LinkTarget) ->
     S = (list_to_atom(lists:append(["cd ", DestDir, "& mklink ", LinkName, " \"", LinkTarget, "\""]))),
     os:cmd(S),
     ok.
+
+%% from max lapshin
+reformat_path(Path) when is_list(Path) andalso is_integer(hd(Path)) ->
+  TokenizedPath = string:tokens(Path,"/"),
+  [list_to_binary(Part) || Part <- TokenizedPath];
+%% If path is just a binary, let's make it a string and treat it as such
+reformat_path(Path) when is_binary(Path) ->
+  reformat_path(binary_to_list(Path));
+%% If path is a list of binaries, then we assumed it's formatted for cowboy format already
+reformat_path(Path) when is_list(Path) andalso is_binary(hd(Path)) ->
+  Path.
