@@ -49,9 +49,11 @@ Using Mnesia
 
 Notes:
 
-1. The erlang VM needs a name to run Mnesia (-name or -sname option on the erl command)
+1. The erlang VM needs a name and cookie to run Mnesia. You can set them with
+   the 'vm_name' and 'vm_cookie' options in boss.config.
 
-2. There needs to be a cookie set (file .erlang.cookie) even on a single node db
+2. Create a table for each model as well a table called '_ids_' with attributes
+   for [type, id, count].
 
 3. Open up boss.config and set db_adapter to mnesia
 
