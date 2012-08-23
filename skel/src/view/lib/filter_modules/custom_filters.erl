@@ -6,4 +6,4 @@
 % my_reverse(Value) ->
 %     lists:reverse(binary_to_list(Value)).
 %
-% "foo"|my_reverse   => "foo"
+% "foo"|my_reverse   => "oof"
