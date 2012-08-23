@@ -70,7 +70,7 @@ BossRecords are <em>specially compiled parameterized modules</em> that follow th
     <span class="attr">-belongs_to</span>(foo).
 </div>
 
-<p>Requires a matching <code>FooId</code> in the parameter list. Adds a function <code>foo()</code> which returns the BossRecord (of any type, usually <code>foo</code>) with ID equal to the current BossRecord's <code>FooId</code>.</p>
+<p>Requires a matching <code>FooId</code> in the parameter list. Adds a function <code>foo()</code> which returns the BossRecord (of any type, usually <code>foo</code>) with ID equal to the current BossRecord's <code>FooId</code>. If the model name differs from the field name, use <code>-belongs_to_&lt;model name&gt;(&lt;field name&gt;)</code>.</p>
 
 <div class="code spec">
     <span class="attr">-has</span>({bar, 1}).<br />
