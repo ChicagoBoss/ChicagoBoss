@@ -133,7 +133,7 @@ init(Config) ->
                 false -> misultin:start_link(ServerConfig)
             end;
 	cowboy ->
-		  Dispatch = [{'_', [{'_', boss_mochicow_handler, [{loop, {boss_mochicow_handler, loop}}]}]}],
+		  %Dispatch = [{'_', [{'_', boss_mochicow_handler, [{loop, {boss_mochicow_handler, loop}}]}]}],
 		  error_logger:info_msg("Starting cowboy... on ~p~n", [MasterNode]),
 		  application:start(cowboy),
 		  HttpPort = boss_env:get_env(port, 8001),
@@ -142,14 +142,13 @@ init(Config) ->
 			  error_logger:info_msg("Starting http listener... on ~p ~n", [HttpPort]),
 			  cowboy:start_listener(boss_http_listener, 100,
 						cowboy_tcp_transport, [{port, HttpPort}],
-						cowboy_http_protocol, [{dispatch, Dispatch}]);
+						cowboy_http_protocol, []);
 		      true ->
 			  error_logger:info_msg("Starting https listener... on ~p ~n", [HttpPort]),
 			  SSLConfig = [{port, HttpPort}]++SSLOptions, 
 			  cowboy:start_listener(boss_https_listener, 100,
 						cowboy_ssl_transport, SSLConfig,
-						cowboy_http_protocol, [{dispatch, Dispatch}]
-					       )
+						cowboy_http_protocol, [])
 		  end,
 		  if MasterNode =:= ThisNode ->
 			  boss_service_sup:start_services(ServicesSupPid, boss_websocket_router),		  
@@ -202,6 +201,32 @@ handle_info(timeout, State) ->
                 }
         end, Applications),
 
+    %% cowboy dispatch rule for static content
+    case boss_env:get_env(server, misultin) of	    
+	cowboy ->
+	    AppStaticDispatches = lists:map(
+				    fun(AppName) ->
+					    AppPath = boss_env:get_env(AppName, path, "./"),  
+					    BaseURL = boss_env:get_env(AppName, base_url, "/"),					    
+					    Path = reformat_path(BaseURL++"/static"),
+					    Handler = cowboy_http_static,
+					    Opts = [
+						    {directory, list_to_binary(AppPath ++ "/priv/static")},
+						    {mimetypes, {fun mimetypes:path_to_mimes/2, default}}
+						   ],
+					    {Path ++ ['...'], Handler, Opts}
+				    end, Applications),
+
+	    BossDispatch = [{'_', boss_mochicow_handler, 
+			     [{loop, {boss_mochicow_handler, loop}}]
+			    }],
+
+	    Dispatch = Dispatch = [{'_', AppStaticDispatches ++ BossDispatch}],
+	    ProtoOpts = [{dispatch, Dispatch}],
+	    cowboy:set_protocol_options(boss_http_listener, ProtoOpts);
+        _Oops -> 		       
+	    _Oops
+    end,
     {noreply, State#state{ applications = AppInfoList }}.
 
 handle_call({reload_translation, Locale}, _From, State) ->
@@ -389,7 +414,8 @@ handle_request(Req, RequestMod, ResponseMod) ->
                         AppInfo#boss_app_info{ translator_pid = TranslatorPid, router_pid = RouterPid }, 
                         Request, Mode, Url, SessionID]),
                     ErrorFormat = "~s ~s [~p] ~p ~pms~n", 
-                    ErrorArgs = [Request:request_method(), FullUrl, App, StatusCode, Time div 1000],
+                    RequestMethod = Request:request_method(),
+                    ErrorArgs = [RequestMethod, FullUrl, App, StatusCode, Time div 1000],
                     case StatusCode of
                         500 -> error_logger:error_msg(ErrorFormat, ErrorArgs);
                         404 -> error_logger:warning_msg(ErrorFormat, ErrorArgs);
@@ -416,7 +442,7 @@ handle_request(Req, RequestMod, ResponseMod) ->
                         {stream, Generator, Acc0} ->
                             Response3 = Response2:data(chunked),
                             Response3:build_response(),
-                            process_chunk_generator(Request, Generator, Acc0);
+                            process_chunk_generator(Request, RequestMethod, Generator, Acc0);
                         _ ->
                             (Response2:data(Payload)):build_response()
                     end
@@ -484,8 +510,8 @@ process_not_found(Message, #boss_app_info{ router_pid = RouterPid } = AppInfo, R
             case catch load_and_execute(Mode, Location, AppInfo, Req, SessionID) of
                 {'EXIT', Reason} ->
                     {error, Reason};
-                Ok ->
-                    Ok
+                {ok, Payload, Headers} ->
+                    {not_found, Payload, Headers}
             end;
         {ok, OtherLocation} ->
             {redirect, OtherLocation};
@@ -521,12 +547,14 @@ process_error(Payload, #boss_app_info{ router_pid = RouterPid } = AppInfo, Req, 
             {error, ["Error: <pre>", io_lib:print(Payload), "</pre>"], []}
     end.
 
-process_chunk_generator(Req, Generator, Acc) ->
+process_chunk_generator(_Req, 'HEAD', _Generator, _Acc) ->
+    ok;
+process_chunk_generator(Req, Method, Generator, Acc) ->
     case Generator(Acc) of
         {output, Data, Acc1} ->
             Length = iolist_size(Data),
             mochiweb_socket:send(Req:socket(), [io_lib:format("~.16b\r\n", [Length]), Data, <<"\r\n">>]),
-            process_chunk_generator(Req, Generator, Acc1);
+            process_chunk_generator(Req, Method, Generator, Acc1);
         done ->
             mochiweb_socket:send(Req:socket(), ["0\r\n\r\n"]),
             ok
@@ -698,13 +726,17 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
             end,
             case AuthInfo of
                 {ok, Info} ->
+                    EffectiveRequestMethod = case Req:request_method() of
+                        'HEAD' -> 'GET';
+                        Method -> Method
+                    end,
                    ActionResult = case proplists:get_value(Action, ExportStrings) of
                         3 ->
                             ActionAtom = list_to_atom(Action),
-                            ControllerInstance:ActionAtom(Req:request_method(), Tokens);
+                            ControllerInstance:ActionAtom(EffectiveRequestMethod, Tokens);
                         4 ->
                             ActionAtom = list_to_atom(Action),
-                            ControllerInstance:ActionAtom(Req:request_method(), Tokens, Info);
+                            ControllerInstance:ActionAtom(EffectiveRequestMethod, Tokens, Info);
                         _ ->
                             undefined
                     end,
@@ -949,3 +981,14 @@ mk_win_dir_syslink(LinkName, DestDir, LinkTarget) ->
     S = (list_to_atom(lists:append(["cd ", DestDir, "& mklink ", LinkName, " \"", LinkTarget, "\""]))),
     os:cmd(S),
     ok.
+
+%% from max lapshin
+reformat_path(Path) when is_list(Path) andalso is_integer(hd(Path)) ->
+  TokenizedPath = string:tokens(Path,"/"),
+  [list_to_binary(Part) || Part <- TokenizedPath];
+%% If path is just a binary, let's make it a string and treat it as such
+reformat_path(Path) when is_binary(Path) ->
+  reformat_path(binary_to_list(Path));
+%% If path is a list of binaries, then we assumed it's formatted for cowboy format already
+reformat_path(Path) when is_list(Path) andalso is_binary(hd(Path)) ->
+  Path.
