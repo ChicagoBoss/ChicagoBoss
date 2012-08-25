@@ -119,8 +119,12 @@ init(Config) ->
     SSLOptions = boss_env:get_env(ssl_options, []),
     error_logger:info_msg("SSL:~p~n", [SSLOptions]),
 
-    %service supervisor
-    {ok, ServicesSupPid} = boss_service_sup:start_link(),
+    {ok, ServicesSupPid}  = case MasterNode of
+				ThisNode ->
+				    boss_service_sup:start_link();
+				_AnyNode ->
+				    {ok, undefined}
+			    end,
 
     ServerConfig = [{loop, fun(Req) -> 
                     ?MODULE:handle_request(Req, RequestMod, ResponseMod)
