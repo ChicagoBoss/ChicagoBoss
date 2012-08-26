@@ -165,6 +165,7 @@ handle_info(timeout, State) ->
             (AppName) ->
                 application:start(AppName),
                 BaseURL = boss_env:get_env(AppName, base_url, "/"),
+                StaticPrefix = boss_env:get_env(AppName, static_prefix, "/static"),
                 DomainList = boss_env:get_env(AppName, domains, all),
                 ModelList = boss_files:model_list(AppName),
 	        ThisNode = erlang:node(),
@@ -195,6 +196,7 @@ handle_info(timeout, State) ->
                     router_sup_pid = RouterSupPid,
                     translator_sup_pid = TranslatorSupPid,
                     base_url = (if BaseURL =:= "/" -> ""; true -> BaseURL end),
+                    static_prefix = StaticPrefix,
                     domains = DomainList,
                     model_modules = ModelList,
                     controller_modules = ControllerList
@@ -208,7 +210,8 @@ handle_info(timeout, State) ->
 				    fun(AppName) ->
 					    AppPath = boss_env:get_env(AppName, path, "./"),  
 					    BaseURL = boss_env:get_env(AppName, base_url, "/"),					    
-					    Path = reformat_path(BaseURL++"/static"),
+                        StaticPrefix = boss_env:get_env(AppName, static_prefix, "/static"),
+					    Path = reformat_path(BaseURL++StaticPrefix),
 					    Handler = cowboy_http_static,
 					    Opts = [
 						    {directory, list_to_binary(AppPath ++ "/priv/static")},
@@ -297,6 +300,14 @@ handle_call({base_url, App}, _From, State) ->
                 Res
         end, "", State#state.applications),
     {reply, BaseURL, State};
+handle_call({static_prefix, App}, _From, State) ->
+    StaticPrefix = lists:foldl(fun
+            (#boss_app_info{ application = App1, static_prefix = Prefix }, _) when App1 =:= App ->
+                Prefix;
+            (_, Res) ->
+                Res
+        end, "/static", State#state.applications),
+    {reply, StaticPrefix, State};
 handle_call({domains, App}, _From, State) ->
     DomainList = lists:foldl(fun
             (#boss_app_info{ application = App1, domains = Domains}, _) when App1 =:= App ->
@@ -387,66 +398,73 @@ handle_request(Req, RequestMod, ResponseMod) ->
         App ->
             BaseURL = boss_web:base_url(App),
             DocRoot = boss_files:static_path(App),
+            StaticPrefix = boss_web:static_prefix(App),
             Url = lists:nthtail(length(BaseURL), FullUrl),
+            Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
             case Url of
                 "/favicon.ico" = File ->
-                    Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
                     (Response:file(File)):build_response();
-                "/static/"++File -> 
-                    Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
-                    (Response:file([$/|File])):build_response();
-                _ -> 
-                    SessionKey = boss_session:get_session_key(),
-                    SessionID = case boss_env:get_env(session_enable, true) of
-                        true ->
-                            boss_session:new_session(Request:cookie(SessionKey));
-                        false ->
-                            undefined
-                    end,
-                    Mode = case boss_env:is_developing_app(App) of
-                        true -> development;
-                        false -> production
-                    end,
-                    AppInfo = boss_web:application_info(App),
-                    TranslatorPid = boss_web:translator_pid(App),
-                    RouterPid = boss_web:router_pid(App),
-                    {Time, {StatusCode, Headers, Payload}} = timer:tc(?MODULE, process_request, [
-                        AppInfo#boss_app_info{ translator_pid = TranslatorPid, router_pid = RouterPid }, 
-                        Request, Mode, Url, SessionID]),
-                    ErrorFormat = "~s ~s [~p] ~p ~pms~n", 
-                    RequestMethod = Request:request_method(),
-                    ErrorArgs = [RequestMethod, FullUrl, App, StatusCode, Time div 1000],
-                    case StatusCode of
-                        500 -> error_logger:error_msg(ErrorFormat, ErrorArgs);
-                        404 -> error_logger:warning_msg(ErrorFormat, ErrorArgs);
-                        _ -> error_logger:info_msg(ErrorFormat, ErrorArgs)
-                    end,
-                    Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
-                    Response1 = (Response:status_code(StatusCode)):data(Payload),
-                    Headers2 = case SessionID of
-                        undefined ->
-                            Headers;
+                _ ->
+                    case string:substr(Url, 0, length(StaticPrefix)) of
+                        StaticPrefix ->
+                            [$/|File] = lists:nthtail(length(StaticPrefix), Url),
+                            (Response:file([$/|File])):build_response();
                         _ ->
-                            SessionExpTime = boss_session:get_session_exp_time(),
-                            CookieOptions = [{path, "/"}, {max_age, SessionExpTime}],
-                            CookieOptions2 = case boss_env:get_env(session_domain, undefined) of
-                                undefined ->
-                                    CookieOptions;
-                                CookieDomain ->
-                                    lists:merge(CookieOptions, [{domain, CookieDomain}])
-                            end,
-                            lists:merge(Headers, [ mochiweb_cookies:cookie(SessionKey, SessionID, CookieOptions2) ])
-                    end,
-                    Response2 = lists:foldl(fun({K, V}, Acc) -> Acc:header(K, V) end, Response1, Headers2),
-                    case Payload of
-                        {stream, Generator, Acc0} ->
-                            Response3 = Response2:data(chunked),
-                            Response3:build_response(),
-                            process_chunk_generator(Request, RequestMethod, Generator, Acc0);
-                        _ ->
-                            (Response2:data(Payload)):build_response()
+                            build_dynamic_response(App, Request, Response, Url)
                     end
             end
+    end.
+
+build_dynamic_response(App, Request, Response, Url) ->
+    SessionKey = boss_session:get_session_key(),
+    SessionID = case boss_env:get_env(session_enable, true) of
+        true ->
+            boss_session:new_session(Request:cookie(SessionKey));
+        false ->
+            undefined
+    end,
+    Mode = case boss_env:is_developing_app(App) of
+        true -> development;
+        false -> production
+    end,
+    AppInfo = boss_web:application_info(App),
+    TranslatorPid = boss_web:translator_pid(App),
+    RouterPid = boss_web:router_pid(App),
+    {Time, {StatusCode, Headers, Payload}} = timer:tc(?MODULE, process_request, [
+            AppInfo#boss_app_info{ translator_pid = TranslatorPid, router_pid = RouterPid }, 
+            Request, Mode, Url, SessionID]),
+    ErrorFormat = "~s ~s [~p] ~p ~pms~n", 
+    RequestMethod = Request:request_method(),
+    FullUrl = Request:path(),
+    ErrorArgs = [RequestMethod, FullUrl, App, StatusCode, Time div 1000],
+    case StatusCode of
+        500 -> error_logger:error_msg(ErrorFormat, ErrorArgs);
+        404 -> error_logger:warning_msg(ErrorFormat, ErrorArgs);
+        _ -> error_logger:info_msg(ErrorFormat, ErrorArgs)
+    end,
+    Response1 = (Response:status_code(StatusCode)):data(Payload),
+    Headers2 = case SessionID of
+        undefined ->
+            Headers;
+        _ ->
+            SessionExpTime = boss_session:get_session_exp_time(),
+            CookieOptions = [{path, "/"}, {max_age, SessionExpTime}],
+            CookieOptions2 = case boss_env:get_env(session_domain, undefined) of
+                undefined ->
+                    CookieOptions;
+                CookieDomain ->
+                    lists:merge(CookieOptions, [{domain, CookieDomain}])
+            end,
+            lists:merge(Headers, [ mochiweb_cookies:cookie(SessionKey, SessionID, CookieOptions2) ])
+    end,
+    Response2 = lists:foldl(fun({K, V}, Acc) -> Acc:header(K, V) end, Response1, Headers2),
+    case Payload of
+        {stream, Generator, Acc0} ->
+            Response3 = Response2:data(chunked),
+            Response3:build_response(),
+            process_chunk_generator(Request, RequestMethod, Generator, Acc0);
+        _ ->
+            (Response2:data(Payload)):build_response()
     end.
 
 process_request(AppInfo, Req, development, "/doc", SessionID) ->
