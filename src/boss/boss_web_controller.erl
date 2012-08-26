@@ -166,6 +166,7 @@ handle_info(timeout, State) ->
                 application:start(AppName),
                 BaseURL = boss_env:get_env(AppName, base_url, "/"),
                 StaticPrefix = boss_env:get_env(AppName, static_prefix, "/static"),
+                DocPrefix = boss_env:get_env(AppName, doc_prefix, "/doc"),
                 DomainList = boss_env:get_env(AppName, domains, all),
                 ModelList = boss_files:model_list(AppName),
 	        ThisNode = erlang:node(),
@@ -197,6 +198,7 @@ handle_info(timeout, State) ->
                     translator_sup_pid = TranslatorSupPid,
                     base_url = (if BaseURL =:= "/" -> ""; true -> BaseURL end),
                     static_prefix = StaticPrefix,
+                    doc_prefix = DocPrefix,
                     domains = DomainList,
                     model_modules = ModelList,
                     controller_modules = ControllerList
@@ -467,7 +469,7 @@ build_dynamic_response(App, Request, Response, Url) ->
             (Response2:data(Payload)):build_response()
     end.
 
-process_request(AppInfo, Req, development, "/doc", SessionID) ->
+process_request(#boss_app_info{ doc_prefix = DocPrefix } = AppInfo, Req, development, DocPrefix, SessionID) ->
     Result = case catch load_and_execute(development, {"doc", [], []}, AppInfo, Req, SessionID) of
         {'EXIT', Reason} ->
             {error, Reason};
@@ -475,28 +477,35 @@ process_request(AppInfo, Req, development, "/doc", SessionID) ->
             Ok
     end,
     process_result(AppInfo, Req, Result);
-process_request(AppInfo, Req, development, "/doc/"++ModelName, SessionID) ->
-    Result = case string:chr(ModelName, $.) of
-        0 ->
-            case catch load_and_execute(development, {"doc", ModelName, []}, AppInfo, Req, SessionID) of
-                {'EXIT', Reason} ->
-                    {error, Reason};
-                Ok ->
-                    Ok
+process_request(AppInfo, Req, development, Url, SessionID) ->
+    DocPrefixPlusSlash = AppInfo#boss_app_info.doc_prefix ++ "/",
+    Result = case string:substr(Url, 0, length(DocPrefixPlusSlash)) of
+        DocPrefixPlusSlash ->
+            ModelName = lists:nthtail(length(DocPrefixPlusSlash), Url),
+            case string:chr(ModelName, $.) of
+                0 ->
+                    case catch load_and_execute(development, {"doc", ModelName, []}, AppInfo, Req, SessionID) of
+                        {'EXIT', Reason} ->
+                            {error, Reason};
+                        Ok ->
+                            Ok
+                    end;
+                _ ->
+                    {not_found, "File not found"}
             end;
         _ ->
-            {not_found, "File not found"}
+            ControllerList = boss_files:web_controller_list(AppInfo#boss_app_info.application),
+            RouterPid = AppInfo#boss_app_info.router_pid,
+            boss_router:set_controllers(RouterPid, ControllerList),
+            boss_router:reload(RouterPid),
+            process_dynamic_request(AppInfo, Req, development, Url, SessionID)
     end,
     process_result(AppInfo, Req, Result);
-process_request(#boss_app_info{ router_pid = RouterPid } = AppInfo, Req, Mode, Url, SessionID) ->
-    if 
-        Mode =:= development ->
-            ControllerList = boss_files:web_controller_list(AppInfo#boss_app_info.application),
-            boss_router:set_controllers(RouterPid, ControllerList),
-            boss_router:reload(RouterPid);
-        true ->
-            ok
-    end,
+process_request(AppInfo, Req, Mode, Url, SessionID) ->
+    Result = process_dynamic_request(AppInfo, Req, Mode, Url, SessionID),
+    process_result(AppInfo, Req, Result).
+
+process_dynamic_request(#boss_app_info{ router_pid = RouterPid } = AppInfo, Req, Mode, Url, SessionID) ->
     Result = case boss_router:route(RouterPid, Url) of
         {ok, {Application, Controller, Action, Tokens}} when Application =:= AppInfo#boss_app_info.application ->
             Location = {Controller, Action, Tokens},
@@ -519,7 +528,7 @@ process_request(#boss_app_info{ router_pid = RouterPid } = AppInfo, Req, Mode, U
         _ ->
             Result
     end,
-    process_result(AppInfo, Req, FinalResult).
+    FinalResult.
 
 process_not_found(Message, #boss_app_info{ router_pid = RouterPid } = AppInfo, Req, Mode, SessionID) ->
     case boss_router:handle(RouterPid, 404) of
@@ -655,6 +664,7 @@ load_and_execute(development, {"doc", ModelName, _}, AppInfo, Req, _SessionID) -
                 false ->
                     case boss_html_doc_template:render([
                                 {application, AppInfo#boss_app_info.application},
+                                {'_doc', AppInfo#boss_app_info.doc_prefix},
                                 {'_base_url', AppInfo#boss_app_info.base_url},
                                 {models, ModelModules}]) of
                         {ok, Payload} ->
