@@ -407,7 +407,7 @@ handle_request(Req, RequestMod, ResponseMod) ->
                 "/favicon.ico" = File ->
                     (Response:file(File)):build_response();
                 _ ->
-                    case string:substr(Url, 0, length(StaticPrefix)) of
+                    case string:substr(Url, 1, length(StaticPrefix)) of
                         StaticPrefix ->
                             [$/|File] = lists:nthtail(length(StaticPrefix), Url),
                             (Response:file([$/|File])):build_response();
@@ -479,7 +479,7 @@ process_request(#boss_app_info{ doc_prefix = DocPrefix } = AppInfo, Req, develop
     process_result(AppInfo, Req, Result);
 process_request(AppInfo, Req, development, Url, SessionID) ->
     DocPrefixPlusSlash = AppInfo#boss_app_info.doc_prefix ++ "/",
-    Result = case string:substr(Url, 0, length(DocPrefixPlusSlash)) of
+    Result = case string:substr(Url, 1, length(DocPrefixPlusSlash)) of
         DocPrefixPlusSlash ->
             ModelName = lists:nthtail(length(DocPrefixPlusSlash), Url),
             case string:chr(ModelName, $.) of
