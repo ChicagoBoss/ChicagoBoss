@@ -22,7 +22,7 @@ start() ->
         end, [], [mq_port, mq_host, mq_max_age]),
     MQAdapter = case application:get_env(mq_adapter) of
         {ok, Val} -> Val;
-        _ -> bmq
+        _ -> tinymq
     end,
     MQOptions1 = [{adapter, list_to_atom("boss_mq_adapter_"++atom_to_list(MQAdapter))}|MQOptions],
     start(MQOptions1).

@@ -1,6 +1,6 @@
 {application, boss,
     [
-    {description, "Chicago Boss web framework, now with three flavors of Comet"},
+    {description, "Chicago Boss web framework, now serving three flavors of Comet"},
     {vsn, "0.8.0"},
     {registered, [
         boss_mq, boss_mq_sup,
