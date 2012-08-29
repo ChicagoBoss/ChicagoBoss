@@ -17,7 +17,7 @@ stop(_) ->
     ok.
 
 pull(_, Channel, Timestamp, Subscriber) ->
-    tinymq:pull(Channel, Timestamp, Subscriber).
+    tinymq:subscribe(Channel, Timestamp, Subscriber).
 
 poll(_, Channel, Timestamp) ->
     tinymq:poll(Channel, Timestamp).
