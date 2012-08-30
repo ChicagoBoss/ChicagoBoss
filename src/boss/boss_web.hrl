@@ -2,6 +2,8 @@
 -record(boss_app_info, {
         application,
         base_url,
+        static_prefix,
+        doc_prefix,
         domains,
         init_data,
         router_sup_pid,

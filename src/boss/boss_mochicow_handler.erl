@@ -36,7 +36,7 @@ websocket_handle({text, Msg}, Req, State) ->
 	   session_id=SessionId, 
 	   service_url=ServiceUrl } = State,
     boss_websocket_router:incoming(ServiceUrl, WebsocketId, SessionId, Msg),
-    {reply, {text, <<"copy">>},Req, State, hibernate};
+    {ok, Req, State, hibernate};
 
 websocket_handle(_Any, Req, State) ->
     {ok, Req, State}.

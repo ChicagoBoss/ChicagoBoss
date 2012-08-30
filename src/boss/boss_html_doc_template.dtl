@@ -1,12 +1,12 @@
 <html>
     <head>
-        <title>/doc ({{ application }})</title>
+        <title>{{ _doc }} ({{ application }})</title>
     </head>
     <body>
         <h1><em>Documentation??</em></h1>
         <ul>
         {% for model in models %}
-        <li><a href="{{ _base_url }}/doc/{{ model }}">{{ model }}</a></li>
+        <li><a href="{{ _base_url }}{{ _doc }}/{{ model }}">{{ model }}</a></li>
         {% endfor %}
         </ul>
         <br />
