@@ -3,17 +3,14 @@
 -export([pull/4, poll/3, push/3, now/2]).
 
 start() ->
-    MQOptions = case application:get_env(mq_max_age) of
-        {ok, Val} -> [{max_age, Val}];
-        _ -> []
-    end,
-    start(MQOptions).
+    start([]).
 
-start(Options) ->
-    tinymq_sup:start_link(Options),
+start(_Options) ->
+    application:start(tinymq),
     {ok, undefined}.
 
 stop(_) ->
+    application:stop(tinymq),
     ok.
 
 pull(_, Channel, Timestamp, Subscriber) ->
