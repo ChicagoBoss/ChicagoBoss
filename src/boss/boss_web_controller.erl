@@ -739,22 +739,21 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
             ExportStrings = lists:map(
                 fun({Function, Arity}) -> {atom_to_list(Function), Arity} end,
                 Module:module_info(exports)),
+            RequestMethod = Req:request_method(),
             ControllerInstance = case proplists:get_value("new", ExportStrings) of
-                1 -> 
-                    Module:new(Req);
-                2 ->
-                    Module:new(Req, SessionID)
+                1 -> Module:new(Req);
+                2 -> Module:new(Req, SessionID)
             end,
-            AuthInfo = case lists:member({"before_", 2}, ExportStrings) of
-                true -> 
-                    case ControllerInstance:before_(Action) of
-                        ok ->
-                            {ok, undefined};
-                        OtherInfo ->
-                            OtherInfo
-                    end;
-                false -> 
-                    {ok, undefined}
+            AuthResult = case proplists:get_value("before_", ExportStrings) of
+                2 -> ControllerInstance:before_(Action);
+                4 -> ControllerInstance:before_(Action, RequestMethod, Tokens);
+                _ -> ok
+            end,
+            AuthInfo = case AuthResult of
+                ok ->
+                    {ok, undefined};
+                OtherInfo ->
+                    OtherInfo
             end,
             case AuthInfo of
                 {ok, Info} ->
