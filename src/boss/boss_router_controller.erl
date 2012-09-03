@@ -8,7 +8,7 @@
 
 -define(BOSS_ROUTES_TABLE, boss_routes).
 -define(BOSS_HANDLERS_TABLE, boss_handlers).
--record(boss_route, {url, pattern, application, controller, action, params = []}).
+-record(boss_route, {number, url, pattern, application, controller, action, params = []}).
 -record(boss_handler, {status_code, application, controller, action, params = []}).
 
 -record(state, {
@@ -137,9 +137,10 @@ load(State) ->
     RoutesFile = boss_files:routes_file(State#state.application),
     error_logger:info_msg("Loading routes from ~p ....~n", [RoutesFile]),
     case file:consult(RoutesFile) of
-        {ok, Routes} -> 
+        {ok, OrderedRoutes} -> 
+            Routes = lists:zipwith(fun(Number, {Url, Proplist}) -> {Number, Url, Proplist} end, lists:seq(1,length(OrderedRoutes)), OrderedRoutes),
             lists:map(fun
-                    ({UrlOrStatusCode, Proplist}) when is_list(Proplist) ->
+                    ({Number, UrlOrStatusCode, Proplist}) when is_list(Proplist) ->
                         TheApplication = proplists:get_value(application, Proplist, State#state.application),
                         TheController = proplists:get_value(controller, Proplist),
                         TheAction = proplists:get_value(action, Proplist),
@@ -150,6 +151,7 @@ load(State) ->
                             Url when is_list(Url) ->
                                 {ok, MP} = re:compile("^"++Url++"$"),
                                 NewRoute = #boss_route{ 
+                                    number = Number,
                                     url = Url, 
                                     pattern = MP,
                                     application = TheApplication, 
