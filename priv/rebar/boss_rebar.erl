@@ -366,11 +366,14 @@ all_ebin_dirs(BossConf, _AppFile) ->
 %%--------------------------------------------------------------------
 init_conf(BossConf) ->
     lists:map(fun(AppLine) ->
-                      {App, AppConf} = AppLine, 
-                      lists:map(fun({Conf, Val}) ->
-                                        application:set_env(App, Conf, Val)
-                                end, AppConf)
-              end, BossConf).
+                {App, AppConf} = AppLine, 
+                lists:map(fun
+                        ({Conf, Val}) ->
+                            application:set_env(App, Conf, Val);
+                        (true) ->
+                            ok
+                    end, AppConf)
+        end, BossConf).
 
 %% ===================================================================
 %% Internal functions
