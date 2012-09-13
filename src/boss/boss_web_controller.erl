@@ -65,8 +65,10 @@ init(Config) ->
     DBShards = boss_env:get_env(db_shards, []),
     CacheEnable = boss_env:get_env(cache_enable, false),
     IsMasterNode = boss_env:is_master_node(),
+    DBKeyType = boss_env:get_env(db_keytype, serial),
     DBOptions1 = [{adapter, DBAdapter}, {cache_enable, CacheEnable}, 
-        {shards, DBShards}, {is_master_node, IsMasterNode}|DBOptions],
+        {shards, DBShards}, {is_master_node, IsMasterNode}, 
+        {db_keytype, DBKeyType}|DBOptions],
 
     boss_db:start(DBOptions1),
 
