@@ -221,6 +221,10 @@ If you need help getting started, check the new pdf tutorial:
 
 <http://www.chicagoboss.org/tutorial.pdf>
 
+Be sure to also check the wiki
+
+<https://github.com/evanmiller/ChicagoBoss/wiki>
+
 There's also the mailing list:
 
 <http://groups.google.com/group/chicagoboss>
