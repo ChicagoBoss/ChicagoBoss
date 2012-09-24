@@ -39,6 +39,12 @@ json_data1([{VariableName, {A, B, C} = Val}|Rest], ModelList, Acc) when is_integ
     json_data1([{VariableName, Val, "F d, Y H:i:s"}|Rest], ModelList, Acc);
 json_data1([{VariableName, {A, B, C} = Val, Format}|Rest], ModelList, Acc) when is_integer(A), is_integer(B), is_integer(C) ->
     json_data1(Rest, ModelList, [{VariableName, list_to_binary(erlydtl_filters:date(calendar:now_to_datetime(Val), Format))}|Acc]);
+json_data1([{VariableName, {{A, B, C}, {D, E, F}} = Val}|Rest], ModelList, Acc) when is_integer(A), is_integer(B), is_integer(C),
+                                                                                     is_integer(D), is_integer(E), is_integer(F) ->
+    json_data1([{VariableName, Val, "F d, Y H:i:s"}|Rest], ModelList, Acc);
+json_data1([{VariableName, {{A, B, C}, {D, E, F}} = Val, Format}|Rest], ModelList, Acc) when is_integer(A), is_integer(B), is_integer(C),
+                                                                                     is_integer(D), is_integer(E), is_integer(F) ->
+    json_data1(Rest, ModelList, [{VariableName, list_to_binary(erlydtl_filters:date(Val, Format))}|Acc]);
 json_data1([{VariableName, Variable}|Rest], ModelList, Acc) ->
     case boss_model_manager:is_model_instance (Variable, ModelList) of
         true ->
