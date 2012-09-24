@@ -32,15 +32,17 @@ json_data1([{VariableName, [First|_] = Variable}|Rest], ModelList, Acc) when is_
             json_data1(Rest, ModelList, [{VariableName, json_data1(Variable, ModelList, [])}|Acc])
     end;
 json_data1([{VariableName, [First|_] = Variable}|Rest], ModelList, Acc) when is_list(First) ->
-    json_data1(Rest, ModelList, [{VariableName, lists:map(fun(Item) -> 
+    json_data1(Rest, ModelList, [{VariableName, lists:map(fun(Item) ->
                             json_data1(Item, ModelList, [])
                     end, Variable)}|Acc]);
 json_data1([{VariableName, {A, B, C} = Val}|Rest], ModelList, Acc) when is_integer(A), is_integer(B), is_integer(C) ->
-    json_data1(Rest, ModelList, [{VariableName, list_to_binary(erlydtl_filters:date(calendar:now_to_datetime(Val), "F d, Y H:i:s"))}|Acc]);
+    json_data1([{VariableName, Val, "F d, Y H:i:s"}|Rest], ModelList, Acc);
+json_data1([{VariableName, {A, B, C} = Val, Format}|Rest], ModelList, Acc) when is_integer(A), is_integer(B), is_integer(C) ->
+    json_data1(Rest, ModelList, [{VariableName, list_to_binary(erlydtl_filters:date(calendar:now_to_datetime(Val), Format))}|Acc]);
 json_data1([{VariableName, Variable}|Rest], ModelList, Acc) ->
     case boss_model_manager:is_model_instance (Variable, ModelList) of
-        true -> 
+        true ->
             json_data1(Rest, ModelList, [{VariableName, boss_model_manager:to_json(Variable)}|Acc]);
-        false -> 
+        false ->
             json_data1(Rest, ModelList, [{VariableName, Variable}|Acc])
     end.
