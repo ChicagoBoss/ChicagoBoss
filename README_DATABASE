@@ -8,7 +8,7 @@ development and testing but not much else.
 Using PostgreSQL/MySQL
 ----------------------
 
-Open up boss.config and set db_adapter to pgsql or mysql. You should also set:
+Open up boss.config and set db_adapter to `pgsql` or `mysql`. You should also set:
 
  - db_host
  - db_port
@@ -16,20 +16,43 @@ Open up boss.config and set db_adapter to pgsql or mysql. You should also set:
  - db_password
  - db_database
 
+Models
+- - -
+
 To use Chicago Boss with a SQL database, you need to create a table for each of
 your model files. The table name should be the plural of the model name. Field
 names should be the underscored versions of the model attribute names. Use
-whatever data types make sense for your application. The "id" field should be
-a serial integer. (However, the generated BossRecord ID exposed to your
-application will still have the form "model_name-1".)
+whatever data types make sense for your application.
+
+ID fields
+- - - - -
+
+The "id" field should be a serial integer. (However, the generated 
+BossRecord ID exposed to your application will still have the form "model_name-1".)
+
+Here are useful starting points for MySQL and PostgreSQL respectively:
+
+    CREATE TABLE models (
+        id MEDIUMINT NOT NULL AUTO_INCREMENT,
+        ...
+        PRIMARY KEY (id)
+    );
+
+    CREATE TABLE models (
+        id SERIAL PRIMARY KEY,
+        ...
+    );
+
+Counters
+- - - -
 
 To use the counter features, you need a table called "counters" with a "name"
 and "value" column, like these: 
 
-CREATE TABLE counters (
-    name                VARCHAR(255) PRIMARY KEY,
-    value               INTEGER DEFAULT 0
-);
+    CREATE TABLE counters (
+        name                VARCHAR(255) PRIMARY KEY,
+        value               INTEGER DEFAULT 0
+    );
 
 
 Using Tokyo Tyrant
