@@ -361,7 +361,7 @@ find_application_for_path(Host, Path, Default, [App|Rest], MatchScore) ->
 
 stop_init_scripts(Application, InitData) ->
     lists:foldr(fun(File, _) ->
-                case boss_compiler:compile(File, [{include_dirs, [boss_files:include_dir()]}]) of
+                case boss_compiler:compile(File, [{include_dirs, [boss_files:include_dir() | boss_env:get_env(boss, include_dirs, [])]}]) of
                     {ok, Module} ->
                         case proplists:get_value(Module, InitData, init_failed) of
                            init_failed ->
@@ -375,7 +375,7 @@ stop_init_scripts(Application, InitData) ->
 
 run_init_scripts(AppName) ->
     lists:foldl(fun(File, Acc) ->
-                case boss_compiler:compile(File, [{include_dirs, [boss_files:include_dir()]}]) of
+                case boss_compiler:compile(File, [{include_dirs, [boss_files:include_dir() | boss_env:get_env(boss, include_dirs, [])]}]) of
                     {ok, Module} ->
                         case catch Module:init() of
                             {ok, Info} ->
