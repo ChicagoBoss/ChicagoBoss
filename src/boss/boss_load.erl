@@ -227,13 +227,16 @@ compile_view_erlydtl(Application, ViewPath, OutDir, TranslatorPid) ->
     end.
 
 compile_model(ModulePath, OutDir) ->
-    boss_model_manager:compile(ModulePath, [{out_dir, OutDir}, {include_dirs, [boss_files:include_dir() | boss_env:get_env(boss, include_dirs, [])]}]).
+    boss_model_manager:compile(ModulePath, [{out_dir, OutDir}, {include_dirs, [boss_files:include_dir() | boss_env:get_env(boss, include_dirs, [])]},
+			 {compiler_options, boss_env:get_env(boss, compiler_options, [])}]).
 
 compile_controller(ModulePath, OutDir) ->
-    boss_controller_compiler:compile(ModulePath, [{out_dir, OutDir}, {include_dirs, [boss_files:include_dir() | boss_env:get_env(boss, include_dirs, [])]}]).
+    boss_controller_compiler:compile(ModulePath, [{out_dir, OutDir}, {include_dirs, [boss_files:include_dir() | boss_env:get_env(boss, include_dirs, [])]},
+			 {compiler_options, boss_env:get_env(boss, compiler_options, [])}]).
 
 compile(ModulePath, OutDir) ->
-    boss_compiler:compile(ModulePath, [{out_dir, OutDir}, {include_dirs, [boss_files:include_dir() | boss_env:get_env(boss, include_dirs, [])]}]).
+    boss_compiler:compile(ModulePath, [{out_dir, OutDir}, {include_dirs, [boss_files:include_dir() | boss_env:get_env(boss, include_dirs, [])]},
+			 {compiler_options, boss_env:get_env(boss, compiler_options, [])}]).
 
 load_view_lib(Application, OutDir, TranslatorPid) ->
     {ok, HelperDirModule} = compile_view_dir_erlydtl(boss_files:view_html_tags_path(), 
