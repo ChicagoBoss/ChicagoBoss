@@ -299,7 +299,11 @@ boss_load(BossConf, AppFile) ->
                                                 ok
                                         end 
                                  end, rebar_utils:beams(Dir))
-              end, AllDirs).
+              end, AllDirs),
+    %% Fix starting mimetypes app in boss.erl->ensure_started(mimetypes)
+    %% mimetyps.app not found, adding deps/*/ebin don't work
+    BossPath = boss_config_value(BossConf, boss, path),
+    code:add_path(BossPath++"/deps/mimetypes/ebin").
 
 %%--------------------------------------------------------------------
 %% @doc Start the boss app
