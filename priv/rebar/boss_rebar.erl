@@ -133,9 +133,9 @@ start_cmd(_RebarConf, BossConf, AppFile) ->
     CookieOpt = cookie_option(BossConf),
     
     ErlCmd = erl_command(),
-    ExtraVmargs = extra_vmargs(BossConf),
+    VmArgs = vm_args(BossConf),
     io:format("~s +K true +P ~B -pa ~s -boot start_sasl -config boss -s boss ~s -detached ~s~s~n", 
-        [ErlCmd, MaxProcesses, string:join(EbinDirs, " -pa "), CookieOpt, SNameArg, ExtraVmargs]),
+        [ErlCmd, MaxProcesses, string:join(EbinDirs, " -pa "), CookieOpt, SNameArg, VmArgs]),
     ok.
 
 %%--------------------------------------------------------------------
@@ -158,9 +158,9 @@ start_dev_cmd(_RebarConf, BossConf, AppFile) ->
     ErlCmd = erl_command(), 
     EbinDirs = all_ebin_dirs(BossConf, AppFile),
     CookieOpt = cookie_option(BossConf),
-    ExtraVmargs = extra_vmargs(BossConf),
+    VmArgs = vm_args(BossConf),
     io:format("~s -pa ~s -boss developing_app ~s -boot start_sasl -config boss ~s -s reloader -s boss ~s~s~n", 
-        [ErlCmd, string:join(EbinDirs, " -pa "), AppName, CookieOpt, SNameArg, ExtraVmargs]),
+        [ErlCmd, string:join(EbinDirs, " -pa "), AppName, CookieOpt, SNameArg, VmArgs]),
 	ok.
 
 %%--------------------------------------------------------------------
@@ -400,12 +400,12 @@ host_name() ->
 sname(BossConf, AppFile) ->
     boss_config_value(BossConf, boss, vm_name, io_lib:format("~s@~s", [app_name(AppFile), host_name()])).
 
-extra_vmargs(BossConf) ->
-    case boss_config_value(BossConf, boss, extra_vmargs) of
+vm_args(BossConf) ->
+    case boss_config_value(BossConf, boss, vm_args) of
         {error, _} ->
             "";
-        ExtraVmargs ->
-            " "++ExtraVmargs++" "
+        VmArgs ->
+            " "++VmArgs
     end.
 
 cookie_option(BossConf) ->
