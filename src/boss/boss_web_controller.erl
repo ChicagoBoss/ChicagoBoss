@@ -44,13 +44,17 @@ terminate(_Reason, State) ->
     misultin:stop().
 
 init(Config) ->
-    LogDir = boss_env:get_env(log_dir, "log"),
-    LogFile = make_log_file_name(LogDir),
-    ok = filelib:ensure_dir(LogFile),
-    error_logger:logfile(close),
-    ok = error_logger:logfile({open, LogFile}),
-    %ok = error_logger:tty(false),
-    ok = make_log_file_symlink(LogFile),
+    case boss_env:get_env(log_enable, true) of
+        false -> ok;
+        true ->
+            LogDir = boss_env:get_env(log_dir, "log"),
+            LogFile = make_log_file_name(LogDir),
+            ok = filelib:ensure_dir(LogFile),
+            error_logger:logfile(close),
+            ok = error_logger:logfile({open, LogFile}),
+            %ok = error_logger:tty(false),
+            ok = make_log_file_symlink(LogFile)
+    end,
 
     Env = boss_env:setup_boss_env(),
     error_logger:info_msg("Starting Boss in ~p mode....~n", [Env]),
