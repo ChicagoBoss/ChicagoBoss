@@ -7,6 +7,7 @@
     <li><code>cache_servers</code> - A list of cache servers (<code>{Host, Port, PoolSize}</code>). Defaults to <code>[{"localhost", 11211, 1}]</code>.
     <li><code>cache_exp_time</code> - The maximum time to keep a cache entry, in seconds. Defaults to 60.</li>
     <li><code>compiler_options</code> - A list of extra options to be passed to the Erlang compiler invoked by ChicagoBoss. For example, <code>[debug_info]</code> may be specified to make the beam files build with debug information included. Valid options are those available to <a href="http://www.erlang.org/doc/man/compile.html#forms-2">compile:forms/2</a>.</li>
+    <li><code>vm_args</code> - A string of additional vm args that will be appended to the start* commands. For example, limit the TCP ports for distributed Erlang traffic (running Erlang through a firewall), you can use <code>{vm_args, "-kernel inet_dist_listen_max 9105 inet_dist_listen_min 9100"}</code></li>
     <li><code>db_host</code> - The hostname of the database. Defaults to "localhost".</li>
     <li><code>db_port</code> - The port of the database. Defaults to 1978.</li>
     <li><code>db_username</code> - The username used for connecting to the database (if needed).</li>
