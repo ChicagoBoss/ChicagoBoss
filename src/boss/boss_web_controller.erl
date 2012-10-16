@@ -44,9 +44,10 @@ terminate(_Reason, State) ->
     misultin:stop().
 
 init(Config) ->
-    case boss_env:get_env(log_dir, "log") of
-        none -> ok;
-        LogDir ->
+    case boss_env:get_env(log_enable, true) of
+        false -> ok;
+        true ->
+            LogDir = boss_env:get_env(log_dir, "log"),
             LogFile = make_log_file_name(LogDir),
             ok = filelib:ensure_dir(LogFile),
             error_logger:logfile(close),
