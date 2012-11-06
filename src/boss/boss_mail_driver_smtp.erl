@@ -16,7 +16,8 @@ start() ->
         _ ->
             [{auth, never} | Options]
     end,
-    {ok, Options1}.
+    Options2 = [{port, boss_env:get_env(mail_relay_port, 25)}|Options1],
+    {ok, Options2}.
 
 stop(_) ->
     ok.
