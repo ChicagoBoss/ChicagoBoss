@@ -69,12 +69,12 @@ init(Config) ->
     DBShards = boss_env:get_env(db_shards, []),
     CacheEnable = boss_env:get_env(cache_enable, false),
     IsMasterNode = boss_env:is_master_node(),
-    DBCacheEnable = case {CacheEnable, boss_env:get_env(db_cache_enable, false)} of
-                        {true, true} ->
-                            true;
-                        {_, _} ->
-                            false
-                    end,
+    DBCacheEnable = case boss_env:get_env(db_cache_enable, false) of
+        true ->
+            CacheEnable;
+        _ ->
+            false
+    end,
     DBOptions1 = [{adapter, DBAdapter}, {cache_enable, DBCacheEnable}, 
         {shards, DBShards}, {is_master_node, IsMasterNode}|DBOptions],
 
