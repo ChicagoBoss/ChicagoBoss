@@ -901,8 +901,9 @@ render_view({Controller, Template, _}, AppInfo, Req, SessionID, Variables, Heade
             {Lang, TranslationFun} = choose_translation_fun(AppInfo#boss_app_info.translator_pid, 
                 Module:translatable_strings(), Req:header(accept_language), 
                 proplists:get_value("Content-Language", Headers)),
-            case Module:render(lists:merge([{"_lang", Lang}, {"_session", SessionData},
-                            {"_base_url", AppInfo#boss_app_info.base_url}|Variables], BossFlash), 
+            RenderVars = BossFlash ++ [{"_lang", Lang}, {"_session", SessionData},
+                            {"_base_url", AppInfo#boss_app_info.base_url}|Variables],
+            case Module:render([{"_vars", RenderVars}|RenderVars],
                     [{translation_fun, TranslationFun}, {locale, Lang},
                         {custom_tags_context, [
                                 {host, Req:header(host)},
