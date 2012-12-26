@@ -128,18 +128,36 @@ init([]) ->
 
 handle_call({get_service, ServiceUrl}, _From, State) ->
     #state{services=Services} = State,    
-    Reply = dict:fetch(ServiceUrl, Services),
-    {reply, Reply, State};
+    try dict:fetch(ServiceUrl, Services) of 
+	Reply -> 
+		{reply, {ok, Reply}, State}
+    catch error:badarg ->
+		{reply, {error, unknow_service}, State};
+     	  Class:Reason ->
+		{reply, {Class, Reason}, State}
+    end;
 
 handle_call({get_all_service}, _From, State) ->
     #state{services=Services} = State,    
-    Reply = dict:fetch_keys(Services),
-    {reply, Reply, State};
+    try dict:fetch_keys(Services) of
+	Reply ->
+		{reply, {ok, Reply}, State}
+    catch error:badarg ->	
+    		{reply, {error, unknow_service}, State};
+	  Class:Reason ->
+		{reply, {Class, Reason}, State}
+    end;
 
 handle_call({get_consumers}, _From, State) ->
-    #state{consumers=Consumers} = State,    
-    Reply = dict:fetch_keys(Consumers),
-    {reply, Reply, State};
+    #state{consumers=Consumers} = State,
+    try dict:fetch_keys(Consumers) of
+	Reply ->
+    		{reply, Reply, State}
+    catch error:badarg ->
+		{reply, {error, unknow_service}, State};
+	  Class:Reason ->
+		{reply, {Class, Reason}, State}
+    end;
 
 handle_call({register_service, ServiceUrl, ServiceId}, _From, State) ->
     #state{consumers=ConsumersStore, services=ServicesStore, nb_consumer=NbConsumer} = State,    
@@ -169,25 +187,41 @@ handle_call(_Request, _From, State) ->
 
 handle_cast({join_service, ServiceUrl, WebSocketId, SessionId}, State) ->
     #state{consumers=Consumers, services=Services, nb_consumer=NbConsumer} = State,    
-    ServiceId = dict:fetch(ServiceUrl, Services),
-    boss_service_worker:join(ServiceId, binary_to_list(ServiceUrl), WebSocketId, SessionId),
-    NewConsumers = dict:store(WebSocketId, [ServiceId, SessionId], Consumers),
-    NewState = #state{consumers=NewConsumers, services=Services,nb_consumer=NbConsumer+1},
-    {noreply, NewState};
+    try dict:fetch(ServiceUrl, Services) of 
+	ServiceId ->
+    		boss_service_worker:join(ServiceId, binary_to_list(ServiceUrl), WebSocketId, SessionId),
+    		NewConsumers = dict:store(WebSocketId, [ServiceId, SessionId], Consumers),
+    		NewState = #state{consumers=NewConsumers, services=Services,nb_consumer=NbConsumer+1},
+		{noreply, NewState}
+    catch _Class:_Reason ->
+	%LOG
+    	{noreply, State}
+    end;
 
 handle_cast({incoming_msg, ServiceUrl, WebSocketId, SessionId, Msg}, State) ->
     #state{services=Services} = State,    
-    ServiceId = dict:fetch(ServiceUrl, Services),
-    boss_service_worker:incoming(ServiceId, binary_to_list(ServiceUrl), WebSocketId, SessionId, Msg),
-    {noreply, State};
+    try dict:fetch(ServiceUrl, Services) of
+	ServiceId ->
+    		boss_service_worker:incoming(ServiceId, binary_to_list(ServiceUrl), WebSocketId, SessionId, Msg),
+    		{noreply, State}
+    catch _Class:_Reason ->
+	%LOG
+	{noreply, State}
+    end;
 
 handle_cast({terminate_service, ServiceUrl, WebSocketId, SessionId}, State) ->
     #state{consumers=Consumers, services=Services, nb_consumer=NbConsumer} = State,    
-    ServiceId = dict:fetch(ServiceUrl, Services),
-    boss_service_worker:close(ServiceId, binary_to_list(ServiceUrl), WebSocketId, SessionId),
-    NewConsumers = dict:erase(WebSocketId, Consumers),
-    NewState = #state{consumers=NewConsumers, services=Services, nb_consumer=NbConsumer-1},
-    {noreply, NewState};
+    try dict:fetch(ServiceUrl, Services) of
+	ServiceId ->
+    		boss_service_worker:close(ServiceId, binary_to_list(ServiceUrl), WebSocketId, SessionId),
+    		NewConsumers = dict:erase(WebSocketId, Consumers),
+    		NewState = #state{consumers=NewConsumers, services=Services, nb_consumer=NbConsumer-1},
+    		{noreply, NewState}
+    catch _Class:_Reason ->
+	%LOG
+	{noreply, State}
+    end;
+
 
 handle_cast(_Msg, State) ->
     {noreply, State}.
