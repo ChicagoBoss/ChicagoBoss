@@ -25,7 +25,7 @@ bootstrap_test_env(Application, Adapter) ->
     boss_session:start(),
     boss_mq:start(),
     lists:map(fun(File) ->
-                {ok, _} = boss_compiler:compile(File, [{include_dirs, [boss_files:include_dir()]}])
+                {ok, _} = boss_compiler:compile(File, [{include_dirs, [boss_files:include_dir() | boss_env:get_env(boss, include_dirs, [])]}])
         end, boss_files:init_file_list(Application)),
     boss_news:start(),
     boss_mail:start([{driver, boss_mail_driver_mock}]),

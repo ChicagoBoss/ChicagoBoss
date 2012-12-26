@@ -113,7 +113,13 @@ profile('GET', [UserId]) -&gt;
 <a name="auth"></a>
 <h3>Authorization</h3>
 
-<p>If an action takes three arguments, then the function <code>before_/1</code> in your controller will be passed the action name as a string and should return one of:</P>
+<p>If an action takes three arguments, then the function <code>before_/3</code> in your controller will be passed:</p>
+<ol>
+    <li>the action name as a string</li>
+    <li>the request method as an atom</li>
+    <li>the list of URL tokens</li>
+</ol>
+<p><code>before_/3 should return one of:</P>
 
 <div class="code spec">
     {ok, ExtraInfo}
@@ -131,7 +137,7 @@ profile('GET', [UserId]) -&gt;
 <p>Probably most common before_ looks like:</p>
 
 <div class="code spec">
-before_(_) -&gt;<br />
+before_(_, _, _) -&gt;<br />
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="function">my_user_lib</span>:<span class="function">require_login</span>(Req).
 </div>
 

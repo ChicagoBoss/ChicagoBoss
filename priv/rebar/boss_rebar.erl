@@ -120,22 +120,23 @@ test_functional(RebarConf, BossConf, AppFile) ->
 %% @end
 %%--------------------------------------------------------------------
 start_cmd(_RebarConf, BossConf, AppFile) ->
-	rebar_log:log(info, "Generating dynamic start command~n", []),
-	
-	EbinDirs = all_ebin_dirs(BossConf, AppFile),
-	MaxProcesses = max_processes(BossConf),
-	SNameArg = case sname(BossConf, AppFile) of
+    rebar_log:log(info, "Generating dynamic start command~n", []),
+
+    EbinDirs = all_ebin_dirs(BossConf, AppFile),
+    MaxProcesses = max_processes(BossConf),
+    SNameArg = case sname(BossConf, AppFile) of
         undefined ->
             "";
         SName ->
             io_lib:format("-sname ~s", [SName])
     end,
     CookieOpt = cookie_option(BossConf),
+    
     ErlCmd = erl_command(),
-
-    io:format("~s +K true +P ~B -pa ~s -boot start_sasl -config boss -s boss ~s -detached ~s~n", 
-        [ErlCmd, MaxProcesses, string:join(EbinDirs, " -pa "), CookieOpt, SNameArg]),
-	ok.
+    VmArgs = vm_args(BossConf),
+    io:format("~s +K true +P ~B -pa ~s -boot start_sasl -config boss -s boss ~s -detached ~s~s~n", 
+        [ErlCmd, MaxProcesses, string:join(EbinDirs, " -pa "), CookieOpt, SNameArg, VmArgs]),
+    ok.
 
 %%--------------------------------------------------------------------
 %% @doc start_dev_cmd
@@ -157,8 +158,9 @@ start_dev_cmd(_RebarConf, BossConf, AppFile) ->
     ErlCmd = erl_command(), 
     EbinDirs = all_ebin_dirs(BossConf, AppFile),
     CookieOpt = cookie_option(BossConf),
-    io:format("~s -pa ~s -boss developing_app ~s -boot start_sasl -config boss ~s -s reloader -s boss ~s~n", 
-        [ErlCmd, string:join(EbinDirs, " -pa "), AppName, CookieOpt, SNameArg]),
+    VmArgs = vm_args(BossConf),
+    io:format("~s -pa ~s -boss developing_app ~s -boot start_sasl -config boss ~s -s reloader -s boss ~s~s~n", 
+        [ErlCmd, string:join(EbinDirs, " -pa "), AppName, CookieOpt, SNameArg, VmArgs]),
 	ok.
 
 %%--------------------------------------------------------------------
@@ -299,7 +301,11 @@ boss_load(BossConf, AppFile) ->
                                                 ok
                                         end 
                                  end, rebar_utils:beams(Dir))
-              end, AllDirs).
+              end, AllDirs),
+    %% Fix starting mimetypes app in boss.erl->ensure_started(mimetypes)
+    %% mimetyps.app not found, adding deps/*/ebin don't work
+    BossPath = boss_config_value(BossConf, boss, path),
+    code:add_path(BossPath++"/deps/mimetypes/ebin").
 
 %%--------------------------------------------------------------------
 %% @doc Start the boss app
@@ -366,11 +372,14 @@ all_ebin_dirs(BossConf, _AppFile) ->
 %%--------------------------------------------------------------------
 init_conf(BossConf) ->
     lists:map(fun(AppLine) ->
-                      {App, AppConf} = AppLine, 
-                      lists:map(fun({Conf, Val}) ->
-                                        application:set_env(App, Conf, Val)
-                                end, AppConf)
-              end, BossConf).
+                {App, AppConf} = AppLine, 
+                lists:map(fun
+                        ({Conf, Val}) ->
+                            application:set_env(App, Conf, Val);
+                        (true) ->
+                            ok
+                    end, AppConf)
+        end, BossConf).
 
 %% ===================================================================
 %% Internal functions
@@ -390,6 +399,14 @@ host_name() ->
 
 sname(BossConf, AppFile) ->
     boss_config_value(BossConf, boss, vm_name, io_lib:format("~s@~s", [app_name(AppFile), host_name()])).
+
+vm_args(BossConf) ->
+    case boss_config_value(BossConf, boss, vm_args) of
+        {error, _} ->
+            "";
+        VmArgs ->
+            " "++VmArgs
+    end.
 
 cookie_option(BossConf) ->
     case boss_config_value(BossConf, boss, vm_cookie) of

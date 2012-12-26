@@ -6,6 +6,8 @@
     <li><code>cache_adapter</code> - The cache adapter to use. Currently the only valid value is <code>memcached_bin</code>.</li>
     <li><code>cache_servers</code> - A list of cache servers (<code>{Host, Port, PoolSize}</code>). Defaults to <code>[{"localhost", 11211, 1}]</code>.
     <li><code>cache_exp_time</code> - The maximum time to keep a cache entry, in seconds. Defaults to 60.</li>
+    <li><code>compiler_options</code> - A list of extra options to be passed to the Erlang compiler invoked by ChicagoBoss. For example, <code>[debug_info]</code> may be specified to make the beam files build with debug information included. Valid options are those available to <a href="http://www.erlang.org/doc/man/compile.html#forms-2">compile:forms/2</a>.</li>
+    <li><code>vm_args</code> - A string of additional vm args that will be appended to the start* commands. For example, limit the TCP ports for distributed Erlang traffic (running Erlang through a firewall), you can use <code>{vm_args, "-kernel inet_dist_listen_max 9105 inet_dist_listen_min 9100"}</code></li>
     <li><code>db_host</code> - The hostname of the database. Defaults to "localhost".</li>
     <li><code>db_port</code> - The port of the database. Defaults to 1978.</li>
     <li><code>db_username</code> - The username used for connecting to the database (if needed).</li>
@@ -19,11 +21,14 @@
         <li><code>pgsql</code> - PostgreSQL</li>
         <li><code>tyrant</code> - Tokyo Tyrant</li>
     </ul></li>
+    <li><code>db_cache_enable</code> - Whether to enable the cache in boss_db. Defaults to false. Requires cache_enable to be set to true.</li>
     <li><code>db_shards</code> - A list of proplists with per-shard database configuration. The proplists override the above options, and should contain an additional option:
     <ul>
         <li><code>db_shard_models</code> - A list of models (atoms) which are stored on the shard.</li>
     </ul></li>
+    <li><code>include_dirs</code> - List of additional directories to be searched for files specified in <code>-include</code> directives.</li>
     <li><code>log_dir</code> - Directory in which to keep log files. Location is relative to the project directory. Defaults to "log".</li>
+    <li><code>log_enable</code> - Controls whether ChicagoBoss will generate log files. If this is set to <code>false</code>, log messages will still be sent to Erlang's internal <code>error_logger</code> server and may be handled from there. Defaults to <code>true</code>.</li>
     <li><code>mail_driver</code> - The email delivery driver to use. Valid values are:
     <ul>
         <li><code>boss_mail_driver_smtp</code> - SMTP delivery. If <code>mail_relay</code> is present, it is used as a relay, otherwise direct delivery is attempted.</li>

@@ -30,7 +30,7 @@ handle_call({session_exists, SessionID}, _From, State) ->
             NowSeconds = now_seconds(),
             Val = dict:fetch(SessionID, State#state.session_dict),
             State#state{ 
-                ttl_tree = boss_pq:move_value(Val, NowSeconds + State#state.exp_time, SessionID, State#state.ttl_tree),
+                ttl_tree = tiny_pq:move_value(Val, NowSeconds + State#state.exp_time, SessionID, State#state.ttl_tree),
                 session_dict = dict:store(SessionID,
                     NowSeconds + State#state.exp_time,
                     State#state.session_dict)};
@@ -42,7 +42,7 @@ handle_call({create_session, SessionID, Data}, _From, State) ->
     NowSeconds = now_seconds(),
     ets:insert(State#state.table, #boss_session{sid=SessionID, data=Data}),
     NewState = State#state{ 
-        ttl_tree = boss_pq:insert_value(NowSeconds + State#state.exp_time, SessionID, State#state.ttl_tree),
+        ttl_tree = tiny_pq:insert_value(NowSeconds + State#state.exp_time, SessionID, State#state.ttl_tree),
         session_dict = dict:store(SessionID, NowSeconds + State#state.exp_time, State#state.session_dict)
     },
     {reply, ok, NewState};
@@ -77,7 +77,7 @@ handle_call({delete_session, SessionID}, _From, State) ->
     NewState = case dict:find(SessionID, State#state.session_dict) of
         {ok, Val} ->
             State#state{ 
-                ttl_tree = boss_pq:delete_value(Val, SessionID, State#state.ttl_tree),
+                ttl_tree = tiny_pq:delete_value(Val, SessionID, State#state.ttl_tree),
                 session_dict = dict:erase(SessionID, State#state.session_dict)
             };
         _ ->
@@ -113,7 +113,7 @@ handle_info(_Info, State) ->
     {noreply, State}.
 
 prune_expired_sessions(#state{ ttl_tree = Tree, session_dict = Dict, table = TableId } = State, NowSeconds) ->
-    {NewDict, NewTree} = boss_pq:prune(fun(SessionID, DictAcc) ->
+    {NewDict, NewTree} = tiny_pq:prune_collect_old(fun(SessionID, DictAcc) ->
                 ets:delete(TableId, SessionID),
                 dict:erase(SessionID, DictAcc)
         end, Dict, Tree, NowSeconds),
