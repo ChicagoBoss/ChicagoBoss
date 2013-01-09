@@ -894,15 +894,12 @@ render_view(Location, AppInfo, Req, SessionID, Variables) ->
 render_view({Controller, Template, _}, AppInfo, Req, SessionID, Variables, Headers) ->
     ViewPath = boss_files:web_view_path(Controller, Template),
     LoadResult = boss_load:load_view_if_dev(AppInfo#boss_app_info.application, ViewPath, AppInfo#boss_app_info.translator_pid),
-    BossFlash = boss_flash:get_and_clear(SessionID),
-    SessionData = boss_session:get_session_data(SessionID),
     case LoadResult of
         {ok, Module} ->
             {Lang, TranslationFun} = choose_translation_fun(AppInfo#boss_app_info.translator_pid, 
                 Module:translatable_strings(), Req:header(accept_language), 
                 proplists:get_value("Content-Language", Headers)),
-            RenderVars = BossFlash ++ [{"_lang", Lang}, {"_session", SessionData},
-                            {"_base_url", AppInfo#boss_app_info.base_url}|Variables],
+            RenderVars = get_context(SessionID, Lang, AppInfo, Variables, Req),
             case Module:render([{"_vars", RenderVars}|RenderVars],
                     [{translation_fun, TranslationFun}, {locale, Lang},
                         {custom_tags_context, [
@@ -922,6 +919,22 @@ render_view({Controller, Template, _}, AppInfo, Req, SessionID, Variables, Heade
             {not_found, io_lib:format("The requested template (~p) was not found.", [File]) };
         {error, Error}-> 
             render_errors([Error], AppInfo, Req)
+    end.
+
+get_context(SessionID, Lang, AppInfo, Variables, Req) ->
+    SessionData = boss_session:get_session_data(SessionID),
+    BossFlash = boss_flash:get_and_clear(SessionID),
+    Context = BossFlash ++
+        [
+         {"_lang", Lang},
+         {"_session", SessionData},
+         {"_base_url", AppInfo#boss_app_info.base_url}|Variables
+        ],
+    case boss_env:get_env(request_in_templates, false) of
+        true ->
+            [{"_request", Req}] ++ Context;
+        _ ->
+            Context
     end.
 
 choose_translation_fun(_, _, undefined, undefined) ->
