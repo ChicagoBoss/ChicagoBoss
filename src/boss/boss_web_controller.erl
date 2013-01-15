@@ -894,15 +894,12 @@ render_view(Location, AppInfo, Req, SessionID, Variables) ->
 render_view({Controller, Template, _}, AppInfo, Req, SessionID, Variables, Headers) ->
     ViewPath = boss_files:web_view_path(Controller, Template),
     LoadResult = boss_load:load_view_if_dev(AppInfo#boss_app_info.application, ViewPath, AppInfo#boss_app_info.translator_pid),
-    BossFlash = boss_flash:get_and_clear(SessionID),
-    SessionData = boss_session:get_session_data(SessionID),
     case LoadResult of
         {ok, Module} ->
             {Lang, TranslationFun} = choose_translation_fun(AppInfo#boss_app_info.translator_pid, 
                 Module:translatable_strings(), Req:header(accept_language), 
                 proplists:get_value("Content-Language", Headers)),
-            RenderVars = BossFlash ++ [{"_lang", Lang}, {"_session", SessionData},
-                            {"_base_url", AppInfo#boss_app_info.base_url}|Variables],
+            RenderVars = get_template_context(Req, SessionID, Lang, AppInfo, Variables),
             case Module:render([{"_vars", RenderVars}|RenderVars],
                     [{translation_fun, TranslationFun}, {locale, Lang},
                         {custom_tags_context, [
@@ -923,6 +920,27 @@ render_view({Controller, Template, _}, AppInfo, Req, SessionID, Variables, Heade
         {error, Error}-> 
             render_errors([Error], AppInfo, Req)
     end.
+
+get_template_context(Req, SessionID, Lang, AppInfo, Variables) ->
+    BossFlash = boss_flash:get_and_clear(SessionID),
+    SessionData = boss_session:get_session_data(SessionID),
+    BossFlash
+        ++ [{"_lang", Lang},
+            {"_session", SessionData},
+            {"_base_url", AppInfo#boss_app_info.base_url}
+            |Variables]
+        ++ lists:map(
+             fun({Module, Fun, Arity}) ->
+                 case Arity of
+                     0 ->
+                         Module:Fun();
+                     2 ->
+                         Module:Fun(Req, SessionID);
+                     5 ->
+                         Module:Fun(Req, SessionID, Lang, AppInfo, Variables)
+                 end
+             end,
+             boss_env:get_env(template_context_processors, [])).
 
 choose_translation_fun(_, _, undefined, undefined) ->
     DefaultLang = boss_env:get_env(assume_locale, "en"),
