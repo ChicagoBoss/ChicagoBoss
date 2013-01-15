@@ -2,21 +2,40 @@
 -export([start/0, stop/1, deliver/4]).
 
 start() ->
-    OptionsBase = [{tls, if_available},
-        {ssl, false}, {hostname, smtp_util:guess_FQDN()}, {retries, 1}],
-    Options = case application:get_env(mail_relay_host) of
-        {ok, Relay} ->
-            [{relay, Relay} | OptionsBase];
+    OptionsBase = [{ssl, false}, {hostname, smtp_util:guess_FQDN()}, {retries, 1}],
+    {ok, OptionsBase ++ get_tls() ++ get_host() ++ get_port() ++ get_credentials()}.
+
+get_tls() ->
+    case application:get_env(mail_relay_use_tls) of
+        {ok, Setting} ->
+            [{tls, Setting}];
         undefined ->
-            OptionsBase
-    end,
-    Options1 = case application:get_env(mail_relay_username) of
+            [{tls, if_available}]
+    end.
+
+get_host() ->
+    case application:get_env(mail_relay_host) of
+        {ok, Relay} ->
+            [{relay, Relay}];
+        undefined ->
+            []
+    end.
+
+get_port() ->
+    case application:get_env(mail_relay_port) of
+        {ok, Port} ->
+            [{port, Port}];
+        undefined ->
+            []
+    end.
+
+get_credentials() ->
+    case application:get_env(mail_relay_username) of
         {ok, UserName} ->
-            [{auth, always}, {username, UserName}, {password, boss_env:get_env(mail_relay_password, "")}|Options];
+            [{auth, always}, {username, UserName}, {password, boss_env:get_env(mail_relay_password, "")}];
         _ ->
-            [{auth, never} | Options]
-    end,
-    {ok, Options1}.
+            [{auth, never}]
+    end.
 
 stop(_) ->
     ok.
