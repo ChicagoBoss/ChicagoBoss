@@ -932,6 +932,8 @@ get_template_context(Req, SessionID, Lang, AppInfo, Variables) ->
         ++ lists:map(
              fun({Module, Fun, Arity}) ->
                  case Arity of
+                     0 ->
+                         Module:Fun();
                      2 ->
                          Module:Fun(Req, SessionID);
                      5 ->
