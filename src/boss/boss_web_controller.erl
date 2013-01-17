@@ -868,7 +868,7 @@ process_action_result(Info, {json, Data}, ExtraHeaders, AppInfo, AuthInfo) ->
     process_action_result(Info, {json, Data, []}, ExtraHeaders, AppInfo, AuthInfo);
 process_action_result(Info, {json, Data, Headers}, ExtraHeaders, AppInfo, AuthInfo) ->
     process_action_result(Info, {output, boss_json:encode(Data, AppInfo#boss_app_info.model_modules),
-            merge_headers(Headers, [{"Content-Type", "application/json"}])}, ExtraHeaders, AppInfo, AuthInfo);
+            merge_headers(Headers, [{"Content-Type", "text/javascript"}])}, ExtraHeaders, AppInfo, AuthInfo);
 
 process_action_result(Info, {jsonp, Callback, Data}, ExtraHeaders, AppInfo, AuthInfo) ->
     process_action_result(Info, {jsonp, Callback, Data, []}, ExtraHeaders, AppInfo, AuthInfo);
