@@ -56,5 +56,14 @@ init([]) ->
 	   {boss_web_controller, start_link, [WebConfig]},
 	   permanent, 5000, worker, dynamic},
 
-    Processes = [Web],
+    % add additional supervisors to the supervision tree
+    AddSups = boss_env:get_env(additional_supervisors, []),
+
+    Processes = lists:foldl(fun(App, Acc) ->
+                                    [{App,
+                                      {App, start_link, []},
+                                      permanent, 5000, worker, []}
+                                     |Acc]
+                            end, [Web], AddSups),
+
     {ok, {{one_for_one, 10, 10}, Processes}}.
