@@ -122,7 +122,7 @@ render_view(App, {Action, Extension}, Variables, ContentLanguage) ->
             TranslationFun = boss_translator:fun_for(TranslatorPid, ContentLanguage),
             ViewModule:render([{"_lang", ContentLanguage}|Variables], 
                 [{translation_fun, TranslationFun}, {locale, ContentLanguage}, 
-                    {custom_tags_context, [{application, App}, {router_pid, RouterPid}]}]);
+                    {application, App}, {router_pid, RouterPid}]);
         _ ->
             undefined
     end.
