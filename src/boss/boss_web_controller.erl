@@ -903,7 +903,6 @@ render_view({Controller, Template, _}, AppInfo, Req, SessionID, Variables, Heade
                 proplists:get_value("Content-Language", Headers)),
             RenderVars = BossFlash ++ [{"_lang", Lang}, {"_session", SessionData},
                             {"_base_url", AppInfo#boss_app_info.base_url}|Variables],
-                        io:format("LANG: ~p~n", [Lang]),
             case Module:render([{"_vars", RenderVars}|RenderVars],
                     [{translation_fun, TranslationFun}, {locale, Lang},
                         {host, Req:header(host)}, {application, atom_to_list(AppInfo#boss_app_info.application)},
