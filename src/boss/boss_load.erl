@@ -207,6 +207,7 @@ compile_view(Application, Path, OutDir, TranslatorPid) ->
     case file:read_file_info(Path) of
         {ok, _} ->
             case filename:extension(Path) of
+                ".txt" -> compile_view_erlydtl(Application, Path, OutDir, TranslatorPid);
                 ".html" -> compile_view_erlydtl(Application, Path, OutDir, TranslatorPid);
                 ".dtl" -> compile_view_erlydtl(Application, Path, OutDir, TranslatorPid);
                 ".jade" -> compile_view_jade(Application, Path, OutDir, TranslatorPid)
