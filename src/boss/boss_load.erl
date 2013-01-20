@@ -203,6 +203,18 @@ compile_view_dir_erlydtl(LibPath, Module, OutDir, TranslatorPid) ->
         Err -> Err
     end.
 
+compile_view(Application, Path, OutDir, TranslatorPid) ->
+    case filename:extension(Path) of
+        ".html" -> compile_view_erlydtl(Application, Path, OutDir, TranslatorPid);
+        ".dtl" -> compile_view_erlydtl(Application, Path, OutDir, TranslatorPid);
+        ".jade" -> compile_view_jade(Application, Path, OutDir, TranslatorPid)
+    end.
+
+compile_view_jade(Application, ViewPath, _OutDir, _TranslatorPid) ->
+    Module = view_module(Application, ViewPath),
+    % TODO compile it, load it, and (possibly) write the BEAM to disk
+    {ok, Module}.
+
 compile_view_erlydtl(Application, ViewPath, OutDir, TranslatorPid) ->
     HelperDirModule = view_custom_tags_dir_module(Application),
     TagHelpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_tag_helper_list()),
@@ -263,7 +275,7 @@ load_view_lib_if_old(Application, TranslatorPid) ->
 
 load_views(Application, OutDir, TranslatorPid) ->
     ModuleList = lists:foldr(fun(Path, Acc) -> 
-                {ok, Module} = compile_view_erlydtl(Application, Path, OutDir, TranslatorPid),
+                {ok, Module} = compile_view(Application, Path, OutDir, TranslatorPid),
                 [Module|Acc]
         end, [], boss_files:view_file_list()),
     {ok, ModuleList}.

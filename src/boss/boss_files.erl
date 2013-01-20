@@ -140,7 +140,7 @@ web_controller(AppName, Controller) ->
 
 
 view_file_list() ->
-    ViewFiles = filelib:fold_files(filename:join([root_src_dir(), "view"]), ".*\\.(html|txt)$", true, fun(F1,Acc1) -> [F1 | Acc1] end, []),
+    ViewFiles = filelib:fold_files(filename:join([root_src_dir(), "view"]), ".*\\.(jade|dtl|html)$", true, fun(F1,Acc1) -> [F1 | Acc1] end, []),
     MailPattern = filename:join([root_src_dir(), "mail", "view", "*.{html,txt}"]),
     ViewFiles ++ filelib:wildcard(MailPattern).
 
