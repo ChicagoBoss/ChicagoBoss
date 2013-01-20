@@ -204,16 +204,23 @@ compile_view_dir_erlydtl(LibPath, Module, OutDir, TranslatorPid) ->
     end.
 
 compile_view(Application, Path, OutDir, TranslatorPid) ->
-    case filename:extension(Path) of
-        ".html" -> compile_view_erlydtl(Application, Path, OutDir, TranslatorPid);
-        ".dtl" -> compile_view_erlydtl(Application, Path, OutDir, TranslatorPid);
-        ".jade" -> compile_view_jade(Application, Path, OutDir, TranslatorPid)
+    case file:read_file_info(Path) of
+        {ok, _} ->
+            case filename:extension(Path) of
+                ".html" -> compile_view_erlydtl(Application, Path, OutDir, TranslatorPid);
+                ".dtl" -> compile_view_erlydtl(Application, Path, OutDir, TranslatorPid);
+                ".jade" -> compile_view_jade(Application, Path, OutDir, TranslatorPid)
+            end;
+        _ ->
+            {error, not_found}
     end.
 
-compile_view_jade(Application, ViewPath, _OutDir, _TranslatorPid) ->
+compile_view_jade(Application, ViewPath, OutDir, _TranslatorPid) ->
     Module = view_module(Application, ViewPath),
-    % TODO compile it, load it, and (possibly) write the BEAM to disk
-    {ok, Module}.
+    case jaderl:compile(ViewPath, Module, [{out_dir, OutDir}]) of
+        ok -> {ok, Module};
+        Err -> Err
+    end.
 
 compile_view_erlydtl(Application, ViewPath, OutDir, TranslatorPid) ->
     HelperDirModule = view_custom_tags_dir_module(Application),
@@ -300,7 +307,7 @@ load_view_if_old(Application, ViewPath, Module, TranslatorPid) ->
             end,
             case NeedCompile of
                 true ->
-                    compile_view_erlydtl(Application, ViewPath, undefined, TranslatorPid);
+                    compile_view(Application, ViewPath, undefined, TranslatorPid);
                 false ->
                     {ok, Module}
             end;

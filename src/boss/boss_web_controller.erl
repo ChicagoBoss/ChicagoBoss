@@ -892,14 +892,29 @@ render_view(Location, AppInfo, Req, SessionID, Variables) ->
     render_view(Location, AppInfo, Req, SessionID, Variables, []).
 
 render_view({Controller, Template, _}, AppInfo, Req, SessionID, Variables, Headers) ->
-    ViewPath = boss_files:web_view_path(Controller, Template),
-    LoadResult = boss_load:load_view_if_dev(AppInfo#boss_app_info.application, ViewPath, AppInfo#boss_app_info.translator_pid),
+    TryExtensions = ["html", "dtl", "jade"],
+    LoadResult = lists:foldl(fun
+            (Ext, false) ->
+                ViewPath = boss_files:web_view_path(Controller, Template, Ext),
+                case boss_load:load_view_if_dev(AppInfo#boss_app_info.application, 
+                    ViewPath, AppInfo#boss_app_info.translator_pid) of
+                    {error, not_found} -> false;
+                    LoadResult -> LoadResult
+                end;
+            (_, Acc) -> 
+                Acc
+        end, false, TryExtensions),
     BossFlash = boss_flash:get_and_clear(SessionID),
     SessionData = boss_session:get_session_data(SessionID),
     case LoadResult of
         {ok, Module} ->
+            ModuleExports = Module:module_info(exports),
+            TranslatableStrings = case proplists:get_value(translatable_strings, ModuleExports) of
+                0 -> Module:translatable_strings();
+                _ -> []
+            end,
             {Lang, TranslationFun} = choose_translation_fun(AppInfo#boss_app_info.translator_pid, 
-                Module:translatable_strings(), Req:header(accept_language), 
+                TranslatableStrings, Req:header(accept_language), 
                 proplists:get_value("Content-Language", Headers)),
             RenderVars = BossFlash ++ [{"_lang", Lang}, {"_session", SessionData},
                             {"_base_url", AppInfo#boss_app_info.base_url}|Variables],
@@ -914,7 +929,8 @@ render_view({Controller, Template, _}, AppInfo, Req, SessionID, Variables, Heade
                     Err
             end;
         {error, not_found} ->
-            {not_found, io_lib:format("The requested template (~p) was not found.", [ViewPath]) };
+            AnyViewPath = boss_files:web_view_path(Controller, Template, "{" ++ string:join(TryExtensions, ",") ++ "}"),
+            {not_found, io_lib:format("The requested template (~p) was not found.", [AnyViewPath]) };
         {error, {File, [{0, _Module, "Failed to read file"}]}} ->
             {not_found, io_lib:format("The requested template (~p) was not found.", [File]) };
         {error, Error}-> 

@@ -29,7 +29,9 @@
         web_controller_list/1,
         web_controller_path/0,
         web_view_path/0,
-        web_view_path/2]).
+        web_view_path/2,
+        web_view_path/3
+    ]).
 
 root_dir() -> filename:absname(""). %filename:join([filename:dirname(code:which(?MODULE)), ".."]).
 root_src_dir() -> "src".
@@ -46,7 +48,8 @@ web_view_path() ->
     filename:join([root_src_dir(), "view"]).
 web_view_path(Controller) -> 
     filename:join([web_view_path(), Controller]).
-web_view_path(Controller, Template) -> web_view_path(Controller, Template, "html").
+web_view_path(Controller, Template) -> 
+    web_view_path(Controller, Template, "html").
 web_view_path(Controller, Template, Extension) -> 
     filename:join([web_view_path(Controller), lists:concat([Template, ".", Extension])]).
 
