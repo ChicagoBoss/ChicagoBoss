@@ -34,8 +34,13 @@
 <p>To use embedded Elixir, create templates with extension ".eex", and prefix your variables with <code>@</code>.</p>
 <p>Example Elixir:</p>
 <div class="code">
-    A message for you: <%= @message %><br />
-    <%# This is a comment %>
+    A message for you: &lt;%= @message %&gt;<br />
+    <br />
+    &lt;%# This is a comment %&gt;<br />
+    <br />
+    &lt;%= Enum.map @puppies, fn(puppy) -&gt; %&gt;<br />
+    Name: &lt;%= puppy.name %&gt;<br />
+    &lt;% end %&gt;
 </div>
 <p>For more information on embedded Elixir, see <a href="http://elixir-lang.org/docs/master/EEx.html">the EEx docs</a>.</p>
 {% endblock %}
