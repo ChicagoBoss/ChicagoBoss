@@ -470,10 +470,13 @@ build_dynamic_response(App, Request, Response, Url) ->
     end,
     Response2 = lists:foldl(fun({K, V}, Acc) -> Acc:header(K, V) end, Response1, Headers2),
     case Payload of
+        {stream_raw, Generator, Acc0} ->
+            Response2:build_response(),
+            process_stream_generator(Request, RequestMethod, false, Generator, Acc0);
         {stream, Generator, Acc0} ->
             Response3 = Response2:data(chunked),
             Response3:build_response(),
-            process_chunk_generator(Request, RequestMethod, Generator, Acc0);
+            process_stream_generator(Request, RequestMethod, true, Generator, Acc0);
         _ ->
             (Response2:data(Payload)):build_response()
     end.
@@ -583,17 +586,24 @@ process_error(Payload, #boss_app_info{ router_pid = RouterPid } = AppInfo, Req, 
             {error, ["Error: <pre>", io_lib:print(Payload), "</pre>"], []}
     end.
 
-process_chunk_generator(_Req, 'HEAD', _Generator, _Acc) ->
+process_stream_generator(_Req, 'HEAD', _IsChunked, _Generator, _Acc) ->
     ok;
-process_chunk_generator(Req, Method, Generator, Acc) ->
+process_stream_generator(Req, Method, true = IsChunked, Generator, Acc) ->
     case Generator(Acc) of
         {output, Data, Acc1} ->
             Length = iolist_size(Data),
             mochiweb_socket:send(Req:socket(), [io_lib:format("~.16b\r\n", [Length]), Data, <<"\r\n">>]),
-            process_chunk_generator(Req, Method, Generator, Acc1);
+            process_stream_generator(Req, Method, IsChunked, Generator, Acc1);
         done ->
             mochiweb_socket:send(Req:socket(), ["0\r\n\r\n"]),
             ok
+    end;
+process_stream_generator(Req, Method, false = IsChunked, Generator, Acc) ->
+    case Generator(Acc) of
+        {output, Data, Acc1} ->
+            mochiweb_socket:send(Req:socket(), [Data]),
+            process_stream_generator(Req, Method, IsChunked, Generator, Acc1);
+        done -> ok
     end.
 
 process_result(AppInfo, Req, {Status, Payload}) ->
@@ -892,7 +902,7 @@ render_view(Location, AppInfo, Req, SessionID, Variables) ->
     render_view(Location, AppInfo, Req, SessionID, Variables, []).
 
 render_view({Controller, Template, _}, AppInfo, Req, SessionID, Variables, Headers) ->
-    TryExtensions = ["html", "dtl", "jade"],
+    TryExtensions = boss_files:template_extensions(),
     LoadResult = lists:foldl(fun
             (Ext, {error, not_found}) ->
                 ViewPath = boss_files:web_view_path(Controller, Template, Ext),
@@ -904,14 +914,14 @@ render_view({Controller, Template, _}, AppInfo, Req, SessionID, Variables, Heade
     BossFlash = boss_flash:get_and_clear(SessionID),
     SessionData = boss_session:get_session_data(SessionID),
     case LoadResult of
-        {ok, Module} ->
-            TranslatableStrings = Module:translatable_strings(),
+        {ok, Module, TemplateAdapter} ->
+            TranslatableStrings = TemplateAdapter:translatable_strings(Module),
             {Lang, TranslationFun} = choose_translation_fun(AppInfo#boss_app_info.translator_pid, 
                 TranslatableStrings, Req:header(accept_language), 
                 proplists:get_value("Content-Language", Headers)),
             RenderVars = BossFlash ++ [{"_lang", Lang}, {"_session", SessionData},
                             {"_base_url", AppInfo#boss_app_info.base_url}|Variables],
-            case Module:render([{"_vars", RenderVars}|RenderVars],
+            case TemplateAdapter:render(Module, [{"_vars", RenderVars}|RenderVars],
                     [{translation_fun, TranslationFun}, {locale, Lang},
                         {host, Req:header(host)}, {application, atom_to_list(AppInfo#boss_app_info.application)},
                         {controller, Controller}, {action, Template},

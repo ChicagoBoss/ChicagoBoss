@@ -362,7 +362,17 @@ all_ebin_dirs(BossConf, _AppFile) ->
                                         end;
                                     _ -> [filename:join([Path, "deps", "*", "ebin"])]
                                 end,
-                                [MainEbin | DepsEbins] ++ EbinDirs
+                                ElixirEbins = case os:type() of
+                                    {win32, _} ->
+                                        case file:list_dir(filename:join([Path, "deps", "elixir", "lib"])) of
+                                            {ok, ElixirLibs} -> lists:maps(fun(Dir) ->
+                                                            filename:join([Path, "deps", "elixir", "lib", Dir, "ebin"])
+                                                    end, ElixirLibs);
+                                            {error, _} -> []
+                                        end;
+                                    _ -> [filename:join([Path, "deps", "elixir", "lib", "*", "ebin"])]
+                                end,
+                                [MainEbin | DepsEbins] ++ ElixirEbins ++ EbinDirs
 						end end, [], lists:reverse(BossConf)).
 
 %%--------------------------------------------------------------------

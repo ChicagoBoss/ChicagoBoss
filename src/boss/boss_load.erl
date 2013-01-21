@@ -203,47 +203,21 @@ compile_view_dir_erlydtl(LibPath, Module, OutDir, TranslatorPid) ->
         Err -> Err
     end.
 
-compile_view(Application, Path, OutDir, TranslatorPid) ->
-    case file:read_file_info(Path) of
+compile_view(Application, ViewPath, TemplateAdapter, OutDir, TranslatorPid) ->
+    case file:read_file_info(ViewPath) of
         {ok, _} ->
-            case filename:extension(Path) of
-                ".txt" -> compile_view_erlydtl(Application, Path, OutDir, TranslatorPid);
-                ".html" -> compile_view_erlydtl(Application, Path, OutDir, TranslatorPid);
-                ".dtl" -> compile_view_erlydtl(Application, Path, OutDir, TranslatorPid);
-                ".jade" -> compile_view_jade(Application, Path, OutDir, TranslatorPid)
-            end;
+            Module = view_module(Application, ViewPath),
+            HelperDirModule = view_custom_tags_dir_module(Application),
+            Locales = boss_files:language_list(Application),
+            DocRoot = view_doc_root(ViewPath),
+            TemplateAdapter:compile_file(ViewPath, Module, [
+                    {out_dir, OutDir}, 
+                    {doc_root, DocRoot},
+                    {translator_pid, TranslatorPid},
+                    {helper_module, HelperDirModule},
+                    {locales, Locales}]);
         _ ->
             {error, not_found}
-    end.
-
-compile_view_jade(Application, ViewPath, OutDir, _TranslatorPid) ->
-    Module = view_module(Application, ViewPath),
-    case jaderl:compile(ViewPath, Module, [{out_dir, OutDir}]) of
-        ok -> {ok, Module};
-        Err -> Err
-    end.
-
-compile_view_erlydtl(Application, ViewPath, OutDir, TranslatorPid) ->
-    HelperDirModule = view_custom_tags_dir_module(Application),
-    TagHelpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_tag_helper_list()),
-    FilterHelpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_filter_helper_list()),
-    ExtraTagHelpers = boss_env:get_env(template_tag_modules, []),
-    ExtraFilterHelpers = boss_env:get_env(template_filter_modules, []),
-    Module = view_module(Application, ViewPath),
-    Res = erlydtl_compiler:compile(ViewPath, Module,
-        [{doc_root, view_doc_root(ViewPath)}, 
-            {custom_tags_modules, TagHelpers ++ ExtraTagHelpers ++ [boss_erlydtl_tags, HelperDirModule]},
-            {custom_filters_modules, FilterHelpers ++ ExtraFilterHelpers},
-            {compiler_options, []}, {out_dir, OutDir}, {blocktrans_fun,
-                fun(BlockString, Locale) ->
-                        case boss_translator:lookup(TranslatorPid, BlockString, Locale) of
-                            undefined -> default;
-                            Body -> list_to_binary(Body)
-                        end
-                end}, {blocktrans_locales, boss_files:language_list(Application)}]),
-    case Res of
-        ok -> {ok, Module};
-        Err -> Err
     end.
 
 compile_model(ModulePath, OutDir) ->
@@ -283,12 +257,14 @@ load_view_lib_if_old(Application, TranslatorPid) ->
 
 load_views(Application, OutDir, TranslatorPid) ->
     ModuleList = lists:foldr(fun(Path, Acc) -> 
-                {ok, Module} = compile_view(Application, Path, OutDir, TranslatorPid),
+                TemplateAdapter = boss_files:template_adapter_for_extension(
+                    filename:extension(Path)),
+                {ok, Module} = compile_view(Application, Path, TemplateAdapter, OutDir, TranslatorPid),
                 [Module|Acc]
         end, [], boss_files:view_file_list()),
     {ok, ModuleList}.
 
-load_view_if_old(Application, ViewPath, Module, TranslatorPid) ->
+load_view_if_old(Application, ViewPath, Module, TemplateAdapter, TranslatorPid) ->
     case load_view_lib_if_old(Application, TranslatorPid) of
         {ok, _} -> 
             NeedCompile = case module_is_loaded(Module) of
@@ -296,7 +272,7 @@ load_view_if_old(Application, ViewPath, Module, TranslatorPid) ->
                     Dependencies = lists:map(fun
                             ({File, _CheckSum}) -> File;
                             (File) -> File
-                        end, [Module:source() | Module:dependencies()]),
+                        end, [TemplateAdapter:source(Module) | TemplateAdapter:dependencies(Module)]),
                     TagHelpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_tag_helper_list()),
                     FilterHelpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_filter_helper_list()),
                     ExtraTagHelpers = boss_env:get_env(template_tag_modules, []),
@@ -308,7 +284,8 @@ load_view_if_old(Application, ViewPath, Module, TranslatorPid) ->
             end,
             case NeedCompile of
                 true ->
-                    compile_view(Application, ViewPath, undefined, TranslatorPid);
+                    compile_view(Application, ViewPath, TemplateAdapter, 
+                        undefined, TranslatorPid);
                 false ->
                     {ok, Module}
             end;
@@ -318,14 +295,15 @@ load_view_if_old(Application, ViewPath, Module, TranslatorPid) ->
 
 load_view_if_dev(Application, ViewPath, TranslatorPid) ->
     Module = view_module(Application, ViewPath),
+    TemplateAdapter = boss_files:template_adapter_for_extension(filename:extension(ViewPath)),
     Result = case boss_env:is_developing_app(Application) of
-        true -> load_view_if_old(Application, ViewPath, Module, TranslatorPid);
+        true -> load_view_if_old(Application, ViewPath, Module, TemplateAdapter, TranslatorPid);
         false -> {ok, Module}
     end,
     case Result of
         {ok, Module} ->
             case code:ensure_loaded(Module) of
-                {module, Module} -> {ok, Module};
+                {module, Module} -> {ok, Module, TemplateAdapter};
                 _ -> {error, not_found}
             end;
         Other ->

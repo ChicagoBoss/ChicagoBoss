@@ -25,4 +25,17 @@
     <li><code>_lang</code> - The content language of the rendered view</li>
     <li><code>_session</code> - Key/value pairs from the current session, if it exists</li>
 </ul>
+
+<h2>Experimental Template Languages</h2>
+<p>Two other template languages are supported on an experimental basis: <a href="http://jade-lang.com/">Jade</a> (provided by <a href="https://github.com/graeme-defty/jaderl">jaderl</a>) and embedded <a href="https://github.com/elixir-lang/elixir">Elixir</a>.</p>
+<h3>Jade</h3>
+<p>To use Jade, simply create templates with extension ".jade".</p>
+<h3>Embedded Elixir</h3>
+<p>To use embedded Elixir, create templates with extension ".eex", and prefix your variables with <code>@</code>.</p>
+<p>Example Elixir:</p>
+<div class="code">
+    A message for you: <%= @message %><br />
+    <%# This is a comment %>
+</div>
+<p>For more information on embedded Elixir, see <a href="http://elixir-lang.org/docs/master/EEx.html">the EEx docs</a>.</p>
 {% endblock %}
