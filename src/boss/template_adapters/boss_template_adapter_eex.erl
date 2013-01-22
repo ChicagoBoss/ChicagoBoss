@@ -11,29 +11,24 @@ source(_Module) -> "".
 
 dependencies(_Module) -> [].
 
-% stupid hack for now
-assigns() ->
-    get(?TEMPLATE_VARIABLE_KEY).
-
 render(Module, Variables, _Options) ->
-    put(?TEMPLATE_VARIABLE_KEY, Variables),
-    {ok, Module:render()}.
+    {ok, Module:render(Variables)}.
 
 compile_file(ViewPath, Module, Options) ->
     OutDir = proplists:get_value(out_dir, Options),
     CompilerOptions = proplists:get_value(compiler_options, Options, []),
     EExAst = 'Elixir-EEx':compile_file(ViewPath),
-    Scope = elixir:scope_for_eval([{delegate_locals_to, ?MODULE}]),
-    {ErlAst, _Scope1} = elixir_translator:translate_each(EExAst, Scope),
+    {ErlAst, _} = elixir:translate_forms([EExAst], [{ assigns, [] }], [{delegate_locals_to, ?MODULE}]),
 
     Render0FunctionAst = erl_syntax:function(erl_syntax:atom(render),
-        [erl_syntax:clause([], none, [ErlAst])]),
+        [erl_syntax:clause([erl_syntax:variable("Variables")], none, [
+                    {match, 0, {var, 0, assigns}, {var, 0, 'Variables'}} | ErlAst])]),
 
     ModuleAst  = erl_syntax:attribute(erl_syntax:atom(module), [erl_syntax:atom(Module)]),
 
     ExportAst = erl_syntax:attribute(erl_syntax:atom(export),
         [erl_syntax:list([erl_syntax:arity_qualifier(erl_syntax:atom(render), 
-                        erl_syntax:integer(0))])]),
+                        erl_syntax:integer(1))])]),
 
     Forms = [erl_syntax:revert(X) || X <- [ModuleAst, ExportAst, Render0FunctionAst]],
 
