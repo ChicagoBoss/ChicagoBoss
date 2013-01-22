@@ -124,12 +124,7 @@ start_cmd(_RebarConf, BossConf, AppFile) ->
 
     EbinDirs = all_ebin_dirs(BossConf, AppFile),
     MaxProcesses = max_processes(BossConf),
-    SNameArg = case sname(BossConf, AppFile) of
-        undefined ->
-            "";
-        SName ->
-            io_lib:format("-sname ~s", [SName])
-    end,
+    SNameArg = vm_sname_arg(BossConf, AppFile),
     CookieOpt = cookie_option(BossConf),
     
     ErlCmd = erl_command(),
@@ -149,12 +144,7 @@ start_dev_cmd(_RebarConf, BossConf, AppFile) ->
 	rebar_log:log(info, "Generating dynamic start-dev command~n", []),
 	
 	AppName = app_name(AppFile),
-	SNameArg = case sname(BossConf, AppFile) of
-        undefined ->
-            "";
-        SName ->
-            io_lib:format("-sname ~s", [SName])
-    end,
+	SNameArg = vm_sname_arg(BossConf, AppFile),
     ErlCmd = erl_command(), 
     EbinDirs = all_ebin_dirs(BossConf, AppFile),
     CookieOpt = cookie_option(BossConf),
@@ -172,7 +162,7 @@ start_dev_cmd(_RebarConf, BossConf, AppFile) ->
 stop_cmd(_RebarConf, BossConf, AppFile) ->
 	rebar_log:log(info, "Generating dynamic stop command~n", []),
 	
-    case sname(BossConf, AppFile) of
+    case vm_sname(BossConf, AppFile) of
         undefined ->
             io:format("echo 'The stop command requires a vm_name in boss.config'", []);
         SName ->
@@ -192,7 +182,7 @@ stop_cmd(_RebarConf, BossConf, AppFile) ->
 %%--------------------------------------------------------------------
 reload_cmd(_RebarConf, BossConf, AppFile) ->
 	rebar_log:log(info, "Generating dynamic reload command~n", []),
-    case sname(BossConf, AppFile) of
+    case vm_sname(BossConf, AppFile) of
         undefined ->
             io:format("echo 'The reload command requires a vm_name in boss.config'", []);
         SName ->
@@ -407,8 +397,21 @@ host_name() ->
 	{ok, Host} = inet:gethostname(),
 	Host.
 
-sname(BossConf, AppFile) ->
+vm_name(BossConf, AppFile) ->
     boss_config_value(BossConf, boss, vm_name, io_lib:format("~s@~s", [app_name(AppFile), host_name()])).
+
+vm_sname(BossConf, AppFile) ->
+    boss_config_value(BossConf, boss, vm_sname, io_lib:format("~s@~s", [app_name(AppFile), host_name()])).
+
+vm_sname_arg(BossConf, AppFile) ->
+    case vm_sname(BossConf, AppFile) of
+        undefined -> 
+            case vm_name(BossConf, AppFile) of
+                undefined -> "";
+                Name -> io_lib:format("-name ~s", [Name])
+            end;
+        SName -> io_lib:format("-sname ~s", [SName])
+    end.
 
 vm_args(BossConf) ->
     case boss_config_value(BossConf, boss, vm_args) of
