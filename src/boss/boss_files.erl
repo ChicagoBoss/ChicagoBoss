@@ -25,11 +25,15 @@
         view_html_tags_path/0,
         view_filter_helper_list/0,
         view_tag_helper_list/0,
+        template_adapter_for_extension/1,
+        template_extensions/0,
         web_controller/2,
         web_controller_list/1,
         web_controller_path/0,
         web_view_path/0,
-        web_view_path/2]).
+        web_view_path/2,
+        web_view_path/3
+    ]).
 
 root_dir() -> filename:absname(""). %filename:join([filename:dirname(code:which(?MODULE)), ".."]).
 root_src_dir() -> "src".
@@ -46,7 +50,8 @@ web_view_path() ->
     filename:join([root_src_dir(), "view"]).
 web_view_path(Controller) -> 
     filename:join([web_view_path(), Controller]).
-web_view_path(Controller, Template) -> web_view_path(Controller, Template, "html").
+web_view_path(Controller, Template) -> 
+    web_view_path(Controller, Template, "html").
 web_view_path(Controller, Template, Extension) -> 
     filename:join([web_view_path(Controller), lists:concat([Template, ".", Extension])]).
 
@@ -138,9 +143,27 @@ web_controller_list(AppName) ->
 web_controller(AppName, Controller) ->
     lists:concat([AppName, "_", Controller, "_controller"]).
 
+template_adapters() -> [boss_template_adapter_erlydtl, boss_template_adapter_jade, boss_template_adapter_eex].
+
+template_adapter_for_extension("."++Extension) ->
+    lists:foldl(fun
+            (Adapter, undefined) -> 
+                case lists:member(Extension, Adapter:file_extensions()) of
+                    true -> Adapter;
+                    false -> undefined
+                end;
+            (_, Acc) -> Acc
+        end, undefined, template_adapters()).
+
+template_extensions() ->
+    lists:foldl(fun (Adapter, Acc) -> Acc ++ Adapter:file_extensions() end,
+        [], template_adapters()).
 
 view_file_list() ->
-    ViewFiles = filelib:fold_files(filename:join([root_src_dir(), "view"]), ".*\\.(html|txt)$", true, fun(F1,Acc1) -> [F1 | Acc1] end, []),
+    ViewExtensions = template_extensions(),
+    ViewFilePattern = ".*\\.(" ++ string:join(ViewExtensions, "|") ++ ")$",
+    ViewFiles = filelib:fold_files(filename:join([root_src_dir(), "view"]), ViewFilePattern, 
+        true, fun(F1,Acc1) -> [F1 | Acc1] end, []),
     MailPattern = filename:join([root_src_dir(), "mail", "view", "*.{html,txt}"]),
     ViewFiles ++ filelib:wildcard(MailPattern).
 

@@ -41,6 +41,7 @@ terminate(_Reason, State) ->
     boss_db:stop(),
     boss_cache:stop(),
     mochiweb_http:stop(),
+    elixir:stop([]),
     misultin:stop().
 
 init(Config) ->
@@ -55,6 +56,8 @@ init(Config) ->
             %ok = error_logger:tty(false),
             ok = make_log_file_symlink(LogFile)
     end,
+
+    elixir:start("", ""),
 
     Env = boss_env:setup_boss_env(),
     error_logger:info_msg("Starting Boss in ~p mode....~n", [Env]),
@@ -86,10 +89,10 @@ init(Config) ->
 
     boss_session:start(),
 
-
     ThisNode = erlang:node(),
-    MasterNode = boss_env:get_env(master_node, ThisNode),
-    if MasterNode =:= ThisNode ->
+    MasterNode = boss_env:master_node(),
+    if 
+        MasterNode =:= ThisNode ->
             error_logger:info_msg("Starting master services on ~p~n", [MasterNode]),
             boss_mq:start(),
 
@@ -178,22 +181,24 @@ handle_info(timeout, State) ->
                 DocPrefix = boss_env:get_env(AppName, doc_prefix, "/doc"),
                 DomainList = boss_env:get_env(AppName, domains, all),
                 ModelList = boss_files:model_list(AppName),
-	        ThisNode = erlang:node(),
-		MasterNode = boss_env:get_env(master_node, ThisNode),
-		if MasterNode =:= ThisNode ->
-		    case boss_env:get_env(server, misultin) of
-			cowboy ->
-			    WebSocketModules = boss_files:websocket_list(AppName),
-			    MappingServices  = boss_files:websocket_mapping(BaseURL,
-									    atom_to_list(AppName), 
-									    WebSocketModules),
-			    boss_service_sup:start_services(ServicesSupPid, MappingServices);
-			_Any ->
-			    _Any
-		    end
-		end,				    				    
-		ControllerList = boss_files:web_controller_list(AppName),
-		{ok, RouterSupPid} = boss_router:start([{application, AppName},
+                IsMasterNode = boss_env:is_master_node(),
+                if 
+                    IsMasterNode ->
+                        case boss_env:get_env(server, misultin) of
+                            cowboy ->
+                                WebSocketModules = boss_files:websocket_list(AppName),
+                                MappingServices  = boss_files:websocket_mapping(BaseURL,
+                                    atom_to_list(AppName), 
+                                    WebSocketModules),
+                                boss_service_sup:start_services(ServicesSupPid, MappingServices);
+                            _Any ->
+                                _Any
+                        end;
+                    true ->
+                        ok
+                end,				    				    
+                ControllerList = boss_files:web_controller_list(AppName),
+                {ok, RouterSupPid} = boss_router:start([{application, AppName},
                         {controllers, ControllerList}]),
                 {ok, TranslatorSupPid} = boss_translator:start([{application, AppName}]),
                 case boss_env:is_developing_app(AppName) of
@@ -470,10 +475,13 @@ build_dynamic_response(App, Request, Response, Url) ->
     end,
     Response2 = lists:foldl(fun({K, V}, Acc) -> Acc:header(K, V) end, Response1, Headers2),
     case Payload of
+        {stream_raw, Generator, Acc0} ->
+            Response2:build_response(),
+            process_stream_generator(Request, RequestMethod, false, Generator, Acc0);
         {stream, Generator, Acc0} ->
             Response3 = Response2:data(chunked),
             Response3:build_response(),
-            process_chunk_generator(Request, RequestMethod, Generator, Acc0);
+            process_stream_generator(Request, RequestMethod, true, Generator, Acc0);
         _ ->
             (Response2:data(Payload)):build_response()
     end.
@@ -583,17 +591,24 @@ process_error(Payload, #boss_app_info{ router_pid = RouterPid } = AppInfo, Req, 
             {error, ["Error: <pre>", io_lib:print(Payload), "</pre>"], []}
     end.
 
-process_chunk_generator(_Req, 'HEAD', _Generator, _Acc) ->
+process_stream_generator(_Req, 'HEAD', _IsChunked, _Generator, _Acc) ->
     ok;
-process_chunk_generator(Req, Method, Generator, Acc) ->
+process_stream_generator(Req, Method, true = IsChunked, Generator, Acc) ->
     case Generator(Acc) of
         {output, Data, Acc1} ->
             Length = iolist_size(Data),
             mochiweb_socket:send(Req:socket(), [io_lib:format("~.16b\r\n", [Length]), Data, <<"\r\n">>]),
-            process_chunk_generator(Req, Method, Generator, Acc1);
+            process_stream_generator(Req, Method, IsChunked, Generator, Acc1);
         done ->
             mochiweb_socket:send(Req:socket(), ["0\r\n\r\n"]),
             ok
+    end;
+process_stream_generator(Req, Method, false = IsChunked, Generator, Acc) ->
+    case Generator(Acc) of
+        {output, Data, Acc1} ->
+            mochiweb_socket:send(Req:socket(), [Data]),
+            process_stream_generator(Req, Method, IsChunked, Generator, Acc1);
+        done -> ok
     end.
 
 process_result(AppInfo, Req, {Status, Payload}) ->
@@ -892,32 +907,38 @@ render_view(Location, AppInfo, Req, SessionID, Variables) ->
     render_view(Location, AppInfo, Req, SessionID, Variables, []).
 
 render_view({Controller, Template, _}, AppInfo, Req, SessionID, Variables, Headers) ->
-    ViewPath = boss_files:web_view_path(Controller, Template),
-    LoadResult = boss_load:load_view_if_dev(AppInfo#boss_app_info.application, ViewPath, AppInfo#boss_app_info.translator_pid),
+    TryExtensions = boss_files:template_extensions(),
+    LoadResult = lists:foldl(fun
+            (Ext, {error, not_found}) ->
+                ViewPath = boss_files:web_view_path(Controller, Template, Ext),
+                boss_load:load_view_if_dev(AppInfo#boss_app_info.application, 
+                    ViewPath, AppInfo#boss_app_info.translator_pid);
+            (_, Acc) -> 
+                Acc
+        end, {error, not_found}, TryExtensions),
     BossFlash = boss_flash:get_and_clear(SessionID),
     SessionData = boss_session:get_session_data(SessionID),
     case LoadResult of
-        {ok, Module} ->
+        {ok, Module, TemplateAdapter} ->
+            TranslatableStrings = TemplateAdapter:translatable_strings(Module),
             {Lang, TranslationFun} = choose_translation_fun(AppInfo#boss_app_info.translator_pid, 
-                Module:translatable_strings(), Req:header(accept_language), 
+                TranslatableStrings, Req:header(accept_language), 
                 proplists:get_value("Content-Language", Headers)),
             RenderVars = BossFlash ++ [{"_lang", Lang}, {"_session", SessionData},
                             {"_base_url", AppInfo#boss_app_info.base_url}|Variables],
-            case Module:render([{"_vars", RenderVars}|RenderVars],
+            case TemplateAdapter:render(Module, [{"_vars", RenderVars}|RenderVars],
                     [{translation_fun, TranslationFun}, {locale, Lang},
-                        {custom_tags_context, [
-                                {host, Req:header(host)},
-                                {application, atom_to_list(AppInfo#boss_app_info.application)},
-                                {controller, Controller}, 
-                                {action, Template},
-                                {router_pid, AppInfo#boss_app_info.router_pid}]}]) of
+                        {host, Req:header(host)}, {application, atom_to_list(AppInfo#boss_app_info.application)},
+                        {controller, Controller}, {action, Template},
+                        {router_pid, AppInfo#boss_app_info.router_pid}]) of
                 {ok, Payload} ->
                     {ok, Payload, Headers};
                 Err ->
                     Err
             end;
         {error, not_found} ->
-            {not_found, io_lib:format("The requested template (~p) was not found.", [ViewPath]) };
+            AnyViewPath = boss_files:web_view_path(Controller, Template, "{" ++ string:join(TryExtensions, ",") ++ "}"),
+            {not_found, io_lib:format("The requested template (~p) was not found.", [AnyViewPath]) };
         {error, {File, [{0, _Module, "Failed to read file"}]}} ->
             {not_found, io_lib:format("The requested template (~p) was not found.", [File]) };
         {error, Error}-> 

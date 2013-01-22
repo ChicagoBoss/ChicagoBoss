@@ -38,6 +38,7 @@ load_all_modules(Application, TranslatorPid, OutDir) ->
     {ok, AllModules}.
 
 load_all_modules_and_emit_app_file(AppName, OutDir) ->
+    elixir:start([], []),
     TranslatorPid = boss_translator:start([{application, AppName}]),
     {ok, ModulePropList} = load_all_modules(AppName, TranslatorPid, OutDir),
     AllModules = lists:foldr(fun({_, Mods}, Acc) -> Mods ++ Acc end, [], ModulePropList),
@@ -115,32 +116,9 @@ load_dir(Dir, OutDir, Compiler) when is_function(Compiler) ->
         _ ->
             []
     end,
-    {ModuleList, ErrorList} = lists:foldl(fun
-            ("."++_, Acc) ->
-                Acc;
-            (File, {Modules, Errors}) ->
-                Filename = filename:join([Dir, File]),
-                case filelib:is_dir(Filename) of
-                    true ->
-                        case load_dir(Filename, OutDir, Compiler) of
-                            {ok, NewMods} ->
-                                {NewMods ++ Modules, Errors};
-                            {error, NewErrs} ->
-                                {Modules, NewErrs ++ Errors}
-                        end;
-                    false ->
-                        case maybe_compile(Dir, File, OutDir, Compiler) of
-                            ok ->
-                                {Modules, Errors};
-                            {ok, Module} ->
-                                {[Module|Modules], Errors};
-                            {error, Error} ->
-                                {Modules, [Error | Errors]};
-                            {error, NewErrors, _NewWarnings} when is_list(NewErrors) ->
-                                {Modules, NewErrors ++ Errors}
-                        end
-                end
-        end, {[], []}, Files),
+    FullFiles = lists:map(fun(F) -> filename:join([Dir, F]) end, Files),
+    {ModuleList, ErrorList} = compile_and_accumulate_errors(
+        FullFiles, OutDir, Compiler, {[], []}),
     case length(ErrorList) of
         0 ->
             {ok, ModuleList};
@@ -148,12 +126,48 @@ load_dir(Dir, OutDir, Compiler) when is_function(Compiler) ->
             {error, ErrorList}
     end.
 
-maybe_compile(Dir, File, OutDir, Compiler) ->
-    case lists:suffix(".erl", File) of
+compile_and_accumulate_errors([], _OutDir, _Compiler, Acc) -> 
+    Acc;
+compile_and_accumulate_errors(["."++_|Rest], OutDir, Compiler, Acc) -> 
+    compile_and_accumulate_errors(Rest, OutDir, Compiler, Acc);
+compile_and_accumulate_errors([Filename|Rest], OutDir, Compiler, {Modules, Errors}) ->
+    Result = case filelib:is_dir(Filename) of
         true ->
+            case load_dir(Filename, OutDir, Compiler) of
+                {ok, NewMods} ->
+                    {NewMods ++ Modules, Errors};
+                {error, NewErrs} ->
+                    {Modules, NewErrs ++ Errors}
+            end;
+        false ->
+            case maybe_compile(Filename, OutDir, Compiler) of
+                ok ->
+                    {Modules, Errors};
+                {ok, Module} ->
+                    {[Module|Modules], Errors};
+                {error, Error} ->
+                    {Modules, [Error | Errors]};
+                {error, NewErrors, _NewWarnings} when is_list(NewErrors) ->
+                    {Modules, NewErrors ++ Errors}
+            end
+    end,
+    compile_and_accumulate_errors(Rest, OutDir, Compiler, Result).
+
+maybe_compile(File, OutDir, Compiler) ->
+    Module = case filename:extension(File) of
+        ".erl" ->
             ModuleName = filename:basename(File, ".erl"),
-            Module = list_to_atom(ModuleName),
-            AbsPath = filename:absname(filename:join([Dir, File])),
+            list_to_atom(ModuleName);
+        ".ex" ->
+            ModuleName = filename:basename(File, ".ex"),
+            list_to_atom("Elixir-"++inflector:camelize(ModuleName));
+        _ ->
+            undefined
+    end,
+    case Module of
+        undefined -> ok;
+        _ ->
+            AbsPath = filename:absname(File),
             case OutDir of
                 undefined ->
                     case module_older_than(Module, [AbsPath]) of
@@ -164,9 +178,7 @@ maybe_compile(Dir, File, OutDir, Compiler) ->
                     end;
                 _ ->
                     Compiler(AbsPath, OutDir)
-            end;
-        _ ->
-            ok
+            end
     end.
 
 view_doc_root(ViewPath) ->
@@ -203,40 +215,42 @@ compile_view_dir_erlydtl(LibPath, Module, OutDir, TranslatorPid) ->
         Err -> Err
     end.
 
-compile_view_erlydtl(Application, ViewPath, OutDir, TranslatorPid) ->
-    HelperDirModule = view_custom_tags_dir_module(Application),
-    TagHelpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_tag_helper_list()),
-    FilterHelpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_filter_helper_list()),
-    ExtraTagHelpers = boss_env:get_env(template_tag_modules, []),
-    ExtraFilterHelpers = boss_env:get_env(template_filter_modules, []),
-    Module = view_module(Application, ViewPath),
-    Res = erlydtl_compiler:compile(ViewPath, Module,
-        [{doc_root, view_doc_root(ViewPath)}, 
-            {custom_tags_modules, TagHelpers ++ ExtraTagHelpers ++ [boss_erlydtl_tags, HelperDirModule]},
-            {custom_filters_modules, FilterHelpers ++ ExtraFilterHelpers},
-            {compiler_options, []}, {out_dir, OutDir}, {blocktrans_fun,
-                fun(BlockString, Locale) ->
-                        case boss_translator:lookup(TranslatorPid, BlockString, Locale) of
-                            undefined -> default;
-                            Body -> list_to_binary(Body)
-                        end
-                end}, {blocktrans_locales, boss_files:language_list(Application)}]),
-    case Res of
-        ok -> {ok, Module};
-        Err -> Err
+compile_view(Application, ViewPath, TemplateAdapter, OutDir, TranslatorPid) ->
+    case file:read_file_info(ViewPath) of
+        {ok, _} ->
+            Module = view_module(Application, ViewPath),
+            HelperDirModule = view_custom_tags_dir_module(Application),
+            Locales = boss_files:language_list(Application),
+            DocRoot = view_doc_root(ViewPath),
+            TemplateAdapter:compile_file(ViewPath, Module, [
+                    {out_dir, OutDir}, 
+                    {doc_root, DocRoot},
+                    {translator_pid, TranslatorPid},
+                    {helper_module, HelperDirModule},
+                    {locales, Locales}]);
+        _ ->
+            {error, not_found}
     end.
 
 compile_model(ModulePath, OutDir) ->
-    boss_model_manager:compile(ModulePath, [{out_dir, OutDir}, {include_dirs, [boss_files:include_dir() | boss_env:get_env(boss, include_dirs, [])]},
-			 {compiler_options, boss_env:get_env(boss, compiler_options, [])}]).
+    IncludeDirs = [boss_files:include_dir() | boss_env:get_env(boss, include_dirs, [])],
+    boss_model_manager:compile(ModulePath, [{out_dir, OutDir}, {include_dirs, IncludeDirs},
+			 {compiler_options, boss_env:get_env(boss, compiler_options, [return_errors])}]).
 
 compile_controller(ModulePath, OutDir) ->
-    boss_controller_compiler:compile(ModulePath, [{out_dir, OutDir}, {include_dirs, [boss_files:include_dir() | boss_env:get_env(boss, include_dirs, [])]},
-			 {compiler_options, boss_env:get_env(boss, compiler_options, [])}]).
+    IncludeDirs = [boss_files:include_dir() | boss_env:get_env(boss, include_dirs, [])],
+    boss_controller_compiler:compile(ModulePath, [{out_dir, OutDir}, {include_dirs, IncludeDirs},
+			 {compiler_options, boss_env:get_env(boss, compiler_options, [return_errors])}]).
 
 compile(ModulePath, OutDir) ->
-    boss_compiler:compile(ModulePath, [{out_dir, OutDir}, {include_dirs, [boss_files:include_dir() | boss_env:get_env(boss, include_dirs, [])]},
-			 {compiler_options, boss_env:get_env(boss, compiler_options, [])}]).
+    IncludeDirs = [boss_files:include_dir() | boss_env:get_env(boss, include_dirs, [])],
+    case filename:extension(ModulePath) of
+        ".erl" -> 
+            boss_compiler:compile(ModulePath, [{out_dir, OutDir}, {include_dirs, IncludeDirs},
+                    {compiler_options, boss_env:get_env(boss, compiler_options, [return_errors])}]);
+        ".ex" ->
+            boss_elixir_compiler:compile(ModulePath, [{out_dir, OutDir}])
+    end.
 
 load_view_lib(Application, OutDir, TranslatorPid) ->
     {ok, HelperDirModule} = compile_view_dir_erlydtl(boss_files:view_html_tags_path(), 
@@ -263,12 +277,14 @@ load_view_lib_if_old(Application, TranslatorPid) ->
 
 load_views(Application, OutDir, TranslatorPid) ->
     ModuleList = lists:foldr(fun(Path, Acc) -> 
-                {ok, Module} = compile_view_erlydtl(Application, Path, OutDir, TranslatorPid),
+                TemplateAdapter = boss_files:template_adapter_for_extension(
+                    filename:extension(Path)),
+                {ok, Module} = compile_view(Application, Path, TemplateAdapter, OutDir, TranslatorPid),
                 [Module|Acc]
         end, [], boss_files:view_file_list()),
     {ok, ModuleList}.
 
-load_view_if_old(Application, ViewPath, Module, TranslatorPid) ->
+load_view_if_old(Application, ViewPath, Module, TemplateAdapter, TranslatorPid) ->
     case load_view_lib_if_old(Application, TranslatorPid) of
         {ok, _} -> 
             NeedCompile = case module_is_loaded(Module) of
@@ -276,7 +292,7 @@ load_view_if_old(Application, ViewPath, Module, TranslatorPid) ->
                     Dependencies = lists:map(fun
                             ({File, _CheckSum}) -> File;
                             (File) -> File
-                        end, [Module:source() | Module:dependencies()]),
+                        end, [TemplateAdapter:source(Module) | TemplateAdapter:dependencies(Module)]),
                     TagHelpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_tag_helper_list()),
                     FilterHelpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_filter_helper_list()),
                     ExtraTagHelpers = boss_env:get_env(template_tag_modules, []),
@@ -288,7 +304,8 @@ load_view_if_old(Application, ViewPath, Module, TranslatorPid) ->
             end,
             case NeedCompile of
                 true ->
-                    compile_view_erlydtl(Application, ViewPath, undefined, TranslatorPid);
+                    compile_view(Application, ViewPath, TemplateAdapter, 
+                        undefined, TranslatorPid);
                 false ->
                     {ok, Module}
             end;
@@ -298,14 +315,15 @@ load_view_if_old(Application, ViewPath, Module, TranslatorPid) ->
 
 load_view_if_dev(Application, ViewPath, TranslatorPid) ->
     Module = view_module(Application, ViewPath),
+    TemplateAdapter = boss_files:template_adapter_for_extension(filename:extension(ViewPath)),
     Result = case boss_env:is_developing_app(Application) of
-        true -> load_view_if_old(Application, ViewPath, Module, TranslatorPid);
+        true -> load_view_if_old(Application, ViewPath, Module, TemplateAdapter, TranslatorPid);
         false -> {ok, Module}
     end,
     case Result of
         {ok, Module} ->
             case code:ensure_loaded(Module) of
-                {module, Module} -> {ok, Module};
+                {module, Module} -> {ok, Module, TemplateAdapter};
                 _ -> {error, not_found}
             end;
         Other ->
