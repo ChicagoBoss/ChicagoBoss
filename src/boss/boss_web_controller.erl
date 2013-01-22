@@ -41,6 +41,7 @@ terminate(_Reason, State) ->
     boss_db:stop(),
     boss_cache:stop(),
     mochiweb_http:stop(),
+    elixir:stop([]),
     misultin:stop().
 
 init(Config) ->
@@ -55,6 +56,8 @@ init(Config) ->
             %ok = error_logger:tty(false),
             ok = make_log_file_symlink(LogFile)
     end,
+
+    elixir:start("", ""),
 
     Env = boss_env:setup_boss_env(),
     error_logger:info_msg("Starting Boss in ~p mode....~n", [Env]),

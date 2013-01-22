@@ -38,6 +38,7 @@ load_all_modules(Application, TranslatorPid, OutDir) ->
     {ok, AllModules}.
 
 load_all_modules_and_emit_app_file(AppName, OutDir) ->
+    elixir:start([], []),
     TranslatorPid = boss_translator:start([{application, AppName}]),
     {ok, ModulePropList} = load_all_modules(AppName, TranslatorPid, OutDir),
     AllModules = lists:foldr(fun({_, Mods}, Acc) -> Mods ++ Acc end, [], ModulePropList),
@@ -149,10 +150,19 @@ load_dir(Dir, OutDir, Compiler) when is_function(Compiler) ->
     end.
 
 maybe_compile(Dir, File, OutDir, Compiler) ->
-    case lists:suffix(".erl", File) of
-        true ->
+    Module = case filename:extension(File) of
+        ".erl" ->
             ModuleName = filename:basename(File, ".erl"),
-            Module = list_to_atom(ModuleName),
+            list_to_atom(ModuleName);
+        ".ex" ->
+            ModuleName = filename:basename(File, ".ex"),
+            list_to_atom("Elixir-"++inflector:camelize(ModuleName));
+        _ ->
+            undefined
+    end,
+    case Module of
+        undefined -> ok;
+        _ ->
             AbsPath = filename:absname(filename:join([Dir, File])),
             case OutDir of
                 undefined ->
@@ -164,9 +174,7 @@ maybe_compile(Dir, File, OutDir, Compiler) ->
                     end;
                 _ ->
                     Compiler(AbsPath, OutDir)
-            end;
-        _ ->
-            ok
+            end
     end.
 
 view_doc_root(ViewPath) ->
@@ -229,8 +237,14 @@ compile_controller(ModulePath, OutDir) ->
 			 {compiler_options, boss_env:get_env(boss, compiler_options, [])}]).
 
 compile(ModulePath, OutDir) ->
-    boss_compiler:compile(ModulePath, [{out_dir, OutDir}, {include_dirs, [boss_files:include_dir() | boss_env:get_env(boss, include_dirs, [])]},
-			 {compiler_options, boss_env:get_env(boss, compiler_options, [])}]).
+    IncludeDirs = [boss_files:include_dir() | boss_env:get_env(boss, include_dirs, [])],
+    case filename:extension(ModulePath) of
+        ".erl" -> 
+            boss_compiler:compile(ModulePath, [{out_dir, OutDir}, {include_dirs, IncludeDirs},
+                    {compiler_options, boss_env:get_env(boss, compiler_options, [])}]);
+        ".ex" ->
+            boss_elixir_compiler:compile(ModulePath, [{out_dir, OutDir}])
+    end.
 
 load_view_lib(Application, OutDir, TranslatorPid) ->
     {ok, HelperDirModule} = compile_view_dir_erlydtl(boss_files:view_html_tags_path(), 
