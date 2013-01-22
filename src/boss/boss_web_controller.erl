@@ -89,10 +89,10 @@ init(Config) ->
 
     boss_session:start(),
 
-
     ThisNode = erlang:node(),
-    MasterNode = boss_env:get_env(master_node, ThisNode),
-    if MasterNode =:= ThisNode ->
+    MasterNode = boss_env:master_node(),
+    if 
+        MasterNode =:= ThisNode ->
             error_logger:info_msg("Starting master services on ~p~n", [MasterNode]),
             boss_mq:start(),
 
@@ -181,10 +181,9 @@ handle_info(timeout, State) ->
                 DocPrefix = boss_env:get_env(AppName, doc_prefix, "/doc"),
                 DomainList = boss_env:get_env(AppName, domains, all),
                 ModelList = boss_files:model_list(AppName),
-                ThisNode = erlang:node(),
-                MasterNode = boss_env:get_env(master_node, ThisNode),
+                IsMasterNode = boss_env:is_master_node(),
                 if 
-                    MasterNode =:= ThisNode ->
+                    IsMasterNode ->
                         case boss_env:get_env(server, misultin) of
                             cowboy ->
                                 WebSocketModules = boss_files:websocket_list(AppName),
