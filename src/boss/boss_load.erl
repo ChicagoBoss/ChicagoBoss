@@ -116,32 +116,9 @@ load_dir(Dir, OutDir, Compiler) when is_function(Compiler) ->
         _ ->
             []
     end,
-    {ModuleList, ErrorList} = lists:foldl(fun
-            ("."++_, Acc) ->
-                Acc;
-            (File, {Modules, Errors}) ->
-                Filename = filename:join([Dir, File]),
-                case filelib:is_dir(Filename) of
-                    true ->
-                        case load_dir(Filename, OutDir, Compiler) of
-                            {ok, NewMods} ->
-                                {NewMods ++ Modules, Errors};
-                            {error, NewErrs} ->
-                                {Modules, NewErrs ++ Errors}
-                        end;
-                    false ->
-                        case maybe_compile(Dir, File, OutDir, Compiler) of
-                            ok ->
-                                {Modules, Errors};
-                            {ok, Module} ->
-                                {[Module|Modules], Errors};
-                            {error, Error} ->
-                                {Modules, [Error | Errors]};
-                            {error, NewErrors, _NewWarnings} when is_list(NewErrors) ->
-                                {Modules, NewErrors ++ Errors}
-                        end
-                end
-        end, {[], []}, Files),
+    FullFiles = lists:map(fun(F) -> filename:join([Dir, F]) end, Files),
+    {ModuleList, ErrorList} = compile_and_accumulate_errors(
+        FullFiles, OutDir, Compiler, {[], []}),
     case length(ErrorList) of
         0 ->
             {ok, ModuleList};
@@ -149,7 +126,34 @@ load_dir(Dir, OutDir, Compiler) when is_function(Compiler) ->
             {error, ErrorList}
     end.
 
-maybe_compile(Dir, File, OutDir, Compiler) ->
+compile_and_accumulate_errors([], _OutDir, _Compiler, Acc) -> 
+    Acc;
+compile_and_accumulate_errors(["."++_|Rest], OutDir, Compiler, Acc) -> 
+    compile_and_accumulate_errors(Rest, OutDir, Compiler, Acc);
+compile_and_accumulate_errors([Filename|Rest], OutDir, Compiler, {Modules, Errors}) ->
+    Result = case filelib:is_dir(Filename) of
+        true ->
+            case load_dir(Filename, OutDir, Compiler) of
+                {ok, NewMods} ->
+                    {NewMods ++ Modules, Errors};
+                {error, NewErrs} ->
+                    {Modules, NewErrs ++ Errors}
+            end;
+        false ->
+            case maybe_compile(Filename, OutDir, Compiler) of
+                ok ->
+                    {Modules, Errors};
+                {ok, Module} ->
+                    {[Module|Modules], Errors};
+                {error, Error} ->
+                    {Modules, [Error | Errors]};
+                {error, NewErrors, _NewWarnings} when is_list(NewErrors) ->
+                    {Modules, NewErrors ++ Errors}
+            end
+    end,
+    compile_and_accumulate_errors(Rest, OutDir, Compiler, Result).
+
+maybe_compile(File, OutDir, Compiler) ->
     Module = case filename:extension(File) of
         ".erl" ->
             ModuleName = filename:basename(File, ".erl"),
@@ -163,7 +167,7 @@ maybe_compile(Dir, File, OutDir, Compiler) ->
     case Module of
         undefined -> ok;
         _ ->
-            AbsPath = filename:absname(filename:join([Dir, File])),
+            AbsPath = filename:absname(File),
             case OutDir of
                 undefined ->
                     case module_older_than(Module, [AbsPath]) of
@@ -229,19 +233,21 @@ compile_view(Application, ViewPath, TemplateAdapter, OutDir, TranslatorPid) ->
     end.
 
 compile_model(ModulePath, OutDir) ->
-    boss_model_manager:compile(ModulePath, [{out_dir, OutDir}, {include_dirs, [boss_files:include_dir() | boss_env:get_env(boss, include_dirs, [])]},
-			 {compiler_options, boss_env:get_env(boss, compiler_options, [])}]).
+    IncludeDirs = [boss_files:include_dir() | boss_env:get_env(boss, include_dirs, [])],
+    boss_model_manager:compile(ModulePath, [{out_dir, OutDir}, {include_dirs, IncludeDirs},
+			 {compiler_options, boss_env:get_env(boss, compiler_options, [return_errors])}]).
 
 compile_controller(ModulePath, OutDir) ->
-    boss_controller_compiler:compile(ModulePath, [{out_dir, OutDir}, {include_dirs, [boss_files:include_dir() | boss_env:get_env(boss, include_dirs, [])]},
-			 {compiler_options, boss_env:get_env(boss, compiler_options, [])}]).
+    IncludeDirs = [boss_files:include_dir() | boss_env:get_env(boss, include_dirs, [])],
+    boss_controller_compiler:compile(ModulePath, [{out_dir, OutDir}, {include_dirs, IncludeDirs},
+			 {compiler_options, boss_env:get_env(boss, compiler_options, [return_errors])}]).
 
 compile(ModulePath, OutDir) ->
     IncludeDirs = [boss_files:include_dir() | boss_env:get_env(boss, include_dirs, [])],
     case filename:extension(ModulePath) of
         ".erl" -> 
             boss_compiler:compile(ModulePath, [{out_dir, OutDir}, {include_dirs, IncludeDirs},
-                    {compiler_options, boss_env:get_env(boss, compiler_options, [])}]);
+                    {compiler_options, boss_env:get_env(boss, compiler_options, [return_errors])}]);
         ".ex" ->
             boss_elixir_compiler:compile(ModulePath, [{out_dir, OutDir}])
     end.
