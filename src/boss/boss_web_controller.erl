@@ -568,9 +568,9 @@ process_not_found(Message, #boss_app_info{ router_pid = RouterPid } = AppInfo, R
 process_error(Payload, AppInfo, _Req, development, _SessionID) ->
     error_logger:error_report(Payload),
     ExtraMessage = case boss_router:handle(AppInfo#boss_app_info.router_pid, 500) of
-        undefined ->
+        not_found ->
             ["This message will appear in production; you may want to define a 500 handler in ", boss_files:routes_file(AppInfo#boss_app_info.application)];
-        _ ->
+        _Route ->
             "(Don't worry, this message will not appear in production.)"
     end,
     {error, ["Error: <pre>", io_lib:print(Payload), "</pre>", "<p>", ExtraMessage, "</p>"], []};
