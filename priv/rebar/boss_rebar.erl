@@ -397,20 +397,17 @@ host_name() ->
 	{ok, Host} = inet:gethostname(),
 	Host.
 
-vm_name(BossConf, AppFile) ->
-    boss_config_value(BossConf, boss, vm_name, io_lib:format("~s@~s", [app_name(AppFile), host_name()])).
-
 vm_sname(BossConf, AppFile) ->
     boss_config_value(BossConf, boss, vm_sname, io_lib:format("~s@~s", [app_name(AppFile), host_name()])).
 
 vm_sname_arg(BossConf, AppFile) ->
-    case vm_sname(BossConf, AppFile) of
+    case boss_config_value(BossConf, boss, vm_name) of
         undefined -> 
-            case vm_name(BossConf, AppFile) of
+            case vm_sname(BossConf, AppFile) of
                 undefined -> "";
-                Name -> io_lib:format("-name ~s", [Name])
+                Name -> io_lib:format("-sname ~s", [Name])
             end;
-        SName -> io_lib:format("-sname ~s", [SName])
+        SName -> io_lib:format("-name ~s", [SName])
     end.
 
 vm_args(BossConf) ->
