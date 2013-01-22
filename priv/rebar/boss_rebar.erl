@@ -401,7 +401,7 @@ vm_sname(BossConf, AppFile) ->
     boss_config_value(BossConf, boss, vm_sname, io_lib:format("~s@~s", [app_name(AppFile), host_name()])).
 
 vm_sname_arg(BossConf, AppFile) ->
-    case boss_config_value(BossConf, boss, vm_name) of
+    case boss_config_value(BossConf, boss, vm_name, undefined) of
         undefined -> 
             case vm_sname(BossConf, AppFile) of
                 undefined -> "";
