@@ -14,20 +14,22 @@ init(Application, Controller, Req, SessionID) ->
     {Module, ExportStrings, Req, SessionID}.
 
 before_filter({Module, ExportStrings, Req, SessionID}, Action, RequestMethod, Tokens) ->
+    BinTokens = lists:map(fun list_to_binary/1, Tokens),
     case proplists:get_value("before_", ExportStrings) of
         3 -> Module:before_(Req, SessionID, Action);
-        5 -> Module:before_(Req, SessionID, Action, RequestMethod, Tokens);
+        5 -> Module:before_(Req, SessionID, Action, RequestMethod, BinTokens);
         _ -> ok
     end.
 
 action({Module, ExportStrings, Req, SessionID}, Action, RequestMethod, Tokens, AuthInfo) ->
+    BinTokens = lists:map(fun list_to_binary/1, Tokens),
     case proplists:get_value(Action, ExportStrings) of
         4 ->
             ActionAtom = list_to_atom(Action),
-            Module:ActionAtom(Req, SessionID, RequestMethod, Tokens);
+            Module:ActionAtom(Req, SessionID, RequestMethod, BinTokens);
         5 ->
             ActionAtom = list_to_atom(Action),
-            Module:ActionAtom(Req, SessionID, RequestMethod, Tokens, AuthInfo);
+            Module:ActionAtom(Req, SessionID, RequestMethod, BinTokens, AuthInfo);
         _ -> undefined
     end.
 

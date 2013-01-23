@@ -38,7 +38,7 @@ load_all_modules(Application, TranslatorPid, OutDir) ->
     {ok, AllModules}.
 
 load_all_modules_and_emit_app_file(AppName, OutDir) ->
-    elixir:start([], []),
+    application:start(elixir),
     TranslatorPid = boss_translator:start([{application, AppName}]),
     {ok, ModulePropList} = load_all_modules(AppName, TranslatorPid, OutDir),
     AllModules = lists:foldr(fun({_, Mods}, Acc) -> Mods ++ Acc end, [], ModulePropList),
