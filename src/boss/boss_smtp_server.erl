@@ -14,11 +14,12 @@
 init(Hostname, _SessionCount, Address, Options) ->
     Errors = case proplists:get_value(boss_env, Options, development) of
         development -> 
-            case boss_load:load_mail_controllers() of
+            Application = boss_env:get_env(developing_app, undefined),
+            case boss_load:load_mail_controllers(Application) of
                 {ok, _} -> 
-                    case boss_load:load_libraries() of
+                    case boss_load:load_libraries(Application) of
                         {ok, _} ->
-                            case boss_load:load_models() of
+                            case boss_load:load_models(Application) of
                                 {ok, _} -> [];
                                 {error, List} -> List
                             end;

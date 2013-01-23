@@ -4,13 +4,13 @@
         load_all_modules/2,
         load_all_modules/3,
         load_all_modules_and_emit_app_file/2,
-        load_libraries/0,
-        load_services_websockets/0,
-        load_mail_controllers/0,
-        load_models/0,
+        load_libraries/1,
+        load_services_websockets/1,
+        load_mail_controllers/1,
+        load_models/1,
         load_view_if_dev/3,
-        load_view_lib_modules/0,
-        load_web_controllers/0,
+        load_view_lib_modules/1,
+        load_web_controllers/1,
         module_is_loaded/1,
         reload_all/0
     ]).
@@ -21,13 +21,13 @@ load_all_modules(Application, TranslatorPid) ->
     load_all_modules(Application, TranslatorPid, undefined).
 
 load_all_modules(Application, TranslatorPid, OutDir) ->
-    {ok, TestModules} = load_dirs(boss_files:test_path(), OutDir, fun compile/2),
-    {ok, LibModules} = load_libraries(OutDir),
-    {ok, WebSocketModules} = load_services_websockets(OutDir),
-    {ok, MailModules} = load_mail_controllers(OutDir),
-    {ok, ControllerModules} = load_web_controllers(OutDir),
-    {ok, ModelModules} = load_models(OutDir),
-    {ok, ViewHelperModules} = load_view_lib_modules(OutDir),
+    {ok, TestModules} = load_dirs(boss_files:test_path(), Application, OutDir, fun compile/2),
+    {ok, LibModules} = load_libraries(Application, OutDir),
+    {ok, WebSocketModules} = load_services_websockets(Application, OutDir),
+    {ok, MailModules} = load_mail_controllers(Application, OutDir),
+    {ok, ControllerModules} = load_web_controllers(Application, OutDir),
+    {ok, ModelModules} = load_models(Application, OutDir),
+    {ok, ViewHelperModules} = load_view_lib_modules(Application, OutDir),
     {ok, ViewLibModules} = load_view_lib(Application, OutDir, TranslatorPid),
     {ok, ViewModules} = load_views(Application, OutDir, TranslatorPid),
     AllModules = [{test_modules, TestModules}, 
@@ -64,52 +64,52 @@ reload_all() ->
     Modules = [M || {M, F} <- code:all_loaded(), is_list(F), not code:is_sticky(M)],
     [begin code:purge(M), code:load_file(M) end || M <- Modules].
 
-load_libraries() ->
-    load_libraries(undefined).
-load_libraries(OutDir) ->
-    load_dirs(boss_files:lib_path(), OutDir, fun compile/2).
+load_libraries(Application) ->
+    load_libraries(Application, undefined).
+load_libraries(Application, OutDir) ->
+    load_dirs(boss_files:lib_path(), Application, OutDir, fun compile/2).
 
-load_services_websockets() ->
-    load_services_websockets(boss_files:ebin_dir()).
-load_services_websockets(OutDir) ->
-    load_dirs(boss_files:websocket_path(), OutDir, fun compile/2).
+load_services_websockets(Application) ->
+    load_services_websockets(Application, boss_files:ebin_dir()).
+load_services_websockets(Application, OutDir) ->
+    load_dirs(boss_files:websocket_path(), Application, OutDir, fun compile/2).
 
-load_mail_controllers() ->
-    load_mail_controllers(undefined).
-load_mail_controllers(OutDir) ->
-    load_dirs(boss_files:mail_controller_path(), OutDir, fun compile/2).
+load_mail_controllers(Application) ->
+    load_mail_controllers(Application, undefined).
+load_mail_controllers(Application, OutDir) ->
+    load_dirs(boss_files:mail_controller_path(), Application, OutDir, fun compile/2).
 
-load_web_controllers() ->
-    load_web_controllers(undefined).
-load_web_controllers(OutDir) ->
-    load_dirs(boss_files:web_controller_path(), OutDir, fun compile_controller/2).
+load_web_controllers(Application) ->
+    load_web_controllers(Application, undefined).
+load_web_controllers(Application, OutDir) ->
+    load_dirs(boss_files:web_controller_path(), Application, OutDir, fun compile_controller/2).
 
-load_view_lib_modules() ->
-    load_view_lib_modules(undefined).
-load_view_lib_modules(OutDir) ->
-    load_dirs(boss_files:view_helpers_path(), OutDir, fun compile/2).
+load_view_lib_modules(Application) ->
+    load_view_lib_modules(Application, undefined).
+load_view_lib_modules(Application, OutDir) ->
+    load_dirs(boss_files:view_helpers_path(), Application, OutDir, fun compile/2).
 
-load_models() ->
-    load_models(undefined).
-load_models(OutDir) ->
-    load_dirs(boss_files:model_path(), OutDir, fun compile_model/2).
+load_models(Application) ->
+    load_models(Application, undefined).
+load_models(Application, OutDir) ->
+    load_dirs(boss_files:model_path(), Application, OutDir, fun compile_model/2).
 
-load_dirs(Dirs, OutDir, Compiler) ->
-    load_dirs1(Dirs, OutDir, Compiler, [], []).
+load_dirs(Dirs, Application, OutDir, Compiler) ->
+    load_dirs1(Dirs, Application, OutDir, Compiler, [], []).
 
-load_dirs1([], _, _, ModuleAcc, []) ->
+load_dirs1([], _, _, _, ModuleAcc, []) ->
     {ok, ModuleAcc};
-load_dirs1([], _, _, _, ErrorAcc) ->
+load_dirs1([], _, _, _, _, ErrorAcc) ->
     {error, ErrorAcc};
-load_dirs1([Dir|Rest], OutDir, Compiler, ModuleAcc, ErrorAcc) ->
-    case load_dir(Dir, OutDir, Compiler) of
+load_dirs1([Dir|Rest], Application, OutDir, Compiler, ModuleAcc, ErrorAcc) ->
+    case load_dir(Dir, Application, OutDir, Compiler) of
         {ok, ModuleList} ->
-            load_dirs1(Rest, OutDir, Compiler, ModuleList ++ ModuleAcc, ErrorAcc);
+            load_dirs1(Rest, Application, OutDir, Compiler, ModuleList ++ ModuleAcc, ErrorAcc);
         {error, ErrorList} ->
-            load_dirs1(Rest, OutDir, Compiler, ModuleAcc, ErrorList ++ ErrorAcc)
+            load_dirs1(Rest, Application, OutDir, Compiler, ModuleAcc, ErrorList ++ ErrorAcc)
     end.
 
-load_dir(Dir, OutDir, Compiler) when is_function(Compiler) ->
+load_dir(Dir, Application, OutDir, Compiler) when is_function(Compiler) ->
     Files = case file:list_dir(Dir) of
         {ok, FileList} ->
             FileList;
@@ -118,7 +118,7 @@ load_dir(Dir, OutDir, Compiler) when is_function(Compiler) ->
     end,
     FullFiles = lists:map(fun(F) -> filename:join([Dir, F]) end, Files),
     {ModuleList, ErrorList} = compile_and_accumulate_errors(
-        FullFiles, OutDir, Compiler, {[], []}),
+        FullFiles, Application, OutDir, Compiler, {[], []}),
     case length(ErrorList) of
         0 ->
             {ok, ModuleList};
@@ -126,21 +126,21 @@ load_dir(Dir, OutDir, Compiler) when is_function(Compiler) ->
             {error, ErrorList}
     end.
 
-compile_and_accumulate_errors([], _OutDir, _Compiler, Acc) -> 
+compile_and_accumulate_errors([], _Application, _OutDir, _Compiler, Acc) -> 
     Acc;
-compile_and_accumulate_errors(["."++_|Rest], OutDir, Compiler, Acc) -> 
-    compile_and_accumulate_errors(Rest, OutDir, Compiler, Acc);
-compile_and_accumulate_errors([Filename|Rest], OutDir, Compiler, {Modules, Errors}) ->
+compile_and_accumulate_errors(["."++_|Rest], Application, OutDir, Compiler, Acc) -> 
+    compile_and_accumulate_errors(Rest, Application, OutDir, Compiler, Acc);
+compile_and_accumulate_errors([Filename|Rest], Application, OutDir, Compiler, {Modules, Errors}) ->
     Result = case filelib:is_dir(Filename) of
         true ->
-            case load_dir(Filename, OutDir, Compiler) of
+            case load_dir(Filename, Application, OutDir, Compiler) of
                 {ok, NewMods} ->
                     {NewMods ++ Modules, Errors};
                 {error, NewErrs} ->
                     {Modules, NewErrs ++ Errors}
             end;
         false ->
-            case maybe_compile(Filename, OutDir, Compiler) of
+            case maybe_compile(Filename, Application, OutDir, Compiler) of
                 ok ->
                     {Modules, Errors};
                 {ok, Module} ->
@@ -151,16 +151,18 @@ compile_and_accumulate_errors([Filename|Rest], OutDir, Compiler, {Modules, Error
                     {Modules, NewErrors ++ Errors}
             end
     end,
-    compile_and_accumulate_errors(Rest, OutDir, Compiler, Result).
+    compile_and_accumulate_errors(Rest, Application, OutDir, Compiler, Result).
 
-maybe_compile(File, OutDir, Compiler) ->
+maybe_compile(File, Application, OutDir, Compiler) ->
     Module = case filename:extension(File) of
         ".erl" ->
             ModuleName = filename:basename(File, ".erl"),
             list_to_atom(ModuleName);
         ".ex" ->
             ModuleName = filename:basename(File, ".ex"),
-            list_to_atom("Elixir-"++inflector:camelize(ModuleName));
+            list_to_atom(lists:concat(["Elixir", "-", 
+                        inflector:camelize(atom_to_list(Application)), "-",
+                        inflector:camelize(ModuleName)]));
         _ ->
             undefined
     end,
@@ -195,9 +197,9 @@ view_doc_root(ViewPath) ->
         end, "", 
         [boss_files:web_view_path(), boss_files:mail_view_path()]).
 
-compile_view_dir_erlydtl(LibPath, Module, OutDir, TranslatorPid) ->
-    TagHelpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_tag_helper_list()),
-    FilterHelpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_filter_helper_list()),
+compile_view_dir_erlydtl(Application, LibPath, Module, OutDir, TranslatorPid) ->
+    TagHelpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_tag_helper_list(Application)),
+    FilterHelpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_filter_helper_list(Application)),
     ExtraTagHelpers = boss_env:get_env(template_tag_modules, []),
     ExtraFilterHelpers = boss_env:get_env(template_filter_modules, []),
     Res = erlydtl_compiler:compile_dir(LibPath, Module,
@@ -222,11 +224,17 @@ compile_view(Application, ViewPath, TemplateAdapter, OutDir, TranslatorPid) ->
             HelperDirModule = view_custom_tags_dir_module(Application),
             Locales = boss_files:language_list(Application),
             DocRoot = view_doc_root(ViewPath),
+            TagHelpers = lists:map(fun erlang:list_to_atom/1, 
+                boss_files:view_tag_helper_list(Application)),
+            FilterHelpers = lists:map(fun erlang:list_to_atom/1, 
+                boss_files:view_filter_helper_list(Application)),
             TemplateAdapter:compile_file(ViewPath, Module, [
                     {out_dir, OutDir}, 
                     {doc_root, DocRoot},
                     {translator_pid, TranslatorPid},
                     {helper_module, HelperDirModule},
+                    {tag_helpers, TagHelpers},
+                    {filter_helpers, FilterHelpers},
                     {locales, Locales}]);
         _ ->
             {error, not_found}
@@ -239,8 +247,13 @@ compile_model(ModulePath, OutDir) ->
 
 compile_controller(ModulePath, OutDir) ->
     IncludeDirs = [boss_files:include_dir() | boss_env:get_env(boss, include_dirs, [])],
-    boss_controller_compiler:compile(ModulePath, [{out_dir, OutDir}, {include_dirs, IncludeDirs},
-			 {compiler_options, boss_env:get_env(boss, compiler_options, [return_errors])}]).
+    case filename:extension(ModulePath) of
+        ".erl" -> 
+            boss_controller_compiler:compile(ModulePath, [{out_dir, OutDir}, {include_dirs, IncludeDirs},
+                    {compiler_options, boss_env:get_env(boss, compiler_options, [return_errors])}]);
+        ".ex" ->
+            boss_elixir_compiler:compile(ModulePath, [{out_dir, OutDir}])
+    end.
 
 compile(ModulePath, OutDir) ->
     IncludeDirs = [boss_files:include_dir() | boss_env:get_env(boss, include_dirs, [])],
@@ -253,8 +266,9 @@ compile(ModulePath, OutDir) ->
     end.
 
 load_view_lib(Application, OutDir, TranslatorPid) ->
-    {ok, HelperDirModule} = compile_view_dir_erlydtl(boss_files:view_html_tags_path(), 
-        view_custom_tags_dir_module(Application), OutDir, TranslatorPid),
+    {ok, HelperDirModule} = compile_view_dir_erlydtl(Application,
+        boss_files:view_html_tags_path(), view_custom_tags_dir_module(Application), 
+        OutDir, TranslatorPid),
     {ok, [HelperDirModule]}.
 
 load_view_lib_if_old(Application, TranslatorPid) ->
@@ -293,8 +307,8 @@ load_view_if_old(Application, ViewPath, Module, TemplateAdapter, TranslatorPid) 
                             ({File, _CheckSum}) -> File;
                             (File) -> File
                         end, [TemplateAdapter:source(Module) | TemplateAdapter:dependencies(Module)]),
-                    TagHelpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_tag_helper_list()),
-                    FilterHelpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_filter_helper_list()),
+                    TagHelpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_tag_helper_list(Application)),
+                    FilterHelpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_filter_helper_list(Application)),
                     ExtraTagHelpers = boss_env:get_env(template_tag_modules, []),
                     ExtraFilterHelpers = boss_env:get_env(template_filter_modules, []),
                     module_older_than(Module, 

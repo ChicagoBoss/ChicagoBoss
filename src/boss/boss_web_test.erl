@@ -9,7 +9,7 @@
 start([Application]) ->
     start([Application, "mock"]);
 start([Application, Adapter]) ->
-    run_tests([Application, Adapter|boss_files:test_list()]).
+    run_tests([Application, Adapter|boss_files:test_list(Application)]).
 
 bootstrap_test_env(Application, Adapter) ->
     DBOptions = lists:foldl(fun(OptName, Acc) ->
