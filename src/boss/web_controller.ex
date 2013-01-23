@@ -1,34 +1,34 @@
 defmodule Boss.WebController do
   defmacro get(action, tokens, block) do
-    handle(:get, action, tokens, block)
+    handle(:GET, action, tokens, block)
   end
 
   defmacro get(action, tokens, info, block) do
-    handle(:get, action, tokens, block, info)
+    handle(:GET, action, tokens, block, info)
   end
 
   defmacro post(action, tokens, block) do
-    handle(:post, action, tokens, block)
+    handle(:POST, action, tokens, block)
   end
 
   defmacro post(action, tokens, info, block) do
-    handle(:post, action, tokens, block, info)
+    handle(:POST, action, tokens, block, info)
   end
 
   defmacro put(action, tokens, block) do
-    handle(:put, action, tokens, block)
+    handle(:PUT, action, tokens, block)
   end
 
   defmacro put(action, tokens, info, block) do
-    handle(:put, action, tokens, block, info)
+    handle(:PUT, action, tokens, block, info)
   end
 
   defmacro delete(action, tokens, block) do
-    handle(:delete, action, tokens, block)
+    handle(:DELETE, action, tokens, block)
   end
 
   defmacro delete(action, tokens, info, block) do
-    handle(:delete, action, tokens, block, info)
+    handle(:DELETE, action, tokens, block, info)
   end
 
   defmacro before_(action, block) do
