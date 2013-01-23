@@ -87,6 +87,13 @@ Tokens are passed in as Elixir strings (binaries), not Erlang strings.
 Feel free to mix and match Elixir and Erlang controllers in the same project,
 but watch out for name collisions.
 
+You can access the regular Chicago Boss Erlang API using atoms:
+
+   get :index, [] do
+      puppies = :boss_db.find(:puppy, [{:name, :equals, "Fido"}])
+      {:ok, [{:puppies, puppies}]}
+   end
+
 
 View API
 --
@@ -105,7 +112,7 @@ Note that top-level variables should be prefixed with @.
 To populate this template, you'll want something in your controller like:
 
     get :index, [] do
-        {:ok, [{:name, "Fido"}]}
+        {:ok, [{:puppy, [{:name, "Fido"}]}]}
     end
 
 To write a loop, use Enum.map:
