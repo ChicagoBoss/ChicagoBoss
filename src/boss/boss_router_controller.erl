@@ -174,7 +174,7 @@ load(State) ->
     end.
 
 is_controller(State, Controller) -> 
-    lists:member(boss_files:web_controller(State#state.application, Controller), State#state.controllers).
+    boss_files:is_controller_present(State#state.application, Controller, State#state.controllers).
 
 default_action(State, Controller) ->
     case is_controller(State, Controller) of

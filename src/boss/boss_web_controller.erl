@@ -144,7 +144,7 @@ init(Config) ->
                 true -> misultin:start_link([{ssl, SSLOptions} | ServerConfig]);
                 false -> misultin:start_link(ServerConfig)
             end;
-	cowboy ->
+        cowboy ->
 		  %Dispatch = [{'_', [{'_', boss_mochicow_handler, [{loop, {boss_mochicow_handler, loop}}]}]}],
 		  error_logger:info_msg("Starting cowboy... on ~p~n", [MasterNode]),
 		  application:start(cowboy),
@@ -162,9 +162,11 @@ init(Config) ->
 						cowboy_ssl_transport, SSLConfig,
 						cowboy_http_protocol, [])
 		  end,
-		  if MasterNode =:= ThisNode ->
-			  boss_service_sup:start_services(ServicesSupPid, boss_websocket_router),		  
-			  boss_load:load_services_websockets()			    				
+		  if 
+              MasterNode =:= ThisNode ->
+                  boss_service_sup:start_services(ServicesSupPid, boss_websocket_router);
+              true ->
+                  ok
 		  end
 		  
 	  end,
@@ -671,13 +673,13 @@ process_result(_, _, {StatusCode, Payload, Headers}) when is_integer(StatusCode)
     {StatusCode, merge_headers(Headers, [{"Content-Type", "text/html"}]), Payload}.
 
 load_and_execute(Mode, {Controller, _, _} = Location, AppInfo, Req, SessionID) when Mode =:= production; Mode =:= testing->
-    case lists:member(boss_files:web_controller(AppInfo#boss_app_info.application, Controller), 
+    case boss_files:is_controller_present(AppInfo#boss_app_info.application, Controller, 
             AppInfo#boss_app_info.controller_modules) of
         true -> execute_action(Location, AppInfo, Req, SessionID);
         false -> render_view(Location, AppInfo, Req, SessionID)
     end;
 load_and_execute(development, {"doc", ModelName, _}, AppInfo, Req, _SessionID) ->
-    case boss_load:load_models() of
+    case boss_load:load_models(AppInfo#boss_app_info.application) of
         {ok, ModelModules} ->
             case lists:member(ModelName, lists:map(fun atom_to_list/1, ModelModules)) of
                 true ->
@@ -701,25 +703,30 @@ load_and_execute(development, {"doc", ModelName, _}, AppInfo, Req, _SessionID) -
             render_errors(ErrorList, AppInfo, Req)
     end;
 load_and_execute(development, {Controller, _, _} = Location, AppInfo, Req, SessionID) ->
-    Res1 = boss_load:load_mail_controllers(),
+    Application = AppInfo#boss_app_info.application,
+    Res1 = boss_load:load_mail_controllers(Application),
     Res2 = case Res1 of
-        {ok, _} -> boss_load:load_libraries();
+        {ok, _} -> boss_load:load_libraries(Application);
         _ -> Res1
     end,
     Res3 = case Res2 of
-        {ok, _} -> boss_load:load_view_lib_modules();
+        {ok, _} -> boss_load:load_view_lib_modules(Application);
         _ -> Res2
     end,
     Res4 = case Res3 of
-        {ok, _} -> boss_load:load_web_controllers();
+        {ok, _} -> boss_load:load_services_websockets(Application);
         _ -> Res3
     end,
-    case Res4 of
+    Res5 = case Res4 of
+        {ok, _} -> boss_load:load_web_controllers(Application);
+        _ -> Res4
+    end,
+    case Res5 of
         {ok, Controllers} ->
-            case lists:member(boss_files:web_controller(AppInfo#boss_app_info.application, Controller), 
-                    lists:map(fun atom_to_list/1, Controllers)) of
+            case boss_files:is_controller_present(Application, Controller,
+                    lists:map(fun atom_to_list/1, Controllers)) of 
                 true ->
-                    case boss_load:load_models() of
+                    case boss_load:load_models(Application) of
                         {ok, _} ->
                             execute_action(Location, AppInfo, Req, SessionID);
                         {error, ErrorList} ->
@@ -755,50 +762,39 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
         false ->
             % do not convert a list to an atom until we are sure the controller/action
             % pair exists. this prevents a memory leak due to atom creation.
-            Module = list_to_atom(boss_files:web_controller(AppInfo#boss_app_info.application, Controller)),
-            ExportStrings = lists:map(
-                fun({Function, Arity}) -> {atom_to_list(Function), Arity} end,
-                Module:module_info(exports)),
+            Adapters = [boss_controller_adapter_pmod, boss_controller_adapter_elixir],
+
+            Adapter = lists:foldl(fun
+                    (A, false) ->
+                        case A:accept(AppInfo#boss_app_info.application, Controller) of
+                            true -> A;
+                            _ -> false
+                        end;
+                    (_, Acc) -> Acc
+                end, false, Adapters),
+
+            AdapterInfo = Adapter:init(AppInfo#boss_app_info.application, Controller, Req, SessionID),
             RequestMethod = Req:request_method(),
-            ControllerInstance = case proplists:get_value("new", ExportStrings) of
-                1 -> Module:new(Req);
-                2 -> Module:new(Req, SessionID)
-            end,
-            AuthResult = case proplists:get_value("before_", ExportStrings) of
-                2 -> ControllerInstance:before_(Action);
-                4 -> ControllerInstance:before_(Action, RequestMethod, Tokens);
-                _ -> ok
-            end,
+
+            AuthResult = Adapter:before_filter(AdapterInfo, Action, RequestMethod, Tokens),
+
             AuthInfo = case AuthResult of
                 ok ->
                     {ok, undefined};
                 OtherInfo ->
                     OtherInfo
             end,
+
             case AuthInfo of
                 {ok, Info} ->
                     EffectiveRequestMethod = case Req:request_method() of
                         'HEAD' -> 'GET';
                         Method -> Method
                     end,
-                   ActionResult = case proplists:get_value(Action, ExportStrings) of
-                        3 ->
-                            ActionAtom = list_to_atom(Action),
-                            ControllerInstance:ActionAtom(EffectiveRequestMethod, Tokens);
-                        4 ->
-                            ActionAtom = list_to_atom(Action),
-                            ControllerInstance:ActionAtom(EffectiveRequestMethod, Tokens, Info);
-                        _ ->
-                            undefined
-                    end,
-                    LangResult = case proplists:get_value("lang_", ExportStrings) of
-                        2 ->
-                            ControllerInstance:lang_(Action);
-                        3 ->
-                            ControllerInstance:lang_(Action, Info);
-                        _ ->
-                            auto
-                    end,
+
+                    ActionResult = Adapter:action(AdapterInfo, Action, EffectiveRequestMethod, Tokens, Info),
+                    LangResult = Adapter:language(AdapterInfo, Action, Info),
+
                     LangHeaders = case LangResult of
                         auto -> [];
                         _ -> [{"Content-Language", LangResult}]
@@ -810,14 +806,8 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
                             process_action_result({Location, Req, SessionID, [Location|LocationTrail]}, 
                                 ActionResult, LangHeaders, AppInfo, Info)
                     end,
-                    case proplists:get_value("after_", ExportStrings) of
-                        3 ->
-                            ControllerInstance:after_(Action, Result);
-                        4 ->
-                            ControllerInstance:after_(Action, Result, Info);
-                        _ ->
-                            Result
-                    end;
+
+                    Adapter:after_filter(AdapterInfo, Action, Result, Info);
                 {redirect, Where} ->
                     {redirect, process_redirect(Controller, Where, AppInfo)}
             end
