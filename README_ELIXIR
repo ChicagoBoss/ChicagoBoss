@@ -125,4 +125,7 @@ This is a comment:
 
     <%# Comment %>
 
+Of course, you're free to continue using Django templates with extension ".dtl"
+if you prefer a dedicated template language.
+    
 Enjoy!
