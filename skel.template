@@ -19,6 +19,7 @@
 {dir, "{{dest}}/src/mail/view"}.
 {dir, "{{dest}}/src/test/eunit"}.
 {dir, "{{dest}}/src/test/functional"}.
+{template, "skel/rebar.config", "{{dest}}/rebar.config"}.
 {template, "skel/start-server.bat", "{{dest}}/start-server.bat"}.
 {template, "skel/src/project.app.src", "{{dest}}/src/{{appid}}.app.src"}.
 {template, "skel/src/view/lib/tag_modules/custom_tags.erl", "{{dest}}/src/view/lib/tag_modules/{{appid}}_custom_tags.erl"}.
@@ -36,7 +37,6 @@
 {file, "skel/init-dev.sh", "{{dest}}/init-dev.sh"}.
 {file, "skel/rebar", "{{dest}}/rebar"}.
 {file, "skel/rebar.cmd", "{{dest}}/rebar.cmd"}.
-{file, "skel/rebar.config", "{{dest}}/rebar.config"}.
 {chmod, 8#755, "{{dest}}/init.sh"}.
 {chmod, 8#755, "{{dest}}/init-dev.sh"}.
 {chmod, 8#755, "{{dest}}/rebar"}.

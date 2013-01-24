@@ -41,7 +41,7 @@ terminate(_Reason, State) ->
     boss_db:stop(),
     boss_cache:stop(),
     mochiweb_http:stop(),
-    elixir:stop([]),
+    application:stop(elixir),
     misultin:stop().
 
 init(Config) ->
@@ -57,7 +57,7 @@ init(Config) ->
             ok = make_log_file_symlink(LogFile)
     end,
 
-    elixir:start("", ""),
+    application:start(elixir),
 
     Env = boss_env:setup_boss_env(),
     error_logger:info_msg("Starting Boss in ~p mode....~n", [Env]),
@@ -477,13 +477,10 @@ build_dynamic_response(App, Request, Response, Url) ->
     end,
     Response2 = lists:foldl(fun({K, V}, Acc) -> Acc:header(K, V) end, Response1, Headers2),
     case Payload of
-        {stream_raw, Generator, Acc0} ->
-            Response2:build_response(),
-            process_stream_generator(Request, RequestMethod, false, Generator, Acc0);
         {stream, Generator, Acc0} ->
             Response3 = Response2:data(chunked),
             Response3:build_response(),
-            process_stream_generator(Request, RequestMethod, true, Generator, Acc0);
+            process_stream_generator(Request, RequestMethod, Generator, Acc0);
         _ ->
             (Response2:data(Payload)):build_response()
     end.
@@ -593,24 +590,17 @@ process_error(Payload, #boss_app_info{ router_pid = RouterPid } = AppInfo, Req, 
             {error, ["Error: <pre>", io_lib:print(Payload), "</pre>"], []}
     end.
 
-process_stream_generator(_Req, 'HEAD', _IsChunked, _Generator, _Acc) ->
+process_stream_generator(_Req, 'HEAD', _Generator, _Acc) ->
     ok;
-process_stream_generator(Req, Method, true = IsChunked, Generator, Acc) ->
+process_stream_generator(Req, Method, Generator, Acc) ->
     case Generator(Acc) of
         {output, Data, Acc1} ->
             Length = iolist_size(Data),
-            mochiweb_socket:send(Req:socket(), [io_lib:format("~.16b\r\n", [Length]), Data, <<"\r\n">>]),
-            process_stream_generator(Req, Method, IsChunked, Generator, Acc1);
+            ok = mochiweb_socket:send(Req:socket(), [io_lib:format("~.16b\r\n", [Length]), Data, <<"\r\n">>]),
+            process_stream_generator(Req, Method, Generator, Acc1);
         done ->
             mochiweb_socket:send(Req:socket(), ["0\r\n\r\n"]),
             ok
-    end;
-process_stream_generator(Req, Method, false = IsChunked, Generator, Acc) ->
-    case Generator(Acc) of
-        {output, Data, Acc1} ->
-            mochiweb_socket:send(Req:socket(), [Data]),
-            process_stream_generator(Req, Method, IsChunked, Generator, Acc1);
-        done -> ok
     end.
 
 process_result(AppInfo, Req, {Status, Payload}) ->
