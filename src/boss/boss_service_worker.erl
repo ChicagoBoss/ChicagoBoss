@@ -49,8 +49,8 @@ websockets(Service) ->
     gen_server:call({global, Service}, {websockets}).
 
 websockets_eval(Service, Fun) ->
-    gen_server:call({global, Service}, {websockets, Fun}).
-
+    WebSockets = gen_server:call({global, Service}, {websockets}),
+    lists:map(Fun, WebSockets).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -165,11 +165,6 @@ handle_call({terminate_service, ServiceUrl, WebSocketId, SessionId}, _From,  Sta
 handle_call({websockets}, _From, State) ->
     #state{handler=_Handler, internal=_Internal, websockets=WebSockets} = State,
     {reply, sets:to_list(WebSockets), State};
-
-handle_call({websockets, Fun}, _From, State) ->
-    #state{handler=_Handler, internal=_Internal, websockets=WebSockets} = State,
-    Reply = lists:map(Fun, sets:to_list(WebSockets)),
-    {reply, Reply, State};
 
 handle_call(_Request, _From, State) ->
     Reply = ok,
