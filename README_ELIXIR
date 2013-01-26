@@ -51,11 +51,16 @@ should NOT be prefixed with the application name. Example:
 Open up the controller and write a basic module, like:
 
     defmodule MyApplication.PuppyController do
-        import Boss.WebController
+        use Boss.WebController
 
         get :index, [] do
             {:output, "Hello, world!"}
         end
+
+        get about, [] do
+            {:output, "Hello, world!"}
+        end
+
     end
 
 To test it out, start the server and visit:
@@ -127,5 +132,5 @@ This is a comment:
 
 Of course, you're free to continue using Django templates with extension ".dtl"
 if you prefer a dedicated template language.
-    
+
 Enjoy!
