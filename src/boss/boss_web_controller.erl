@@ -983,16 +983,38 @@ translation_coverage(Strings, Locale, TranslatorPid) ->
             0.0
     end.
 
+camelize([]) ->
+    [];
+camelize([C|CS]) ->
+    lists:flatten([string:to_upper(C)|camelize_helper(CS)]).
+
+camelize_helper([]) ->
+    [];
+camelize_helper([C|[]]) ->
+    [C|[]];
+camelize_helper([S|[C|CS]] = _Word) when C >= $a, C =< $z, (S =:= $- orelse S =:= $_)  ->
+    [S|[string:to_upper(C)|camelize_helper(CS)]];
+camelize_helper([X|CS]) ->
+    [X|camelize_helper(CS)].
+
 merge_headers(Headers1, Headers2) ->
+    Headers1L = lists:map(
+                  fun
+                      ({Key, Val}) when is_atom(Key) ->
+                          {atom_to_list(Key), Val};
+                      (KV) ->
+                          KV
+                  end, Headers1),
+    Headers1LU = lists:map(fun ({Key, Val}) -> {camelize(Key), Val} end, Headers1L),
     HeadersToAdd = lists:foldl(fun(Key, Acc) ->
-                case proplists:is_defined(Key, Headers1) of
+                case proplists:is_defined(Key, Headers1LU) of
                     true ->
                         Acc;
                     false ->
                         proplists:lookup_all(Key, Headers2) ++ Acc
                 end
         end, [], proplists:get_keys(Headers2)),
-    HeadersToAdd ++ Headers1.
+    HeadersToAdd ++ Headers1LU.
 
 make_log_file_name(Dir) ->
     {{Y, M, D}, {Hour, Min, Sec}} = calendar:local_time(), 
