@@ -984,15 +984,25 @@ translation_coverage(Strings, Locale, TranslatorPid) ->
     end.
 
 merge_headers(Headers1, Headers2) ->
+    %% make sure the key is a list
+    NewHeaders = lists:map(
+                   fun
+                       ({Key, Val}) when is_atom(Key) ->
+                           {atom_to_list(Key), Val};
+                       (KV) ->
+                           KV
+                   end, Headers1),
+    %% Title-case header keys, as per RFC 2616, 4.2, "common form".
+    NewHeadersTitleCased = lists:map(fun ({Key, Val}) -> {boss_string:title(Key, "-"), Val} end, NewHeaders),
     HeadersToAdd = lists:foldl(fun(Key, Acc) ->
-                case proplists:is_defined(Key, Headers1) of
+                case proplists:is_defined(Key, NewHeadersTitleCased) of
                     true ->
                         Acc;
                     false ->
                         proplists:lookup_all(Key, Headers2) ++ Acc
                 end
         end, [], proplists:get_keys(Headers2)),
-    HeadersToAdd ++ Headers1.
+    HeadersToAdd ++ NewHeadersTitleCased.
 
 make_log_file_name(Dir) ->
     {{Y, M, D}, {Hour, Min, Sec}} = calendar:local_time(), 
