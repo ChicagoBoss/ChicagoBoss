@@ -138,7 +138,7 @@ compile_and_accumulate_errors([Filename|Rest], Application, OutDir, Compiler, {M
                 {ok, Module} ->
                     {[Module|Modules], Errors};
                 {error, Error} ->
-                    {Modules, [Error | Errors]};
+                    {Modules, [{error, [{msg, file:format_error(Error)}, {filename, Filename}]} | Errors]};
                 {error, NewErrors, _NewWarnings} when is_list(NewErrors) ->
                     {Modules, NewErrors ++ Errors}
             end
