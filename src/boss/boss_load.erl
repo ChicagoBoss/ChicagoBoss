@@ -110,15 +110,9 @@ load_dirs1([Dir|Rest], Application, OutDir, Compiler, ModuleAcc, ErrorAcc) ->
     end.
 
 load_dir(Dir, Application, OutDir, Compiler) when is_function(Compiler) ->
-    Files = case file:list_dir(Dir) of
-        {ok, FileList} ->
-            FileList;
-        _ ->
-            []
-    end,
-    FullFiles = lists:map(fun(F) -> filename:join([Dir, F]) end, Files),
+    FileList = filelib:fold_files(Dir, "^(?i)[^#][[:print:]]+.(erl|ex)$", false, fun(F, Acc) -> [F] ++ Acc end, []),
     {ModuleList, ErrorList} = compile_and_accumulate_errors(
-        FullFiles, Application, OutDir, Compiler, {[], []}),
+        FileList, Application, OutDir, Compiler, {[], []}),
     case length(ErrorList) of
         0 ->
             {ok, ModuleList};
@@ -128,8 +122,6 @@ load_dir(Dir, Application, OutDir, Compiler) when is_function(Compiler) ->
 
 compile_and_accumulate_errors([], _Application, _OutDir, _Compiler, Acc) -> 
     Acc;
-compile_and_accumulate_errors(["."++_|Rest], Application, OutDir, Compiler, Acc) -> 
-    compile_and_accumulate_errors(Rest, Application, OutDir, Compiler, Acc);
 compile_and_accumulate_errors([Filename|Rest], Application, OutDir, Compiler, {Modules, Errors}) ->
     Result = case filelib:is_dir(Filename) of
         true ->
