@@ -118,7 +118,7 @@ render_view(App, {Action, Extension}, Variables, ContentLanguage) ->
     TranslatorPid = boss_web:translator_pid(App),
     RouterPid = boss_web:router_pid(App),
     case boss_load:load_view_if_dev(App, ViewPath, TranslatorPid) of
-        {ok, ViewModule} ->
+        {ok, ViewModule, _ViewAdapter} ->
             TranslationFun = boss_translator:fun_for(TranslatorPid, ContentLanguage),
             ViewModule:render([{"_lang", ContentLanguage}|Variables], 
                 [{translation_fun, TranslationFun}, {locale, ContentLanguage}, 
