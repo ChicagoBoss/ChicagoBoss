@@ -64,9 +64,8 @@ start_services(SupPid, Services) ->
 	 ({ServiceUrl, Service}, Acc) ->
 	      {ok, ServicePid} = 
 		  supervisor:start_child(SupPid,
-					 {Service, {boss_service_worker, start_link, [Service]},
+					 {Service, {boss_service_worker, start_link, [Service, ServiceUrl]},
 					  permanent, 5000, worker, [Service]}),
-	      boss_websocket_router:register(ServiceUrl, Service),
 	      Acc ++ [{ok, ServicePid}]
       end, 
       [], 

@@ -11,7 +11,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/1]).
+-export([start_link/2]).
 -export([incoming/5, join/4, close/4, websockets/1, websockets_eval/2]).
 
 %% gen_server callbacks
@@ -33,8 +33,8 @@
 %% @spec start_link() -> {ok, Pid} | ignore | {error, Error}
 %% @end
 %%--------------------------------------------------------------------
-start_link(Handler) when is_atom(Handler)->
-    gen_server:start_link({global, Handler}, ?MODULE, [Handler], []).
+start_link(Handler, ServiceUrl) when is_atom(Handler)->
+    gen_server:start_link({global, Handler}, ?MODULE, [Handler, ServiceUrl], []).
 
 incoming(Service, ServiceUrl, WebSocketId, SessionId, Msg) ->
     gen_server:cast({global, Service}, {incoming_msg, ServiceUrl, WebSocketId, SessionId, Msg}).
@@ -67,10 +67,11 @@ websockets_eval(Service, Fun) ->
 %%                     {stop, Reason}
 %% @end
 %%--------------------------------------------------------------------
-init([Handler]) when is_atom(Handler) ->
+init([Handler, ServiceUrl]) when is_atom(Handler) ->
     % todo option to init
     try Handler:init() of
 	{ok, Internal} ->
+	    boss_websocket_router:register(ServiceUrl, Handler),
 	    {ok, #state{handler=Handler, internal=Internal, websockets=sets:new()}}
     catch Class:Reason ->
 	    error_logger:error_msg(
