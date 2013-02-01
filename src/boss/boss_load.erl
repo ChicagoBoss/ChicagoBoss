@@ -29,6 +29,7 @@ load_all_modules(Application, TranslatorPid, OutDir) ->
     {ok, ModelModules} = load_models(Application, OutDir),
     {ok, ViewHelperModules} = load_view_lib_modules(Application, OutDir),
     {ok, ViewLibModules} = load_view_lib(Application, OutDir, TranslatorPid),
+    rebar_log:log(debug, "load_view_lib_modules done~n", []),
     {ok, ViewModules} = load_views(Application, OutDir, TranslatorPid),
     AllModules = [{test_modules, TestModules}, 
 		  {lib_modules, LibModules}, {websocket_modules, WebSocketModules},
@@ -87,7 +88,7 @@ load_web_controllers(Application, OutDir) ->
 load_view_lib_modules(Application) ->
     load_view_lib_modules(Application, undefined).
 load_view_lib_modules(Application, OutDir) ->
-    %% rebar_log:log(debug, "view_helpers_path: ~p~n", [boss_files:view_helpers_path()]),
+    rebar_log:log(debug, "load_view_lib_modules: ~p~n", [Application]),
     load_dirs(boss_files:view_helpers_path(), Application, OutDir, fun compile/2).
 
 load_models(Application) ->
