@@ -87,6 +87,7 @@ load_web_controllers(Application, OutDir) ->
 load_view_lib_modules(Application) ->
     load_view_lib_modules(Application, undefined).
 load_view_lib_modules(Application, OutDir) ->
+    %% rebar_log:log(debug, "view_helpers_path: ~p~n", [boss_files:view_helpers_path()]),
     load_dirs(boss_files:view_helpers_path(), Application, OutDir, fun compile/2).
 
 load_models(Application) ->
@@ -113,6 +114,7 @@ load_dir(Dir, Application, OutDir, Compiler) when is_function(Compiler) ->
     FileList = filelib:fold_files(Dir, "^(?i)[^#][[:print:]]+.(erl|ex)$", false, fun(F, Acc) -> [F] ++ Acc end, []),
     {ModuleList, ErrorList} = compile_and_accumulate_errors(
         FileList, Application, OutDir, Compiler, {[], []}),
+    rebar_log:log(debug, "load_dir FileList: ~p~n", [FileList]),
     case length(ErrorList) of
         0 ->
             {ok, ModuleList};
