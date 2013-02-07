@@ -420,6 +420,8 @@ handle_request(Req, RequestMod, ResponseMod) ->
             Url = lists:nthtail(length(BaseURL), FullUrl),
             Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
             case Url of
+                "/apple-touch-icon.png" = File ->
+                    (Response:file(File)):build_response();
                 "/favicon.ico" = File ->
                     (Response:file(File)):build_response();
                 _ ->
