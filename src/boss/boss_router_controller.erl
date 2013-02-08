@@ -99,7 +99,7 @@ handle_call({unroute, Controller, Action, Params}, _From, State) ->
                     lists:concat(["/", Controller, "/", Action]);
                 _ ->
                     lists:concat(["/", Controller, "/", Action |
-                            lists:foldr(fun(T, Acc) -> ["/", T | Acc] end, [], Tokens)])
+                            lists:foldr(fun(T, Acc) -> ["/", mochiweb_util:quote_plus(T) | Acc] end, [], Tokens)])
             end,
             QueryString = mochiweb_util:urlencode(Variables1),
             case QueryString of
