@@ -223,7 +223,7 @@ handle_info(timeout, State) ->
 
     %% cowboy dispatch rule for static content
     case boss_env:get_env(server, misultin) of	    
-	cowboy ->
+        cowboy ->
 	    AppStaticDispatches = lists:map(
 				    fun(AppName) ->
 					    AppPath = boss_env:get_env(AppName, path, "./"),  
@@ -244,7 +244,11 @@ handle_info(timeout, State) ->
 
 	    Dispatch = Dispatch = [{'_', AppStaticDispatches ++ BossDispatch}],
 	    ProtoOpts = [{dispatch, Dispatch}],
-	    cowboy:set_protocol_options(boss_http_listener, ProtoOpts);
+        CowboyListener = case boss_env:get_env(ssl_enable, false) of
+            true -> boss_https_listener;
+            _ -> boss_http_listener
+        end,
+	    cowboy:set_protocol_options(CowboyListener, ProtoOpts);
         _Oops -> 		       
 	    _Oops
     end,

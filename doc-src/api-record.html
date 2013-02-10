@@ -92,6 +92,7 @@ BossRecords are <em>specially compiled parameterized modules</em> that follow th
     <li><code>descending</code> - whether to values from high to low (a boolean).</li>
     <li><code>module</code> - If the assocation name is different than the underlying module, use this option to specify the underlying module.</li>
     <li><code>foreign_key</code> - If the associated module uses something unexpected for the foreign key, use this option to specify the foreign key (e.g. <code>person_id</code>).</li>
+    <li><code>include</code> - a list of belongs_to associations to pre-fetch (atoms). Requires the database cache to be enabled.</li>
 </ul>
 
 <p>Note that Time and float attributes are stored internally as integers, so sort them with <code>num_ascending</code> or <code>num_descending</code>.</p>
