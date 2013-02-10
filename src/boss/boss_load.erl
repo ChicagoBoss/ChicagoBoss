@@ -17,10 +17,11 @@
 
 -define(CUSTOM_TAGS_DIR_MODULE, '_view_lib_tags').
 
-load_all_modules(Application, TranslatorPid) ->
-    load_all_modules(Application, TranslatorPid, undefined).
+load_all_modules(Application, TranslatorSupPid) ->
+    load_all_modules(Application, TranslatorSupPid, undefined).
 
-load_all_modules(Application, TranslatorPid, OutDir) ->
+load_all_modules(Application, TranslatorSupPid, OutDir) ->
+    [{_, TranslatorPid, _, _}] = supervisor:which_children(TranslatorSupPid),
     {ok, TestModules} = load_dirs(boss_files:test_path(), Application, OutDir, fun compile/2),
     {ok, LibModules} = load_libraries(Application, OutDir),
     {ok, WebSocketModules} = load_services_websockets(Application, OutDir),
@@ -39,8 +40,8 @@ load_all_modules(Application, TranslatorPid, OutDir) ->
 
 load_all_modules_and_emit_app_file(AppName, OutDir) ->
     application:start(elixir),
-    TranslatorPid = boss_translator:start([{application, AppName}]),
-    {ok, ModulePropList} = load_all_modules(AppName, TranslatorPid, OutDir),
+    {ok, TranslatorSupPid} = boss_translator:start([{application, AppName}]),
+    {ok, ModulePropList} = load_all_modules(AppName, TranslatorSupPid, OutDir),
     AllModules = lists:foldr(fun({_, Mods}, Acc) -> Mods ++ Acc end, [], ModulePropList),
 	DotAppSrc = boss_files:dot_app_src(AppName),
     {ok, [{application, AppName, AppData}]} = file:consult(DotAppSrc),
