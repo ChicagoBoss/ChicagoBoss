@@ -244,7 +244,13 @@ handle_info(timeout, State) ->
 
 	    Dispatch = Dispatch = [{'_', AppStaticDispatches ++ BossDispatch}],
 	    ProtoOpts = [{dispatch, Dispatch}],
-	    cowboy:set_protocol_options(boss_http_listener, ProtoOpts);
+        SSLEnable = boss_env:get_env(ssl_enable, false),
+        case SSLEnable of
+            true ->
+                cowboy:set_protocol_options(boss_https_listener, ProtoOpts);
+            _ ->
+                cowboy:set_protocol_options(boss_http_listener, ProtoOpts)
+        end;
         _Oops -> 		       
 	    _Oops
     end,
