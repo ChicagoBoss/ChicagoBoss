@@ -28,6 +28,15 @@ reload(Pid) ->
 route(Pid, Url) ->
     gen_server:call(Pid, {route, Url}).
 
+unroute(Pid, Application, Controller, undefined, Params) ->
+    ControllerModule = list_to_atom(boss_files:web_controller(Application, Controller)),
+    Action =  case proplists:get_value(default_action, ControllerModule:module_info(attributes)) of
+                  [DefaultAction] when is_atom(DefaultAction) ->
+                      atom_to_list(DefaultAction);
+                  _ ->
+                      "index"
+              end,
+    unroute(Pid, Application, Controller, Action, Params);
 unroute(Pid, Application, Controller, Action, Params) ->
     case gen_server:call(Pid, {unroute, Controller, Action, Params}) of
         undefined ->

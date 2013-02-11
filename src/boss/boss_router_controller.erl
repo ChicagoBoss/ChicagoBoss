@@ -71,7 +71,7 @@ handle_call({route, Url}, _From, State) ->
                 [Controller, Action|Tokens] ->
                     case is_controller(State, Controller) of
                         true -> 
-                            UnquotedTokens = lists:map(fun mochiweb_util:unqoute/1, Tokens),
+                            UnquotedTokens = lists:map(fun mochiweb_util:unquote/1, Tokens),
                             {ok, {State#state.application, Controller, Action, UnquotedTokens}};
                         false -> not_found
                     end;
