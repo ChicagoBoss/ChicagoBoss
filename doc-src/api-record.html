@@ -1,7 +1,8 @@
 {% extends "api.html" %}
 {% block api_content %}
 <p style="font-size: 14px;"><em>Jump to: </em> 
-<a href="#instance">Generated instance methods</a> 
+<a href="#mappings">Specifying table and column names</a> 
+&nbsp; <a href="#instance">Generated instance methods</a> 
 &nbsp; <a href="#associations">Associations (<code>belongs_to</code>, <code>has</code>)</a>
 &nbsp; <a href="#hooks">Save hooks</a>
 </p>
@@ -39,6 +40,15 @@ BossRecords are <em>specially compiled parameterized modules</em> that follow th
 
     <li><p>To see the full API for a BossRecord called <code>foo</code> at any time during development, point your browser to /doc/foo on your dev server.</p></li>
 </ul>
+<a name="mappings"></a>
+<h2>Specifying table and column names</h2>
+<p>If you're connecting to an existing SQL database, you may want to override the default table and column names. (By default, the table name is the plural form of the model name, and the column names are the lowercase, underscored versions of the attribute variables.)</p>
+<p>To specify your own database layout, you can use the <code>-table</code> and <code>-columns</code> module attributes:</p>
+<div class="code spec">
+    <span class="attr">-table</span>("my_table_name").<br />
+    <span class="attr">-columns</span>([{attribute1, "my_column_name"}]).
+</div>
+<p>These names can be accessed at run-time with the <code>database_table/0</code> and <code>database_columns/0</code> functions; see below.</p>
 <a name="instance"></a>
 <h2>Generated functions</h2>
 <p>Generated instance functions of a BossRecord include:</p>
