@@ -7,14 +7,17 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 -define(BOSS_ROUTES_TABLE, boss_routes).
+-define(BOSS_REVERSE_ROUTES_TABLE, boss_reverse_routes).
 -define(BOSS_HANDLERS_TABLE, boss_handlers).
 -record(boss_route, {number, url, pattern, application, controller, action, params = []}).
+-record(boss_reverse_route, {application_controller_action_params, url}).
 -record(boss_handler, {status_code, application, controller, action, params = []}).
 
 -record(state, {
         application,
         controllers = [],
         routes_table_id,
+        reverse_routes_table_id,
         handlers_table_id
     }).
 
@@ -28,14 +31,19 @@ init(Options) ->
     BossApp = proplists:get_value(application, Options),
     Controllers = proplists:get_value(controllers, Options, []),
     RoutesTableId = ets:new(?BOSS_ROUTES_TABLE, [ordered_set, public, {keypos, 2}]),
+    ReverseRoutesTableId = ets:new(?BOSS_REVERSE_ROUTES_TABLE, [ordered_set, public, {keypos, 2}]),
     HandlersTableId = ets:new(?BOSS_HANDLERS_TABLE, [ordered_set, public, {keypos, 2}]),
-    State = #state{ application = BossApp, routes_table_id = RoutesTableId, 
-        handlers_table_id = HandlersTableId, controllers = Controllers },
+    State = #state{ application = BossApp, 
+        routes_table_id = RoutesTableId, 
+        reverse_routes_table_id = ReverseRoutesTableId,
+        handlers_table_id = HandlersTableId, 
+        controllers = Controllers },
     load(State),
     {ok, State}.
 
 handle_call(reload, _From, State) ->
     ets:delete_all_objects(State#state.routes_table_id),
+    ets:delete_all_objects(State#state.reverse_routes_table_id),
     ets:delete_all_objects(State#state.handlers_table_id),
     load(State),
     {reply, ok, State};
@@ -60,9 +68,11 @@ handle_call({route, Url}, _From, State) ->
                         true -> {ok, {State#state.application, Controller, default_action(State, Controller), []}};
                         false -> not_found
                     end;
-                [Controller, Action|Params] ->
+                [Controller, Action|Tokens] ->
                     case is_controller(State, Controller) of
-                        true -> {ok, {State#state.application, Controller, Action, Params}};
+                        true -> 
+                            UnquotedTokens = lists:map(fun mochiweb_util:unquote/1, Tokens),
+                            {ok, {State#state.application, Controller, Action, UnquotedTokens}};
                         false -> not_found
                     end;
                 _ ->
@@ -77,41 +87,12 @@ handle_call({route, Url}, _From, State) ->
 handle_call({unroute, Controller, undefined, Params}, From, State) ->
     handle_call({unroute, Controller, default_action(State, Controller), Params}, From, State);
 handle_call({unroute, Controller, Action, Params}, _From, State) ->
-    RoutedURL = ets:foldl(fun
-            (#boss_route{ application = App, controller = C, action = A, params = P } = Route, Default) 
-                when App =:= State#state.application, C =:= Controller, A =:= Action ->
-                case lists:keysort(1, Params) =:= lists:keysort(1, P) of
-                    true ->
-                        Route#boss_route.url;
-                    false ->
-                        Default
-                end;
-            (_, Default) ->
-                Default
-        end, undefined, State#state.routes_table_id),
-    Result = case RoutedURL of
-        undefined ->
-            ControllerModule = list_to_atom(boss_files:web_controller(State#state.application, Controller)),
-            {Tokens, Variables1} = boss_controller_lib:convert_params_to_tokens(Params, ControllerModule, list_to_atom(Action)),
-
-            URL = case Tokens of
-                [] ->
-                    lists:concat(["/", Controller, "/", Action]);
-                _ ->
-                    lists:concat(["/", Controller, "/", Action |
-                            lists:foldr(fun(T, Acc) -> ["/", mochiweb_util:quote_plus(T) | Acc] end, [], Tokens)])
-            end,
-            QueryString = mochiweb_util:urlencode(Variables1),
-            case QueryString of
-                "" ->
-                    URL;
-                _ ->
-                    URL ++ "?" ++ QueryString
-            end;
-        _ ->
-            RoutedURL
+    RoutedURL = case ets:lookup(State#state.reverse_routes_table_id,
+            {State#state.application, Controller, Action, lists:keysort(1, Params)}) of
+        [#boss_reverse_route{ url = Url }] -> Url;
+        [] -> undefined
     end,
-    {reply, Result, State};
+    {reply, RoutedURL, State};
 handle_call(get_all, _From, State) ->
     Res = lists:map(fun(#boss_route{ url = U, application = App, controller = C, action = A, params = P }) -> 
                 [{url, U}, {application, App}, {controller, C}, {action, A}, {params, P}]
@@ -125,6 +106,7 @@ handle_cast(_Info, State) ->
 
 terminate(_Reason, State) ->
     ets:delete(State#state.routes_table_id),
+    ets:delete(State#state.reverse_routes_table_id),
     ets:delete(State#state.handlers_table_id).
 
 code_change(_OldVsn, State, _Extra) ->
@@ -138,9 +120,8 @@ load(State) ->
     error_logger:info_msg("Loading routes from ~p ....~n", [RoutesFile]),
     case file:consult(RoutesFile) of
         {ok, OrderedRoutes} -> 
-            Routes = lists:zipwith(fun(Number, {Url, Proplist}) -> {Number, Url, Proplist} end, lists:seq(1,length(OrderedRoutes)), OrderedRoutes),
-            lists:map(fun
-                    ({Number, UrlOrStatusCode, Proplist}) when is_list(Proplist) ->
+            lists:foldl(fun
+                    ({UrlOrStatusCode, Proplist}, Number) when is_list(Proplist) ->
                         TheApplication = proplists:get_value(application, Proplist, State#state.application),
                         TheController = proplists:get_value(controller, Proplist),
                         TheAction = proplists:get_value(action, Proplist),
@@ -158,7 +139,17 @@ load(State) ->
                                     controller = TheController, 
                                     action = TheAction, 
                                     params = CleanParams },
-                                true = ets:insert(State#state.routes_table_id, NewRoute);
+                                NewReverseRoute = #boss_reverse_route{
+                                    application_controller_action_params = {
+                                        TheApplication,
+                                        TheController,
+                                        TheAction,
+                                        lists:keysort(1, CleanParams)
+                                    },
+                                    url = Url
+                                },
+                                true = ets:insert(State#state.routes_table_id, NewRoute),
+                                true = ets:insert(State#state.reverse_routes_table_id, NewReverseRoute);
                             StatusCode when is_integer(StatusCode) ->
                                 NewHandler = #boss_handler{ 
                                     status_code = StatusCode, 
@@ -167,8 +158,9 @@ load(State) ->
                                     action = TheAction, 
                                     params = CleanParams },
                                 true = ets:insert(State#state.handlers_table_id, NewHandler)
-                        end
-                end, Routes);
+                        end,
+                        Number+1
+                end, 1, OrderedRoutes);
         Error -> 
             error_logger:error_msg("Missing or invalid boss.routes file in ~p~n~p~n", [RoutesFile, Error])
     end.
