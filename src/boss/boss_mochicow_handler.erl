@@ -9,7 +9,8 @@ init({_Any, http}, Req, _Opts) ->
     case cowboy_http_req:header('Upgrade', Req) of
 	{undefined, _Req2} -> {upgrade, protocol, mochicow_upgrade};
 	{<<"websocket">>, _Req2} -> {upgrade, protocol, cowboy_http_websocket};
-	{<<"WebSocket">>, _Req2} -> {upgrade, protocol, cowboy_http_websocket}
+	{<<"WebSocket">>, _Req2} -> {upgrade, protocol, cowboy_http_websocket};
+    {<<"Websocket">>, _Req2} -> {upgrade, protocol, cowboy_http_websocket}
     end.
 
 -record(state, {websocket_id, session_id, service_url}).
