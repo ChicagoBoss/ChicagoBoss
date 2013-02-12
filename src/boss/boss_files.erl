@@ -34,7 +34,9 @@
         web_controller_path/0,
         web_view_path/0,
         web_view_path/2,
-        web_view_path/3
+        web_view_path/3,
+	 make_migration/2,
+	 run_migrations/1
     ]).
 
 root_dir() -> filename:absname(""). %filename:join([filename:dirname(code:which(?MODULE)), ".."]).
@@ -225,3 +227,24 @@ module_list1([Dir|Rest], Application, ModuleAcc) ->
 
 dot_app_src(AppName) ->
 	filename:join(["src", lists:concat([AppName, ".app.src"])]).
+
+
+%% Returns a sorted list of all files in priv/migrations/.
+migration_list(App) ->
+    lists:sort(filelib:wildcard(filename:join([root_priv_dir(App), "migrations", "*.erl"]))).
+
+%% Create a migration.  MigrationName is an atom to use as the name of
+%% the migration.
+make_migration(App, MigrationName) ->
+    {MegaSeconds, Seconds, _Microsecs} = erlang:now(),
+    Filename = filename:join([root_priv_dir(App), "migrations",
+			      io_lib:format("~p~p_~s.erl", [MegaSeconds, Seconds, MigrationName])]),
+    file:write_file(Filename, io_lib:format("%% Migration: ~p~n~n{~p,~n  fun(up) -> undefined;~n     (down) -> undefined~n  end}.~n", [MigrationName, MigrationName])).
+
+%% Run the migrations.
+run_migrations(App) ->
+    Migrations = lists:map(fun(File) ->
+				   {ok, Terms} = file:script(File),
+				   Terms
+			   end, migration_list(App)),
+    boss_db:migrate(Migrations).
