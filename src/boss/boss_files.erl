@@ -34,9 +34,10 @@
         web_controller_path/0,
         web_view_path/0,
         web_view_path/2,
-        web_view_path/3,
+	 web_view_path/3,
 	 make_migration/2,
-	 run_migrations/1
+	 run_migrations/1,
+	 redo_migration/2
     ]).
 
 root_dir() -> filename:absname(""). %filename:join([filename:dirname(code:which(?MODULE)), ".."]).
@@ -243,8 +244,20 @@ make_migration(App, MigrationName) ->
 
 %% Run the migrations.
 run_migrations(App) ->
-    Migrations = lists:map(fun(File) ->
-				   {ok, Terms} = file:script(File),
-				   Terms
-			   end, migration_list(App)),
-    boss_db:migrate(Migrations).
+    boss_db:migrate(load_migrations(App)).
+
+% Redo {down, up} a specific migration.
+redo_migration(App, Tag) ->
+    Fun =  proplists:get_value(Tag, load_migrations(App)),
+    boss_db:transaction(fun () ->
+				boss_db:migrate({Tag, Fun}, down),
+				boss_db:migrate({Tag, Fun}, up)
+			end).
+
+load_migrations(App) ->
+    lists:map(fun(File) ->
+		      io:format("Reading migration file: ~p~n", [File]),
+		      {ok, Terms} = file:script(File),
+		      Terms
+	      end, migration_list(App)).
+
