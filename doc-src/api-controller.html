@@ -323,15 +323,24 @@ before_(_, _, _) -&gt;<br />
 
 <div class="code spec">
     query_param( Key<span class="typevar">::string()</span> ) -&gt; string() | undefined
+    query_param( Key<span class="typevar">::string()</span>, DefaultValue<span class="typevar">::term()</span> ) -&gt; string() | Default Value
 </div>
 
 <p>Get the value of a given query string parameter (e.g. "?id=1234")</p>
 
 <div class="code spec">
     post_param( Key<span class="typevar">::string()</span> ) -&gt; string() | undefined
+    post_param( Key<span class="typevar">::string()</span>, DefaultValue<span class="typevar">::term()</span> ) -&gt; string() | Default Value
 </div>
 
 <p>Get the value of a given POST parameter</p>
+
+<div class="code spec">
+    param( Key<span class="typevar">::string()</span> ) -&gt; string() | undefined
+    param( Key<span class="typevar">::string()</span>, DefaultValue<span class="typevar">::term()</span> ) -&gt; string() | Default Value
+</div>
+
+<p>Get the value of a given POST/GET parameter</p>
 
 <div class="code spec">
     deep_post_param( [ Path<span class="typevar">::string()</span> ] ) -&gt; DeepParam | undefined
