@@ -772,14 +772,29 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
             AdapterInfo = Adapter:init(AppInfo#boss_app_info.application, Controller, Req, SessionID),
             RequestMethod = Req:request_method(),
 
-            AuthResult = Adapter:before_filter(AdapterInfo, Action, RequestMethod, Tokens),
+            BeforeInfo = before_request(boss_env:get_env(AppInfo#boss_app_info.application, middlewares, []),
+                                        Controller, Action, Req, SessionID, []),
 
-            AuthInfo = case AuthResult of
-                ok ->
-                    {ok, undefined};
-                OtherInfo ->
-                    OtherInfo
-            end,
+            AuthInfo = case BeforeInfo of
+                {ok, BInfo} ->
+                    AuthResult = Adapter:before_filter(AdapterInfo, Action, RequestMethod, Tokens),
+
+                    case AuthResult of
+                        ok ->
+                            {ok, BInfo};
+                        {ok, AuthDetails} ->
+                            case length(BInfo) of
+                                0 ->
+                                    {ok, AuthDetails};
+                                _Other ->
+                                    {ok, lists:merge(BInfo, AuthDetails)}
+                            end;
+                        OtherInfo ->
+                            OtherInfo
+                    end;
+                AnotherInfo ->
+                    AnotherInfo
+                end,
 
             case AuthInfo of
                 {ok, Info} ->
@@ -807,6 +822,18 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
                 {redirect, Where} ->
                     {redirect, process_redirect(Controller, Where, AppInfo)}
             end
+    end.
+
+before_request([], _Controller, _Action, _Req, _SessionID, Info) ->
+    {ok, Info};
+before_request([Middleware|Middlewares], Controller, Action, Req, SessionID, Info) ->
+    case Middleware:before_(Controller, Action, Req, SessionID) of
+        ok ->
+            before_request(Middlewares, Controller, Action, Req, SessionID, Info);
+        {ok, ExtraInfo} ->
+            before_request(Middlewares, Controller, Action, Req, SessionID, lists:merge(ExtraInfo, Info));
+        Other ->
+            Other
     end.
 
 process_location(Controller,  [{_, _}|_] = Where, AppInfo) ->
