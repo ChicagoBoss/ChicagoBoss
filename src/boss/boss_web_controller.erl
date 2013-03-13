@@ -991,11 +991,10 @@ translation_coverage(Strings, Locale, TranslatorPid) ->
 
 merge_headers(Headers1, Headers2) ->
     HeadersToAdd = lists:foldl(fun(Key, Acc) ->
-                case proplists:is_defined(Key, Headers1) of
-                    true ->
-                        Acc;
-                    false ->
-                        proplists:lookup_all(Key, Headers2) ++ Acc
+                case (proplists:is_defined(Key, Headers1) orelse (is_list(Key) andalso 
+                            proplists:is_defined(list_to_binary(Key), Headers1))) of
+                    true -> Acc;
+                    false -> proplists:lookup_all(Key, Headers2) ++ Acc
                 end
         end, [], proplists:get_keys(Headers2)),
     HeadersToAdd ++ Headers1.
