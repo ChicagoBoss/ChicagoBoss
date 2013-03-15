@@ -810,12 +810,15 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
                         auto -> [];
                         _ -> [{"Content-Language", LangResult}]
                     end,
-                    Result = case ActionResult of
+
+                    FinalResult = after_request(boss_env:get_env(AppInfo#boss_app_info.application, middlewares, []),
+                                          Controller, Action, Req, SessionID, ActionResult),
+                    Result = case FinalResult of
                         undefined ->
                             render_view(Location, AppInfo, Req, SessionID, [{"_before", Info}], LangHeaders);
-                        ActionResult ->
+                        FinalResult ->
                             process_action_result({Location, Req, SessionID, [Location|LocationTrail]}, 
-                                ActionResult, LangHeaders, AppInfo, Info)
+                                FinalResult, LangHeaders, AppInfo, Info)
                     end,
 
                     Adapter:after_filter(AdapterInfo, Action, Result, Info);
@@ -827,14 +830,44 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
 before_request([], _Controller, _Action, _Req, _SessionID, Info) ->
     {ok, Info};
 before_request([Middleware|Middlewares], Controller, Action, Req, SessionID, Info) ->
-    case Middleware:before_(Controller, Action, Req, SessionID) of
-        ok ->
-            before_request(Middlewares, Controller, Action, Req, SessionID, Info);
-        {ok, ExtraInfo} ->
-            before_request(Middlewares, Controller, Action, Req, SessionID, lists:merge(ExtraInfo, Info));
-        Other ->
-            Other
+    case proplists:is_defined(before_, Middleware:module_info(exports)) of
+        true ->
+            case Middleware:before_(Controller, Action, Req, SessionID) of
+                ok ->
+                    before_request(Middlewares, Controller, Action, Req, SessionID, Info);
+                {ok, ExtraInfo} ->
+                    before_request(Middlewares, Controller, Action, Req, SessionID, lists:merge(ExtraInfo, Info));
+                Other ->
+                    Other
+            end;
+        false ->
+            before_request(Middlewares, Controller, Action, Req, SessionID, Info)
     end.
+
+after_request([], _Controller, _Action, _Req, _SessionID, Result) ->
+    Result;
+after_request(Middlewares, Controller, Action, Req, SessionID, ok) ->
+    after_request(Middlewares, Controller, Action, Req, SessionID, {ok, [], []});
+after_request(Middlewares, Controller, Action, Req, SessionID, {ok, Data}) ->
+    after_request(Middlewares, Controller, Action, Req, SessionID, {ok, Data, []});
+after_request([Middleware|Middlewares], Controller, Action, Req, SessionID, {ok, Data, Headers}) ->
+    case proplists:is_defined(after_, Middleware:module_info(exports)) of
+        true ->
+            case Middleware:after_(Controller, Action, Req, SessionID, Data, Headers) of
+                ok ->
+                    after_request(Middlewares, Controller, Action, Req, SessionID, {ok, Data, Headers});
+                {ok, ExtraInfo} ->
+                    after_request(Middlewares, Controller, Action, Req, SessionID, {ok, lists:merge(ExtraInfo, Data), Headers});
+                {ok, ExtraInfo, ExtraHeaders} ->
+                    after_request(Middlewares, Controller, Action, Req, SessionID, {ok, lists:merge(ExtraInfo, Data), lists:merge(Headers, ExtraHeaders)});
+                Other ->
+                    Other
+            end;
+        false ->
+            after_request(Middlewares, Controller, Action, Req, SessionID, {ok, Data, Headers})
+    end;
+after_request([_|Middlewares], Controller, Action, Req, SessionID, Result) ->
+    after_request(Middlewares, Controller, Action, Req, SessionID, Result).
 
 process_location(Controller,  [{_, _}|_] = Where, AppInfo) ->
     {_, TheController, TheAction, CleanParams} = process_redirect(Controller, Where, AppInfo),
