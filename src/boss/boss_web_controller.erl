@@ -876,7 +876,9 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
 
                     Adapter:after_filter(AdapterInfo, Action, RenderedResult, Info);
                 {redirect, Where} ->
-                    {redirect, process_redirect(Controller, Where, AppInfo)}
+                    {redirect, process_redirect(Controller, Where, AppInfo)};
+				{output, Payload, Headers} ->
+					{ok, Payload, Headers}
             end
     end.
 
