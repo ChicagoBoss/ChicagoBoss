@@ -4,6 +4,7 @@
 &nbsp; <a href="#routes">Routes</a> 
 &nbsp; <a href="#auth">Authorization</a> 
 &nbsp; <a href="#return_values">Return values</a> 
+&nbsp; <a href="#cache">Caching</a> 
 &nbsp; <a href="#lang">Content-Language</a> 
 &nbsp; <a href="#filter">Post-processing</a> 
 &nbsp; <a href="#simplebridge">SimpleBridge request object</a></p>
@@ -119,7 +120,7 @@ profile('GET', [UserId]) -&gt;
     <li>the request method as an atom</li>
     <li>the list of URL tokens</li>
 </ol>
-<p><code>before_/3 should return one of:</P>
+<p><code>before_/3</code> should return one of:</P>
 
 <div class="code spec">
     {ok, ExtraInfo}
@@ -261,6 +262,47 @@ before_(_, _, _) -&gt;<br />
 
 <br />
 
+<a name="cache"></a>
+<h3>Caching</h3>
+<p>Caching should be a part of any scalability strategy. In addition to caching the results of database queries (see <a href="api-config.html">config</a>), Chicago Boss can cache the list of variables returned from controller actions. CB can also cache entire rendered web pages, but in doing so you will lose the benefit of customizing the page contents with the <code>_before</code> variable, which is not cached.</p>
+
+<p>To enable caching, first make sure the <code>cache_enable</code> is set to <code>true</code> in your configuration and that you've configured cache servers. At present only Memcached cache servers are supported, but additional adapters will be added in the future.</p>
+
+<p>Next, define a <code>cache_</code> function with the following arguments:</p>
+<ol>
+    <li><code>Action</code> - the action name (a string)</li>
+    <li><code>Tokens</code> - a list of tokens</li>
+    <li><code>AuthInfo</code> (optional) - authorization information returned from the <code>before_</code> filter (see <a href="#auth">Authorization</a>)</li>
+</ol>
+
+<p>The <code>cache_</code> function should return one of:</p>
+<ul>
+    <li><code>{vars, CacheOptions}</code> - cache the variable list returned by the controller action</li>
+    <li><code>{page, CacheOptions}</code> - cache the rendered page contents</li>
+    <li><code>none</code> - don't cache</li>
+</ul>
+
+<p>Finally, <code>CacheOptions</code> is a proplist possibly containing:</p>
+<ul>
+    <li><code>seconds</code> - length of time to cache the result, in seconds</li>
+    <li><code>watch</code> - a <a href="api-news.html">topic string</a> defining a collection of records to watch for changes. When a change is observed, the cached data will be invalidated</li>
+</ul>
+
+<p>Note that separate cache entries are created for each language as returned by <code>lang_</code> (see <a href="#lang">Content-Language</a>).</p>
+
+<p>Example <code>cache_</code> function:</p>
+
+<div class="code">
+    cache_(<span class="string">"index"</span>, []) -&gt;<br />
+    &nbsp;&nbsp;&nbsp;&nbsp;{page, [{seconds, 30}]};<br />
+    cache_(<span class="string">"profile"</span>, [ProfileId]) -&gt;<br />
+    &nbsp;&nbsp;&nbsp;&nbsp;{vars, [{seconds, 300}, {watch, ProfileId ++ <span class="string">".*"</span>}]};<br />
+    cache_(_, _) -&gt;<br />
+    &nbsp;&nbsp;&nbsp;&nbsp;none.
+</div>
+
+<br />
+
 <a name="lang"></a>
 <h3>Content-Language</h3>
 <p>CB application views can be multi-lingual. By default, the language served to the client is chosen by comparing the incoming Accept-Language header to the available translations in a given view (see <a href="https://github.com/evanmiller/ChicagoBoss/wiki/How-Chicago-Boss-Chooses-Which-Language-To-Serve">"How Chicago Boss Chooses Which Language To Serve"</a>. This can be overridden in two ways:</p>
@@ -322,21 +364,27 @@ before_(_, _, _) -&gt;<br />
 <p>Get the request method, e.g. GET, POST, etc.</p>
 
 <div class="code spec">
-    query_param( Key<span class="typevar">::string()</span> ) -&gt; string() | undefined
+    protcol() -&gt; http | https
+</div>
+
+<p>Get the request protocol (HTTP or HTTPS)</p>
+
+<div class="code spec">
+    query_param( Key<span class="typevar">::string()</span> ) -&gt; string() | undefined<br />
     query_param( Key<span class="typevar">::string()</span>, DefaultValue<span class="typevar">::term()</span> ) -&gt; string() | Default Value
 </div>
 
 <p>Get the value of a given query string parameter (e.g. "?id=1234")</p>
 
 <div class="code spec">
-    post_param( Key<span class="typevar">::string()</span> ) -&gt; string() | undefined
+    post_param( Key<span class="typevar">::string()</span> ) -&gt; string() | undefined<br />
     post_param( Key<span class="typevar">::string()</span>, DefaultValue<span class="typevar">::term()</span> ) -&gt; string() | Default Value
 </div>
 
 <p>Get the value of a given POST parameter</p>
 
 <div class="code spec">
-    param( Key<span class="typevar">::string()</span> ) -&gt; string() | undefined
+    param( Key<span class="typevar">::string()</span> ) -&gt; string() | undefined<br />
     param( Key<span class="typevar">::string()</span>, DefaultValue<span class="typevar">::term()</span> ) -&gt; string() | Default Value
 </div>
 

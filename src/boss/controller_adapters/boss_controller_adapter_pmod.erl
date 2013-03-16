@@ -24,6 +24,13 @@ before_filter({ControllerInstance, ExportStrings}, Action, RequestMethod, Tokens
         _ -> ok
     end.
 
+cache_info({ControllerInstance, ExportStrings}, Action, Tokens, Info) ->
+    case proplists:get_value("cache_", ExportStrings) of
+        3 -> ControllerInstance:cache_(Action, Tokens);
+        4 -> ControllerInstance:cache_(Action, Tokens, Info);
+        _ -> ok
+    end.
+
 action({ControllerInstance, ExportStrings}, Action, RequestMethod, Tokens, AuthInfo) ->
     case proplists:get_value(Action, ExportStrings) of
         3 ->

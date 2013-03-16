@@ -2,7 +2,12 @@
 -behaviour(gen_server).
 -export([start_link/0, start_link/1, handle_request/3, process_request/5]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
+-export([handle_news_for_cache/3]).
 -define(DEBUGPRINT(A), error_logger:info_report("~~o)> " ++ A)).
+-define(PAGE_CACHE_PREFIX, "boss_web_controller_page").
+-define(PAGE_CACHE_DEFAULT_TTL, 60).
+-define(VARIABLES_CACHE_PREFIX, "boss_web_controller_variables").
+-define(VARIABLES_CACHE_DEFAULT_TTL, 60).
 
 -record(state, {
         applications = [],
@@ -788,26 +793,96 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
                         Method -> Method
                     end,
 
-                    ActionResult = Adapter:action(AdapterInfo, Action, EffectiveRequestMethod, Tokens, Info),
                     LangResult = Adapter:language(AdapterInfo, Action, Info),
 
-                    LangHeaders = case LangResult of
-                        auto -> [];
-                        _ -> [{"Content-Language", LangResult}]
-                    end,
-                    Result = case ActionResult of
-                        undefined ->
-                            render_view(Location, AppInfo, Req, SessionID, [{"_before", Info}], LangHeaders);
-                        ActionResult ->
-                            process_action_result({Location, Req, SessionID, [Location|LocationTrail]}, 
-                                ActionResult, LangHeaders, AppInfo, Info)
+                    CacheKey = {Controller, Action, Tokens, LangResult},
+
+                    CacheInfo = case (boss_env:get_env(cache_enable, false) andalso 
+                            EffectiveRequestMethod =:= 'GET') of
+                        true -> Adapter:cache_info(AdapterInfo, Action, Tokens, Info);
+                        false -> none
                     end,
 
-                    Adapter:after_filter(AdapterInfo, Action, Result, Info);
+                    CachedRenderedResult = case CacheInfo of
+                        {page, _} -> boss_cache:get(?PAGE_CACHE_PREFIX, CacheKey);
+                        _ -> undefined
+                    end,
+
+                    {CacheTTL, CacheWatchString} = case CacheInfo of
+                        {page, CacheOptions} ->
+                            {proplists:get_value(seconds, CacheOptions, ?PAGE_CACHE_DEFAULT_TTL),
+                                proplists:get_value(watch, CacheOptions)};
+                        {vars, CacheOptions} ->
+                            {proplists:get_value(seconds, CacheOptions, ?VARIABLES_CACHE_DEFAULT_TTL),
+                                proplists:get_value(watch, CacheOptions)};
+                        _ ->
+                            {undefined, undefined}
+                    end,
+
+                    RenderedResult = case CachedRenderedResult of
+                        undefined ->
+                            CachedActionResult = case CacheInfo of
+                                {vars, _} -> boss_cache:get(?VARIABLES_CACHE_PREFIX, CacheKey);
+                                _ -> undefined
+                            end,
+
+                            ActionResult = case CachedActionResult of
+                                undefined -> Adapter:action(AdapterInfo, Action, EffectiveRequestMethod, Tokens, Info);
+                                _ -> CachedActionResult
+                            end,
+
+                            case (CachedActionResult =/= undefined andalso is_tuple(ActionResult) andalso element(1, ActionResult) =:= ok) of
+                                true ->
+                                    case CacheWatchString of
+                                        undefined -> ok;
+                                        _ ->
+                                            boss_news:set_watch({?VARIABLES_CACHE_PREFIX, CacheKey}, CacheWatchString,
+                                                fun ?MODULE:handle_news_for_cache/3, {?VARIABLES_CACHE_PREFIX, CacheKey}, 
+                                                CacheTTL)
+                                    end,
+                                    boss_cache:set(?VARIABLES_CACHE_PREFIX, CacheKey, ActionResult, CacheTTL);
+                                false ->
+                                    ok
+                            end,
+
+                            LangHeaders = case LangResult of
+                                auto -> [];
+                                _ -> [{"Content-Language", LangResult}]
+                            end,
+
+                            case ActionResult of
+                                undefined ->
+                                    render_view(Location, AppInfo, Req, SessionID, [{"_before", Info}], LangHeaders);
+                                ActionResult ->
+                                    process_action_result({Location, Req, SessionID, [Location|LocationTrail]}, 
+                                        ActionResult, LangHeaders, AppInfo, Info)
+                            end;
+                        Other ->
+                            Other
+                    end,
+
+                    case (CachedRenderedResult =/= undefined andalso is_tuple(RenderedResult) andalso element(1, RenderedResult) =:= ok) of
+                        true ->
+                            case CacheWatchString of
+                                undefined -> ok;
+                                _ ->
+                                    boss_news:set_watch({?PAGE_CACHE_PREFIX, CacheKey}, CacheWatchString,
+                                        fun ?MODULE:handle_news_for_cache/3, {?PAGE_CACHE_PREFIX, CacheKey}, CacheTTL)
+                            end,
+                            boss_cache:set(?PAGE_CACHE_PREFIX, CacheKey, RenderedResult, CacheTTL);
+                        false ->
+                            ok
+                    end,
+
+                    Adapter:after_filter(AdapterInfo, Action, RenderedResult, Info);
                 {redirect, Where} ->
                     {redirect, process_redirect(Controller, Where, AppInfo)}
             end
     end.
+
+handle_news_for_cache(_, _, {Prefix, Key}) ->
+    boss_cache:delete(Prefix, Key),
+    {ok, cancel_watch}.
 
 process_location(Controller,  [{_, _}|_] = Where, AppInfo) ->
     {_, TheController, TheAction, CleanParams} = process_redirect(Controller, Where, AppInfo),
