@@ -188,6 +188,7 @@ handle_info(timeout, State) ->
                 DocPrefix = boss_env:get_env(AppName, doc_prefix, "/doc"),
                 DomainList = boss_env:get_env(AppName, domains, all),
                 ModelList = boss_files:model_list(AppName),
+                ViewList = boss_files:view_module_list(AppName),
                 IsMasterNode = boss_env:is_master_node(),
                 if 
                     IsMasterNode ->
@@ -222,6 +223,7 @@ handle_info(timeout, State) ->
                     doc_prefix = DocPrefix,
                     domains = DomainList,
                     model_modules = ModelList,
+                    view_modules = ViewList,
                     controller_modules = ControllerList
                 }
         end, Applications),
@@ -973,7 +975,8 @@ render_view({Controller, Template, _}, AppInfo, Req, SessionID, Variables, Heade
             (Ext, {error, not_found}) ->
                 ViewPath = boss_files:web_view_path(Controller, Template, Ext),
                 boss_load:load_view_if_dev(AppInfo#boss_app_info.application, 
-                    ViewPath, AppInfo#boss_app_info.translator_pid);
+                    ViewPath, AppInfo#boss_app_info.view_modules,
+                    AppInfo#boss_app_info.translator_pid);
             (_, Acc) -> 
                 Acc
         end, {error, not_found}, TryExtensions),

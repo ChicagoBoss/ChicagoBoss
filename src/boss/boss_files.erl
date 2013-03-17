@@ -25,6 +25,7 @@
         view_html_tags_path/0,
         view_filter_helper_list/1,
         view_tag_helper_list/1,
+        view_module_list/1,
         template_adapter_for_extension/1,
         template_extensions/0,
         is_controller_present/3,
@@ -140,6 +141,13 @@ web_controller_list(AppName) ->
             module_list(AppName, web_controller_path());
         false ->
             lists:map(fun atom_to_list/1, boss_env:get_env(AppName, controller_modules, []))
+    end.
+
+view_module_list(AppName) ->
+    case boss_env:is_developing_app(AppName) of
+        true -> [];
+        false ->
+            lists:map(fun atom_to_list/1, boss_env:get_env(AppName, view_modules, []))
     end.
 
 is_controller_present(Application, Controller, ModuleList) ->
