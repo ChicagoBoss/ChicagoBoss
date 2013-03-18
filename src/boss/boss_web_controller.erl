@@ -154,18 +154,14 @@ init(Config) ->
 		  error_logger:info_msg("Starting cowboy... on ~p~n", [MasterNode]),
 		  application:start(cowboy),
 		  HttpPort = boss_env:get_env(port, 8001),
-                  case SSLEnable of 
-		      false -> 
-			  error_logger:info_msg("Starting http listener... on ~p ~n", [HttpPort]),
-			  cowboy:start_listener(boss_http_listener, 100,
-						cowboy_tcp_transport, [{port, HttpPort}],
-						cowboy_http_protocol, []);
-		      true ->
-			  error_logger:info_msg("Starting https listener... on ~p ~n", [HttpPort]),
-			  SSLConfig = [{port, HttpPort}]++SSLOptions, 
-			  cowboy:start_listener(boss_https_listener, 100,
-						cowboy_ssl_transport, SSLConfig,
-						cowboy_http_protocol, [])
+          case SSLEnable of 
+              false -> 
+                  error_logger:info_msg("Starting http listener... on ~p ~n", [HttpPort]),
+                  cowboy:start_http(boss_http_listener, 100, [{port, HttpPort}], []);
+              true ->
+                  error_logger:info_msg("Starting https listener... on ~p ~n", [HttpPort]),
+                  SSLConfig = [{port, HttpPort}]++SSLOptions, 
+                  cowboy:start_https(boss_https_listener, 100, SSLConfig, [])
 		  end,
 		  if 
               MasterNode =:= ThisNode ->
@@ -231,33 +227,31 @@ handle_info(timeout, State) ->
     %% cowboy dispatch rule for static content
     case boss_env:get_env(server, misultin) of	    
         cowboy ->
-	    AppStaticDispatches = lists:map(
-				    fun(AppName) ->
-					    AppPath = boss_env:get_env(AppName, path, "./"),  
-					    BaseURL = boss_env:get_env(AppName, base_url, "/"),					    
+            AppStaticDispatches = lists:map(
+                fun(AppName) ->
+                        BaseURL = boss_env:get_env(AppName, base_url, "/"),					    
                         StaticPrefix = boss_env:get_env(AppName, static_prefix, "/static"),
 					    Path = reformat_path(BaseURL++StaticPrefix),
-					    Handler = cowboy_http_static,
+					    Handler = cowboy_static,
 					    Opts = [
-						    {directory, list_to_binary(AppPath ++ "/priv/static")},
+                            {directory, {priv_dir, AppName, [<<"static">>]}},
 						    {mimetypes, {fun mimetypes:path_to_mimes/2, default}}
 						   ],
 					    {Path ++ ['...'], Handler, Opts}
-				    end, Applications),
+                end, Applications),
 
-	    BossDispatch = [{'_', boss_mochicow_handler, 
-			     [{loop, {boss_mochicow_handler, loop}}]
-			    }],
+            BossDispatch = [{'_', boss_mochicow_handler, 
+                    [{loop, {boss_mochicow_handler, loop}}]
+                }],
 
-	    Dispatch = Dispatch = [{'_', AppStaticDispatches ++ BossDispatch}],
-	    ProtoOpts = [{dispatch, Dispatch}],
-        CowboyListener = case boss_env:get_env(ssl_enable, false) of
-            true -> boss_https_listener;
-            _ -> boss_http_listener
-        end,
-	    cowboy:set_protocol_options(CowboyListener, ProtoOpts);
+            Dispatch = [{'_', AppStaticDispatches ++ BossDispatch}],
+            CowboyListener = case boss_env:get_env(ssl_enable, false) of
+                true -> boss_https_listener;
+                _ -> boss_http_listener
+            end,
+            cowboy:set_env(CowboyListener, dispatch, Dispatch);
         _Oops -> 		       
-	    _Oops
+            _Oops
     end,
     {noreply, State#state{ applications = AppInfoList }}.
 
