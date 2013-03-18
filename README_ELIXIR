@@ -84,8 +84,8 @@ in an explicit style:
         {:output, "Hello, world!"}
     end
 
-Other macros available include "before_", "after_", and "lang_", which take the
-same arguments as their Erlang counterparts.
+Other macros available include "before_", "cache_", "after_", and "lang_",
+which take the same arguments as their Erlang counterparts.
 
 Tokens are passed in as Elixir strings (binaries), not Erlang strings.
 

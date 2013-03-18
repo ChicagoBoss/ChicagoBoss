@@ -8,7 +8,7 @@
         load_services_websockets/1,
         load_mail_controllers/1,
         load_models/1,
-        load_view_if_dev/3,
+        load_view_if_dev/4,
         load_view_lib_modules/1,
         load_web_controllers/1,
         module_is_loaded/1,
@@ -328,21 +328,24 @@ load_view_if_old(Application, ViewPath, Module, TemplateAdapter, TranslatorPid) 
             Err
     end.
 
-load_view_if_dev(Application, ViewPath, TranslatorPid) ->
+load_view_if_dev(Application, ViewPath, ViewModules, TranslatorPid) ->
     Module = view_module(Application, ViewPath),
     TemplateAdapter = boss_files:template_adapter_for_extension(filename:extension(ViewPath)),
-    Result = case boss_env:is_developing_app(Application) of
-        true -> load_view_if_old(Application, ViewPath, Module, TemplateAdapter, TranslatorPid);
-        false -> {ok, Module}
-    end,
-    case Result of
-        {ok, Module} ->
-            case code:ensure_loaded(Module) of
-                {module, Module} -> {ok, Module, TemplateAdapter};
-                _ -> {error, not_found}
+    case boss_env:is_developing_app(Application) of
+        true -> 
+            case load_view_if_old(Application, ViewPath, Module, TemplateAdapter, TranslatorPid) of
+                {ok, Module} ->
+                    {ok, Module, TemplateAdapter};
+                Other ->
+                    Other
             end;
-        Other ->
-            Other
+        false -> 
+            case lists:member(atom_to_list(Module), ViewModules) of
+                true ->
+                    {ok, Module, TemplateAdapter};
+                _ ->
+                    {error, not_found}
+            end
     end.
 
 module_is_loaded(Module) ->
