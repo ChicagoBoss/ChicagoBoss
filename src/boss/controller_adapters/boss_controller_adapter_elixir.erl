@@ -21,6 +21,14 @@ before_filter({Module, ExportStrings, Req, SessionID}, Action, RequestMethod, To
         _ -> ok
     end.
 
+cache_info({Module, ExportStrings, Req, SessionID}, Action, Tokens, AuthInfo) ->
+    BinTokens = lists:map(fun list_to_binary/1, Tokens),
+    case proplists:get_value("cache_", ExportStrings) of
+        4 -> Module:cache_(Req, SessionID, Action, BinTokens);
+        5 -> Module:cache_(Req, SessionID, Action, BinTokens, AuthInfo);
+        _ -> ok
+    end.
+
 action({Module, ExportStrings, Req, SessionID}, Action, RequestMethod, Tokens, AuthInfo) ->
     BinTokens = lists:map(fun list_to_binary/1, Tokens),
     case proplists:get_value(Action, ExportStrings) of
