@@ -236,7 +236,7 @@ migration_list(App) ->
 
 %% Create a migration.  MigrationName is an atom to use as the name of
 %% the migration.
-make_migration(App, MigrationName) ->
+make_migration(App, MigrationName) when is_atom(MigrationName) ->
     {MegaSeconds, Seconds, _Microsecs} = erlang:now(),
     Filename = filename:join([root_priv_dir(App), "migrations",
 			      io_lib:format("~p~p_~s.erl", [MegaSeconds, Seconds, MigrationName])]),
