@@ -1,5 +1,5 @@
 -module(boss_mochicow_handler).
--behaviour(cowboy_http_websocket_handler).
+-behaviour(cowboy_websocket_handler).
 
 -export([init/3, loop/1, terminate/2]).
 -export([websocket_init/3, websocket_handle/3,

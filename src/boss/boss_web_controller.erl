@@ -126,7 +126,7 @@ init(Config) ->
     {ServerMod, RequestMod, ResponseMod} = case boss_env:get_env(server, misultin) of
         mochiweb -> {mochiweb_http, mochiweb_request_bridge, mochiweb_response_bridge};
         misultin -> {misultin, misultin_request_bridge, misultin_response_bridge};
-	cowboy -> {cowboy, mochiweb_request_bridge, mochiweb_response_bridge}
+        cowboy -> {cowboy, mochiweb_request_bridge, mochiweb_response_bridge}
     end,
     SSLEnable = boss_env:get_env(ssl_enable, false),
     SSLOptions = boss_env:get_env(ssl_options, []),
@@ -152,16 +152,17 @@ init(Config) ->
         cowboy ->
 		  %Dispatch = [{'_', [{'_', boss_mochicow_handler, [{loop, {boss_mochicow_handler, loop}}]}]}],
 		  error_logger:info_msg("Starting cowboy... on ~p~n", [MasterNode]),
+		  application:start(ranch),
 		  application:start(cowboy),
 		  HttpPort = boss_env:get_env(port, 8001),
           case SSLEnable of 
               false -> 
                   error_logger:info_msg("Starting http listener... on ~p ~n", [HttpPort]),
-                  cowboy:start_http(boss_http_listener, 100, [{port, HttpPort}], []);
+                  cowboy:start_http(boss_http_listener, 100, [{port, HttpPort}], [{env, []}]);
               true ->
                   error_logger:info_msg("Starting https listener... on ~p ~n", [HttpPort]),
                   SSLConfig = [{port, HttpPort}]++SSLOptions, 
-                  cowboy:start_https(boss_https_listener, 100, SSLConfig, [])
+                  cowboy:start_https(boss_https_listener, 100, SSLConfig, [{env, []}])
 		  end,
 		  if 
               MasterNode =:= ThisNode ->
@@ -231,25 +232,25 @@ handle_info(timeout, State) ->
                 fun(AppName) ->
                         BaseURL = boss_env:get_env(AppName, base_url, "/"),					    
                         StaticPrefix = boss_env:get_env(AppName, static_prefix, "/static"),
-					    Path = reformat_path(BaseURL++StaticPrefix),
+					    Path = BaseURL++StaticPrefix,
 					    Handler = cowboy_static,
 					    Opts = [
                             {directory, {priv_dir, AppName, [<<"static">>]}},
 						    {mimetypes, {fun mimetypes:path_to_mimes/2, default}}
-						   ],
-					    {Path ++ ['...'], Handler, Opts}
+                        ],
+                       {Path ++ "[...]", Handler, Opts}
                 end, Applications),
 
-            BossDispatch = [{'_', boss_mochicow_handler, 
-                    [{loop, {boss_mochicow_handler, loop}}]
-                }],
+            BossDispatch = [{'_', boss_mochicow_handler, [{loop, {boss_mochicow_handler, loop}}]}],
+            % [{"/", boss_mochicow_handler, []}],
+            %Dispatch = [{'_', 
 
             Dispatch = [{'_', AppStaticDispatches ++ BossDispatch}],
             CowboyListener = case boss_env:get_env(ssl_enable, false) of
                 true -> boss_https_listener;
                 _ -> boss_http_listener
             end,
-            cowboy:set_env(CowboyListener, dispatch, Dispatch);
+            cowboy:set_env(CowboyListener, dispatch, cowboy_router:compile(Dispatch));
         _Oops -> 		       
             _Oops
     end,
