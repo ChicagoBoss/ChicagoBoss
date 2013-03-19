@@ -135,4 +135,6 @@ developing and perhaps haven't got the table definition quite right:
 
      > boss_migrate:redo_migration(gsd_web, create_some_table).
 
-Internally, migrations are tracked in a table called "schema_migrations".
+Internally, migrations are tracked in a table called
+"schema_migrations" which is automatically created and managed by
+boss_db.
