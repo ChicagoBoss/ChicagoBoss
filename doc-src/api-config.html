@@ -2,6 +2,7 @@
 {% block api_content %}
 <p>All configuration takes place in <code>boss.config</code> in your project directory. Valid configuration options are:</p>
 <ul>
+    <li><code>acceptor_processes</code> - The number of acceptor processes to start (Cowboy only). Defaults to 100. Don't worry about this.</li>
     <li><code>assume_locale</code> - The presumed locale of translatable strings. Defaults to "en".</li>
     <li><code>cache_adapter</code> - The cache adapter to use. Currently the only valid value is <code>memcached_bin</code>.</li>
     <li><code>cache_servers</code> - A list of cache servers (<code>{Host, Port, PoolSize}</code>). Defaults to <code>[{"localhost", 11211, 1}]</code>.
