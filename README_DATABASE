@@ -112,7 +112,7 @@ Database Migrations
 
 Chicago Boss supports Rails-like database migrations, which work like so:
 
-    > boss_files:make_migration(your_app_name, create_some_table).
+    > boss_migrate:make_migration(your_app_name, create_some_table).
 
 This creates a file in priv/migrations/ with a name like 1363463613_create_some_table.erl
 
@@ -128,11 +128,11 @@ Edit this file in order to do something along these lines:
 
 To actually run the migrations, you'd do
 
-     > boss_files:run_migrations(gsd_web).
+     > boss_migrate:run_migrations(gsd_web).
 
 You can also redo the last migration - which is useful when you're
 developing and perhaps haven't got the table definition quite right:
 
-     > boss_files:redo_migration(gsd_web, create_some_table).
+     > boss_migrate:redo_migration(gsd_web, create_some_table).
 
 Internally, migrations are tracked in a table called "schema_migrations".

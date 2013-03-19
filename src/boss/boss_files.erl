@@ -17,6 +17,7 @@
         model_path/0,
         model_path/1,
         routes_file/1,
+        root_priv_dir/1,
         static_path/1,
         test_list/1,
         test_path/0,
@@ -35,10 +36,7 @@
         web_controller_path/0,
         web_view_path/0,
         web_view_path/2,
-	 web_view_path/3,
-	 make_migration/2,
-	 run_migrations/1,
-	 redo_migration/2
+	 web_view_path/3
     ]).
 
 root_dir() -> filename:absname(""). %filename:join([filename:dirname(code:which(?MODULE)), ".."]).
@@ -236,36 +234,4 @@ module_list1([Dir|Rest], Application, ModuleAcc) ->
 
 dot_app_src(AppName) ->
 	filename:join(["src", lists:concat([AppName, ".app.src"])]).
-
-
-%% Returns a sorted list of all files in priv/migrations/.
-migration_list(App) ->
-    lists:sort(filelib:wildcard(filename:join([root_priv_dir(App), "migrations", "*.erl"]))).
-
-%% Create a migration.  MigrationName is an atom to use as the name of
-%% the migration.
-make_migration(App, MigrationName) when is_atom(MigrationName) ->
-    {MegaSeconds, Seconds, _Microsecs} = erlang:now(),
-    Filename = filename:join([root_priv_dir(App), "migrations",
-			      io_lib:format("~p~p_~s.erl", [MegaSeconds, Seconds, MigrationName])]),
-    file:write_file(Filename, io_lib:format("%% Migration: ~p~n~n{~p,~n  fun(up) -> undefined;~n     (down) -> undefined~n  end}.~n", [MigrationName, MigrationName])).
-
-%% Run the migrations.
-run_migrations(App) ->
-    boss_db:migrate(load_migrations(App)).
-
-% Redo {down, up} a specific migration.
-redo_migration(App, Tag) ->
-    Fun =  proplists:get_value(Tag, load_migrations(App)),
-    boss_db:transaction(fun () ->
-				boss_db:migrate({Tag, Fun}, down),
-				boss_db:migrate({Tag, Fun}, up)
-			end).
-
-load_migrations(App) ->
-    lists:map(fun(File) ->
-		      io:format("Reading migration file: ~p~n", [File]),
-		      {ok, Terms} = file:script(File),
-		      Terms
-	      end, migration_list(App)).
 
