@@ -3,7 +3,10 @@
 
 convert_params_to_tokens(Variables, ControllerModule, Action) ->
     DummyController = apply(ControllerModule, new, lists:seq(1, proplists:get_value(new, ControllerModule:module_info(exports)))), 
-    Routes = DummyController:'_routes'(),
+    Routes = case lists:member({'_routes', 1}, ControllerModule:module_info(exports)) of
+        true -> DummyController:'_routes'();
+        false -> []
+    end,
     lists:foldr(fun
             ({RouteName, RouteTokens}, {Acc, Vars}) when RouteName =:= Action ->
                 Result = lists:foldr(fun
