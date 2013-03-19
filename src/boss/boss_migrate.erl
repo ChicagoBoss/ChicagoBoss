@@ -3,9 +3,9 @@
 
 -module(boss_migrate).
 
--export([make_migration/2,
-	 run_migrations/1,
-	 redo_migration/2]).
+-export([make/2,
+	 run/1,
+	 redo/2]).
 
 %% Returns a sorted list of all files in priv/migrations/.
 migration_list(App) ->
@@ -13,18 +13,18 @@ migration_list(App) ->
 
 %% Create a migration.  MigrationName is an atom to use as the name of
 %% the migration.
-make_migration(App, MigrationName) when is_atom(MigrationName) ->
+make(App, MigrationName) when is_atom(MigrationName) ->
     {MegaSeconds, Seconds, _Microsecs} = erlang:now(),
     Filename = filename:join([boss_files:root_priv_dir(App), "migrations",
 			      io_lib:format("~p~p_~s.erl", [MegaSeconds, Seconds, MigrationName])]),
     file:write_file(Filename, io_lib:format("%% Migration: ~p~n~n{~p,~n  fun(up) -> undefined;~n     (down) -> undefined~n  end}.~n", [MigrationName, MigrationName])).
 
 %% Run the migrations.
-run_migrations(App) ->
+run(App) ->
     boss_db:migrate(load_migrations(App)).
 
-% Redo {down, up} a specific migration.
-redo_migration(App, Tag) ->
+						% Redo {down, up} a specific migration.
+redo(App, Tag) ->
     Fun =  proplists:get_value(Tag, load_migrations(App)),
     boss_db:transaction(fun () ->
 				boss_db:migrate({Tag, Fun}, down),
