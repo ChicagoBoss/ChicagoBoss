@@ -117,7 +117,7 @@ handle_info(_Info, State) ->
 
 load(State) ->
     RoutesFile = boss_files:routes_file(State#state.application),
-    error_logger:info_msg("Loading routes from ~p ....~n", [RoutesFile]),
+    error_logger:info_msg("Loading routes from ~p ....", [RoutesFile]),
     case file:consult(RoutesFile) of
         {ok, OrderedRoutes} -> 
             lists:foldl(fun

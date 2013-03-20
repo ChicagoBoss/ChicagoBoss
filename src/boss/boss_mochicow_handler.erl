@@ -1,5 +1,5 @@
 -module(boss_mochicow_handler).
--behaviour(cowboy_http_websocket_handler).
+-behaviour(cowboy_websocket_handler).
 
 -export([init/3, loop/1, terminate/2]).
 -export([websocket_init/3, websocket_handle/3,
@@ -23,7 +23,7 @@ terminate(_Req, _State) ->
 
 websocket_init(_Any, Req, _Opts) ->
     SessionKey = boss_env:get_env(session_key, "_boss_session"),
-    {ServiceUrl, _Req1} = cowboy_req:path(Req),
+    {ServiceUrl, _Req1} = cowboy_req:raw_path(Req),
     {SessionId, _Req2}  = cowboy_req:cookie(list_to_binary(SessionKey), Req),
     WebsocketId = self(),    
     State= #state{websocket_id=WebsocketId, 
