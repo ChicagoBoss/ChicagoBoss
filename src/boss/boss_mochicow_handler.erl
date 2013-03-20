@@ -23,7 +23,7 @@ terminate(_Req, _State) ->
 
 websocket_init(_Any, Req, _Opts) ->
     SessionKey = boss_env:get_env(session_key, "_boss_session"),
-    {ServiceUrl, _Req1} = cowboy_req:raw_path(Req),
+    {ServiceUrl, _Req1} = cowboy_req:path(Req),
     {SessionId, _Req2}  = cowboy_req:cookie(list_to_binary(SessionKey), Req),
     WebsocketId = self(),    
     State= #state{websocket_id=WebsocketId, 
