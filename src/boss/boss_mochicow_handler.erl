@@ -6,7 +6,7 @@
 	 websocket_info/3, websocket_terminate/3]).
 
 init({_Any, http}, Req, _Opts) ->
-    case cowboy_req:header('Upgrade', Req) of
+    case cowboy_req:header(<<"upgrade">>, Req) of
 	{undefined, _Req2} -> {upgrade, protocol, mochicow_upgrade};
 	{<<"websocket">>, _Req2} -> {upgrade, protocol, cowboy_websocket};
 	{<<"Websocket">>, _Req2} -> {upgrade, protocol, cowboy_websocket};
@@ -23,7 +23,7 @@ terminate(_Req, _State) ->
 
 websocket_init(_Any, Req, _Opts) ->
     SessionKey = boss_env:get_env(session_key, "_boss_session"),
-    {ServiceUrl, _Req1} = cowboy_req:raw_path(Req),
+    {ServiceUrl, _Req1} = cowboy_req:path(Req),
     {SessionId, _Req2}  = cowboy_req:cookie(list_to_binary(SessionKey), Req),
     WebsocketId = self(),    
     State= #state{websocket_id=WebsocketId, 
