@@ -12,7 +12,7 @@
 
 %% API
 -export([start_link/2]).
--export([incoming/5, join/4, close/4]).
+-export([incoming/5, join/4, close/4, websockets/1, websockets_eval/2]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -20,7 +20,7 @@
 
 -define(SERVER, ?MODULE). 
 
--record(state, {handler, internal}).
+-record(state, {handler, internal, websockets}).
 
 %%%===================================================================
 %%% API
@@ -45,6 +45,13 @@ join(Service, ServiceUrl, WebSocketId, SessionId) ->
 close(Service, ServiceUrl, WebSocketId, SessionId) ->
     gen_server:call({global, Service}, {terminate_service, ServiceUrl, WebSocketId, SessionId}).
 
+websockets(Service) ->
+    gen_server:call({global, Service}, {websockets}).
+
+websockets_eval(Service, Fun) ->
+    WebSockets = gen_server:call({global, Service}, {websockets}),
+    lists:map(Fun, WebSockets).
+
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
@@ -65,7 +72,7 @@ init([Handler, ServiceUrl]) when is_atom(Handler) ->
     try Handler:init() of
 	{ok, Internal} ->
 	    boss_websocket_router:register(ServiceUrl, Handler),
-	    {ok, #state{handler=Handler, internal=Internal}}
+	    {ok, #state{handler=Handler, internal=Internal, websockets=sets:new()}}
     catch Class:Reason ->
 	    error_logger:error_msg(
 	      "** Boss Service Handler ~p terminating in init/0~n"
@@ -90,55 +97,58 @@ init([Handler, ServiceUrl]) when is_atom(Handler) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_call({join_service, ServiceUrl, WebSocketId, SessionId}, _From, State) ->
-    #state{handler=Handler, internal=Internal} = State,
+    #state{handler=Handler, internal=Internal, websockets=WebSockets} = State,
+    NewWebSockets = sets:add_element(WebSocketId, WebSockets),
+    io:format("new web sockets ~p~n", [sets:to_list(NewWebSockets)]),
     try 
 	Handler:handle_join(ServiceUrl, WebSocketId, SessionId, Internal) of
 	{reply, Reply, NewInternal} ->
-	    {reply, Reply, #state{handler=Handler, internal=NewInternal}};
+	    {reply, Reply, #state{handler=Handler, internal=NewInternal, websockets=NewWebSockets}};
 	{reply, Reply, State, NewInternal, Timeout} ->
-	    {reply, Reply, #state{handler=Handler, internal=NewInternal}, Timeout};
+	    {reply, Reply, #state{handler=Handler, internal=NewInternal, websockets=NewWebSockets}, Timeout};
 
 	{noreply, NewInternal} ->
-	    {noreply, #state{handler=Handler, internal=NewInternal}};
+	    {noreply, #state{handler=Handler, internal=NewInternal, websockets=NewWebSockets}};
 	{noreply, NewInternal, Timeout} ->
-	    {noreply, #state{handler=Handler, internal=NewInternal}, Timeout};
+	    {noreply, #state{handler=Handler, internal=NewInternal, websockets=NewWebSockets}, Timeout};
 
 	{stop, InternalReason, Reply, NewInternal} ->
-	    {stop, InternalReason, Reply, #state{handler=Handler, internal=NewInternal}};
+	    {stop, InternalReason, Reply, #state{handler=Handler, internal=NewInternal, websockets=WebSockets}};
 	{stop, InternalReason, NewInternal} ->
-	    {stop, InternalReason, #state{handler=Handler, internal=NewInternal}}
+	    {stop, InternalReason, #state{handler=Handler, internal=NewInternal, websockets=WebSockets}}
 
-	catch Class:Reason ->
-		error_logger:error_msg(
-		  "** Boss Service Handler ~p terminating in join/0~n"
-		  "   for the reason ~p:~p~n"
-  		  "ServiceUrl: ~p~n"
-  		  "WebSocketId: ~p~n"
-  		  "SessionId  : ~p~n"
-  		  "State    : ~p~n"
-		  "** Stacktrace: ~p~n~n",
-		  [Handler, Class, Reason, ServiceUrl, WebSocketId,
-		   SessionId, Internal, erlang:get_stacktrace()])
-	end;
+    catch Class:Reason ->
+	    error_logger:error_msg(
+	      "** Boss Service Handler ~p terminating in join/0~n"
+	      "   for the reason ~p:~p~n"
+	      "ServiceUrl: ~p~n"
+	      "WebSocketId: ~p~n"
+	      "SessionId  : ~p~n"
+	      "State    : ~p~n"
+	      "** Stacktrace: ~p~n~n",
+	      [Handler, Class, Reason, ServiceUrl, WebSocketId,
+	       SessionId, Internal, erlang:get_stacktrace()])
+    end;
 
 
 handle_call({terminate_service, ServiceUrl, WebSocketId, SessionId}, _From,  State) ->   
-    #state{handler=Handler, internal=Internal} = State,    
+    #state{handler=Handler, internal=Internal, websockets=WebSockets} = State,
+    NewWebSockets = sets:del_element(WebSocketId, WebSockets),
     try Handler:handle_close(ServiceUrl, WebSocketId, SessionId, Internal) of
 	{reply, Reply, NewInternal} ->
-	    {reply, Reply, #state{handler=Handler, internal=NewInternal}};
+	    {reply, Reply, #state{handler=Handler, internal=NewInternal, websockets=NewWebSockets}};
 	{reply, Reply, NewInternal, Timeout} ->
-	    {reply, Reply, #state{handler=Handler, internal=NewInternal}, Timeout};
+	    {reply, Reply, #state{handler=Handler, internal=NewInternal, websockets=NewWebSockets}, Timeout};
 	
 	{noreply, NewInternal} ->
-	    {noreply, #state{handler=Handler, internal=NewInternal}};
+	    {noreply, #state{handler=Handler, internal=NewInternal, websockets=NewWebSockets}};
 	{noreply, NewInternal, Timeout} ->
-	    {noreply, #state{handler=Handler, internal=NewInternal}, Timeout};
+	    {noreply, #state{handler=Handler, internal=NewInternal, websockets=NewWebSockets}, Timeout};
 	
 	{stop, InternalReason, Reply, NewInternal} ->
-	    {stop, InternalReason, Reply, #state{handler=Handler, internal=NewInternal}};
+	    {stop, InternalReason, Reply, #state{handler=Handler, internal=NewInternal, websockets=NewWebSockets}};
 	{stop, InternalReason, NewInternal} ->
-	    {stop, InternalReason, #state{handler=Handler, internal=NewInternal}}
+	    {stop, InternalReason, #state{handler=Handler, internal=NewInternal, websockets=NewWebSockets}}
 		
     catch Class:Reason ->
 	    error_logger:error_msg(
@@ -152,6 +162,10 @@ handle_call({terminate_service, ServiceUrl, WebSocketId, SessionId}, _From,  Sta
 	      [Handler, Class, Reason, ServiceUrl, WebSocketId,
 	       SessionId, Internal, erlang:get_stacktrace()])	
     end;
+
+handle_call({websockets}, _From, State) ->
+    #state{handler=_Handler, internal=_Internal, websockets=WebSockets} = State,
+    {reply, sets:to_list(WebSockets), State};
 
 handle_call(_Request, _From, State) ->
     Reply = ok,
@@ -168,14 +182,14 @@ handle_call(_Request, _From, State) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_cast({incoming_msg, ServiceUrl, WebSocketId, SessionId, Message}, State) ->
-    #state{handler=Handler, internal=Internal} = State,
+    #state{handler=Handler, internal=Internal, websockets=WebSockets} = State,
     try Handler:handle_incoming(ServiceUrl, WebSocketId, SessionId, Message, Internal) of
 	{noreply, NewInternal} ->
-	    {noreply, #state{handler=Handler, internal=NewInternal}};
+	    {noreply, #state{handler=Handler, internal=NewInternal, websockets=WebSockets}};
 	{noreply, NewInternal, Timeout} ->
-	    {noreply, #state{handler=Handler, internal=NewInternal}, Timeout};
+	    {noreply, #state{handler=Handler, internal=NewInternal, websockets=WebSockets}, Timeout};
 	{stop, _Reason, NewInternal} ->
-	    {stop, _Reason, #state{handler=Handler, internal=NewInternal}}		
+	    {stop, _Reason, #state{handler=Handler, internal=NewInternal, websockets=WebSockets}}
     catch Class:Reason ->
 	    error_logger:error_msg(
 	      "** Boss Service Handler ~p terminating in handle_incoming/4~n"
@@ -204,14 +218,14 @@ handle_cast(_Msg, State) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_info(_Info, State) ->
-    #state{handler=Handler, internal=Internal} = State,
+    #state{handler=Handler, internal=Internal, websockets=WebSockets} = State,
     try Handler:handle_info(_Info, Internal) of
 	{noreply, NewInternal} ->
-	    {noreply, #state{handler=Handler, internal=NewInternal}};
+	    {noreply, #state{handler=Handler, internal=NewInternal, websockets=WebSockets}};
 	{noreply, NewInternal, Timeout} ->
-	    {noreply, #state{handler=Handler, internal=NewInternal}, Timeout};
+	    {noreply, #state{handler=Handler, internal=NewInternal, websockets=WebSockets}, Timeout};
 	{stop, InternalReason, NewInternal} ->
-	    {stop, InternalReason, #state{handler=Handler, internal=NewInternal}}
+	    {stop, InternalReason, #state{handler=Handler, internal=NewInternal, websockets=WebSockets}}
     catch Class:Reason ->
 	    error_logger:error_msg(
 	      "** Handler ~p terminating in handle_info/2~n"
