@@ -52,14 +52,7 @@ terminate(_Reason, State) ->
 init(Config) ->
     case boss_env:get_env(log_enable, true) of
         false -> ok;
-        true ->
-            LogDir = boss_env:get_env(log_dir, "log"),
-            LogFile = make_log_file_name(LogDir),
-            ok = filelib:ensure_dir(LogFile),
-            error_logger:logfile(close),
-            ok = error_logger:logfile({open, LogFile}),
-            %ok = error_logger:tty(false),
-            ok = make_log_file_symlink(LogFile)
+        true -> lager:start()
     end,
 
     application:start(elixir),
@@ -155,14 +148,15 @@ init(Config) ->
 		  application:start(ranch),
 		  application:start(cowboy),
 		  HttpPort = boss_env:get_env(port, 8001),
+          AcceptorCount = boss_env:get_env(acceptor_processes, 100),
           case SSLEnable of 
               false -> 
                   error_logger:info_msg("Starting http listener... on ~p ~n", [HttpPort]),
-                  cowboy:start_http(boss_http_listener, 100, [{port, HttpPort}], [{env, []}]);
+                  cowboy:start_http(boss_http_listener, AcceptorCount, [{port, HttpPort}], [{env, []}]);
               true ->
                   error_logger:info_msg("Starting https listener... on ~p ~n", [HttpPort]),
                   SSLConfig = [{port, HttpPort}]++SSLOptions, 
-                  cowboy:start_https(boss_https_listener, 100, SSLConfig, [{env, []}])
+                  cowboy:start_https(boss_https_listener, AcceptorCount, SSLConfig, [{env, []}])
 		  end,
 		  if 
               MasterNode =:= ThisNode ->
@@ -459,7 +453,7 @@ build_dynamic_response(App, Request, Response, Url) ->
     {Time, {StatusCode, Headers, Payload}} = timer:tc(?MODULE, process_request, [
             AppInfo#boss_app_info{ translator_pid = TranslatorPid, router_pid = RouterPid }, 
             Request, Mode, Url, SessionID]),
-    ErrorFormat = "~s ~s [~p] ~p ~pms~n", 
+    ErrorFormat = "~s ~s [~p] ~p ~pms", 
     RequestMethod = Request:request_method(),
     FullUrl = Request:path(),
     ErrorArgs = [RequestMethod, FullUrl, App, StatusCode, Time div 1000],
@@ -1071,40 +1065,3 @@ merge_headers(Headers1, Headers2) ->
                 end
         end, [], proplists:get_keys(Headers2)),
     HeadersToAdd ++ Headers1.
-
-make_log_file_name(Dir) ->
-    {{Y, M, D}, {Hour, Min, Sec}} = calendar:local_time(), 
-    filename:join([Dir, 
-            lists:flatten(io_lib:format("boss_error-~4..0B-~2..0B-~2..0B.~2..0B-~2..0B-~2..0B.log", 
-                    [Y, M, D, Hour, Min, Sec]))]).
-
-
-make_log_file_symlink(LogFile) ->
-    SymLink = filename:join([filename:dirname(LogFile), "boss_error-LATEST.log"]),
-     case os:type() of
-        {unix,_} ->
-            file:delete(SymLink),
-            file:make_symlink(filename:basename(LogFile), SymLink);
-        {win32,_} ->
-            file:delete(SymLink),
-            {ok, Cwd} = file:get_cwd(),
-            LinkTarget = Cwd ++ "/log/" ++ filename:basename(LogFile),
-            mk_win_dir_syslink("boss_error-LATEST.log", filename:dirname(LogFile), LinkTarget)
-     end.
-
-%% @doc Make symbolik link in current directory on windows vista or highter
-mk_win_dir_syslink(LinkName, DestDir, LinkTarget) ->
-    S = (list_to_atom(lists:append(["cd ", DestDir, "& mklink ", LinkName, " \"", LinkTarget, "\""]))),
-    os:cmd(S),
-    ok.
-
-%% from max lapshin
-reformat_path(Path) when is_list(Path) andalso is_integer(hd(Path)) ->
-  TokenizedPath = string:tokens(Path,"/"),
-  [list_to_binary(Part) || Part <- TokenizedPath];
-%% If path is just a binary, let's make it a string and treat it as such
-reformat_path(Path) when is_binary(Path) ->
-  reformat_path(binary_to_list(Path));
-%% If path is a list of binaries, then we assumed it's formatted for cowboy format already
-reformat_path(Path) when is_list(Path) andalso is_binary(hd(Path)) ->
-  Path.

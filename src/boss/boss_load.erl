@@ -244,14 +244,14 @@ compile_view(Application, ViewPath, TemplateAdapter, OutDir, TranslatorPid) ->
 compile_model(ModulePath, OutDir) ->
     IncludeDirs = [boss_files:include_dir() | boss_env:get_env(boss, include_dirs, [])],
     boss_model_manager:compile(ModulePath, [{out_dir, OutDir}, {include_dirs, IncludeDirs},
-			 {compiler_options, boss_env:get_env(boss, compiler_options, [return_errors])}]).
+			 {compiler_options, compiler_options()}]).
 
 compile_controller(ModulePath, OutDir) ->
     IncludeDirs = [boss_files:include_dir() | boss_env:get_env(boss, include_dirs, [])],
     case filename:extension(ModulePath) of
         ".erl" -> 
             boss_controller_compiler:compile(ModulePath, [{out_dir, OutDir}, {include_dirs, IncludeDirs},
-                    {compiler_options, boss_env:get_env(boss, compiler_options, [return_errors])}]);
+                    {compiler_options, compiler_options()}]);
         ".ex" ->
             boss_elixir_compiler:compile(ModulePath, [{out_dir, OutDir}])
     end.
@@ -261,10 +261,13 @@ compile(ModulePath, OutDir) ->
     case filename:extension(ModulePath) of
         ".erl" -> 
             boss_compiler:compile(ModulePath, [{out_dir, OutDir}, {include_dirs, IncludeDirs},
-                    {compiler_options, boss_env:get_env(boss, compiler_options, [return_errors])}]);
+                    {compiler_options, compiler_options()}]);
         ".ex" ->
             boss_elixir_compiler:compile(ModulePath, [{out_dir, OutDir}])
     end.
+
+compiler_options() ->
+    lists:merge([{parse_transform, lager_transform}], boss_env:get_env(boss, compiler_options, [return_errors])).
 
 load_view_lib(Application, OutDir, TranslatorPid) ->
     {ok, HelperDirModule} = compile_view_dir_erlydtl(Application,

@@ -2,6 +2,7 @@
 {% block api_content %}
 <p>All configuration takes place in <code>boss.config</code> in your project directory. Valid configuration options are:</p>
 <ul>
+    <li><code>acceptor_processes</code> - The number of acceptor processes to start (Cowboy only). Defaults to 100. Don't worry about this.</li>
     <li><code>assume_locale</code> - The presumed locale of translatable strings. Defaults to "en".</li>
     <li><code>cache_adapter</code> - The cache adapter to use. Currently the only valid value is <code>memcached_bin</code>.</li>
     <li><code>cache_servers</code> - A list of cache servers (<code>{Host, Port, PoolSize}</code>). Defaults to <code>[{"localhost", 11211, 1}]</code>.
@@ -27,7 +28,6 @@
         <li><code>db_shard_models</code> - A list of models (atoms) which are stored on the shard.</li>
     </ul></li>
     <li><code>include_dirs</code> - List of additional directories to be searched for files specified in <code>-include</code> directives.</li>
-    <li><code>log_dir</code> - Directory in which to keep log files. Location is relative to the project directory. Defaults to "log".</li>
     <li><code>log_enable</code> - Controls whether ChicagoBoss will generate log files. If this is set to <code>false</code>, log messages will still be sent to Erlang's internal <code>error_logger</code> server and may be handled from there. Defaults to <code>true</code>.</li>
     <li><code>mail_driver</code> - The email delivery driver to use. Valid values are:
     <ul>
@@ -70,6 +70,10 @@
     </ul>
     <li><code>ssl_enable</code> - Enable HTTP over SSL</li>
     <li><code>ssl_options</code> - SSL options; see <a href="http://www.erlang.org/doc/man/ssl.html">ssl(3erl)</a></li>
+</ul>
+<p>Logging with lager</p>
+<ul>
+<li><code>lager</code> - Lager config, see <a href="https://github.com/basho/lager">Lager Github Readme</a>.</li>
 </ul>
 <p><b>Warning:</b> From 0.5.2, the frontpage, default_action and default_actions configuration options has been moved to the <a href="api-controller.html#routes">new routing system</a></p>
 {% endblock %}
