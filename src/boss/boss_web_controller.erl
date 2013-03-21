@@ -832,7 +832,7 @@ before_request([], _Controller, _Action, _Req, _SessionID, Info) ->
 before_request([Middleware|Middlewares], Controller, Action, Req, SessionID, Info) ->
     case proplists:is_defined(before_, Middleware:module_info(exports)) of
         true ->
-            case Middleware:before_(Controller, Action, Req, SessionID) of
+            case Middleware:before_(Controller, Action, Req, SessionID, Info) of
                 ok ->
                     before_request(Middlewares, Controller, Action, Req, SessionID, Info);
                 {ok, ExtraInfo} ->
