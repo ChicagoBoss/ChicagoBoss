@@ -5,6 +5,7 @@
 {dir, "{{dest}}"}.
 {dir, "{{dest}}/log"}.
 {dir, "{{dest}}/priv/lang"}.
+{dir, "{{dest}}/priv/migrations"}.
 {dir, "{{dest}}/ebin"}.
 {dir, "{{dest}}/include"}.
 {dir, "{{dest}}/src/lib"}.

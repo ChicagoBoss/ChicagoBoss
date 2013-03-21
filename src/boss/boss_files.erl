@@ -17,6 +17,7 @@
         model_path/0,
         model_path/1,
         routes_file/1,
+        root_priv_dir/1,
         static_path/1,
         test_list/1,
         test_path/0,
@@ -35,7 +36,7 @@
         web_controller_path/0,
         web_view_path/0,
         web_view_path/2,
-        web_view_path/3
+	 web_view_path/3
     ]).
 
 root_dir() -> filename:absname(""). %filename:join([filename:dirname(code:which(?MODULE)), ".."]).
@@ -233,3 +234,4 @@ module_list1([Dir|Rest], Application, ModuleAcc) ->
 
 dot_app_src(AppName) ->
 	filename:join(["src", lists:concat([AppName, ".app.src"])]).
+
