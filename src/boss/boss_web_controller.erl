@@ -859,7 +859,7 @@ after_request([Middleware|Middlewares], Controller, Action, Req, SessionID, {ok,
                 {ok, ExtraInfo} ->
                     after_request(Middlewares, Controller, Action, Req, SessionID, {ok, lists:merge(ExtraInfo, Data), Headers});
                 {ok, ExtraInfo, ExtraHeaders} ->
-                    after_request(Middlewares, Controller, Action, Req, SessionID, {ok, lists:merge(ExtraInfo, Data), lists:merge(Headers, ExtraHeaders)});
+                    after_request(Middlewares, Controller, Action, Req, SessionID, {ok, lists:merge(ExtraInfo, Data), merge_headers(Headers, ExtraHeaders)});
                 Other ->
                     Other
             end;
