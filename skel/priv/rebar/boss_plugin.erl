@@ -140,7 +140,10 @@ boss_config(Command) ->
         false ->
             ?BOSS_CONFIG_FILE;
         true ->
-            ?BOSS_TEST_CONFIG_FILE
+            case file:read_file_info(?BOSS_TEST_CONFIG_FILE) of
+                {ok, _} -> ?BOSS_TEST_CONFIG_FILE;
+                _ -> ?BOSS_CONFIG_FILE
+            end
     end,
     case file:consult(BossConfFile) of
         {error,enoent} ->
