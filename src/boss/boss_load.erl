@@ -249,7 +249,8 @@ compile(ModulePath, OutDir) ->
     CompilerAdapter:compile(ModulePath, Options).
 
 compiler_options() ->
-    lists:merge([{parse_transform, lager_transform}], boss_env:get_env(boss, compiler_options, [return_errors])).
+    lists:merge([{parse_transform, lager_transform}, return_errors], 
+        boss_env:get_env(boss, compiler_options, [])).
 
 load_view_lib(Application, OutDir, TranslatorPid) ->
     {ok, HelperDirModule} = compile_view_dir_erlydtl(Application,
