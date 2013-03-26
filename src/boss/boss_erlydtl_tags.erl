@@ -8,7 +8,7 @@ url(Variables, Options) ->
         end, Variables),
     ThisApp = proplists:get_value(application, Options),
     LinkedApp = proplists:get_value(application, ListVars, ThisApp),
-    ControllerList = boss_files:web_controller_list(LinkedApp),
+    ControllerList = boss_files:web_controller_list(list_to_atom(LinkedApp)),
     ThisController = proplists:get_value(controller, Options),
     LinkedController = proplists:get_value(controller, ListVars, ThisController),
     DefaultAction = case proplists:get_value(controller, ListVars) of
