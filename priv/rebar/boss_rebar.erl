@@ -108,7 +108,7 @@ test_functional(RebarConf, BossConf, AppFile) ->
 	%% Compile, load all boss ebin dir and start boss
 	boss_rebar:compile(RebarConf, BossConf, AppFile),
 	boss_rebar:boss_load(BossConf, AppFile),
-	boss_rebar:boss_start(BossConf),
+	% boss_rebar:boss_start(BossConf),
 	AppName = app_name(AppFile),
 	boss_web_test:start([atom_to_list(AppName)]).
 
@@ -295,7 +295,8 @@ boss_load(BossConf, AppFile) ->
     %% Fix starting mimetypes app in boss.erl->ensure_started(mimetypes)
     %% mimetyps.app not found, adding deps/*/ebin don't work
     BossPath = boss_config_value(BossConf, boss, path),
-    code:add_path(BossPath++"/deps/mimetypes/ebin").
+    code:add_path(BossPath++"/deps/mimetypes/ebin"),
+    code:add_path(BossPath++"/deps/lager/ebin").
 
 %%--------------------------------------------------------------------
 %% @doc Start the boss app
@@ -303,7 +304,7 @@ boss_load(BossConf, AppFile) ->
 %% @end
 %%--------------------------------------------------------------------
 boss_start(_BossConf) ->
-    io:format("Starting boss and waiting all apps to initilize...~n"),
+    io:format("Starting boss and waiting for all apps to initialize...~n"),
     ok = boss:start(),
     BossApps = boss_env:get_env(applications, []),
     timer:sleep(50),
