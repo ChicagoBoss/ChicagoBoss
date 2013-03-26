@@ -7,7 +7,7 @@
 %% Exported Functions
 %%
 -export([start/0, start/1, stop/0]).
--export([reload/1, route/2, unroute/5, handle/2, get_all/1, set_controllers/2]).
+-export([reload/1, route/2, unroute/6, handle/2, get_all/1, set_controllers/2]).
 
 %%
 %% API Functions
@@ -28,22 +28,22 @@ reload(Pid) ->
 route(Pid, Url) ->
     gen_server:call(Pid, {route, Url}).
 
-unroute(Pid, Application, Controller, undefined, Params) ->
-    ControllerModule = list_to_atom(boss_files:web_controller(Application, Controller)),
+unroute(Pid, Application, ControllerList, Controller, undefined, Params) ->
+    ControllerModule = list_to_atom(boss_files:web_controller(Application, Controller, ControllerList)),
     Action =  case proplists:get_value(default_action, ControllerModule:module_info(attributes)) of
                   [DefaultAction] when is_atom(DefaultAction) ->
                       atom_to_list(DefaultAction);
                   _ ->
                       "index"
               end,
-    unroute(Pid, Application, Controller, Action, Params);
-unroute(Pid, Application, Controller, Action, Params) ->
+    unroute(Pid, Application, ControllerList, Controller, Action, Params);
+unroute(Pid, Application, ControllerList, Controller, Action, Params) ->
     case gen_server:call(Pid, {unroute, Controller, Action, Params}) of
         undefined ->
             % Do the fancy routing in the calling process
             % to take some pressure off the router process.
             % In the future the router needs workers.
-            ControllerModule = list_to_atom(boss_files:web_controller(Application, Controller)),
+            ControllerModule = list_to_atom(boss_files:web_controller(Application, Controller, ControllerList)),
             {Tokens, Variables1} = boss_controller_lib:convert_params_to_tokens(Params, ControllerModule, list_to_atom(Action)),
 
             URL = case Tokens of
