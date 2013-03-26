@@ -1,8 +1,6 @@
 -module(boss_template_adapter_eex).
 -compile(export_all).
 
--define(TEMPLATE_VARIABLE_KEY, boss_template_adapter_eex_vars).
-
 file_extensions() -> ["eex"].
 
 translatable_strings(_Module) -> [].

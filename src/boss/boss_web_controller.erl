@@ -450,8 +450,13 @@ build_dynamic_response(App, Request, Response, Url) ->
     AppInfo = boss_web:application_info(App),
     TranslatorPid = boss_web:translator_pid(App),
     RouterPid = boss_web:router_pid(App),
+    ControllerList = boss_files:web_controller_list(App),
     {Time, {StatusCode, Headers, Payload}} = timer:tc(?MODULE, process_request, [
-            AppInfo#boss_app_info{ translator_pid = TranslatorPid, router_pid = RouterPid }, 
+            AppInfo#boss_app_info{ 
+                translator_pid = TranslatorPid, 
+                router_pid = RouterPid,
+                controller_modules = ControllerList
+            }, 
             Request, Mode, Url, SessionID]),
     ErrorFormat = "~s ~s [~p] ~p ~pms", 
     RequestMethod = Request:request_method(),
@@ -758,14 +763,16 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
 
             Adapter = lists:foldl(fun
                     (A, false) ->
-                        case A:accept(AppInfo#boss_app_info.application, Controller) of
+                        case A:accept(AppInfo#boss_app_info.application, Controller, 
+                                AppInfo#boss_app_info.controller_modules) of
                             true -> A;
                             _ -> false
                         end;
                     (_, Acc) -> Acc
                 end, false, Adapters),
 
-            AdapterInfo = Adapter:init(AppInfo#boss_app_info.application, Controller, Req, SessionID),
+            AdapterInfo = Adapter:init(AppInfo#boss_app_info.application, Controller, 
+                AppInfo#boss_app_info.controller_modules, Req, SessionID),
             RequestMethod = Req:request_method(),
 
             AuthResult = Adapter:before_filter(AdapterInfo, Action, RequestMethod, Tokens),
@@ -877,7 +884,8 @@ handle_news_for_cache(_, _, {Prefix, Key}) ->
 
 process_location(Controller,  [{_, _}|_] = Where, AppInfo) ->
     {_, TheController, TheAction, CleanParams} = process_redirect(Controller, Where, AppInfo),
-    ControllerModule = list_to_atom(boss_files:web_controller(AppInfo#boss_app_info.application, Controller)),
+    ControllerModule = list_to_atom(boss_files:web_controller(
+            AppInfo#boss_app_info.application, Controller, AppInfo#boss_app_info.controller_modules)),
     ActionAtom = list_to_atom(TheAction),
     {Tokens, []} = boss_controller_lib:convert_params_to_tokens(CleanParams, ControllerModule, ActionAtom),
     {TheController, TheAction, Tokens}.

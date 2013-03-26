@@ -2,12 +2,12 @@
 -module(boss_controller_adapter_pmod).
 -compile(export_all).
 
-accept(Application, Controller) ->
-    Module = list_to_atom(boss_files:web_controller(Application, Controller)),
-    code:which(Module) =/= non_existing.
+accept(Application, Controller, ControllerList) ->
+    Module = boss_compiler_adapter_erlang:controller_module(Application, Controller),
+    lists:member(Module, ControllerList).
 
-init(Application, Controller, Req, SessionID) ->
-    Module = list_to_atom(boss_files:web_controller(Application, Controller)),
+init(Application, Controller, ControllerList, Req, SessionID) ->
+    Module = list_to_atom(boss_files:web_controller(Application, Controller, ControllerList)),
     ExportStrings = lists:map(
         fun({Function, Arity}) -> {atom_to_list(Function), Arity} end,
         Module:module_info(exports)),

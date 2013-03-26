@@ -155,21 +155,11 @@ compile_and_accumulate_errors([Filename|Rest], Application, OutDir, Compiler, {M
     compile_and_accumulate_errors(Rest, Application, OutDir, Compiler, Result).
 
 maybe_compile(File, Application, OutDir, Compiler) ->
-    Module = case filename:extension(File) of
-        ".erl" ->
-            ModuleName = filename:basename(File, ".erl"),
-            list_to_atom(ModuleName);
-        ".ex" ->
-            ModuleName = filename:basename(File, ".ex"),
-            list_to_atom(lists:concat(["Elixir", "-", 
-                        inflector:camelize(atom_to_list(Application)), "-",
-                        inflector:camelize(ModuleName)]));
-        _ ->
-            undefined
-    end,
-    case Module of
+    CompilerAdapter = boss_files:compiler_adapter_for_extension(filename:extension(File)),
+    case CompilerAdapter of
         undefined -> ok;
         _ ->
+            Module = list_to_atom(CompilerAdapter:module_name_for_file(Application, File)),
             AbsPath = filename:absname(File),
             case OutDir of
                 undefined ->
@@ -248,23 +238,15 @@ compile_model(ModulePath, OutDir) ->
 
 compile_controller(ModulePath, OutDir) ->
     IncludeDirs = [boss_files:include_dir() | boss_env:get_env(boss, include_dirs, [])],
-    case filename:extension(ModulePath) of
-        ".erl" -> 
-            boss_controller_compiler:compile(ModulePath, [{out_dir, OutDir}, {include_dirs, IncludeDirs},
-                    {compiler_options, compiler_options()}]);
-        ".ex" ->
-            boss_elixir_compiler:compile(ModulePath, [{out_dir, OutDir}])
-    end.
+    Options = [{out_dir, OutDir}, {include_dirs, IncludeDirs}, {compiler_options, compiler_options()}],
+    CompilerAdapter = boss_files:compiler_adapter_for_extension(filename:extension(ModulePath)),
+    CompilerAdapter:compile_controller(ModulePath, Options).
 
 compile(ModulePath, OutDir) ->
     IncludeDirs = [boss_files:include_dir() | boss_env:get_env(boss, include_dirs, [])],
-    case filename:extension(ModulePath) of
-        ".erl" -> 
-            boss_compiler:compile(ModulePath, [{out_dir, OutDir}, {include_dirs, IncludeDirs},
-                    {compiler_options, compiler_options()}]);
-        ".ex" ->
-            boss_elixir_compiler:compile(ModulePath, [{out_dir, OutDir}])
-    end.
+    Options = [{out_dir, OutDir}, {include_dirs, IncludeDirs}, {compiler_options, compiler_options()}],
+    CompilerAdapter = boss_files:compiler_adapter_for_extension(filename:extension(ModulePath)),
+    CompilerAdapter:compile(ModulePath, Options).
 
 compiler_options() ->
     lists:merge([{parse_transform, lager_transform}], boss_env:get_env(boss, compiler_options, [return_errors])).
