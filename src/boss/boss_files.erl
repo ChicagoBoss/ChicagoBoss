@@ -136,6 +136,8 @@ model_list(AppName) ->
             lists:map(fun atom_to_list/1, boss_env:get_env(AppName, model_modules, []))
     end.
 
+web_controller_list(AppName) when is_list(AppName) ->
+    web_controller_list(list_to_atom(AppName));
 web_controller_list(AppName) ->
     case boss_env:is_developing_app(AppName) of
         true ->
