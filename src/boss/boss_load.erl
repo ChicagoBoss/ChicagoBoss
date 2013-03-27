@@ -30,6 +30,7 @@ load_all_modules(Application, TranslatorSupPid, OutDir) ->
     {ok, ModelModules} = load_models(Application, OutDir),
     {ok, ViewHelperModules} = load_view_lib_modules(Application, OutDir),
     {ok, ViewLibModules} = load_view_lib(Application, OutDir, TranslatorPid),
+    rebar_log:log(debug, "load_view_lib_modules done~n", []),
     {ok, ViewModules} = load_views(Application, OutDir, TranslatorPid),
     AllModules = [{test_modules, TestModules}, 
 		  {lib_modules, LibModules}, {websocket_modules, WebSocketModules},
@@ -88,6 +89,7 @@ load_web_controllers(Application, OutDir) ->
 load_view_lib_modules(Application) ->
     load_view_lib_modules(Application, undefined).
 load_view_lib_modules(Application, OutDir) ->
+    rebar_log:log(debug, "load_view_lib_modules: ~p~n", [Application]),
     load_dirs(boss_files:view_helpers_path(), Application, OutDir, fun compile/2).
 
 load_models(Application) ->
@@ -111,15 +113,10 @@ load_dirs1([Dir|Rest], Application, OutDir, Compiler, ModuleAcc, ErrorAcc) ->
     end.
 
 load_dir(Dir, Application, OutDir, Compiler) when is_function(Compiler) ->
-    Files = case file:list_dir(Dir) of
-        {ok, FileList} ->
-            FileList;
-        _ ->
-            []
-    end,
-    FullFiles = lists:map(fun(F) -> filename:join([Dir, F]) end, Files),
+    FileList = filelib:fold_files(Dir, "^(?i)[^#][[:print:]]+.(erl|ex)$", false, fun(F, Acc) -> [F] ++ Acc end, []),
     {ModuleList, ErrorList} = compile_and_accumulate_errors(
-        FullFiles, Application, OutDir, Compiler, {[], []}),
+        FileList, Application, OutDir, Compiler, {[], []}),
+    rebar_log:log(debug, "load_dir FileList: ~p~n", [FileList]),
     case length(ErrorList) of
         0 ->
             {ok, ModuleList};
@@ -129,8 +126,6 @@ load_dir(Dir, Application, OutDir, Compiler) when is_function(Compiler) ->
 
 compile_and_accumulate_errors([], _Application, _OutDir, _Compiler, Acc) -> 
     Acc;
-compile_and_accumulate_errors(["."++_|Rest], Application, OutDir, Compiler, Acc) -> 
-    compile_and_accumulate_errors(Rest, Application, OutDir, Compiler, Acc);
 compile_and_accumulate_errors([Filename|Rest], Application, OutDir, Compiler, {Modules, Errors}) ->
     Result = case filelib:is_dir(Filename) of
         true ->
@@ -147,7 +142,7 @@ compile_and_accumulate_errors([Filename|Rest], Application, OutDir, Compiler, {M
                 {ok, Module} ->
                     {[Module|Modules], Errors};
                 {error, Error} ->
-                    {Modules, [Error | Errors]};
+                    {Modules, [{error, [{msg, file:format_error(Error)}, {filename, Filename}]} | Errors]};
                 {error, NewErrors, _NewWarnings} when is_list(NewErrors) ->
                     {Modules, NewErrors ++ Errors}
             end
