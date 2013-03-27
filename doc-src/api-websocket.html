@@ -43,6 +43,17 @@
 <p>Handle an incoming message from a client.</p>
 
 <div class="code spec">
+    handle_broadcast(Message::term(), State) -&gt;<br>
+    &nbsp;&nbsp;{noreply, NewState} |<br>
+    &nbsp;&nbsp;{noreply, NewState, Timeout} |<br>
+    &nbsp;&nbsp;{stop, Reason, NewState}
+</div>
+<p>Handle an outgoing broadcast message from some Erlang process to
+the connected web sockets.  It is your responsibility to keep track of
+the web sockets (via handle_join and handle_close) and send the
+outgoing messages as you see fit.</p>
+
+<div class="code spec">
     handle_info(Info, State) -&gt;<br>
     &nbsp;&nbsp;{noreply, NewState} |<br>
     &nbsp;&nbsp;{noreply, NewState, Timeout} |<br>
