@@ -16,3 +16,4 @@ rm -rf deps/mochiweb/support
 rm -rf deps/mochiweb/examples
 rm -rf deps/pmod_transform/tests
 rm -rf deps/jaderl/tests
+sed -i "s/{vsn, git}/{vsn, \"0\"}/" deps/*/src/*.app.src
