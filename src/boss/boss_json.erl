@@ -31,7 +31,7 @@ json_data1([{VariableName, [First|_] = Variable}|Rest], ModelList, Acc) when is_
         false ->
             json_data1(Rest, ModelList, [{VariableName, json_data1(Variable, ModelList, [])}|Acc])
     end;
-json_data1([{VariableName, [First|_] = Variable}|Rest], ModelList, Acc) when is_list(First) ->
+json_data1([{VariableName, [[{_, _}|_]|_] = Variable}|Rest], ModelList, Acc) ->
     json_data1(Rest, ModelList, [{VariableName, lists:map(fun(Item) -> 
                             json_data1(Item, ModelList, [])
                     end, Variable)}|Acc]);
