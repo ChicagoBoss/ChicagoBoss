@@ -129,27 +129,30 @@ load_dir(Dir, Application, OutDir, Compiler) when is_function(Compiler) ->
 
 compile_and_accumulate_errors([], _Application, _OutDir, _Compiler, Acc) -> 
     Acc;
-compile_and_accumulate_errors(["."++_|Rest], Application, OutDir, Compiler, Acc) -> 
-    compile_and_accumulate_errors(Rest, Application, OutDir, Compiler, Acc);
 compile_and_accumulate_errors([Filename|Rest], Application, OutDir, Compiler, {Modules, Errors}) ->
-    Result = case filelib:is_dir(Filename) of
-        true ->
-            case load_dir(Filename, Application, OutDir, Compiler) of
-                {ok, NewMods} ->
-                    {NewMods ++ Modules, Errors};
-                {error, NewErrs} ->
-                    {Modules, NewErrs ++ Errors}
-            end;
-        false ->
-            case maybe_compile(Filename, Application, OutDir, Compiler) of
-                ok ->
-                    {Modules, Errors};
-                {ok, Module} ->
-                    {[Module|Modules], Errors};
-                {error, Error} ->
-                    {Modules, [Error | Errors]};
-                {error, NewErrors, _NewWarnings} when is_list(NewErrors) ->
-                    {Modules, NewErrors ++ Errors}
+    Result = case filename:basename(Filename) of
+        "."++_ ->
+            {Modules, Errors};
+        _ ->
+            case filelib:is_dir(Filename) of
+                true ->
+                    case load_dir(Filename, Application, OutDir, Compiler) of
+                        {ok, NewMods} ->
+                            {NewMods ++ Modules, Errors};
+                        {error, NewErrs} ->
+                            {Modules, NewErrs ++ Errors}
+                    end;
+                false ->
+                    case maybe_compile(Filename, Application, OutDir, Compiler) of
+                        ok ->
+                            {Modules, Errors};
+                        {ok, Module} ->
+                            {[Module|Modules], Errors};
+                        {error, Error} ->
+                            {Modules, [Error | Errors]};
+                        {error, NewErrors, _NewWarnings} when is_list(NewErrors) ->
+                            {Modules, NewErrors ++ Errors}
+                    end
             end
     end,
     compile_and_accumulate_errors(Rest, Application, OutDir, Compiler, Result).
