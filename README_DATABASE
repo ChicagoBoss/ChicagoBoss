@@ -83,7 +83,7 @@ Notes:
 3. Open up boss.config and set db_adapter to mnesia
 
 
-Using Riak (EXPERIMENTAL)
+Using Riak
 -------------------------
 
 Riak is a NoSQL database developed by Basho Technologies.
