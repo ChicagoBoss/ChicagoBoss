@@ -22,7 +22,7 @@ edoc:
 #$(ERL) -pa ebin -noshell -eval "boss_doc:run()" -s init stop
 
 app:
-	@(if [[ ! "$(PROJECT)" =~ ^[a-z]+[a-zA-Z0-9_@]*$$ ]] ; then echo "Project name should be a valid Erlang atom."; exit 1; fi)
+	@(if ! echo "$(PROJECT)" | grep -qE '^[a-z]+[a-zA-Z0-9_@]*$$'; then echo "Project name should be a valid Erlang atom."; exit 1; fi)
 	@$(REBAR) create template=skel dest=$(DEST) src=$(PWD) appid=$(PROJECT) skip_deps=true
 
 get-deps:
