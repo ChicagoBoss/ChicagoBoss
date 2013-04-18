@@ -846,7 +846,7 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
                             end,
 
                             ActionResult = after_request(boss_env:get_env(AppInfo#boss_app_info.application, middlewares, []),
-                                                         Controller, Req, SessionID, ActionTempResult),
+                                                         Controller, Req, SessionID, merge_result_and_info(ActionTempResult, Info)),
 
                             case (CachedActionResult =/= undefined andalso is_tuple(ActionResult) andalso element(1, ActionResult) =:= ok) of
                                 true ->
@@ -933,6 +933,19 @@ before_request_action(Middleware, Middlewares, Controller, Req, SessionID, Info)
         false ->
             before_request(Middlewares, Controller, Req, SessionID, Info)
     end.
+
+%% merge result and info
+merge_result_and_info(ok, []) ->
+    ok;
+merge_result_and_info(ok, Data) ->
+    {ok, Data};
+merge_result_and_info({ok, Data}, InfoData) ->
+    {ok, lists:merge(InfoData, Data)};
+merge_result_and_info({ok, Data, Headers}, InfoData) ->
+    {ok, lists:merge(InfoData, Data), Headers};
+merge_result_and_info(Result, _) ->
+    %% Return result, if merge is imposible
+    Result.
 
 after_request([], _Controller, _Req, _SessionID, Result) ->
     Result;

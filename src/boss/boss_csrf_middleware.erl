@@ -2,8 +2,8 @@
 -export([before_/3, after_/4]).
 
 before_(Req, _SessionID, Info) ->
-    [CSRF_Token, NewToken] = get_csrf_token(Req, Info),
-    {ok, Data} = case lists:member(Req:request_method(), ['GET', 'HEAD', 'OPTIONS', 'TRACE']) of
+    [CSRF_Token, NewToken] = get_csrf_token(Req),
+    case lists:member(Req:request_method(), ['GET', 'HEAD', 'OPTIONS', 'TRACE']) of
         true -> accept_(Req, NewToken);
         false ->
             case proplists:is_defined(do_not_enforce_csrf_checks, Info) of
@@ -15,19 +15,15 @@ before_(Req, _SessionID, Info) ->
                             pre_check_csrf_token(Req, CSRF_Token, NewToken)
                     end
             end
-    end,
-    %%{ok, Data, [{cookie, io_lib:format("csrftoken=~s", [NewToken])}]}.
-    {ok, Data}.
+    end.
 
-after_(_Req, _SessionId, Result, _Headers) ->
-    io:format("Result so far: ~p.~n", [Result]),
-    %%{ok, [{csrf_token, get_random_string(12)}]}.
-    {ok, [], [{cookie, "test=123"}]}.
+after_(_Req, _SessionID, Result, _Headers) ->
+    Token = proplists:get_value(csrftoken, Result),
+    {ok, [], [mochiweb_cookies:cookie(csrftoken, Token, [{path, "/"}, {max_age, boss_session:get_session_exp_time()}])]}.
 
 pre_check_csrf_token(Req, CSRF_Token, NewToken) ->
     %% Pre check CSRF token
-    %%case CSRF_Token =:= none of
-    case NewToken =:= none of
+    case CSRF_Token =:= none of
         true ->
             reject_(Req, NewToken, no_csrf_cookie);
         false ->
@@ -55,8 +51,8 @@ check_csrf_token(Req, PostToken, CSRF_Token, NewToken) ->
 
 
 
-get_csrf_token(Req, Info) ->
-    case Req:cookie(csrftoken) of
+get_csrf_token(Req) ->
+    case Req:cookie("csrftoken") of
         undefined ->
             %% Generate New
             [none, get_random_string(12)];
@@ -80,13 +76,17 @@ check_referer(Req) ->
         undefined ->
             %%false;
             true;
-        Referer -> %% TODO: Finish referer check
+        _Referer -> %% TODO: Finish referer check
             true
     end.
 
 accept_(_Req, Token) ->
-    {ok, [{csrftoken, Token}]}.
+    {ok, [{csrftoken, Token},
+          {csrf_input, csrf_input_(Token)}]}.
 
-reject_(_Req, Token, Reason) ->
-    io:format("~n~n~nREJECTED!!!!!~nReason: ~p~n~n~n", [Reason]),
-    {ok, [{csrftoken, Token}]}.
+reject_(_Req, Token, _Reason) ->
+    {error, [{csrftoken, Token},
+            {csrf_input, csrf_input_(Token)}]}.
+
+csrf_input_(Token) ->
+    io_lib:format("<input type=\"hidden\" name=\"csrfmiddlewaretoken\" value=\"~s\" />", [Token]).
