@@ -2,12 +2,12 @@
 -module(boss_controller_adapter_pmod).
 -compile(export_all).
 
-accept(Application, Controller) ->
-    Module = list_to_atom(boss_files:web_controller(Application, Controller)),
-    code:which(Module) =/= non_existing.
+accept(Application, Controller, ControllerList) ->
+    Module = boss_compiler_adapter_erlang:controller_module(Application, Controller),
+    lists:member(Module, ControllerList).
 
-init(Application, Controller, Req, SessionID) ->
-    Module = list_to_atom(boss_files:web_controller(Application, Controller)),
+init(Application, Controller, ControllerList, Req, SessionID) ->
+    Module = list_to_atom(boss_files:web_controller(Application, Controller, ControllerList)),
     ExportStrings = lists:map(
         fun({Function, Arity}) -> {atom_to_list(Function), Arity} end,
         Module:module_info(exports)),
@@ -21,6 +21,13 @@ before_filter({ControllerInstance, ExportStrings}, Action, RequestMethod, Tokens
     case proplists:get_value("before_", ExportStrings) of
         2 -> ControllerInstance:before_(Action);
         4 -> ControllerInstance:before_(Action, RequestMethod, Tokens);
+        _ -> ok
+    end.
+
+cache_info({ControllerInstance, ExportStrings}, Action, Tokens, Info) ->
+    case proplists:get_value("cache_", ExportStrings) of
+        3 -> ControllerInstance:cache_(Action, Tokens);
+        4 -> ControllerInstance:cache_(Action, Tokens, Info);
         _ -> ok
     end.
 

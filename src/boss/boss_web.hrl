@@ -11,6 +11,7 @@
         translator_sup_pid,
         translator_pid,
         model_modules = [],
+        view_modules = [],
         controller_modules = []
     }).
 

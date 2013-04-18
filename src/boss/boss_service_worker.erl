@@ -12,7 +12,7 @@
 
 %% API
 -export([start_link/2]).
--export([incoming/5, join/4, close/4]).
+-export([incoming/5, join/4, close/4, broadcast/2]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -41,6 +41,9 @@ incoming(Service, ServiceUrl, WebSocketId, SessionId, Msg) ->
 
 join(Service, ServiceUrl, WebSocketId, SessionId) ->
     gen_server:call({global, Service}, {join_service, ServiceUrl, WebSocketId, SessionId }).
+
+broadcast(Service, Message) ->
+    gen_server:cast({global, Service}, {broadcast, Message}).
 
 close(Service, ServiceUrl, WebSocketId, SessionId) ->
     gen_server:call({global, Service}, {terminate_service, ServiceUrl, WebSocketId, SessionId}).
@@ -121,7 +124,6 @@ handle_call({join_service, ServiceUrl, WebSocketId, SessionId}, _From, State) ->
 		   SessionId, Internal, erlang:get_stacktrace()])
 	end;
 
-
 handle_call({terminate_service, ServiceUrl, WebSocketId, SessionId}, _From,  State) ->   
     #state{handler=Handler, internal=Internal} = State,    
     try Handler:handle_close(ServiceUrl, WebSocketId, SessionId, Internal) of
@@ -188,6 +190,25 @@ handle_cast({incoming_msg, ServiceUrl, WebSocketId, SessionId, Message}, State) 
 	      "** Stacktrace: ~p~n~n",
 	      [Handler, Class, Reason, ServiceUrl, WebSocketId,
 	       SessionId, Message, Internal, erlang:get_stacktrace()])	
+    end;
+
+handle_cast({broadcast, Message}, State) ->
+    #state{handler=Handler, internal=Internal} = State,
+    try Handler:handle_broadcast(Message, Internal) of
+	{noreply, NewInternal} ->
+	    {noreply, #state{handler=Handler, internal=NewInternal}};
+	{noreply, NewInternal, Timeout} ->
+	    {noreply, #state{handler=Handler, internal=NewInternal}, Timeout};
+	{stop, _Reason, NewInternal} ->
+	    {stop, _Reason, #state{handler=Handler, internal=NewInternal}}
+    catch Class:Reason ->
+	    error_logger:error_msg(
+	      "** Boss Service Handler ~p terminating in broadcast~n"
+	      "   for the reason ~p:~p~n"
+	      "Message    : ~p~n"
+	      "State    : ~p~n"
+	      "** Stacktrace: ~p~n~n",
+	      [Handler, Class, Reason, Message, Internal, erlang:get_stacktrace()])
     end;
 
 handle_cast(_Msg, State) ->

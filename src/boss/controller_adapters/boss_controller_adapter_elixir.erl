@@ -2,12 +2,12 @@
 -module(boss_controller_adapter_elixir).
 -compile(export_all).
 
-accept(Application, Controller) ->
-    Module = list_to_atom(boss_files:web_controller_ex(Application, Controller)),
-    code:which(Module) =/= non_existing.
+accept(Application, Controller, ControllerList) ->
+    Module = boss_compiler_adapter_elixir:controller_module(Application, Controller),
+    lists:member(Module, ControllerList).
 
-init(Application, Controller, Req, SessionID) ->
-    Module = list_to_atom(boss_files:web_controller_ex(Application, Controller)),
+init(Application, Controller, ControllerList, Req, SessionID) ->
+    Module = list_to_atom(boss_files:web_controller(Application, Controller, ControllerList)),
     ExportStrings = lists:map(
         fun({Function, Arity}) -> {atom_to_list(Function), Arity} end,
         Module:module_info(exports)),
@@ -18,6 +18,14 @@ before_filter({Module, ExportStrings, Req, SessionID}, Action, RequestMethod, To
     case proplists:get_value("before_", ExportStrings) of
         3 -> Module:before_(Req, SessionID, Action);
         5 -> Module:before_(Req, SessionID, Action, RequestMethod, BinTokens);
+        _ -> ok
+    end.
+
+cache_info({Module, ExportStrings, Req, SessionID}, Action, Tokens, AuthInfo) ->
+    BinTokens = lists:map(fun list_to_binary/1, Tokens),
+    case proplists:get_value("cache_", ExportStrings) of
+        4 -> Module:cache_(Req, SessionID, Action, BinTokens);
+        5 -> Module:cache_(Req, SessionID, Action, BinTokens, AuthInfo);
         _ -> ok
     end.
 

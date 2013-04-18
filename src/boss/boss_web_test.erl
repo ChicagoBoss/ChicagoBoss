@@ -18,9 +18,10 @@ bootstrap_test_env(Application, Adapter) ->
                     _ -> Acc
                 end
         end, [], [db_port, db_host, db_username, db_password, db_database]),
-    %ok = application:start(Application),
+    ok = application:start(Application),
+    ControllerList = boss_files:web_controller_list(Application),
     {ok, RouterSupPid} = boss_router:start([{application, Application}, 
-            {controllers, boss_files:web_controller_list(Application)}]),
+            {controllers, ControllerList}]),
     boss_db:start([{adapter, Adapter}|DBOptions]),
     boss_session:start(),
     boss_mq:start(),
@@ -46,7 +47,7 @@ run_tests([Application, Adapter|TestList]) ->
     AppInfo = bootstrap_test_env(list_to_atom(Application), list_to_atom(Adapter)),
     Pid = erlang:spawn(fun() -> app_info_loop(AppInfo) end),
     register(app_info, Pid),
-    io:format("~p~n", [TestList]),
+    io:format("Found tests: ~p~n", [TestList]),
     lists:map(fun(TestModule) ->
                 TestModuleAtom = list_to_atom(TestModule),
                 io:format("~nRunning: ~p~n", [TestModule]),
@@ -384,7 +385,7 @@ receive_response(RequesterPid, Assertions, Continuations) ->
     end.
 
 parse([], Body) ->
-    mochiweb_html:parse(Body);
+    mochiweb_html:parse([<<"<html>">>, Body, <<"</html>">>]);
 parse([Head|Tail], Body) ->
     case Head of
         {"Content-Type", "application/json"} -> mochijson2:decode(Body);

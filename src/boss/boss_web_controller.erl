@@ -2,7 +2,12 @@
 -behaviour(gen_server).
 -export([start_link/0, start_link/1, handle_request/3, process_request/5]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
+-export([handle_news_for_cache/3]).
 -define(DEBUGPRINT(A), error_logger:info_report("~~o)> " ++ A)).
+-define(PAGE_CACHE_PREFIX, "boss_web_controller_page").
+-define(PAGE_CACHE_DEFAULT_TTL, 60).
+-define(VARIABLES_CACHE_PREFIX, "boss_web_controller_variables").
+-define(VARIABLES_CACHE_DEFAULT_TTL, 60).
 
 -record(state, {
         applications = [],
@@ -47,14 +52,7 @@ terminate(_Reason, State) ->
 init(Config) ->
     case boss_env:get_env(log_enable, true) of
         false -> ok;
-        true ->
-            LogDir = boss_env:get_env(log_dir, "log"),
-            LogFile = make_log_file_name(LogDir),
-            ok = filelib:ensure_dir(LogFile),
-            error_logger:logfile(close),
-            ok = error_logger:logfile({open, LogFile}),
-            %ok = error_logger:tty(false),
-            ok = make_log_file_symlink(LogFile)
+        true -> lager:start()
     end,
 
     application:start(elixir),
@@ -67,7 +65,8 @@ init(Config) ->
                     {ok, Val} -> [{OptName, Val}|Acc];
                     _ -> Acc
                 end
-        end, [], [db_port, db_host, db_username, db_password, db_database]),
+        end, [], [db_port, db_host, db_username, db_password, db_database,
+            db_replication_set, db_read_mode, db_write_mode]),
     DBAdapter = boss_env:get_env(db_adapter, mock),
     DBShards = boss_env:get_env(db_shards, []),
     CacheEnable = boss_env:get_env(cache_enable, false),
@@ -121,7 +120,7 @@ init(Config) ->
     {ServerMod, RequestMod, ResponseMod} = case boss_env:get_env(server, misultin) of
         mochiweb -> {mochiweb_http, mochiweb_request_bridge, mochiweb_response_bridge};
         misultin -> {misultin, misultin_request_bridge, misultin_response_bridge};
-	cowboy -> {cowboy, mochiweb_request_bridge, mochiweb_response_bridge}
+        cowboy -> {cowboy, mochiweb_request_bridge, mochiweb_response_bridge}
     end,
     SSLEnable = boss_env:get_env(ssl_enable, false),
     SSLOptions = boss_env:get_env(ssl_options, []),
@@ -147,20 +146,18 @@ init(Config) ->
         cowboy ->
 		  %Dispatch = [{'_', [{'_', boss_mochicow_handler, [{loop, {boss_mochicow_handler, loop}}]}]}],
 		  error_logger:info_msg("Starting cowboy... on ~p~n", [MasterNode]),
+		  application:start(ranch),
 		  application:start(cowboy),
 		  HttpPort = boss_env:get_env(port, 8001),
-                  case SSLEnable of 
-		      false -> 
-			  error_logger:info_msg("Starting http listener... on ~p ~n", [HttpPort]),
-			  cowboy:start_listener(boss_http_listener, 100,
-						cowboy_tcp_transport, [{port, HttpPort}],
-						cowboy_http_protocol, []);
-		      true ->
-			  error_logger:info_msg("Starting https listener... on ~p ~n", [HttpPort]),
-			  SSLConfig = [{port, HttpPort}]++SSLOptions, 
-			  cowboy:start_listener(boss_https_listener, 100,
-						cowboy_ssl_transport, SSLConfig,
-						cowboy_http_protocol, [])
+          AcceptorCount = boss_env:get_env(acceptor_processes, 100),
+          case SSLEnable of 
+              false -> 
+                  error_logger:info_msg("Starting http listener... on ~p ~n", [HttpPort]),
+                  cowboy:start_http(boss_http_listener, AcceptorCount, [{port, HttpPort}], [{env, []}]);
+              true ->
+                  error_logger:info_msg("Starting https listener... on ~p ~n", [HttpPort]),
+                  SSLConfig = [{port, HttpPort}]++SSLOptions, 
+                  cowboy:start_https(boss_https_listener, AcceptorCount, SSLConfig, [{env, []}])
 		  end,
 		  if 
               MasterNode =:= ThisNode ->
@@ -183,6 +180,7 @@ handle_info(timeout, State) ->
                 DocPrefix = boss_env:get_env(AppName, doc_prefix, "/doc"),
                 DomainList = boss_env:get_env(AppName, domains, all),
                 ModelList = boss_files:model_list(AppName),
+                ViewList = boss_files:view_module_list(AppName),
                 IsMasterNode = boss_env:is_master_node(),
                 if 
                     IsMasterNode ->
@@ -217,6 +215,7 @@ handle_info(timeout, State) ->
                     doc_prefix = DocPrefix,
                     domains = DomainList,
                     model_modules = ModelList,
+                    view_modules = ViewList,
                     controller_modules = ControllerList
                 }
         end, Applications),
@@ -224,33 +223,31 @@ handle_info(timeout, State) ->
     %% cowboy dispatch rule for static content
     case boss_env:get_env(server, misultin) of	    
         cowboy ->
-	    AppStaticDispatches = lists:map(
-				    fun(AppName) ->
-					    AppPath = boss_env:get_env(AppName, path, "./"),  
-					    BaseURL = boss_env:get_env(AppName, base_url, "/"),					    
+            AppStaticDispatches = lists:map(
+                fun(AppName) ->
+                        BaseURL = boss_env:get_env(AppName, base_url, "/"),					    
                         StaticPrefix = boss_env:get_env(AppName, static_prefix, "/static"),
-					    Path = reformat_path(BaseURL++StaticPrefix),
-					    Handler = cowboy_http_static,
+					    Path = BaseURL++StaticPrefix,
+					    Handler = cowboy_static,
 					    Opts = [
-						    {directory, list_to_binary(AppPath ++ "/priv/static")},
+                            {directory, {priv_dir, AppName, [<<"static">>]}},
 						    {mimetypes, {fun mimetypes:path_to_mimes/2, default}}
-						   ],
-					    {Path ++ ['...'], Handler, Opts}
-				    end, Applications),
+                        ],
+                       {Path ++ "[...]", Handler, Opts}
+                end, Applications),
 
-	    BossDispatch = [{'_', boss_mochicow_handler, 
-			     [{loop, {boss_mochicow_handler, loop}}]
-			    }],
+            BossDispatch = [{'_', boss_mochicow_handler, [{loop, {boss_mochicow_handler, loop}}]}],
+            % [{"/", boss_mochicow_handler, []}],
+            %Dispatch = [{'_', 
 
-	    Dispatch = Dispatch = [{'_', AppStaticDispatches ++ BossDispatch}],
-	    ProtoOpts = [{dispatch, Dispatch}],
-        CowboyListener = case boss_env:get_env(ssl_enable, false) of
-            true -> boss_https_listener;
-            _ -> boss_http_listener
-        end,
-	    cowboy:set_protocol_options(CowboyListener, ProtoOpts);
+            Dispatch = [{'_', AppStaticDispatches ++ BossDispatch}],
+            CowboyListener = case boss_env:get_env(ssl_enable, false) of
+                true -> boss_https_listener;
+                _ -> boss_http_listener
+            end,
+            cowboy:set_env(CowboyListener, dispatch, cowboy_router:compile(Dispatch));
         _Oops -> 		       
-	    _Oops
+            _Oops
     end,
     {noreply, State#state{ applications = AppInfoList }}.
 
@@ -454,10 +451,15 @@ build_dynamic_response(App, Request, Response, Url) ->
     AppInfo = boss_web:application_info(App),
     TranslatorPid = boss_web:translator_pid(App),
     RouterPid = boss_web:router_pid(App),
+    ControllerList = boss_files:web_controller_list(App),
     {Time, {StatusCode, Headers, Payload}} = timer:tc(?MODULE, process_request, [
-            AppInfo#boss_app_info{ translator_pid = TranslatorPid, router_pid = RouterPid }, 
+            AppInfo#boss_app_info{ 
+                translator_pid = TranslatorPid, 
+                router_pid = RouterPid,
+                controller_modules = ControllerList
+            }, 
             Request, Mode, Url, SessionID]),
-    ErrorFormat = "~s ~s [~p] ~p ~pms~n", 
+    ErrorFormat = "~s ~s [~p] ~p ~pms", 
     RequestMethod = Request:request_method(),
     FullUrl = Request:path(),
     ErrorArgs = [RequestMethod, FullUrl, App, StatusCode, Time div 1000],
@@ -762,14 +764,16 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
 
             Adapter = lists:foldl(fun
                     (A, false) ->
-                        case A:accept(AppInfo#boss_app_info.application, Controller) of
+                        case A:accept(AppInfo#boss_app_info.application, Controller, 
+                                AppInfo#boss_app_info.controller_modules) of
                             true -> A;
                             _ -> false
                         end;
                     (_, Acc) -> Acc
                 end, false, Adapters),
 
-            AdapterInfo = Adapter:init(AppInfo#boss_app_info.application, Controller, Req, SessionID),
+            AdapterInfo = Adapter:init(AppInfo#boss_app_info.application, Controller, 
+                AppInfo#boss_app_info.controller_modules, Req, SessionID),
             RequestMethod = Req:request_method(),
 
             BeforeInfo = before_request(boss_env:get_env(AppInfo#boss_app_info.application, middlewares, []),
@@ -803,25 +807,91 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
                         Method -> Method
                     end,
 
-                    ActionResult = Adapter:action(AdapterInfo, Action, EffectiveRequestMethod, Tokens, Info),
                     LangResult = Adapter:language(AdapterInfo, Action, Info),
 
-                    LangHeaders = case LangResult of
-                        auto -> [];
-                        _ -> [{"Content-Language", LangResult}]
+                    CacheKey = {Controller, Action, Tokens, LangResult},
+
+                    CacheInfo = case (boss_env:get_env(cache_enable, false) andalso 
+                            EffectiveRequestMethod =:= 'GET') of
+                        true -> Adapter:cache_info(AdapterInfo, Action, Tokens, Info);
+                        false -> none
                     end,
 
-                    FinalResult = after_request(boss_env:get_env(AppInfo#boss_app_info.application, middlewares, []),
-                                          Controller, Req, SessionID, ActionResult),
-                    Result = case FinalResult of
+                    CachedRenderedResult = case CacheInfo of
+                        {page, _} -> boss_cache:get(?PAGE_CACHE_PREFIX, CacheKey);
+                        _ -> undefined
+                    end,
+
+                    {CacheTTL, CacheWatchString} = case CacheInfo of
+                        {page, CacheOptions} ->
+                            {proplists:get_value(seconds, CacheOptions, ?PAGE_CACHE_DEFAULT_TTL),
+                                proplists:get_value(watch, CacheOptions)};
+                        {vars, CacheOptions} ->
+                            {proplists:get_value(seconds, CacheOptions, ?VARIABLES_CACHE_DEFAULT_TTL),
+                                proplists:get_value(watch, CacheOptions)};
+                        _ ->
+                            {undefined, undefined}
+                    end,
+
+                    RenderedResult = case CachedRenderedResult of
                         undefined ->
-                            render_view(Location, AppInfo, Req, SessionID, [{"_before", Info}], LangHeaders);
-                        FinalResult ->
-                            process_action_result({Location, Req, SessionID, [Location|LocationTrail]}, 
-                                FinalResult, LangHeaders, AppInfo, Info)
+                            CachedActionResult = case CacheInfo of
+                                {vars, _} -> boss_cache:get(?VARIABLES_CACHE_PREFIX, CacheKey);
+                                _ -> undefined
+                            end,
+
+                            ActionTempResult = case CachedActionResult of
+                                undefined -> Adapter:action(AdapterInfo, Action, EffectiveRequestMethod, Tokens, Info);
+                                _ -> CachedActionResult
+                            end,
+
+                            ActionResult = after_request(boss_env:get_env(AppInfo#boss_app_info.application, middlewares, []),
+                                                         Controller, Req, SessionID, ActionTempResult),
+
+                            case (CachedActionResult =/= undefined andalso is_tuple(ActionResult) andalso element(1, ActionResult) =:= ok) of
+                                true ->
+                                    case CacheWatchString of
+                                        undefined -> ok;
+                                        _ ->
+                                            boss_news:set_watch({?VARIABLES_CACHE_PREFIX, CacheKey}, CacheWatchString,
+                                                fun ?MODULE:handle_news_for_cache/3, {?VARIABLES_CACHE_PREFIX, CacheKey}, 
+                                                CacheTTL)
+                                    end,
+                                    boss_cache:set(?VARIABLES_CACHE_PREFIX, CacheKey, ActionResult, CacheTTL);
+                                false ->
+                                    ok
+                            end,
+
+                            LangHeaders = case LangResult of
+                                auto -> [];
+                                _ -> [{"Content-Language", LangResult}]
+                            end,
+
+                            case ActionResult of
+                                undefined ->
+                                    render_view(Location, AppInfo, Req, SessionID, [{"_before", Info}], LangHeaders);
+                                ActionResult ->
+                                    process_action_result({Location, Req, SessionID, [Location|LocationTrail]}, 
+                                        ActionResult, LangHeaders, AppInfo, Info)
+                            end;
+                        Other ->
+                            Other
                     end,
 
-                    Adapter:after_filter(AdapterInfo, Action, Result, Info);
+                    case (CachedRenderedResult =/= undefined andalso is_tuple(RenderedResult) andalso element(1, RenderedResult) =:= ok) of
+                        true ->
+                            case CacheWatchString of
+                                undefined -> ok;
+                                _ ->
+                                    boss_news:set_watch({?PAGE_CACHE_PREFIX, CacheKey}, CacheWatchString,
+                                        fun ?MODULE:handle_news_for_cache/3, {?PAGE_CACHE_PREFIX, CacheKey}, CacheTTL)
+                            end,
+                            boss_cache:set(?PAGE_CACHE_PREFIX, CacheKey, RenderedResult, CacheTTL);
+                        false ->
+                            ok
+                    end,
+
+                    Adapter:after_filter(AdapterInfo, Action, RenderedResult, Info);
                 {redirect, Where} ->
                     {redirect, process_redirect(Controller, Where, AppInfo)}
             end
@@ -909,9 +979,14 @@ after_request_action(Middleware, Middlewares, Controller, Req, SessionID, Data, 
             after_request(Middlewares, Controller, Req, SessionID, {ok, Data, Headers})
     end.
 
+handle_news_for_cache(_, _, {Prefix, Key}) ->
+    boss_cache:delete(Prefix, Key),
+    {ok, cancel_watch}.
+
 process_location(Controller,  [{_, _}|_] = Where, AppInfo) ->
     {_, TheController, TheAction, CleanParams} = process_redirect(Controller, Where, AppInfo),
-    ControllerModule = list_to_atom(boss_files:web_controller(AppInfo#boss_app_info.application, Controller)),
+    ControllerModule = list_to_atom(boss_files:web_controller(
+            AppInfo#boss_app_info.application, Controller, AppInfo#boss_app_info.controller_modules)),
     ActionAtom = list_to_atom(TheAction),
     {Tokens, []} = boss_controller_lib:convert_params_to_tokens(CleanParams, ControllerModule, ActionAtom),
     {TheController, TheAction, Tokens}.
@@ -998,7 +1073,8 @@ render_view({Controller, Template, _}, AppInfo, Req, SessionID, Variables, Heade
             (Ext, {error, not_found}) ->
                 ViewPath = boss_files:web_view_path(Controller, Template, Ext),
                 boss_load:load_view_if_dev(AppInfo#boss_app_info.application, 
-                    ViewPath, AppInfo#boss_app_info.translator_pid);
+                    ViewPath, AppInfo#boss_app_info.view_modules,
+                    AppInfo#boss_app_info.translator_pid);
             (_, Acc) -> 
                 Acc
         end, {error, not_found}, TryExtensions),
@@ -1091,48 +1167,10 @@ translation_coverage(Strings, Locale, TranslatorPid) ->
 
 merge_headers(Headers1, Headers2) ->
     HeadersToAdd = lists:foldl(fun(Key, Acc) ->
-                case proplists:is_defined(Key, Headers1) of
-                    true ->
-                        Acc;
-                    false ->
-                        proplists:lookup_all(Key, Headers2) ++ Acc
+                case (proplists:is_defined(Key, Headers1) orelse (is_list(Key) andalso 
+                            proplists:is_defined(list_to_binary(Key), Headers1))) of
+                    true -> Acc;
+                    false -> proplists:lookup_all(Key, Headers2) ++ Acc
                 end
         end, [], proplists:get_keys(Headers2)),
     HeadersToAdd ++ Headers1.
-
-make_log_file_name(Dir) ->
-    {{Y, M, D}, {Hour, Min, Sec}} = calendar:local_time(), 
-    filename:join([Dir, 
-            lists:flatten(io_lib:format("boss_error-~4..0B-~2..0B-~2..0B.~2..0B-~2..0B-~2..0B.log", 
-                    [Y, M, D, Hour, Min, Sec]))]).
-
-
-make_log_file_symlink(LogFile) ->
-    SymLink = filename:join([filename:dirname(LogFile), "boss_error-LATEST.log"]),
-     case os:type() of
-        {unix,_} ->
-            file:delete(SymLink),
-            file:make_symlink(filename:basename(LogFile), SymLink);
-        {win32,_} ->
-            file:delete(SymLink),
-            {ok, Cwd} = file:get_cwd(),
-            LinkTarget = Cwd ++ "/log/" ++ filename:basename(LogFile),
-            mk_win_dir_syslink("boss_error-LATEST.log", filename:dirname(LogFile), LinkTarget)
-     end.
-
-%% @doc Make symbolik link in current directory on windows vista or highter
-mk_win_dir_syslink(LinkName, DestDir, LinkTarget) ->
-    S = (list_to_atom(lists:append(["cd ", DestDir, "& mklink ", LinkName, " \"", LinkTarget, "\""]))),
-    os:cmd(S),
-    ok.
-
-%% from max lapshin
-reformat_path(Path) when is_list(Path) andalso is_integer(hd(Path)) ->
-  TokenizedPath = string:tokens(Path,"/"),
-  [list_to_binary(Part) || Part <- TokenizedPath];
-%% If path is just a binary, let's make it a string and treat it as such
-reformat_path(Path) when is_binary(Path) ->
-  reformat_path(binary_to_list(Path));
-%% If path is a list of binaries, then we assumed it's formatted for cowboy format already
-reformat_path(Path) when is_list(Path) andalso is_binary(hd(Path)) ->
-  Path.

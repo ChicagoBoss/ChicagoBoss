@@ -83,7 +83,7 @@ Notes:
 3. Open up boss.config and set db_adapter to mnesia
 
 
-Using Riak (EXPERIMENTAL)
+Using Riak
 -------------------------
 
 Riak is a NoSQL database developed by Basho Technologies.
@@ -106,3 +106,35 @@ Then run the following command in your Riak installation for each model:
 E.g. if you have a "greeting" model the command should be
    
    bin/search-cmd install greetings
+
+Database Migrations
+-------------------
+
+Chicago Boss supports Rails-like database migrations, which work like so:
+
+    > boss_migrate:make(your_app_name, create_some_table).
+
+This creates a file in priv/migrations/ with a name like 1363463613_create_some_table.erl
+
+Edit this file in order to do something along these lines:
+
+    {create_some_table,
+      fun(up) ->
+	      boss_db:execute("create table some_table ( id serial unique, name varchar,
+	                       birth_date timestamp, created_at timestamp )");
+	 (down) ->
+	      boss_db:execute("drop table some_table")
+      end}.
+
+To actually run the migrations, you'd do
+
+     > boss_migrate:run(gsd_web).
+
+You can also redo the last migration - which is useful when you're
+developing and perhaps haven't got the table definition quite right:
+
+     > boss_migrate:redo(gsd_web, create_some_table).
+
+Internally, migrations are tracked in a table called
+"schema_migrations" which is automatically created and managed by
+boss_db.

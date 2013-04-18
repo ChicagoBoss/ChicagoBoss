@@ -52,15 +52,15 @@ defmodule Boss.WebController do
     end
   end
 
-  defmacro after_(action, result, block) do
+  defmacro cache_(action, tokens, block) do
     quote do
-      def after_(var!(req), var!(session_id), unquote(action), unquote(result)), unquote(block)
+      def cache_(var!(req), var!(session_id), unquote(action), unquote(tokens)), unquote(block)
     end
   end
 
-  defmacro after_(action, result, info, block) do
+  defmacro cache_(action, tokens, info, block) do
     quote do
-      def after_(var!(req), var!(session_id), unquote(action), unquote(result), unquote(info)), unquote(block)
+      def cache_(var!(req), var!(session_id), unquote(action), unquote(tokens), unquote(info)), unquote(block)
     end
   end
 
@@ -73,6 +73,18 @@ defmodule Boss.WebController do
   defmacro lang_(action, info, block) do
     quote do
       def lang_(var!(req), var!(session_id), unquote(action), unquote(info)), unquote(block)
+    end
+  end
+
+  defmacro after_(action, result, block) do
+    quote do
+      def after_(var!(req), var!(session_id), unquote(action), unquote(result)), unquote(block)
+    end
+  end
+
+  defmacro after_(action, result, info, block) do
+    quote do
+      def after_(var!(req), var!(session_id), unquote(action), unquote(result), unquote(info)), unquote(block)
     end
   end
 

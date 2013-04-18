@@ -52,7 +52,7 @@ handle_call({handle, StatusCode}, _From, State) ->
         [] ->
             not_found;
         [#boss_handler{ application = App, controller = C, action = A, params = P }] ->
-            ControllerModule = list_to_atom(boss_files:web_controller(App, C)),
+            ControllerModule = list_to_atom(boss_files:web_controller(App, C, State#state.controllers)),
             {Tokens, []} = boss_controller_lib:convert_params_to_tokens(P, ControllerModule, list_to_atom(A)),
             {ok, {App, C, A, Tokens}}
     end,
@@ -79,7 +79,7 @@ handle_call({route, Url}, _From, State) ->
                     not_found
             end;
         #boss_route{ application = App, controller = C, action = A, params = P } -> 
-            ControllerModule = list_to_atom(boss_files:web_controller(App, C)),
+            ControllerModule = list_to_atom(boss_files:web_controller(App, C, State#state.controllers)),
             {Tokens, []} = boss_controller_lib:convert_params_to_tokens(P, ControllerModule, list_to_atom(A)),
             {ok, {App, C, A, Tokens}}
     end,
@@ -117,7 +117,7 @@ handle_info(_Info, State) ->
 
 load(State) ->
     RoutesFile = boss_files:routes_file(State#state.application),
-    error_logger:info_msg("Loading routes from ~p ....~n", [RoutesFile]),
+    error_logger:info_msg("Loading routes from ~p ....", [RoutesFile]),
     case file:consult(RoutesFile) of
         {ok, OrderedRoutes} -> 
             lists:foldl(fun
@@ -171,7 +171,8 @@ is_controller(State, Controller) ->
 default_action(State, Controller) ->
     case is_controller(State, Controller) of
         true ->
-            ControllerModule = list_to_atom(boss_files:web_controller(State#state.application, Controller)),
+            ControllerModule = list_to_atom(boss_files:web_controller(State#state.application, 
+                    Controller, State#state.controllers)),
             case proplists:get_value(default_action, ControllerModule:module_info(attributes)) of
                 [DefaultAction] when is_atom(DefaultAction) ->
                     atom_to_list(DefaultAction);

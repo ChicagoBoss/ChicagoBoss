@@ -17,6 +17,7 @@
         model_path/0,
         model_path/1,
         routes_file/1,
+        root_priv_dir/1,
         static_path/1,
         test_list/1,
         test_path/0,
@@ -25,16 +26,17 @@
         view_html_tags_path/0,
         view_filter_helper_list/1,
         view_tag_helper_list/1,
+        view_module_list/1,
+        compiler_adapter_for_extension/1,
         template_adapter_for_extension/1,
         template_extensions/0,
         is_controller_present/3,
-        web_controller/2,
-        web_controller_ex/2,
+        web_controller/3,
         web_controller_list/1,
         web_controller_path/0,
         web_view_path/0,
         web_view_path/2,
-        web_view_path/3
+	 web_view_path/3
     ]).
 
 root_dir() -> filename:absname(""). %filename:join([filename:dirname(code:which(?MODULE)), ".."]).
@@ -134,6 +136,8 @@ model_list(AppName) ->
             lists:map(fun atom_to_list/1, boss_env:get_env(AppName, model_modules, []))
     end.
 
+web_controller_list(AppName) when is_list(AppName) ->
+    web_controller_list(list_to_atom(AppName));
 web_controller_list(AppName) ->
     case boss_env:is_developing_app(AppName) of
         true ->
@@ -142,20 +146,43 @@ web_controller_list(AppName) ->
             lists:map(fun atom_to_list/1, boss_env:get_env(AppName, controller_modules, []))
     end.
 
-is_controller_present(Application, Controller, ModuleList) ->
-    (lists:member(web_controller(Application, Controller), ModuleList)
-        orelse lists:member(web_controller_ex(Application, Controller), ModuleList)).
+view_module_list(AppName) ->
+    case boss_env:is_developing_app(AppName) of
+        true -> [];
+        false ->
+            lists:map(fun atom_to_list/1, boss_env:get_env(AppName, view_modules, []))
+    end.
 
-web_controller(AppName, Controller) ->
-    lists:concat([AppName, "_", Controller, "_controller"]).
+is_controller_present(AppName, Controller, ModuleList) ->
+    CompilerAdapters = compiler_adapters(),
+    lists:foldl(fun(Adapter, false) ->
+                ControllerModule = Adapter:controller_module(AppName, Controller),
+                lists:member(ControllerModule, ModuleList);
+            (_, true) -> true
+        end, false, CompilerAdapters).
 
-web_controller_ex(AppName, Controller) ->
-    lists:concat(["Elixir", "-", inflector:camelize(atom_to_list(AppName)), "-", 
-            inflector:camelize(Controller), "Controller"]).
+web_controller(AppName, Controller, ControllerList) ->
+    CompilerAdapters = compiler_adapters(),
+    lists:foldl(fun(Adapter, undefined) ->
+                ControllerModule = Adapter:controller_module(AppName, Controller),
+                case lists:member(ControllerModule, ControllerList) of
+                    true -> ControllerModule;
+                    false -> undefined
+                end;
+            (_, Acc) -> Acc
+        end, undefined, CompilerAdapters).
+
+compiler_adapters() -> [boss_compiler_adapter_erlang, boss_compiler_adapter_elixir].
+
+compiler_adapter_for_extension("."++Extension) ->
+    adapter_for_extension(Extension, compiler_adapters()).
 
 template_adapters() -> [boss_template_adapter_erlydtl, boss_template_adapter_jade, boss_template_adapter_eex].
 
 template_adapter_for_extension("."++Extension) ->
+    adapter_for_extension(Extension, template_adapters()).
+
+adapter_for_extension(Extension, Adapters) ->
     lists:foldl(fun
             (Adapter, undefined) -> 
                 case lists:member(Extension, Adapter:file_extensions()) of
@@ -163,7 +190,7 @@ template_adapter_for_extension("."++Extension) ->
                     false -> undefined
                 end;
             (_, Acc) -> Acc
-        end, undefined, template_adapters()).
+        end, undefined, Adapters).
 
 template_extensions() ->
     lists:foldl(fun (Adapter, Acc) -> Acc ++ Adapter:file_extensions() end,
@@ -204,24 +231,27 @@ module_list(Application, Dirs) ->
 module_list1([], _Application, ModuleAcc) ->
     lists:sort(ModuleAcc);
 module_list1([Dir|Rest], Application, ModuleAcc) ->
-    case file:list_dir(Dir) of
+    CompilerAdapters = compiler_adapters(),
+    ExtensionProplist = lists:foldl(fun
+            (Adapter, Acc) ->
+                lists:map(fun(Ext) -> {Ext, Adapter} end, Adapter:file_extensions()) ++ Acc
+        end, [], CompilerAdapters),
+    ModuleAcc1 = case file:list_dir(Dir) of
         {ok, Files} ->
-            Modules = lists:map(fun(X) -> 
-                        case filename:extension(X) of
-                            ".erl" -> filename:basename(X, ".erl");
-                            ".ex" -> "Elixir-"++inflector:camelize(atom_to_list(Application))++
-                                "-"++inflector:camelize(filename:basename(X, ".ex"))
+            lists:foldl(fun
+                    ("."++_, Acc) -> Acc;
+                    (File, Acc) ->
+                        [$.|Extension] = filename:extension(File),
+                        case proplists:get_value(Extension, ExtensionProplist) of
+                            undefined -> Acc;
+                            Adapter -> [Adapter:module_name_for_file(Application, File)|Acc]
                         end
-                end, lists:filter(fun
-                        ("."++_) ->
-                            false;
-                        (File) -> (lists:suffix(".erl", File) orelse 
-                                lists:suffix(".ex", File))
-                    end, Files)),
-            module_list1(Rest, Application, Modules ++ ModuleAcc);
+                end, ModuleAcc, Files);
         _ ->
-            module_list1(Rest, Application, ModuleAcc)
-    end.
+            ModuleAcc
+    end,
+    module_list1(Rest, Application, ModuleAcc1).
 
 dot_app_src(AppName) ->
 	filename:join(["src", lists:concat([AppName, ".app.src"])]).
+
