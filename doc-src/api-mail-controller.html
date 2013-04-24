@@ -22,9 +22,12 @@
 <p>If the simple method doesn't meet your needs, Chicago Boss provides a way to send email using controllers and views.</p>
 <p>Mail controller logic should go into <code>src/mail/my_application_outgoing_mail_controller.erl</code> in your project directory, and templates should go into <code>src/mail/view/</code>. To send an email from a web controller, call:</p>
 <div class="code">
-    boss_mail:send_template(my_application, foo_message, [Arg1, Arg2, ...])
+    boss_mail:send_template(my_application, foo_message, [Arg1, Arg2, ...])<br>
+    boss_mail:send_template(my_application, foo_message, [Arg1, Arg2, ...], fun Callback/1)
 </div>
-<p>That will invoke <code>outgoing_mail_controller:foo_message(Arg1, Arg2, ...)</code> and use the return value to populate the templates <code>src/mail/view/foo_message.txt</code> and <code>src/mail/view/foo_message.html</code>, then send the email in a background process. Your mail controller function should return:</div>
+<p>That will invoke <code>outgoing_mail_controller:foo_message(Arg1, Arg2, ...)</code> and use the return value to populate the templates <code>src/mail/view/foo_message.txt</code> and <code>src/mail/view/foo_message.html</code>, then send the email in a background process. If <code>Callback</code> is provided, the return value from the email delivery will be passed to it, either <code>{ok, Receipt}</code> or <code>{error, Reason}</code>.</p>
+
+<p>Your mail controller function should return:</div>
 <div class="code">
     {ok, FromAddress, ToAddress, HeaderFields} | <br />
     {ok, FromAddress, ToAddress, HeaderFields, Variables} | <br />
