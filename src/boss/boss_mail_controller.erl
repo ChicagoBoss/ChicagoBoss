@@ -19,9 +19,10 @@ init(Options) ->
     {ok, Conn} = MailDriver:start(),
     {ok, #state{driver = MailDriver, connection = Conn}}.
 
-handle_call({deliver, FromAddress, ToAddress, BodyFun}, _From, State) ->
+handle_call({deliver, FromAddress, ToAddress, BodyFun, ResultFun}, _From, State) ->
     Driver = State#state.driver,
-    {reply, Driver:deliver(State#state.connection, FromAddress, ToAddress, BodyFun), State}.
+    {reply, Driver:deliver(State#state.connection, 
+            FromAddress, ToAddress, BodyFun, ResultFun), State}.
 
 handle_cast(_Request, State) ->
     {noreply, State}.

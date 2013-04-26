@@ -1,5 +1,6 @@
 -module(boss_mail).
--export([start/1, stop/0, send_template/3, send/4, send/5]).
+-export([start/1, stop/0, send_template/3, send_template/4, 
+        send/4, send/5, send/6]).
 
 start(Options) ->
     boss_mail_sup:start_link(Options).
@@ -8,33 +9,43 @@ stop() ->
     ok.
 
 send_template(Application, Action, Args) ->
+    send_template(Application, Action, Args, undefined).
+
+send_template(Application, Action, Args, Callback) ->
     boss_load:load_mail_controllers(Application),
     Controller = list_to_atom(lists:concat([Application, "_outgoing_mail_controller"])),
     case apply(Controller, Action, Args) of
         {ok, FromAddress, ToAddress, HeaderFields} ->
-            send_message(Application, FromAddress, ToAddress, Action, HeaderFields, [], []);
+            send_message(Application, FromAddress, ToAddress, Action, HeaderFields, [], [], Callback);
         {ok, FromAddress, ToAddress, HeaderFields, Variables} -> 
-            send_message(Application, FromAddress, ToAddress, Action, HeaderFields, Variables, []);
+            send_message(Application, FromAddress, ToAddress, Action, HeaderFields, Variables, [], Callback);
         {ok, FromAddress, ToAddress, HeaderFields, Variables, Options} -> 
-            send_message(Application, FromAddress, ToAddress, Action, HeaderFields, Variables, Options);
+            send_message(Application, FromAddress, ToAddress, Action, HeaderFields, Variables, Options, Callback);
         nevermind ->
             ok
     end.
 
-send(FromAddress, ToAddress, Subject, Body, BodyArgs) ->
-    send(FromAddress, ToAddress, Subject, io_lib:format(Body, BodyArgs)).
-
 send(FromAddress, ToAddress, Subject, Body) ->
+    do_send(FromAddress, ToAddress, Subject, Body, undefined).
+
+send(FromAddress, ToAddress, Subject, Body, BodyArgs) ->
+    send(FromAddress, ToAddress, Subject, Body, BodyArgs, undefined).
+
+send(FromAddress, ToAddress, Subject, Body, BodyArgs, Callback) ->
+    do_send(FromAddress, ToAddress, Subject, io_lib:format(Body, BodyArgs), Callback).
+
+do_send(FromAddress, ToAddress, Subject, Body, Callback) ->
     MessageHeader = build_message_header([
             {"Subject", Subject},
             {"To", ToAddress},
             {"From", FromAddress}], "text/plain"), 
     gen_server:call(boss_mail, {deliver, FromAddress, ToAddress, 
-            fun() -> [MessageHeader, "\r\n", convert_unix_newlines_to_dos(Body)] end}).
+            fun() -> [MessageHeader, "\r\n", convert_unix_newlines_to_dos(Body)] end,
+            Callback}).
 
-send_message(App, FromAddress, ToAddress, Action, HeaderFields, Variables, Options) ->
+send_message(App, FromAddress, ToAddress, Action, HeaderFields, Variables, Options, Callback) ->
     BodyFun = fun() -> build_message(App, Action, HeaderFields, Variables, Options) end,
-    gen_server:call(boss_mail, {deliver, FromAddress, ToAddress, BodyFun}).
+    gen_server:call(boss_mail, {deliver, FromAddress, ToAddress, BodyFun, Callback}).
 
 build_message(App, Action, HeaderFields, Variables, Options) ->
     ContentLanguage = proplists:get_value("Content-Language", HeaderFields),

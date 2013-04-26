@@ -1,5 +1,5 @@
 -module(boss_mail_driver_smtp).
--export([start/0, stop/1, deliver/4]).
+-export([start/0, stop/1, deliver/5]).
 
 start() ->
     OptionsBase = [{ssl, false}, {hostname, smtp_util:guess_FQDN()}, {retries, 1}],
@@ -40,7 +40,7 @@ get_credentials() ->
 stop(_) ->
     ok.
 
-deliver(Options, FromAddress, ToAddress, BodyFun) ->
+deliver(Options, FromAddress, ToAddress, BodyFun, ResultFun) ->
     MailOptions = case proplists:lookup(relay, Options) of
         none ->
             [_User, Host] = string:tokens(ToAddress, "@"),
@@ -49,4 +49,4 @@ deliver(Options, FromAddress, ToAddress, BodyFun) ->
             Options
     end,
     Email = {FromAddress, [ToAddress], BodyFun},
-    gen_smtp_client:send(Email, MailOptions).
+    gen_smtp_client:send(Email, MailOptions, ResultFun).

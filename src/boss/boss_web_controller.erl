@@ -429,7 +429,14 @@ handle_request(Req, RequestMod, ResponseMod) ->
                     case string:substr(Url, 1, length(StaticPrefix)) of
                         StaticPrefix ->
                             [$/|File] = lists:nthtail(length(StaticPrefix), Url),
-                            (Response:file([$/|File])):build_response();
+			    Response2 = case boss_env:boss_env() of
+					    development ->
+						Response:header("Cache-Control", "no-cache");
+					    _ ->
+						Response
+					end,
+			    Response3 = Response2:file([$/|File]),
+                            Response3:build_response();
                         _ ->
                             build_dynamic_response(App, Request, Response, Url)
                     end
@@ -982,6 +989,18 @@ after_request_action(Middleware, Middlewares, Controller, Req, SessionID, Data, 
 handle_news_for_cache(_, _, {Prefix, Key}) ->
     boss_cache:delete(Prefix, Key),
     {ok, cancel_watch}.
+
+before_request([], _Controller, _Action, _Req, _SessionID, Info) ->
+    {ok, Info};
+before_request([Middleware|Middlewares], Controller, Action, Req, SessionID, Info) ->
+    case Middleware:before_(Controller, Action, Req, SessionID) of
+        ok ->
+            before_request(Middlewares, Controller, Action, Req, SessionID, Info);
+        {ok, ExtraInfo} ->
+            before_request(Middlewares, Controller, Action, Req, SessionID, lists:merge(ExtraInfo, Info));
+        Other ->
+            Other
+    end.
 
 process_location(Controller,  [{_, _}|_] = Where, AppInfo) ->
     {_, TheController, TheAction, CleanParams} = process_redirect(Controller, Where, AppInfo),

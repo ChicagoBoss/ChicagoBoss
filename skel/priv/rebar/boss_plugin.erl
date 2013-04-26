@@ -28,7 +28,7 @@
 boss(RebarConf, AppFile) ->
 	case is_base_dir() of
 		true -> 
-            Command = rebar_config:get_global(c, "help"),
+            Command = rebar_config:get_global(RebarConf, c, "help"),
 			{ok, BossConf} = init(RebarConf, AppFile, Command),
 			case boss_rebar:run(?BOSS_PLUGIN_CLIENT_VERSION, Command, RebarConf, BossConf, AppFile) of
 				{error, command_not_found} ->
