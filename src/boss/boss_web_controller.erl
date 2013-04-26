@@ -1003,18 +1003,6 @@ handle_news_for_cache(_, _, {Prefix, Key}) ->
     boss_cache:delete(Prefix, Key),
     {ok, cancel_watch}.
 
-before_request([], _Controller, _Action, _Req, _SessionID, Info) ->
-    {ok, Info};
-before_request([Middleware|Middlewares], Controller, Action, Req, SessionID, Info) ->
-    case Middleware:before_(Controller, Action, Req, SessionID) of
-        ok ->
-            before_request(Middlewares, Controller, Action, Req, SessionID, Info);
-        {ok, ExtraInfo} ->
-            before_request(Middlewares, Controller, Action, Req, SessionID, lists:merge(ExtraInfo, Info));
-        Other ->
-            Other
-    end.
-
 process_location(Controller,  [{_, _}|_] = Where, AppInfo) ->
     {_, TheController, TheAction, CleanParams} = process_redirect(Controller, Where, AppInfo),
     ControllerModule = list_to_atom(boss_files:web_controller(
