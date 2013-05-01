@@ -1,0 +1,50 @@
+Defining middlewares
+====================
+
+Middlewares are set in boss.config inside application section and can be set in form:
+{middleware_name::atom(), all} - called before and after every controller within app
+{middleware_name::atom(), {all, ["except_1", "except_2"]}} - called before/after all controllers except mentioned in a list of controller names (note: controller names are strings)
+{middleware_name::atom(), ["only_1", "only_2"] - called only before/after controllers mentioned in a list of controller names (note: controller names are strings)
+
+Middleware modules are going to be called in same sequence as they defined in boss.config
+
+Example boss.config app section:
+```
+{ shop, [
+    {path, "../shop"},
+    {base_url, "/"},
+%% Middlewares
+      { middlewares, [
+        {boss_csrf_middleware, all},
+        {menu_middleware, all},
+        {login_middleware, {all, ["public", "items"]}},
+        {admin_middleware, ["admin"]}
+      ]},
+    {dummy, true}
+]}
+```
+
+before_/3 function
+==================
+Each middleware can (optinally) define before_(Req, SessionId, Info) function, where:
+ Req = boss (simple_bridge) request object
+ SessionId = Current SessionId as string
+ Info = result of controller:before_ or merged result of previous middlewares:before_ results
+
+before_/3 function can return same responses as controller:before_ function, this is sample results:
+
+Result                   | Interpretation
+-----------------------------------------------------------------------------------
+ok.                      | Goto next middleware
+-----------------------------------------------------------------------------------
+{ok, [{hello, "World"}]} | Goto next middleware and merge result with previous Info
+-----------------------------------------------------------------------------------
+Any other result         | Stop processing middlewares call controller:action
+
+
+after/4 function
+================
+Optional function after_/4 is also avaliable.
+after_(_Req, _SessionID, Result, _Headers)
+
+
