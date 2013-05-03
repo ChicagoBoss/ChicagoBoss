@@ -39,7 +39,8 @@ bootstrap_test_env(Application, Adapter) ->
         router_sup_pid = RouterSupPid,
         translator_sup_pid = TranslatorSupPid,
         model_modules = boss_files:model_list(Application),
-        controller_modules = boss_files:web_controller_list(Application)
+        controller_modules = boss_files:web_controller_list(Application),
+        view_modules = boss_files:view_module_list(Application)
     }.
 
 % This function deliberately takes one argument so it can be invoked from the command-line.

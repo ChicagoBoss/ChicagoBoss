@@ -26,7 +26,7 @@
 %% @end
 %%--------------------------------------------------------------------
 boss(RebarConf, AppFile) ->
-	case is_base_dir() of
+	case is_base_dir(RebarConf) of
 		true -> 
             Command = rebar_config:get_global(RebarConf, c, "help"),
 			{ok, BossConf} = init(RebarConf, AppFile, Command),
@@ -99,7 +99,7 @@ init(_RebarConf, AppFile, Command) ->
 %% @end
 %%--------------------------------------------------------------------
 pre_compile(RebarConf, AppFile) ->
-	case is_base_dir() of
+	case is_base_dir(RebarConf) of
 		true -> 
 			{ok, BossConf} = init(RebarConf, AppFile, "compile"),
 			boss_rebar:run(?BOSS_PLUGIN_CLIENT_VERSION, compile, RebarConf, BossConf, AppFile),
@@ -117,7 +117,7 @@ pre_compile(RebarConf, AppFile) ->
 %% @end
 %%--------------------------------------------------------------------
 pre_eunit(RebarConf, AppFile) ->
-	case is_base_dir() of
+	case is_base_dir(RebarConf) of
 		true -> 
 			{ok, BossConf} = init(RebarConf, AppFile, "test_eunit"),
 			boss_rebar:run(?BOSS_PLUGIN_CLIENT_VERSION, test_eunit, RebarConf, BossConf, AppFile),
@@ -131,8 +131,8 @@ pre_eunit(RebarConf, AppFile) ->
 
 %% Checks if the current dir (rebar execution) is the base_dir
 %% Used to prevent run boss tasks in deps directory
-is_base_dir() ->
-    filename:absname(rebar_utils:get_cwd()) =:= rebar_config:get_global(base_dir, undefined).
+is_base_dir(RebarConf) ->
+    filename:absname(rebar_utils:get_cwd()) =:= rebar_config:get_xconf(RebarConf, base_dir, undefined).
 
 %% Gets the boss.config central configuration file
 boss_config(Command) ->
