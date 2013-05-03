@@ -783,14 +783,29 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
                 AppInfo#boss_app_info.controller_modules, Req, SessionID),
             RequestMethod = Req:request_method(),
 
-            AuthResult = Adapter:before_filter(AdapterInfo, Action, RequestMethod, Tokens),
+            BeforeInfo = before_request(boss_env:get_env(AppInfo#boss_app_info.application, middlewares, []),
+                                        Controller, Req, SessionID, [{controller, Controller}, {action, Action}]),
 
-            AuthInfo = case AuthResult of
-                ok ->
-                    {ok, undefined};
-                OtherInfo ->
-                    OtherInfo
-            end,
+            AuthInfo = case BeforeInfo of
+                {ok, BInfo} ->
+                    AuthResult = Adapter:before_filter(AdapterInfo, Action, RequestMethod, Tokens),
+
+                    case AuthResult of
+                        ok ->
+                            {ok, BInfo};
+                        {ok, AuthDetails} ->
+                            case length(BInfo) of
+                                0 ->
+                                    {ok, AuthDetails};
+                                _Other ->
+                                    {ok, lists:merge(BInfo, AuthDetails)}
+                            end;
+                        OtherInfo ->
+                            OtherInfo
+                    end;
+                AnotherInfo ->
+                    AnotherInfo
+                end,
 
             case AuthInfo of
                 {ok, Info} ->
@@ -832,10 +847,13 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
                                 _ -> undefined
                             end,
 
-                            ActionResult = case CachedActionResult of
+                            ActionTempResult = case CachedActionResult of
                                 undefined -> Adapter:action(AdapterInfo, Action, EffectiveRequestMethod, Tokens, Info);
                                 _ -> CachedActionResult
                             end,
+
+                            ActionResult = after_request(boss_env:get_env(AppInfo#boss_app_info.application, middlewares, []),
+                                                         Controller, Req, SessionID, merge_result_and_info(ActionTempResult, Info)),
 
                             case (CachedActionResult =/= undefined andalso is_tuple(ActionResult) andalso element(1, ActionResult) =:= ok) of
                                 true ->
@@ -884,6 +902,101 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
                 {redirect, Where} ->
                     {redirect, process_redirect(Controller, Where, AppInfo)}
             end
+    end.
+
+before_request([], _Controller, _Req, _SessionID, Info) ->
+    {ok, Info};
+before_request([{Middleware, all}|Middlewares], Controller, Req, SessionID, Info) ->
+    %% Execute this middleware for every controller
+    before_request_action(Middleware, Middlewares, Controller, Req, SessionID, Info);
+before_request([{Middleware, {all, Except}}|Middlewares], Controller, Req, SessionID, Info) ->
+    %% Execute all middlewares, skip those in Except
+    case lists:member(Controller, Except) of
+        true -> before_request(Middlewares, Controller, Req, SessionID, Info);
+        false ->
+            before_request_action(Middleware, Middlewares, Controller, Req, SessionID, Info)
+    end;
+before_request([{Middleware, Only}|Middlewares], Controller, Req, SessionID, Info) ->
+    %% Execute only middlewares listed in Only
+    case lists:member(Controller, Only) of
+        true ->
+            before_request_action(Middleware, Middlewares, Controller, Req, SessionID, Info);
+        false ->
+            before_request(Middlewares, Controller, Req, SessionID, Info)
+    end.
+
+%% Actually execute middleware
+before_request_action(Middleware, Middlewares, Controller, Req, SessionID, Info) ->
+    case proplists:is_defined(before_, Middleware:module_info(exports)) of
+        true ->
+            case Middleware:before_(Req, SessionID, Info) of
+                ok ->
+                    before_request(Middlewares, Controller, Req, SessionID, Info);
+                {ok, ExtraInfo} ->
+                    before_request(Middlewares, Controller, Req, SessionID, lists:merge(ExtraInfo, Info));
+                Other ->
+                    Other
+            end;
+        false ->
+            before_request(Middlewares, Controller, Req, SessionID, Info)
+    end.
+
+%% merge result and info
+merge_result_and_info(ok, []) ->
+    ok;
+merge_result_and_info(ok, Data) ->
+    {ok, Data};
+merge_result_and_info({ok, Data}, InfoData) ->
+    {ok, lists:merge(InfoData, Data)};
+merge_result_and_info({ok, Data, Headers}, InfoData) ->
+    {ok, lists:merge(InfoData, Data), Headers};
+merge_result_and_info(Result, _) ->
+    %% Return result, if merge is imposible
+    Result.
+
+after_request([], _Controller, _Req, _SessionID, Result) ->
+    Result;
+after_request(Middlewares, Controller, Req, SessionID, ok) ->
+    after_request(Middlewares, Controller, Req, SessionID, {ok, [], []});
+after_request(Middlewares, Controller, Req, SessionID, {ok, Data}) ->
+    after_request(Middlewares, Controller, Req, SessionID, {ok, Data, []});
+after_request([{Middleware, all}|Middlewares], Controller, Req, SessionID, {ok, Data, Headers}) ->
+    %% Execute this middleware for every controller
+    after_request_action(Middleware, Middlewares, Controller, Req, SessionID, Data, Headers);
+after_request([{Middleware, {all, Except}}|Middlewares], Controller, Req, SessionID, {ok, Data, Headers}) ->
+    %% Execute all middlewares, skip those in Except
+    case lists:member(Controller, Except) of
+        true -> after_request(Middlewares, Controller, Req, SessionID, {ok, Data, Headers});
+        false -> 
+            after_request_action(Middleware, Middlewares, Controller, Req, SessionID, Data, Headers)
+    end;
+after_request([{Middleware, Only}|Middlewares], Controller, Req, SessionID, {ok, Data, Headers}) ->
+    %% Execute only middlewares listed in Only
+    case lists:member(Controller, Only) of
+        true -> after_request_action(Middleware, Middlewares, Controller, Req, SessionID, Data, Headers);
+        false -> after_request(Middlewares, Controller, Req, SessionID, {ok, Data, Headers})
+    end;
+%% Skip all middlewares if Result not {ok..}
+after_request(_Middlewares, Controller, Req, SessionID, Result) ->
+    after_request([], Controller, Req, SessionID, Result).
+
+
+%% Actually apply after_
+after_request_action(Middleware, Middlewares, Controller, Req, SessionID, Data, Headers) ->
+    case proplists:is_defined(after_, Middleware:module_info(exports)) of
+        true ->
+            case Middleware:after_(Req, SessionID, Data, Headers) of
+                ok ->
+                    after_request(Middlewares, Controller, Req, SessionID, {ok, Data, Headers});
+                {ok, ExtraInfo} ->
+                    after_request(Middlewares, Controller, Req, SessionID, {ok, lists:merge(ExtraInfo, Data), Headers});
+                {ok, ExtraInfo, ExtraHeaders} ->
+                    after_request(Middlewares, Controller, Req, SessionID, {ok, lists:merge(ExtraInfo, Data), merge_headers(Headers, ExtraHeaders)});
+                Other ->
+                    Other
+            end;
+        false ->
+            after_request(Middlewares, Controller, Req, SessionID, {ok, Data, Headers})
     end.
 
 handle_news_for_cache(_, _, {Prefix, Key}) ->
