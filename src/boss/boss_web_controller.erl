@@ -784,7 +784,7 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
             RequestMethod = Req:request_method(),
 
             BeforeInfo = before_request(boss_env:get_env(AppInfo#boss_app_info.application, middlewares, []),
-                                        Controller, Req, SessionID, []),
+                                        Controller, Req, SessionID, [{controller, Controller}, {action, Action}]),
 
             AuthInfo = case BeforeInfo of
                 {ok, BInfo} ->
