@@ -80,13 +80,18 @@ check_referer(Req) ->
             true
     end.
 
-accept_(_Req, Token) ->
-    {ok, [{csrftoken, Token},
-          {csrf_input, csrf_input_(Token)}]}.
+accept_(Req, Token) ->
+    UpdatedToken = case proplists:get_value("csrfmiddlewaretoken", Req:post_params(), undefined) of
+	undefined -> 
+	    Token; % Current token hasn't been used, let's reuse it.
+        _Otoher ->
+            get_random_string(12)
+    end,
+    {ok, [{csrftoken, UpdatedToken},
+          {csrf_input, csrf_input_(UpdatedToken)}]}.
 
-reject_(_Req, Token, _Reason) ->
-    {error, [{csrftoken, Token},
-            {csrf_input, csrf_input_(Token)}]}.
+reject_(_Req, _Token, Reason) ->
+    {error, Reason}.
 
 csrf_input_(Token) ->
     io_lib:format("<input type=\"hidden\" name=\"csrfmiddlewaretoken\" value=\"~s\" />", [Token]).
