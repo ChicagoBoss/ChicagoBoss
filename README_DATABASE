@@ -67,6 +67,18 @@ Tokyo Tyrant is a non-relational database developed by FAL Labs.
 3. Open up boss.config and set db_adapter to tyrant
 
 
+Using MongoDB
+------------------
+
+MongoDB is a document-oriented NoSQL database developed by 10gen.
+
+1. Download and install MongoDB from <http://mongodb.org>
+
+2. Start MongoDB with `mongod`
+
+3. Open up boss.config and set the db_adapter to mongodb and db_database to the name of your choice. The database will be created automatically, with the name you specified.
+
+
 Using Mnesia
 ------------
 
