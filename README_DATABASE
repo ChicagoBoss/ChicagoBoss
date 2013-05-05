@@ -16,6 +16,8 @@ Open up boss.config and set db_adapter to `pgsql` or `mysql`. You should also se
  - db_password
  - db_database
 
+Set the db_port appropriately. By default, PostgreSQL listens on port 5432.
+
 Models
 - - -
 
@@ -66,6 +68,8 @@ Tokyo Tyrant is a non-relational database developed by FAL Labs.
 
 3. Open up boss.config and set db_adapter to tyrant
 
+Set the db_port appropriately. By default, Tokyo Tyrant listens on port 1978.
+
 
 Using MongoDB
 ------------------
@@ -77,6 +81,8 @@ MongoDB is a document-oriented NoSQL database developed by 10gen.
 2. Start MongoDB with `mongod`
 
 3. Open up boss.config and set the db_adapter to mongodb and db_database to the name of your choice. The database will be created automatically, with the name you specified.
+
+Set the db_port appropriately. By default, MongoDB listens on port 27017.
 
 
 Using Mnesia
