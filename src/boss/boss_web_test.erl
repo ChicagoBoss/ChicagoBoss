@@ -324,12 +324,13 @@ get_request_loop(AppInfo) ->
     receive
         {From, Uri, Headers} ->
             Req = make_request('GET', Uri, Headers),
+            FullUrl = Req:path(),
             [{_, RouterPid, _, _}] = supervisor:which_children(AppInfo#boss_app_info.router_sup_pid),
             [{_, TranslatorPid, _, _}] = supervisor:which_children(AppInfo#boss_app_info.translator_sup_pid),
             Result = boss_web_controller:process_request(AppInfo#boss_app_info {
                     router_pid = RouterPid, translator_pid = TranslatorPid }, 
-                Req, testing, Uri, undefined),
-            From ! {self(), Uri, Result};
+                Req, testing, FullUrl, undefined),
+            From ! {self(), FullUrl, Result};
         Other ->
             error_logger:error_msg("Unexpected message in get_request_loop: ~p~n", [Other])
     end.
@@ -345,10 +346,11 @@ post_request_loop(AppInfo) ->
             [{_, TranslatorPid, _, _}] = supervisor:which_children(AppInfo#boss_app_info.translator_sup_pid),
             Req = make_request('POST', Uri, 
                 [{"Content-Encoding", "application/x-www-form-urlencoded"} | Headers]),
+            FullUrl = Req:path(),
             Result = boss_web_controller:process_request(AppInfo#boss_app_info{
                     router_pid = RouterPid, translator_pid = TranslatorPid }, 
-                Req, testing, Uri, undefined),
-            From ! {self(), Uri, Result};
+                Req, testing, FullUrl, undefined),
+            From ! {self(), FullUrl, Result};
         Other ->
             error_logger:error_msg("Unexpected message in post_request_loop: ~p~n", [Other])
     end.
