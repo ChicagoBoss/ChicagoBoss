@@ -78,20 +78,18 @@ build_message_header(HeaderFields, DefaultMimeType) ->
     end,
     ContentType = proplists:get_value("Content-Type", HeaderFields, DefaultMimeType),
     Date = proplists:get_value("Date", HeaderFields, erlydtl_dateformat:format("r")),
-    BaseHeader = ["Date: ", Date, "\r\n",
-        "Content-Type: ", ContentType, "\r\n",
-        "MIME-Version: ", "1.0", "\r\n",
-        "Message-ID: ", MessageID, "\r\n"],
-    add_fields(["Subject", "From", "To", "Reply-To"], HeaderFields, BaseHeader).
+    AllHeaders = [{"Date", Date}, {"Content-Type", ContentType},
+        {"MIME-Version", "1.0"}, {"Message-ID", MessageID} | HeaderFields],
+    add_fields(AllHeaders, [], []).
 
 add_fields([], _, Acc) ->
-    Acc;
-add_fields([Field|Rest], HeaderFields, Acc) ->
-    case proplists:get_value(Field, HeaderFields) of
+    lists:reverse(Acc);
+add_fields([{Key, Value}|Rest], Seen, Acc) ->
+    case proplists:get_value(Key, Seen) of
         undefined ->
-            add_fields(Rest, HeaderFields, Acc);
-        Value ->
-            add_fields(Rest, HeaderFields, [Field, ": ", Value, "\r\n" | Acc])
+            add_fields(Rest, [Key|Seen], [[Key, ": ", Value, "\r\n"] | Acc]);
+        _ ->
+            add_fields(Rest, Seen, Acc)
     end.
 
 build_message_body_attachments(App, Action, Variables, [], ContentLanguage) ->
