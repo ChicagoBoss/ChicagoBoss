@@ -73,8 +73,8 @@ build_message_header(HeaderFields, DefaultMimeType) ->
         "Message-ID: ", MessageID, "\r\n"],
     add_fields(["Subject", "From", "To", "Reply-To"], HeaderFields, BaseHeader).
 
-add_fields([], _, Acc) ->
-    Acc;
+add_fields([], Headers, Acc) ->
+    add_extra_headers(lists:reverse(Headers), Acc);
 add_fields([Field|Rest], HeaderFields, Acc) ->
     case proplists:get_value(Field, HeaderFields) of
         undefined ->
@@ -82,6 +82,11 @@ add_fields([Field|Rest], HeaderFields, Acc) ->
         Value ->
             add_fields(Rest, HeaderFields, [Field, ": ", Value, "\r\n" | Acc])
     end.
+
+add_extra_headers([], Acc) ->
+    Acc;
+add_extra_headers(add_extra_headers([{Key, Value}|Rest], Acc) ->
+    add_extra_headers(Rest, [Key, ": ", Value, "\r\n" | Acc]).
 
 build_message_body_attachments(App, Action, Variables, [], ContentLanguage) ->
     build_message_body(App, Action, Variables, ContentLanguage);
