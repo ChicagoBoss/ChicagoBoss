@@ -112,6 +112,7 @@ handle_DATA(FromAddress, ToAddressList, Data, #state{ errors = [] } = State) ->
                                     end
                             end, {undefined, not_done}, State#state.authorized_apps),
                         case Res1 of
+			    {ok, _Pid} -> ErrorAcc;
                             ok -> ErrorAcc;
                             {error, Error} -> [Error|ErrorAcc]
                         end
