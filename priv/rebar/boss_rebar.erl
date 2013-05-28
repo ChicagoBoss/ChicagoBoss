@@ -8,21 +8,21 @@
 
 -export([run/4,
          run/5, 
-		 help/0, 
-		 help/3,
-		 compile/3,
-		 compile/4,
-		 test_eunit/3,
-		 test_functional/3,
-		 start_cmd/3,
-		 start_dev_cmd/3,
-		 stop_cmd/3,
-		 reload_cmd/3,
-		 boss_config_value/3,
-		 boss_config_value/4,
-		 boss_load/2,
-		 boss_start/1,
-		 all_ebin_dirs/2,
+         help/0, 
+         help/3,
+         compile/3,
+         compile/4,
+         test_eunit/3,
+         test_functional/3,
+         start_cmd/3,
+         start_dev_cmd/3,
+         stop_cmd/3,
+         reload_cmd/3,
+         boss_config_value/3,
+         boss_config_value/4,
+         boss_load/2,
+         boss_start/1,
+         all_ebin_dirs/2,
          init_conf/1
         ]).
 
@@ -337,34 +337,57 @@ boss_start_wait([App|Rest]) ->
 %% @end
 %%--------------------------------------------------------------------
 all_ebin_dirs(BossConf, _AppFile) ->
-	lists:foldl(fun({_App, Config}, EbinDirs) ->
-						case lists:keyfind(path, 1, Config) of
-							false -> EbinDirs;
-							{path, Path} -> 
-								MainEbin = filename:join([Path, "ebin"]),
-								filelib:ensure_dir(filename:join([MainEbin, "foobar"])),
-                                DepsEbins = case os:type() of
-                                    {win32, _} ->
-                                        case file:list_dir(filename:join([Path, "deps"])) of
-                                            {ok, Dirs} -> lists:map(fun(Dir) -> 
-                                                            filename:join([Path, "deps", Dir, "ebin"])
-                                                    end, Dirs);
-                                            {error, _Reason} -> []
-                                        end;
-                                    _ -> [filename:join([Path, "deps", "*", "ebin"])]
-                                end,
-                                ElixirEbins = case os:type() of
-                                    {win32, _} ->
-                                        case file:list_dir(filename:join([Path, "deps", "elixir", "lib"])) of
-                                            {ok, ElixirLibs} -> lists:maps(fun(Dir) ->
-                                                            filename:join([Path, "deps", "elixir", "lib", Dir, "ebin"])
-                                                    end, ElixirLibs);
-                                            {error, _} -> []
-                                        end;
-                                    _ -> [filename:join([Path, "deps", "elixir", "lib", "*", "ebin"])]
-                                end,
-                                [MainEbin | DepsEbins] ++ ElixirEbins ++ EbinDirs
-						end end, [], lists:reverse(BossConf)).
+    lists:foldl(fun({_App, Config}, EbinDirs) ->
+                        case lists:keyfind(path, 1, Config) of
+                            false -> EbinDirs;
+                            {path, Path} ->
+                                case lists:reverse(filename:split(Path)) of
+                                    ["boss","deps"|Tail] ->
+                                        Path1 = filename:join(lists:reverse(Tail)),
+                                        MainEbin1 = filename:join([Path1, "deps/boss/ebin"]),
+                                        filelib:ensure_dir(MainEbin1++"/"),
+                                        [MainEbin1|all_ebin_dirs1(Path1, EbinDirs)];
+                                    _ ->
+                                        MainEbin2 = filename:join([Path, "/ebin"]),
+                                        filelib:ensure_dir(MainEbin2++"/"),
+                                        [MainEbin2|all_ebin_dirs1(Path, EbinDirs)]
+                                end
+                                        
+                        end 
+                end, 
+                [], 
+                lists:reverse(BossConf)).
+
+all_ebin_dirs1(Path, EbinDirs) ->
+    DepsEbins = case os:type() of
+                    {win32, _} ->
+                        case file:list_dir(filename:join([Path, "deps"])) of
+                            {ok, Dirs} -> 
+                                lists:map(fun(Dir) -> 
+                                                  filename:join([Path, "deps", Dir, "ebin"])
+                                          end, Dirs);
+                            {error, _Reason} -> []
+                        end;
+                    _ -> [filename:join([Path, "deps", "*", "ebin"])]
+                end,
+    ElixirEbins = case os:type() of
+                      {win32, _} ->
+                          Files = file:list_dir(filename:join([Path, "deps", "elixir", "lib"])), 
+                          case  Files of
+                              {ok, ElixirLibs} ->
+                                  lists:maps(fun(Dir) ->
+                                               filename:join([Path, "deps", "elixir", "lib", Dir, "ebin"])
+                                             end, 
+                                             ElixirLibs);
+                              {error, _} -> 
+                                  []
+                          end;
+                      _ -> 
+                          [filename:join([Path, "deps", "elixir", "lib", "*", "ebin"])]
+                  end,
+    DepsEbins ++ ElixirEbins ++ EbinDirs.
+
+
 
 %%--------------------------------------------------------------------
 %% @doc Injects the boss.conf configuration to the boss application
