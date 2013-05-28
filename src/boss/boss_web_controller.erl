@@ -66,7 +66,7 @@ init(Config) ->
                     _ -> Acc
                 end
         end, [], [db_port, db_host, db_username, db_password, db_database,
-            db_replication_set, db_read_mode, db_write_mode]),
+            db_replication_set, db_read_mode, db_write_mode, db_write_host, db_write_host_port]),
     DBAdapter = boss_env:get_env(db_adapter, mock),
     DBShards = boss_env:get_env(db_shards, []),
     CacheEnable = boss_env:get_env(cache_enable, false),
