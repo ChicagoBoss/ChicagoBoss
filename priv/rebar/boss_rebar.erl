@@ -71,7 +71,7 @@ run(Version, Command, RebarConf, BossConf, AppFile) ->
 %% @end
 %%--------------------------------------------------------------------
 compile(RebarConf, BossConf, AppFile) ->
-	compile(RebarConf, BossConf, AppFile, "ebin").
+    compile(RebarConf, BossConf, AppFile, "ebin").
 %%--------------------------------------------------------------------
 %% @doc compile
 %% @spec compile(_RebarConf, _BossConf, AppFile, Dest) -> 
@@ -81,10 +81,10 @@ compile(RebarConf, BossConf, AppFile) ->
 %%--------------------------------------------------------------------
 compile(_RebarConf, BossConf, AppFile, Dest) ->
     boss_load(BossConf, AppFile),
-	AppName = app_name(AppFile),
-	Res = boss_load:load_all_modules_and_emit_app_file(AppName, Dest),
-	rebar_log:log(info, "Chicago Boss compilation of app ~s on ~s (~s)~n", 
-				  [AppName, Dest, Res]).
+    AppName = app_name(AppFile),
+    Res = boss_load:load_all_modules_and_emit_app_file(AppName, Dest),
+    rebar_log:log(info, "Chicago Boss compilation of app ~s on ~s (~s)~n", 
+                  [AppName, Dest, Res]).
 
 %%--------------------------------------------------------------------
 %% @doc test_eunit
@@ -94,7 +94,7 @@ compile(_RebarConf, BossConf, AppFile, Dest) ->
 %% @end
 %%--------------------------------------------------------------------
 test_eunit(RebarConf, BossConf, AppFile) ->
-	boss_rebar_eunit:eunit(RebarConf, BossConf, AppFile).
+    boss_rebar_eunit:eunit(RebarConf, BossConf, AppFile).
 
 %%--------------------------------------------------------------------
 %% @doc test_functional
@@ -141,17 +141,17 @@ start_cmd(_RebarConf, BossConf, AppFile) ->
 %% @end
 %%--------------------------------------------------------------------
 start_dev_cmd(_RebarConf, BossConf, AppFile) ->
-	rebar_log:log(info, "Generating dynamic start-dev command~n", []),
-	
-	AppName = app_name(AppFile),
-	SNameArg = vm_sname_arg(BossConf, AppFile),
+    rebar_log:log(info, "Generating dynamic start-dev command~n", []),
+    
+    AppName = app_name(AppFile),
+    SNameArg = vm_sname_arg(BossConf, AppFile),
     ErlCmd = erl_command(), 
     EbinDirs = all_ebin_dirs(BossConf, AppFile),
     CookieOpt = cookie_option(BossConf),
     VmArgs = vm_args(BossConf),
-    io:format("~s -pa ~s -boss developing_app ~s -boot start_sasl -config boss ~s -s reloader -s boss ~s~s~n", 
-        [ErlCmd, string:join(EbinDirs, " -pa "), AppName, CookieOpt, SNameArg, VmArgs]),
-	ok.
+    io:format("~s -pa ~s -boss developing_app ~s -boot start_sasl -config boss ~s -s reloader -s lager -s boss ~s~s~n", 
+              [ErlCmd, string:join(EbinDirs, " -pa "), AppName, CookieOpt, SNameArg, VmArgs]),
+    ok.
 
 %%--------------------------------------------------------------------
 %% @doc stop_cmd
@@ -346,48 +346,58 @@ all_ebin_dirs(BossConf, _AppFile) ->
                                         Path1 = filename:join(lists:reverse(Tail)),
                                         MainEbin1 = filename:join([Path1, "deps/boss/ebin"]),
                                         filelib:ensure_dir(MainEbin1++"/"),
-                                        [MainEbin1|all_ebin_dirs1(Path1, EbinDirs)];
+                                        [MainEbin1|all_ebin_dirs2(Path1)];
                                     _ ->
                                         MainEbin2 = filename:join([Path, "/ebin"]),
                                         filelib:ensure_dir(MainEbin2++"/"),
-                                        [MainEbin2|all_ebin_dirs1(Path, EbinDirs)]
+                                        [MainEbin2 | [EbinDirs | all_ebin_dirs1(Path)]] 
                                 end
-                                        
+                                    
                         end 
                 end, 
                 [], 
                 lists:reverse(BossConf)).
 
-all_ebin_dirs1(Path, EbinDirs) ->
+%%old function, keep compatibility
+all_ebin_dirs1(Path) ->
+    MainEbin = filename:join([Path, "ebin"]),
+    filelib:ensure_dir(filename:join([MainEbin, "foobar"])),
     DepsEbins = case os:type() of
                     {win32, _} ->
                         case file:list_dir(filename:join([Path, "deps"])) of
                             {ok, Dirs} -> 
-                                lists:map(fun(Dir) -> 
+                                lists:map(fun(Dir) ->
                                                   filename:join([Path, "deps", Dir, "ebin"])
                                           end, Dirs);
                             {error, _Reason} -> []
                         end;
-                    _ -> [filename:join([Path, "deps", "*", "ebin"])]
+                    _ -> 
+                        [filename:join([Path, "deps", "*", "ebin"])]
                 end,
     ElixirEbins = case os:type() of
                       {win32, _} ->
-                          Files = file:list_dir(filename:join([Path, "deps", "elixir", "lib"])), 
-                          case  Files of
-                              {ok, ElixirLibs} ->
+                          case file:list_dir(filename:join([Path, "deps", "elixir", "lib"])) of
+                              {ok, ElixirLibs} -> 
                                   lists:maps(fun(Dir) ->
-                                               filename:join([Path, "deps", "elixir", "lib", Dir, "ebin"])
-                                             end, 
-                                             ElixirLibs);
-                              {error, _} -> 
-                                  []
+                                                     filename:join([Path, "deps", "elixir", "lib", Dir, "ebin"])
+                                             end, ElixirLibs);
+                              {error, _} -> []
                           end;
                       _ -> 
                           [filename:join([Path, "deps", "elixir", "lib", "*", "ebin"])]
                   end,
-    DepsEbins ++ ElixirEbins ++ EbinDirs.
+    DepsEbins ++ ElixirEbins.
 
-
+all_ebin_dirs2(Path) ->
+    case file:list_dir(filename:join([Path, "deps"])) of
+        {ok, Dirs} -> 
+            lists:map(fun(Dir) -> 
+                              filename:join([Path, "deps", Dir, "ebin"])
+                      end, Dirs);
+        {error, Reason} -> 
+            rebar_log:log(error, "error compilation with reason ~p~n", [Reason]),
+            []
+    end.       
 
 %%--------------------------------------------------------------------
 %% @doc Injects the boss.conf configuration to the boss application
