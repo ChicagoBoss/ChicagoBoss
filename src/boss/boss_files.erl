@@ -46,7 +46,12 @@ root_priv_dir(App) ->
        true ->
            filename:join([root_dir(), "priv"]);
        false ->
-           code:priv_dir(App)
+            case code:priv_dir(App) of
+                {error, bad_name} ->
+                    atom_to_list(App) ++ "/priv";
+                PrivDir ->
+                    PrivDir
+            end
    end.
 
 
