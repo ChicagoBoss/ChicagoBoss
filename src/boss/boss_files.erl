@@ -44,14 +44,9 @@ root_src_dir() -> "src".
 root_priv_dir(App) -> 
     case boss_env:is_developing_app(App) of
        true ->
-           filename:join([root_dir(), "priv"]);
+            filename:join([root_dir(), "priv"]);
        false ->
-            case code:priv_dir(App) of
-                {error, bad_name} ->
-                    atom_to_list(App) ++ "/priv";
-                PrivDir ->
-                    PrivDir
-            end
+            code:priv_dir(App)
    end.
 
 

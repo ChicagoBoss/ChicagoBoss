@@ -336,9 +336,9 @@ boss_start_wait([App|Rest]) ->
 %%       Gets all ebin dirs for the apps defined in boss.config
 %% @end
 %%--------------------------------------------------------------------
-
 all_ebin_dirs(BossConf, _AppFile) ->
-    lists:foldl(fun({_App, Config}, EbinDirs) ->
+    BossAppEbinDir = all_boss_app_ebin_dirs(BossConf),
+    BossAppEbinDir ++ lists:foldl(fun({_App, Config}, EbinDirs) ->
                         case lists:keyfind(path, 1, Config) of
                             false -> EbinDirs;
                             {path, Path} ->
@@ -353,6 +353,31 @@ all_ebin_dirs(BossConf, _AppFile) ->
                                 end
                         end
                 end, [], lists:reverse(BossConf)).
+
+all_boss_app_ebin_dirs(BossConf) ->
+    Boss = proplists:get_value(boss, BossConf),
+    BossApp = proplists:get_value(applications, Boss),
+    BinDir= fun(X) ->
+                    Conf = proplists:get_value(X, BossConf),
+                    case Conf of 
+                        undefined -> 
+                            rebar_log:log(error, 
+                                          "config of your BossApp ~p is missing~n", 
+                                          [X]);
+                        _ ->
+                            case proplists:get_value(path, Conf) of
+                                undefined ->
+                                    rebar_log:log(error, 
+                                                  "path of your BossApp ~p is missing~n", 
+                                                  [X]);
+                                Path ->
+                                    filename:join(Path, "ebin")
+                            end     
+                    end
+            end,
+    EbinDir = [BinDir(X) || X <- BossApp, is_atom(X)],
+    EbinDir.
+
 
 all_ebin_dirs1(Path, EbinDirs) ->    
     MainEbin = filename:join([Path, "ebin"]),
