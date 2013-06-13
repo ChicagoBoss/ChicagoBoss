@@ -11,19 +11,22 @@
 
 <p>The current session ID is available to controllers as the second module parameter. To disable sessions, set "session_enable" to "false" in your boss.config file.</p>
 
-<p>BossFlash is a utility on top of boss_session, you can store messages between requests, automatically populated to the view as {{ "{{ boss_flash }}" }} and deleted from session after used.</p>
+<p>BossFlash is a utility on top of boss_session, you can store messages between requests, automatically populated to the view as <code>{{ "{{ boss_flash }}" }}</code> and deleted from session after used.</p>
 
 <h2>boss_session</h2>
 
-{% for function in session_functions %}
-{% if function.description_long %}
-<div class="code spec">
-    {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
-</div>
-<p>{{ function.description_long }}</p>
-{% endif %}
-{% endfor %}
-
+<table class="code"><tbody>
+	{% for function in session_functions %}
+		{% if function.description_long %}
+		<tr>
+			<td><div class="code spec">
+			{{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
+			</div></td>
+			<td>{{ function.description_long }}</td>
+		</tr>
+		{% endif %}
+	{% endfor %}
+</tbody></table>
 
 <h2>boss_flash</h2>
 
@@ -42,13 +45,17 @@ boss_flash:add(SessionID, notice, "Flash Title", "Flash Message")
 
 <h2>Functions</h2>
 
-{% for function in flash_functions %}
-{% if function.description_long %}
-<div class="code spec">
-    {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
-</div>
-<p>{{ function.description_long }}</p>
-{% endif %}
-{% endfor %}
+<table class="code"><tbody>
+	{% for function in flash_functions %}
+		{% if function.description_long %}
+		<tr>
+			<td><div class="code spec">
+    			{{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
+			</div></td>
+			<td>{{ function.description_long }}</td>
+		</tr>
+		{% endif %}
+	{% endfor %}
+</tbody></table>
 
 {% endblock %}

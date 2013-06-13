@@ -26,11 +26,11 @@ span.bullet {
 div.quote {
     font-style: italic;
 }
-div.code.spec {
-    margin-top: 30px;
-}
-div.code {
-padding: 10px;  font-family: Courier New; background-color: #EEE; color: black;
+div.code, pre.code {
+    padding: 10px;
+    font-family: "Courier New", Courier, monospace;
+    color: black;
+    font-weight: bold;
 }
 div.code span.attr {
     color: #00991A;
@@ -127,31 +127,22 @@ div.content {
     margin-left: -425px; 
     left: 50%; 
     padding: 30px 30px;
-    width: 790px; 
-    /*
-    border-width: 0px 1px; 
-    border-color: black; 
-    border-style: solid; */
+    width: 790px;
     font-size: 20px; padding-bottom: 300px;
 }
-div.content .top_left {
-    width: 30px;
-    height: 30px;
-    background-image: url('http://maps.evanmiller.org/circle/9EC5D3/ffffff/30.gif');
-    background-repeat: no-repeat;
-    background-position: top left;
-    top: 0px;
-    left: 0px;
-    position: absolute;
+
+body {
+    max-width: 1200px;
+    margin: 0 auto;
+
 }
 
-div.content .top_right {
-    width: 30px;
-    height: 30px;
-    background-image: url('http://maps.evanmiller.org/circle/9EC5D3/ffffff/30.gif');
-    background-repeat: no-repeat;
-    background-position: top right;
-    top: 0px;
-    right: 0px;
-    position: absolute;
+table.code code {
+    font-weight: bold;
+
+}
+
+table.code td {
+    border-bottom: #ededed solid 1px;
+    padding: 10px 2px;
 }

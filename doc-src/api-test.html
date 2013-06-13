@@ -6,22 +6,22 @@
 
 <p>To create a test suite, create a module in the <code>src/test/functional/</code> directory. Your test module should export a <code>start/0</code> function, which should invoke a function from the <code>boss_web_test</code> module. This function will in turn invoke functions in the <a href="#boss_assert"><code>boss_assert</code></a> module (to run assertions) and the <a href="#boss_web_test"><code>boss_web_test</code></a> module (to run further tests). A simple example of a test module with included <code>start/0</code> function would be:</p>
 
-<div class="code">
-    -module(my_app_test).
+<pre class="code">
+-module(my_app_test).
 
-    -export([start/0]).
+-export([start/0]).
 
-    start() -&gt;<br />
-    &nbsp;&nbsp;&nbsp;boss_web_test:get_request("/", [],<br />
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[fun boss_assert:http_ok/1], []).
-</div>
+start() -&gt;
+    boss_web_test:get_request("/", [],
+        [fun boss_assert:http_ok/1], []).
+</pre>
 
 <p>The above test issues a GET request to the root URL, asserts that the response is 200 OK, and quits.</p>
 
 <p>When you are ready to run your test suite, type "./rebar boss c=test_functional" in your project directory.</p>
 
 <a name="boss_web_test"></a>
-<h3>boss_web_test</h3>
+<h2>boss_web_test</h2>
 <p>Functions in the <code>boss_web_test</code> issue HTTP requests to your web application (or check for emails sent by it). All functions in the <code>boss_web_test</code> module take the same two final arguments.</p>
 
 <p>Second to last, <code>Assertions</code> is a list of funs that must return a tuple <code>{Passed, ErrorMessage}</code>, where:
@@ -34,33 +34,45 @@
 <p>Most assertions will take the form of calls to <a href="#boss_assert"><code>boss_assert</code></a>, which is documented below.</p>
 
 <p>The last argument to any <code>boss_web_test</code> function is called <code>Continuations</code>. <code>Continuations</code> is a list of additional tests &mdash; funs that take the HTTP response value as their only argument, and use it to invoke additional tests from the <code>boss_web_test</code> module. Funs in <code>Continuations</code> should be preceded by a string label, e.g.:</p>
-<div class="code">
-    boss_web_test:get_request("/", [], [], <br />
-    &nbsp;&nbsp;&nbsp;[ "Click the register link", fun(Res) -&gt; ... end,<br />
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"Click the copyright link", fun(Res) -&gt; ... end, 
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;... ]).
-</div>
+
+<pre class="code">
+boss_web_test:get_request("/", [], [],
+   [ "Click the register link", fun(Res) -&gt; ... end,
+     "Click the copyright link", fun(Res) -&gt; ... end, 
+      ... ]).
+</pre>
 <p>The key thing to understand about <code>Continuations</code> is that they are <em>performed in parallel</em>. Any database manipulations that occur in one continuation cannot affect sibling continuations.</p>
 
 <p>Functions available in the <code>boss_web_test</code> module include:</p>
-{% for function in test_functions %}
-{% if function.description_long %}
-<div class="code spec">
-    {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
-</div>
-<p>{{ function.description_long }}</p>
-{% endif %}
-{% endfor %}
+
+<table class="code"><tbody>
+    {% for function in test_functions %}
+    <tr>
+        {% if function.description_long %}
+        <td><div class="code spec">
+        {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
+        </div></td>
+        <td>{{ function.description_long }}</td>
+        {% endif %}
+    </tr>
+    {% endfor %}
+</tbody></table>
 
 <a name="boss_assert"></a>
-<h3>boss_assert</h3>
+<h2>boss_assert</h2>
+
 <p>The <code>Assertions</code> list in a <code>boss_web_test</code> invocation will usually refer to functions in the <code>boss_assert</code> module. Available functions include:</p>
-{% for function in assert_functions %}
-{% if function.description_long %}
-<div class="code spec">
-    {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
-</div>
-<p>{{ function.description_long }}</p>
-{% endif %}
-{% endfor %}
+
+<table class="code"><tbody>
+    {% for function in assert_functions %}
+    <tr>
+        {% if function.description_long %}
+        <td><div class="code spec">
+            {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
+        </div></td>
+        <td>{{ function.description_long }}</td>
+        {% endif %}
+    {% endfor %}
+</tbody></table>
+
 {% endblock %}

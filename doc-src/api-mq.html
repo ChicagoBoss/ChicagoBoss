@@ -2,11 +2,11 @@
 {% block api_content %}
 <p>BossMQ is an abstraction layer for channel-based messaging that can be used to implement real-time notifications (i.e. Comet). With BossMQ, any controller action can function as a long-polling endpoint simply by calling <code>boss_mq:pull/2</code>:</p>
 
-<div class="code">
-receive_chat('GET', []) -&gt;<br />
-&nbsp;&nbsp;{ok, Timestamp, Messages} = boss_mq:pull("my-channel", now)<br />
-&nbsp;&nbsp;{output, Messages}.
-</div>
+<pre class="code">
+receive_chat('GET', []) -&gt;
+   {ok, Timestamp, Messages} = boss_mq:pull("my-channel", now)
+   {output, Messages}.
+</pre>
 
 <p>The call to <code>pull/2</code> blocks until a message arrives on "my-channel". Because of Erlang's lightweight process model, you usually don't need to worry if <code>pull/2</code> takes a long time to complete.</p>
 
@@ -20,12 +20,18 @@ receive_chat('GET', []) -&gt;<br />
 
 <h2>boss_mq API</h2>
 
+<table><tbody>
 {% for function in functions %}
-{% if function.description_long %}
-<div class="code spec">
-    {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
-</div>
-<p>{{ function.description_long }}</p>
-{% endif %}
+	{% if function.description_long %}
+	<tr>
+		<td>
+			<div class="code spec">
+    			{{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
+			</div>
+		</td>
+		<td>{{ function.description_long }}</td>
+	</tr>
+	{% endif %}
 {% endfor %}
+</tbody></table>
 {% endblock %}
