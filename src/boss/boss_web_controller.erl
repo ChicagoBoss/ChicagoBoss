@@ -640,6 +640,7 @@ process_result(AppInfo, Req, {moved, {Application, Controller, Action, Params}, 
     ExtraParams = [{application, Application}, {controller, Controller}, {action, Action}],
     URL = boss_erlydtl_tags:url(ExtraParams ++ Params, [
             {host, Req:header(host)},
+            {base_url, AppInfo#boss_app_info.base_url},
             {application, AppInfo#boss_app_info.application},
             {router_pid, RouterPid}]),
     {301, [{"Location", URL}, {"Cache-Control", "no-cache"}|Headers], ""};
@@ -661,6 +662,7 @@ process_result(AppInfo, Req, {redirect, {Application, Controller, Action, Params
     ExtraParams = [{application, Application}, {controller, Controller}, {action, Action}],
     URL = boss_erlydtl_tags:url(ExtraParams ++ Params, [
             {host, Req:header(host)},
+            {base_url, AppInfo#boss_app_info.base_url},
             {application, AppInfo#boss_app_info.application},
             {router_pid, RouterPid}]),
     {302, [{"Location", URL}, {"Cache-Control", "no-cache"}|Headers], ""};
