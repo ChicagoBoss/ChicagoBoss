@@ -429,13 +429,13 @@ handle_request(Req, RequestMod, ResponseMod) ->
                     case string:substr(Url, 1, length(StaticPrefix)) of
                         StaticPrefix ->
                             [$/|File] = lists:nthtail(length(StaticPrefix), Url),
-			    Response2 = case boss_env:boss_env() of
-					    development ->
-						Response:header("Cache-Control", "no-cache");
-					    _ ->
-						Response
-					end,
-			    Response3 = Response2:file([$/|File]),
+                            Response2 = case boss_env:boss_env() of
+                                development ->
+                                    Response:header("Cache-Control", "no-cache");
+                                _ ->
+                                    Response
+                            end,
+                            Response3 = Response2:file([$/|File]),
                             Response3:build_response();
                         _ ->
                             build_dynamic_response(App, Request, Response, Url)
