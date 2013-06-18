@@ -27,7 +27,7 @@
 </pre>
 <p>That will invoke <code>outgoing_mail_controller:foo_message(Arg1, Arg2, ...)</code> and use the return value to populate the templates <code>src/mail/view/foo_message.txt</code> and <code>src/mail/view/foo_message.html</code>, then send the email in a background process. If <code>Callback</code> is provided, the return value from the email delivery will be passed to it, either <code>{ok, Receipt}</code> or <code>{error, Reason}</code>.</p>
 
-<p>Your mail controller function should return:</div>
+<p>Your mail controller function should return:</p>
 <pre class="code">
     {ok, FromAddress, ToAddress, HeaderFields} |
     {ok, FromAddress, ToAddress, HeaderFields, Variables} |

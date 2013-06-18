@@ -15,18 +15,17 @@
 
 <h2>boss_session</h2>
 
-<table class="code"><tbody>
-	{% for function in session_functions %}
-		{% if function.description_long %}
-		<tr>
-			<td><div class="code spec">
-			{{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
-			</div></td>
-			<td>{{ function.description_long }}</td>
-		</tr>
-		{% endif %}
-	{% endfor %}
-</tbody></table>
+{% for function in session_functions %}
+    {% if function.description_long %}
+        <div class="example {% cycle 'row1' 'row2' %}">
+          <div class="code">
+                {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
+            </div>
+            <p>{{ function.description_long }}</p>
+        </div>
+    {% endif %}
+{% endfor %}
+
 
 <h2>boss_flash</h2>
 
@@ -45,17 +44,15 @@ boss_flash:add(SessionID, notice, "Flash Title", "Flash Message")
 
 <h2>Functions</h2>
 
-<table class="code"><tbody>
-	{% for function in flash_functions %}
-		{% if function.description_long %}
-		<tr>
-			<td><div class="code spec">
-    			{{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
-			</div></td>
-			<td>{{ function.description_long }}</td>
-		</tr>
-		{% endif %}
-	{% endfor %}
-</tbody></table>
+{% for function in flash_functions %}
+    {% if function.description_long %}
+        <div class="example {% cycle 'row1' 'row2' %}">
+          <div class="code">
+                {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
+            </div>
+            <p>{{ function.description_long }}</p>
+        </div>
+    {% endif %}
+{% endfor %}
 
 {% endblock %}

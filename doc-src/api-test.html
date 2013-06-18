@@ -7,9 +7,9 @@
 <p>To create a test suite, create a module in the <code>src/test/functional/</code> directory. Your test module should export a <code>start/0</code> function, which should invoke a function from the <code>boss_web_test</code> module. This function will in turn invoke functions in the <a href="#boss_assert"><code>boss_assert</code></a> module (to run assertions) and the <a href="#boss_web_test"><code>boss_web_test</code></a> module (to run further tests). A simple example of a test module with included <code>start/0</code> function would be:</p>
 
 <pre class="code">
--module(my_app_test).
+<span class="attr">-module</span>(my_app_test).
 
--export([start/0]).
+<span class="attr">-export</span>([start/0]).
 
 start() -&gt;
     boss_web_test:get_request("/", [],
@@ -45,34 +45,31 @@ boss_web_test:get_request("/", [], [],
 
 <p>Functions available in the <code>boss_web_test</code> module include:</p>
 
-<table class="code"><tbody>
-    {% for function in test_functions %}
-    <tr>
-        {% if function.description_long %}
-        <td><div class="code spec">
-        {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
-        </div></td>
-        <td>{{ function.description_long }}</td>
-        {% endif %}
-    </tr>
-    {% endfor %}
-</tbody></table>
+{% for function in test_functions %}
+    {% if function.description_long %}
+        <div class="example {% cycle 'row1' 'row2' %}">
+          <div class="code spec">
+                {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
+            </div>
+            <p>{{ function.description_long }}</p>
+        </div>
+    {% endif %}
+{% endfor %}
 
 <a name="boss_assert"></a>
 <h2>boss_assert</h2>
 
 <p>The <code>Assertions</code> list in a <code>boss_web_test</code> invocation will usually refer to functions in the <code>boss_assert</code> module. Available functions include:</p>
 
-<table class="code"><tbody>
-    {% for function in assert_functions %}
-    <tr>
-        {% if function.description_long %}
-        <td><div class="code spec">
-            {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
-        </div></td>
-        <td>{{ function.description_long }}</td>
-        {% endif %}
-    {% endfor %}
-</tbody></table>
+{% for function in assert_functions %}
+    {% if function.description_long %}
+        <div class="example {% cycle 'row1' 'row2' %}">
+          <div class="code spec">
+                {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
+            </div>
+            <p>{{ function.description_long }}</p>
+        </div>
+    {% endif %}
+{% endfor %}
 
 {% endblock %}

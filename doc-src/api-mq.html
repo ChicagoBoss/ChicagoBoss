@@ -20,18 +20,15 @@ receive_chat('GET', []) -&gt;
 
 <h2>boss_mq API</h2>
 
-<table><tbody>
 {% for function in functions %}
-	{% if function.description_long %}
-	<tr>
-		<td>
-			<div class="code spec">
-    			{{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
-			</div>
-		</td>
-		<td>{{ function.description_long }}</td>
-	</tr>
-	{% endif %}
+    {% if function.description_long %}
+        <div class="example {% cycle 'row1' 'row2' %}">
+          <div class="code">
+                {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
+            </div>
+            <p>{{ function.description_long }}</p>
+        </div>
+    {% endif %}
 {% endfor %}
-</tbody></table>
+
 {% endblock %}

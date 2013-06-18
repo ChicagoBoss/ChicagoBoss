@@ -32,22 +32,17 @@
 <p>(Other return values are ignored.)</p>
 <p>Functions for managing watches are:</p>
 
-{% if functions %}
-<table><tbody>
-    {% for function in functions %}
-        {% if function.description_long %}
-        <tr>
-            <td>
-                <div class="code spec">
-                    {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
-                </div>
-            </td>
-            <td>{{ function.description_long }}</td>
-        </tr>
-        {% endif %}
-    {% endfor %}
-</tbody></table>
-{% endif %}
+{% for function in functions %}
+    {% if function.description_long %}
+        <div class="example {% cycle 'row1' 'row2' %}">
+          <div class="code">
+                {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
+            </div>
+            <p>{{ function.description_long }}</p>
+        </div>
+    {% endif %}
+{% endfor %}
+
 
 <h3>The <code>*_news.erl</code> startup script</h3>
 <p>Listeners should be set up in the <code>priv/init/&lt;appname&gt;_news.erl</code> file in your project directory. The module should have one exported function, <code>init/0</code>, which is executed at server startup. This function is a convenient place to set up listeners before any web requests are received, but listeners can be set up anywhere in the application.</p>

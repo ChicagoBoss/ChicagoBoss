@@ -124,6 +124,8 @@ div.subnav {
     text-align: center; 
     font-size: 14px;
     padding: 16px;
+    background-color: #4d4d4d;
+    border-bottom: 6px solid #aaa;
 }
 
 a:link, a:visited {
