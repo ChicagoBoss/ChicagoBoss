@@ -6,6 +6,10 @@ accept(Application, Controller, ControllerList) ->
     Module = boss_compiler_adapter_erlang:controller_module(Application, Controller),
     lists:member(Module, ControllerList).
 
+wants_session(Application, Controller, ControllerList) ->
+    Module = list_to_atom(boss_files:web_controller(Application, Controller, ControllerList)),
+    lists:member({'new', 2}, Module:module_info(exports)).
+
 init(Application, Controller, ControllerList, Req, SessionID) ->
     Module = list_to_atom(boss_files:web_controller(Application, Controller, ControllerList)),
     ExportStrings = lists:map(

@@ -1,6 +1,6 @@
 -module(boss_web_controller).
 -behaviour(gen_server).
--export([start_link/0, start_link/1, handle_request/3, process_request/5]).
+-export([start_link/0, start_link/1, handle_request/3, process_request/4]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 -export([handle_news_for_cache/3]).
 -define(DEBUGPRINT(A), error_logger:info_report("~~o)> " ++ A)).
@@ -443,14 +443,16 @@ handle_request(Req, RequestMod, ResponseMod) ->
             end
     end.
 
-build_dynamic_response(App, Request, Response, Url) ->
-    SessionKey = boss_session:get_session_key(),
-    SessionID = case boss_env:get_env(session_enable, true) of
+generate_session_id(Request) ->
+    case boss_env:get_env(session_enable, true) of
         true ->
+            SessionKey = boss_session:get_session_key(),
             boss_session:new_session(Request:cookie(SessionKey));
         false ->
             undefined
-    end,
+    end.
+
+build_dynamic_response(App, Request, Response, Url) ->
     Mode = case boss_env:is_developing_app(App) of
         true -> development;
         false -> production
@@ -465,7 +467,7 @@ build_dynamic_response(App, Request, Response, Url) ->
                 router_pid = RouterPid,
                 controller_modules = ControllerList
             }, 
-            Request, Mode, Url, SessionID]),
+            Request, Mode, Url]),
     ErrorFormat = "~s ~s [~p] ~p ~pms", 
     RequestMethod = Request:request_method(),
     FullUrl = Request:path(),
@@ -476,21 +478,7 @@ build_dynamic_response(App, Request, Response, Url) ->
         _ -> error_logger:info_msg(ErrorFormat, ErrorArgs)
     end,
     Response1 = (Response:status_code(StatusCode)):data(Payload),
-    Headers2 = case SessionID of
-        undefined ->
-            Headers;
-        _ ->
-            SessionExpTime = boss_session:get_session_exp_time(),
-            CookieOptions = [{path, "/"}, {max_age, SessionExpTime}],
-            CookieOptions2 = case boss_env:get_env(session_domain, undefined) of
-                undefined ->
-                    CookieOptions;
-                CookieDomain ->
-                    lists:merge(CookieOptions, [{domain, CookieDomain}])
-            end,
-            lists:merge(Headers, [ mochiweb_cookies:cookie(SessionKey, SessionID, CookieOptions2) ])
-    end,
-    Response2 = lists:foldl(fun({K, V}, Acc) -> Acc:header(K, V) end, Response1, Headers2),
+    Response2 = lists:foldl(fun({K, V}, Acc) -> Acc:header(K, V) end, Response1, Headers),
     case Payload of
         {stream, Generator, Acc0} ->
             Response3 = Response2:data(chunked),
@@ -500,66 +488,67 @@ build_dynamic_response(App, Request, Response, Url) ->
             (Response2:data(Payload)):build_response()
     end.
 
-process_request(#boss_app_info{ doc_prefix = DocPrefix } = AppInfo, Req, development, DocPrefix, SessionID) ->
-    Result = case catch load_and_execute(development, {"doc", [], []}, AppInfo, Req, SessionID) of
+process_request(#boss_app_info{ doc_prefix = DocPrefix } = AppInfo, Req, development, DocPrefix) ->
+    {Result, SessionID1} = case catch load_and_execute(development, {"doc", [], []}, AppInfo, Req, undefined) of
         {'EXIT', Reason} ->
-            {error, Reason};
-        Ok ->
-            Ok
+            {{error, Reason}, generate_session_id(Req)};
+        {R, S} ->
+            {R, S}
     end,
-    process_result(AppInfo, Req, Result);
-process_request(AppInfo, Req, development, Url, SessionID) ->
+    process_result(AppInfo, Req, Result, SessionID1);
+process_request(AppInfo, Req, development, Url) ->
     DocPrefixPlusSlash = AppInfo#boss_app_info.doc_prefix ++ "/",
-    Result = case string:substr(Url, 1, length(DocPrefixPlusSlash)) of
+    {Result, SessionID1} = case string:substr(Url, 1, length(DocPrefixPlusSlash)) of
         DocPrefixPlusSlash ->
             ModelName = lists:nthtail(length(DocPrefixPlusSlash), Url),
             case string:chr(ModelName, $.) of
                 0 ->
-                    case catch load_and_execute(development, {"doc", ModelName, []}, AppInfo, Req, SessionID) of
+                    case catch load_and_execute(development, {"doc", ModelName, []}, AppInfo, Req, undefined) of
                         {'EXIT', Reason} ->
-                            {error, Reason};
-                        Ok ->
-                            Ok
+                            {{error, Reason}, undefined};
+                        {R, S} ->
+                            {R, S}
                     end;
                 _ ->
-                    {not_found, "File not found"}
+                    {{not_found, "File not found"}, undefined}
             end;
         _ ->
             ControllerList = boss_files:web_controller_list(AppInfo#boss_app_info.application),
             RouterPid = AppInfo#boss_app_info.router_pid,
             boss_router:set_controllers(RouterPid, ControllerList),
             boss_router:reload(RouterPid),
-            process_dynamic_request(AppInfo, Req, development, Url, SessionID)
+            process_dynamic_request(AppInfo, Req, development, Url)
     end,
-    process_result(AppInfo, Req, Result);
-process_request(AppInfo, Req, Mode, Url, SessionID) ->
-    Result = process_dynamic_request(AppInfo, Req, Mode, Url, SessionID),
-    process_result(AppInfo, Req, Result).
+    process_result(AppInfo, Req, Result, SessionID1);
+process_request(AppInfo, Req, Mode, Url) ->
+    {Result, SessionID1} = process_dynamic_request(AppInfo, Req, Mode, Url),
+    process_result(AppInfo, Req, Result, SessionID1).
 
-process_dynamic_request(#boss_app_info{ router_pid = RouterPid } = AppInfo, Req, Mode, Url, SessionID) ->
-    Result = case boss_router:route(RouterPid, Url) of
+process_dynamic_request(#boss_app_info{ router_pid = RouterPid } = AppInfo, Req, Mode, Url) ->
+    {Result, SessionID1} = case boss_router:route(RouterPid, Url) of
         {ok, {Application, Controller, Action, Tokens}} when Application =:= AppInfo#boss_app_info.application ->
             Location = {Controller, Action, Tokens},
-            case catch load_and_execute(Mode, Location, AppInfo, Req, SessionID) of
+            case catch load_and_execute(Mode, Location, AppInfo, Req, undefined) of
                 {'EXIT', Reason} ->
-                    {error, Reason};
-                {not_found, Message} ->
-                    process_not_found(Message, AppInfo, Req, Mode, SessionID);
+                    {{error, Reason}, undefined};
+                {{not_found, Message}, S1} ->
+                    {process_not_found(Message, AppInfo, Req, Mode, S1), S1};
                 Ok ->
                     Ok
             end;
         {ok, {OtherApplication, Controller, Action, Tokens}} ->
-            {redirect, {OtherApplication, Controller, Action, Tokens}};
+            {{redirect, {OtherApplication, Controller, Action, Tokens}}, undefined};
         not_found ->
-            process_not_found("No routes matched the requested URL.", AppInfo, Req, Mode, SessionID)
+            {process_not_found("No routes matched the requested URL.", AppInfo, Req, Mode, undefined),
+                undefined}
     end,
     FinalResult = case Result of
         {error, Payload} ->
-            process_error(Payload, AppInfo, Req, Mode, SessionID);
+            process_error(Payload, AppInfo, Req, Mode, SessionID1);
         _ ->
             Result
     end,
-    FinalResult.
+    {FinalResult, SessionID1}.
 
 process_not_found(Message, #boss_app_info{ router_pid = RouterPid } = AppInfo, Req, Mode, SessionID) ->
     case boss_router:handle(RouterPid, 404) of
@@ -568,7 +557,7 @@ process_not_found(Message, #boss_app_info{ router_pid = RouterPid } = AppInfo, R
             case catch load_and_execute(Mode, Location, AppInfo, Req, SessionID) of
                 {'EXIT', Reason} ->
                     {error, Reason};
-                {ok, Payload, Headers} ->
+                {{ok, Payload, Headers}, _} ->
                     {not_found, Payload, Headers}
             end;
         {ok, OtherLocation} ->
@@ -596,8 +585,8 @@ process_error(Payload, #boss_app_info{ router_pid = RouterPid } = AppInfo, Req, 
             case catch load_and_execute(Mode, ErrorLocation, AppInfo, Req, SessionID) of
                 {'EXIT', Reason} ->
                     {error, ["Error in 500 handler: <pre>", io_lib:print(Reason), "</pre>"], []};
-                Ok ->
-                    Ok
+                {Result, _Session} ->
+                    Result
             end;
         {ok, OtherLocation} ->
             {redirect, OtherLocation};
@@ -617,6 +606,25 @@ process_stream_generator(Req, Method, Generator, Acc) ->
             mochiweb_socket:send(Req:socket(), ["0\r\n\r\n"]),
             ok
     end.
+
+process_result(AppInfo, Req, Result, SessionID) ->
+    {StatusCode, Headers, Payload} = process_result(AppInfo, Req, Result),
+    Headers1 = case SessionID of
+        undefined ->
+            Headers;
+        _ ->
+            SessionExpTime = boss_session:get_session_exp_time(),
+            CookieOptions = [{path, "/"}, {max_age, SessionExpTime}],
+            CookieOptions2 = case boss_env:get_env(session_domain, undefined) of
+                undefined ->
+                    CookieOptions;
+                CookieDomain ->
+                    lists:merge(CookieOptions, [{domain, CookieDomain}])
+            end,
+            SessionKey = boss_session:get_session_key(),
+            lists:merge(Headers, [ mochiweb_cookies:cookie(SessionKey, SessionID, CookieOptions2) ])
+    end,
+    {StatusCode, Headers1, Payload}.
 
 process_result(AppInfo, Req, {Status, Payload}) ->
     process_result(AppInfo, Req, {Status, Payload, []});
@@ -683,10 +691,10 @@ load_and_execute(Mode, {Controller, _, _} = Location, AppInfo, Req, SessionID) w
     case boss_files:is_controller_present(AppInfo#boss_app_info.application, Controller, 
             AppInfo#boss_app_info.controller_modules) of
         true -> execute_action(Location, AppInfo, Req, SessionID);
-        false -> render_view(Location, AppInfo, Req, SessionID)
+        false -> {render_view(Location, AppInfo, Req, SessionID), SessionID}
     end;
-load_and_execute(development, {"doc", ModelName, _}, AppInfo, Req, _SessionID) ->
-    case boss_load:load_models(AppInfo#boss_app_info.application) of
+load_and_execute(development, {"doc", ModelName, _}, AppInfo, Req, SessionID) ->
+    Result = case boss_load:load_models(AppInfo#boss_app_info.application) of
         {ok, ModelModules} ->
             case lists:member(ModelName, lists:map(fun atom_to_list/1, ModelModules)) of
                 true ->
@@ -708,7 +716,8 @@ load_and_execute(development, {"doc", ModelName, _}, AppInfo, Req, _SessionID) -
             end;
         {error, ErrorList} ->
             render_errors(ErrorList, AppInfo, Req)
-    end;
+    end,
+    {Result, SessionID};
 load_and_execute(development, {Controller, _, _} = Location, AppInfo, Req, SessionID) ->
     Application = AppInfo#boss_app_info.application,
     Res1 = boss_load:load_mail_controllers(Application),
@@ -737,13 +746,13 @@ load_and_execute(development, {Controller, _, _} = Location, AppInfo, Req, Sessi
                         {ok, _} ->
                             execute_action(Location, AppInfo, Req, SessionID);
                         {error, ErrorList} ->
-                            render_errors(ErrorList, AppInfo, Req)
+                            {render_errors(ErrorList, AppInfo, Req), SessionID}
                     end;
                 false ->
-                    render_view(Location, AppInfo, Req, SessionID)
+                    {render_view(Location, AppInfo, Req, SessionID), SessionID}
             end;
         {error, ErrorList} ->
-            render_errors(ErrorList, AppInfo, Req)
+            {render_errors(ErrorList, AppInfo, Req), SessionID}
     end.
 
 render_errors(ErrorList, AppInfo, Req) ->
@@ -765,7 +774,7 @@ execute_action({Controller, Action, Tokens}, AppInfo, Req, SessionID, LocationTr
 execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID, LocationTrail) ->
     case lists:member(Location, LocationTrail) of
         true ->
-            {error, "Circular redirect!"};
+            {{error, "Circular redirect!"}, SessionID};
         false ->
             % do not convert a list to an atom until we are sure the controller/action
             % pair exists. this prevents a memory leak due to atom creation.
@@ -781,8 +790,18 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
                     (_, Acc) -> Acc
                 end, false, Adapters),
 
+            SessionID1 = case SessionID of
+                undefined ->
+                    case Adapter:wants_session(AppInfo#boss_app_info.application, Controller, 
+                            AppInfo#boss_app_info.controller_modules) of
+                        true -> generate_session_id(Req);
+                        _ -> SessionID
+                    end;
+                _ -> SessionID
+            end,
+
             AdapterInfo = Adapter:init(AppInfo#boss_app_info.application, Controller, 
-                AppInfo#boss_app_info.controller_modules, Req, SessionID),
+                AppInfo#boss_app_info.controller_modules, Req, SessionID1),
             RequestMethod = Req:request_method(),
 
             AuthResult = Adapter:before_filter(AdapterInfo, Action, RequestMethod, Tokens),
@@ -794,99 +813,110 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
                     OtherInfo
             end,
 
-            case AuthInfo of
+            Result = case AuthInfo of
                 {ok, Info} ->
-                    EffectiveRequestMethod = case Req:request_method() of
-                        'HEAD' -> 'GET';
-                        Method -> Method
-                    end,
-
-                    LangResult = Adapter:language(AdapterInfo, Action, Info),
-
-                    CacheKey = {Controller, Action, Tokens, LangResult},
-
-                    CacheInfo = case (boss_env:get_env(cache_enable, false) andalso 
-                            EffectiveRequestMethod =:= 'GET') of
-                        true -> Adapter:cache_info(AdapterInfo, Action, Tokens, Info);
-                        false -> none
-                    end,
-
-                    CachedRenderedResult = case CacheInfo of
-                        {page, _} -> boss_cache:get(?PAGE_CACHE_PREFIX, CacheKey);
-                        _ -> undefined
-                    end,
-
-                    {CacheTTL, CacheWatchString} = case CacheInfo of
-                        {page, CacheOptions} ->
-                            {proplists:get_value(seconds, CacheOptions, ?PAGE_CACHE_DEFAULT_TTL),
-                                proplists:get_value(watch, CacheOptions)};
-                        {vars, CacheOptions} ->
-                            {proplists:get_value(seconds, CacheOptions, ?VARIABLES_CACHE_DEFAULT_TTL),
-                                proplists:get_value(watch, CacheOptions)};
-                        _ ->
-                            {undefined, undefined}
-                    end,
-
-                    RenderedResult = case CachedRenderedResult of
-                        undefined ->
-                            CachedActionResult = case CacheInfo of
-                                {vars, _} -> boss_cache:get(?VARIABLES_CACHE_PREFIX, CacheKey);
-                                _ -> undefined
-                            end,
-
-                            ActionResult = case CachedActionResult of
-                                undefined -> Adapter:action(AdapterInfo, Action, EffectiveRequestMethod, Tokens, Info);
-                                _ -> CachedActionResult
-                            end,
-
-                            case (CachedActionResult =/= undefined andalso is_tuple(ActionResult) andalso element(1, ActionResult) =:= ok) of
-                                true ->
-                                    case CacheWatchString of
-                                        undefined -> ok;
-                                        _ ->
-                                            boss_news:set_watch({?VARIABLES_CACHE_PREFIX, CacheKey}, CacheWatchString,
-                                                fun ?MODULE:handle_news_for_cache/3, {?VARIABLES_CACHE_PREFIX, CacheKey}, 
-                                                CacheTTL)
-                                    end,
-                                    boss_cache:set(?VARIABLES_CACHE_PREFIX, CacheKey, ActionResult, CacheTTL);
-                                false ->
-                                    ok
-                            end,
-
-                            LangHeaders = case LangResult of
-                                auto -> [];
-                                _ -> [{"Content-Language", LangResult}]
-                            end,
-
-                            case ActionResult of
-                                undefined ->
-                                    render_view(Location, AppInfo, Req, SessionID, [{"_before", Info}], LangHeaders);
-                                ActionResult ->
-                                    process_action_result({Location, Req, SessionID, [Location|LocationTrail]}, 
-                                        ActionResult, LangHeaders, AppInfo, Info)
-                            end;
-                        Other ->
-                            Other
-                    end,
-
-                    case (CachedRenderedResult =/= undefined andalso is_tuple(RenderedResult) andalso element(1, RenderedResult) =:= ok) of
-                        true ->
-                            case CacheWatchString of
-                                undefined -> ok;
-                                _ ->
-                                    boss_news:set_watch({?PAGE_CACHE_PREFIX, CacheKey}, CacheWatchString,
-                                        fun ?MODULE:handle_news_for_cache/3, {?PAGE_CACHE_PREFIX, CacheKey}, CacheTTL)
-                            end,
-                            boss_cache:set(?PAGE_CACHE_PREFIX, CacheKey, RenderedResult, CacheTTL);
-                        false ->
-                            ok
-                    end,
-
-                    Adapter:after_filter(AdapterInfo, Action, RenderedResult, Info);
+                    execute_action1(Adapter, AdapterInfo, Info, Location, AppInfo, Req, SessionID1, LocationTrail);
                 {redirect, Where} ->
                     {redirect, process_redirect(Controller, Where, AppInfo)}
-            end
+            end,
+
+            {Result, SessionID1}
     end.
+
+execute_action1(Adapter, AdapterInfo, Info, {Controller, Action, Tokens} = Location, AppInfo, Req, SessionID1, LocationTrail) ->
+    EffectiveRequestMethod = case Req:request_method() of
+        'HEAD' -> 'GET';
+        Method -> Method
+    end,
+
+    LangResult = Adapter:language(AdapterInfo, Action, Info),
+
+    CacheKey = {Controller, Action, Tokens, LangResult},
+
+    CacheInfo = case (boss_env:get_env(cache_enable, false) andalso 
+            EffectiveRequestMethod =:= 'GET') of
+        true -> Adapter:cache_info(AdapterInfo, Action, Tokens, Info);
+        false -> none
+    end,
+
+    CachedRenderedResult = case CacheInfo of
+        {page, _} -> boss_cache:get(?PAGE_CACHE_PREFIX, CacheKey);
+        _ -> undefined
+    end,
+
+    {CacheTTL, CacheWatchString} = case CacheInfo of
+        {page, CacheOptions} ->
+            {proplists:get_value(seconds, CacheOptions, ?PAGE_CACHE_DEFAULT_TTL),
+                proplists:get_value(watch, CacheOptions)};
+        {vars, CacheOptions} ->
+            {proplists:get_value(seconds, CacheOptions, ?VARIABLES_CACHE_DEFAULT_TTL),
+                proplists:get_value(watch, CacheOptions)};
+        _ ->
+            {undefined, undefined}
+    end,
+
+    RenderedResult = case CachedRenderedResult of
+        undefined ->
+            ActionResult = execute_action2(CacheInfo, CacheKey, CacheTTL, CacheWatchString, 
+                Adapter, AdapterInfo, EffectiveRequestMethod, Info, Action, Tokens),
+
+            LangHeaders = case LangResult of
+                auto -> [];
+                _ -> [{"Content-Language", LangResult}]
+            end,
+
+            case ActionResult of
+                undefined ->
+                    render_view(Location, AppInfo, Req, SessionID1, [{"_before", Info}], LangHeaders);
+                ActionResult ->
+                    process_action_result({Location, Req, SessionID1, [Location|LocationTrail]}, 
+                        ActionResult, LangHeaders, AppInfo, Info)
+            end;
+        Other ->
+            Other
+    end,
+
+    case (CachedRenderedResult =/= undefined andalso is_tuple(RenderedResult) andalso element(1, RenderedResult) =:= ok) of
+        true ->
+            case CacheWatchString of
+                undefined -> ok;
+                _ ->
+                    boss_news:set_watch({?PAGE_CACHE_PREFIX, CacheKey}, CacheWatchString,
+                        fun ?MODULE:handle_news_for_cache/3, {?PAGE_CACHE_PREFIX, CacheKey}, CacheTTL)
+            end,
+            boss_cache:set(?PAGE_CACHE_PREFIX, CacheKey, RenderedResult, CacheTTL);
+        false ->
+            ok
+    end,
+
+    Adapter:after_filter(AdapterInfo, Action, RenderedResult, Info).
+
+execute_action2(CacheInfo, CacheKey, CacheTTL, CacheWatchString, Adapter, AdapterInfo, EffectiveRequestMethod, Info, Action, Tokens) ->
+    CachedActionResult = case CacheInfo of
+        {vars, _} -> boss_cache:get(?VARIABLES_CACHE_PREFIX, CacheKey);
+        _ -> undefined
+    end,
+
+    ActionResult = case CachedActionResult of
+        undefined -> Adapter:action(AdapterInfo, Action, EffectiveRequestMethod, Tokens, Info);
+        _ -> CachedActionResult
+    end,
+
+    case (CachedActionResult =/= undefined andalso is_tuple(ActionResult) andalso element(1, ActionResult) =:= ok) of
+        true ->
+            case CacheWatchString of
+                undefined -> ok;
+                _ ->
+                    boss_news:set_watch({?VARIABLES_CACHE_PREFIX, CacheKey}, CacheWatchString,
+                        fun ?MODULE:handle_news_for_cache/3, {?VARIABLES_CACHE_PREFIX, CacheKey}, 
+                        CacheTTL)
+            end,
+            boss_cache:set(?VARIABLES_CACHE_PREFIX, CacheKey, ActionResult, CacheTTL);
+        false ->
+            ok
+    end,
+    
+    ActionResult.
 
 handle_news_for_cache(_, _, {Prefix, Key}) ->
     boss_cache:delete(Prefix, Key),

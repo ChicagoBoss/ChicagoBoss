@@ -329,7 +329,7 @@ get_request_loop(AppInfo) ->
             [{_, TranslatorPid, _, _}] = supervisor:which_children(AppInfo#boss_app_info.translator_sup_pid),
             Result = boss_web_controller:process_request(AppInfo#boss_app_info {
                     router_pid = RouterPid, translator_pid = TranslatorPid }, 
-                Req, testing, FullUrl, undefined),
+                Req, testing, FullUrl),
             From ! {self(), FullUrl, Result};
         Other ->
             error_logger:error_msg("Unexpected message in get_request_loop: ~p~n", [Other])

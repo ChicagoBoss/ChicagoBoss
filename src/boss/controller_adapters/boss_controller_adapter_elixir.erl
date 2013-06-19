@@ -1,10 +1,12 @@
-
 -module(boss_controller_adapter_elixir).
 -compile(export_all).
 
 accept(Application, Controller, ControllerList) ->
     Module = boss_compiler_adapter_elixir:controller_module(Application, Controller),
     lists:member(Module, ControllerList).
+
+wants_session(_Application, _Controller, _ControllerList) ->
+    true.
 
 init(Application, Controller, ControllerList, Req, SessionID) ->
     Module = list_to_atom(boss_files:web_controller(Application, Controller, ControllerList)),
