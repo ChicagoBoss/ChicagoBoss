@@ -53,21 +53,18 @@ BossRecords are <em>specially compiled parameterized modules</em> that follow th
 <h2>Generated functions</h2>
 <p>Generated instance functions of a BossRecord include:</p>
 
-{% if functions %}
+
 {% for function in functions %}
-{% ifnotequal function.function "trivial_counter" %}
-<a name="{{ function.function }}"></a>
-<div class="code spec">
-    {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
-</div>
-<p>
-{% if function.description_long %}
-{{ function.description_long }}
-{% endif %}
-</p>
-{% endifnotequal %}
+    {% ifnotequal function.function "trivial_counter" %}
+    <a name="{{ function.function }}"></a>
+    <div class="example {% cycle 'row1' 'row2' %}">
+        <div class="code spec">
+            {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
+        </div>
+        <p>{% if function.description_long %}{{ function.description_long }}{% else %}&nbsp;{% endif %}</p>
+    </div>
+    {% endifnotequal %}
 {% endfor %}
-{% endif %}
 
 <p>Other getters and setters are generated based on the parameters of your BossRecord.</p>
 

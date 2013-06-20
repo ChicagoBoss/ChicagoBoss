@@ -1,8 +1,42 @@
 body {
     font-family: Arial;
     text-align: left;
-    background-color: white;
+    background-color: #E1DFDF;
+    margin: 0;
 }
+div#api-content {
+    max-width: 1100px;
+    margin: 0 auto;
+    background-color: white;
+    padding: 10pt;
+}
+header {
+    background-color: #333333;
+    color: white;
+}
+header a {
+    transition: all 0.15s linear 0s;
+    font-weight: 300;
+}
+
+h1, h2, h3 {
+    color: black;
+    line-height: 120%;
+    margin-top: 1.3em;
+}
+
+h1 {
+    font-size: 36pt;
+}
+
+h2  {
+    font-size: 32pt;
+}
+
+h3 {
+    font-size: 26pt;
+}
+
 div.equation {
     color: white;
     font-size: 26px; padding: 20px;
@@ -26,46 +60,56 @@ span.bullet {
 div.quote {
     font-style: italic;
 }
-div.code.spec {
-    margin-top: 30px;
+pre.code {
+    padding: 10px;
 }
 div.code {
-padding: 10px;  font-family: Courier New; background-color: #EEE; color: black;
+    padding-top: 4px;
 }
-div.code span.attr {
-    color: #00991A;
+
+div.code, pre.code, td.code {
+    font-family: "Courier New", monospace;
+    color: #333;
+    font-weight: bold;
+    font-size: 14pt;
 }
-div.code span.string {
-    color: #F017FF;
+span.atom, {
+    color: #D48528;
 }
-div.code span.function {
-    color: #007799;
+span.attr {
+    color: #D48528;
 }
-div.code span.bracket {
-    color: #00DBFF;
+span.braces {
+    color: #D48528;
+    font-weight: bold;
 }
-div.code span.keyword {
-    color: #FFF200;
+span.bracket {
+    color: #D48528;
 }
-div.code span.bracket span.name {
-    color: #FFF200;
+span.comment {
+    color: #D48528;
 }
-div.code span.var {
-    color: #00DBFF;
+
+span.function {
+    color: #D48528;
 }
-div.code span.braces {
-    color: #0833C9;
-font-weight: bold;
+
+span.keyword {
+    color: #D48528;
 }
-div.code span.typevar {
-    color: #1249DB;
+span.name {
+    color: #D48528;
 }
-div.code span.comment {
-    color: #1249DB;
+span.string {
+    color: #D48528;
 }
-div.code span.atom {
-    color: #00991A;
+span.typevar {
+    color: #D48528;
 }
+span.var {
+    color: #D48528;
+}
+
 div.nav {
     clear: both;
     color: white;
@@ -76,8 +120,40 @@ div.nav a {
     color: #000;
     font-size: 20px; margin-top: 40px; margin-bottom: 20px;
 }
-div.subnav {text-align: center; font-size: 14px; padding: 16px;
+div.subnav {
+    text-align: center; 
+    font-size: 14px;
+    padding: 16px;
 }
+
+a:link, a:visited {
+    color: gray;
+}
+
+a:hover {
+    color: #999;
+}
+
+a:active {
+    color: #000;
+}
+
+div.subnav a:link, div.subnav a:visited {
+    color: #D48528;
+}
+
+div.subnav a:hover {
+    color: #ddd;
+}
+
+div.subnav a:active {
+    color: #fff;
+}
+
+
+
+
+
 p.question {
     margin: 0px;
     font-style: italic;
@@ -127,31 +203,29 @@ div.content {
     margin-left: -425px; 
     left: 50%; 
     padding: 30px 30px;
-    width: 790px; 
-    /*
-    border-width: 0px 1px; 
-    border-color: black; 
-    border-style: solid; */
+    width: 790px;
     font-size: 20px; padding-bottom: 300px;
 }
-div.content .top_left {
-    width: 30px;
-    height: 30px;
-    background-image: url('http://maps.evanmiller.org/circle/9EC5D3/ffffff/30.gif');
-    background-repeat: no-repeat;
-    background-position: top left;
-    top: 0px;
-    left: 0px;
-    position: absolute;
+code {
+    font-weight: bold;
+    color: #333;
+}
+div.example {
+    border-bottom: #ddd solid 1px;
+    padding: 10pt;
+}
+div.row2 {
+    background-color: rgb(240, 240, 240);
 }
 
-div.content .top_right {
-    width: 30px;
-    height: 30px;
-    background-image: url('http://maps.evanmiller.org/circle/9EC5D3/ffffff/30.gif');
-    background-repeat: no-repeat;
-    background-position: top right;
-    top: 0px;
-    right: 0px;
-    position: absolute;
+td.code {
+
+}
+.nobr {
+    white-space: pre;
+}
+
+#link-home {
+    margin-top: 0px;
+    padding: 10px;
 }

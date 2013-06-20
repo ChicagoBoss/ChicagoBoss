@@ -6,14 +6,18 @@
 <h2>Functions</h2>
 
 <p>Functions in the <code>boss_db</code> module include:</p>
+
 {% for function in functions %}
-{% if function.description_long %}
-<div class="code spec">
-    {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
-</div>
-<p>{{ function.description_long }}</p>
-{% endif %}
+    {% if function.description_long %}
+        <div class="example {% cycle 'row1' 'row2' %}">
+          <div class="code">
+                {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
+            </div>
+            <p>{{ function.description_long }}</p>
+        </div>
+    {% endif %}
 {% endfor %}
+
 
 <h2>Conditions and Comparison Operators</h2>
 
@@ -22,164 +26,152 @@
 <p><code>Conditions</code> looks like a list, but each element in the list uses a notation very similar to abstract mathematical notation with a left-hand side (an atom corresponding to a record attribute), a single-character operator, and a right-hand side (values to match to the attribute). <strong>The mathematical operators are not all ASCII!</strong> You may want to copy-paste the UTF-8 operators below. As an alternative, you can also specify each condition with a 3-tuple with easier-to-type operator names.</p>
 
 <p>As a quick example, to count the number of people younger than 25 with occupation listed as "student" or "unemployed", you would use:</p>
-<div class="code">
-    boss_db:count(person, <br />
-    &nbsp;&nbsp;&nbsp;&nbsp;[age &lt; 25, occupation ∈ ["student", "unemployed"]]).
-</div>
+<pre class="code">
+boss_db:count(person,
+    [age &lt; 25, occupation ∈ ["student", "unemployed"]]).
+</pre>
 <p>This could also be written:</p>
-<div class="code">
-    boss_db:count(person, <br />
-    &nbsp;&nbsp;&nbsp;&nbsp;
-    [{age, 'lt', 25},<br />
-    &nbsp;&nbsp;&nbsp;&nbsp;
-    &nbsp;&nbsp;&nbsp;&nbsp;
+<pre class="code">
+boss_db:count(person,
+    [{age, 'lt', 25},
     {occupation, 'in', ["student", "unemployed"]}]).
+</pre>
+
+<h2>Valid <code>Conditions</code></h2>
+
+<div class="example row1">
+    <div class=" code">
+        <code>key = Value</code><br>
+        <code>{key, 'equals', Value}</code>
+    </div>
+    <p>
+        The "<code>key</code>" attribute is exactly equal to <code>Value</code>.
+    </p>
 </div>
 
-<p>Valid conditions are:</p>
+<div class="example row2">
+    <div class=" code">
+        <code>key ≠ Value</code><br>
+        <code>{key, 'not_equals', Value}</code>
+    </div>
+    <p>
+        The "<code>key</code>" attribute is not exactly equal to <code>Value</code>.
+    </p>
+</div>
+<div class="example row1">
+    <div class="code">
+        <code>key ∈ [Value1, Value2, ...]</code><br>
+        <code>{key, 'in', [Value1, Value2, ...]}</code>
+    </div>
+    <p>The "<code>key</code>" attribute is equal to at least one element on the right-hand side.
+</p>
+</div>
+<div class="example row2">
+    <div class="code">
+        <code>key ∉ [Value1, Value2, ...]</code><br>
+        <code>{key, 'not_in', [Value1, Value2, ...]}</code>
+    </div>
+    <p>The "<code>key</code>" attribute is not equal to any element on the right-hand side.</p>
+</div>
+<div class="example row1">
+    <div class="code">
+        <code>key ∈ {Min, Max}</code><br>
+        <code>{key, 'in', {Min, Max}}</code>
+    </div>
+    <p>The "<code>key</code>" attribute is numerically between <code>Min</code> and <code>Max</code>.
+</p>
+</div>
+<div class="example row2">
+    <div class="code">
+        <code>key ∉ {Min, Max}</code><br>
+        <code>{key, 'not_in', {Min, Max}}</code>
+    </div>
+    <p>The "<code>key</code>" attribute is not between <code>Min</code> and <code>Max</code>.</p>
+</div>
+<div class="example row1">
+    <div class="code">
+        <code>key ∼ RegularExpression</code><br>
+        <code>{key, 'matches', RegularExpression}</code>
+    </div>
+    <p>The "<code>key</code>" attribute matches the <code>RegularExpression</code>. To perform a case-insensitive match, the expression should start with an asterisk (e.g. <code>*erlang</code>).</p>
+</div>
+<div class="example row2">
+    <div class="code">
+        <code>key ≁ RegularExpression</code><br>
+        <code>{key, 'not_matches', RegularExpression}</code>
+    </div>
+    <p>The "key" attribute does not match the <code>RegularExpression.</code>.</p>
+</div>
+<div class="example row1">
+    <div class="code">
+        <code>key ∋ Token</code><br>
+        <code>{key, 'contains', Token}</code>
+    </div>
+    <p>The "key" attribute contains <code>Token</code>.</p>
+</div>
+<div class="example row2">
+    <div class="code">
+        <code>key ∌ Token</code><br>
+        <code>{key, 'not_contains', Token}</code>
+    </div>
+    <p>The "<code>key</code>" attribute does not contain <code>Token</code>.</p>
+</div>
+<div class="example row1">
+    <div class="code">
+        <code>key ⊇ [Token1, Token2, ...]</code><br>
+        <code>{key, 'contains_all', [Token1, Token2, ...]}</code>
+    </div>
+    <p>The "<code>key</code>" attribute contains all tokens on the right-hand side.</p>
+</div>
+<div class="example row2">
+    <div class="code">
+        <code>key ⊉ [Token1, Token2, ...]</code><br>
+        <code>{key, 'not_contains_all', [Token1, Token2, ...]}</code>
+    </div>
+    <p>The "<code>key</code>" attribute does not contain all tokens on the right-hand side.</p>
+</div>
+<div class="example row1">
+    <div class="code">
+        <code>key ∩ [Token1, Token2, ...]</code><br>
+        <code>{key, 'contains_any', [Token1, Token2, ...]}</code>   
+    </div>
+    <p>The "<code>key</code>" attribute contains at least one of the tokens on the right-hand side.</p>
+</div>
+<div class="example row2">
+    <div class="code">
+        <code>key ⊥ [Token1, Token2, ...]</code><br>
+        <code>{key, 'contains_none', [Token1, Token2, ...]}</code>
+    </div>
+    <p>The "<code>key</code>" attribute contains none of the tokens on the right-hand side.</p>
+</div>
+<div class="example row1">
+    <div class="code">
+        <code>key &gt; Value</code><br>
+        <code>{key, 'gt', Value}</code>
+    </div>
+    <p>The "<code>key</code>" attribute is greater than <code>Value</code>.</p>
+</div>
+<div class="example row2">
+    <div class="code">
+        <code>key &lt; Value</code><br>
+        <code>{key, 'lt', Value}</code>
+    </div>
+    <p>The "key" attribute is less than <code>Value</code>.</p>
+</div>
+<div class="example row1">
+    <div class="code">
+        <code>key ≥ Value</code><br>
+        <code>{key, 'ge', Value}</code>
+    </div>
+    <p>The "key" attribute is greater than or equal to <code>Value</code>.</p>
+</div>
+<div class="example row2">
+    <div class="code">
+        <code>key ≤ Value</code><br>
+        <code>{key, 'le', Value}</code>
+    </div>
+    <p>The "key" attribute is less than or equal to <code>Value</code>.</p>
+</div>
 
-<div class="code">
-    key = Value
-</div>
-<div class="code">
-    {key, 'equals', Value}
-</div>
-<p>The "key" attribute is exactly equal to Value.</p>
-
-<div class="code">
-    key ≠ Value
-</div>
-<div class="code">
-    {key, 'not_equals', Value}
-</div>
-<p>The "key" attribute is not exactly equal to Value.</p>
-
-<div class="code">
-    key ∈ [Value1, Value2, ...]
-</div>
-<div class="code">
-    {key, 'in', [Value1, Value2, ...]}
-</div>
-<p>The "key" attribute is equal to at least one element on the right-hand side.</p>
-
-<div class="code">
-    key ∉ [Value1, Value2, ...]
-</div>
-<div class="code">
-    {key, 'not_in', [Value1, Value2, ...]}
-</div>
-<p>The "key" attribute is not equal to any element on the right-hand side.</p>
-
-<div class="code">
-    key ∈ {Min, Max}
-</div>
-<div class="code">
-    {key, 'in', {Min, Max{{ "}}" }}
-</div>
-<p>The "key" attribute is numerically between Min and Max.</p>
-
-<div class="code">
-    key ∉ {Min, Max}
-</div>
-<div class="code">
-    {key, 'not_in', {Min, Max{{ "}}" }}
-</div>
-<p>The "key" attribute is not between Min and Max.</p>
-
-<div class="code">
-    key ∼ RegularExpression
-</div>
-<div class="code">
-    {key, 'matches', RegularExpression}
-</div>
-<p>The "key" attribute matches the RegularExpression. To perform a case-insensitive match, the expression should start with an asterisk (e.g. <code>*erlang</code>).</p>
-
-<div class="code">
-    key ≁ RegularExpression
-</div>
-<div class="code">
-{key, 'not_matches', RegularExpression}
-</div>
-<p>The "key" attribute does not match the RegularExpression.</p>
-
-<div class="code">
-    key ∋ Token
-</div>
-<div class="code">
-{key, 'contains', Token}
-</div>
-<p>The "key" attribute contains Token.</p>
-
-<div class="code">
-    key ∌ Token
-</div>
-<div class="code">
-{key, 'not_contains', Token}
-</div>
-<p>The "key" attribute does not contain Token.</p>
-
-<div class="code">
-    key ⊇ [Token1, Token2, ...]
-</div>
-<div class="code">
-{key, 'contains_all', [Token1, Token2, ...]} 
-</div>
-<p>The "key" attribute contains all tokens on the right-hand side.</p>
-
-<div class="code">
-    key ⊉ [Token1, Token2, ...]
-</div>
-<div class="code">
-{key, 'not_contains_all', [Token1, Token2, ...]}
-</div>
-<p>The "key" attribute does not contain all tokens on the right-hand side.</p>
-
-<div class="code">
-    key ∩ [Token1, Token2, ...]
-</div>
-<div class="code">
-{key, 'contains_any', [Token1, Token2, ...]}
-</div>
-<p>The "key" attribute contains at least one of the tokens on the right-hand side.</p>
-
-<div class="code">
-    key ⊥ [Token1, Token2, ...]
-</div>
-<div class="code">
-{key, 'contains_none', [Token1, Token2, ...]}
-</div>
-<p>The "key" attribute contains none of the tokens on the right-hand side.</p>
-
-<div class="code">
-    key &gt; Value
-</div>
-<div class="code">
-{key, 'gt', Value}
-</div>
-<p>The "key" attribute is greater than Value.</p>
-
-<div class="code">
-    key &lt; Value
-</div>
-<div class="code">
-{key, 'lt', Value}
-</div>
-<p>The "key" attribute is less than Value.</p>
-
-<div class="code">
-    key ≥ Value
-</div>
-<div class="code">
-{key, 'ge', Value}
-</div>
-<p>The "key" attribute is greater than or equal to Value.</p>
-
-<div class="code">
-    key ≤ Value
-</div>
-<div class="code">
-{key, 'le', Value}
-</div>
-<p>The "key" attribute is less than or equal to Value.</p>
 
 {% endblock %}
