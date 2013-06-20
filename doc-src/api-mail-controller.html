@@ -21,19 +21,19 @@
 <h2>Sending email with templates</h2>
 <p>If the simple method doesn't meet your needs, Chicago Boss provides a way to send email using controllers and views.</p>
 <p>Mail controller logic should go into <code>src/mail/my_application_outgoing_mail_controller.erl</code> in your project directory, and templates should go into <code>src/mail/view/</code>. To send an email from a web controller, call:</p>
-<div class="code">
-    boss_mail:send_template(my_application, foo_message, [Arg1, Arg2, ...])<br>
-    boss_mail:send_template(my_application, foo_message, [Arg1, Arg2, ...], fun Callback/1)
-</div>
+<pre class="code">
+    boss_mail:send_template(my_application, foo_message, [Arg1,&nbsp;Arg2,&nbsp;...])
+    boss_mail:send_template(my_application, foo_message, [Arg1,&nbsp;Arg2,&nbsp;...], fun Callback/1)
+</pre>
 <p>That will invoke <code>outgoing_mail_controller:foo_message(Arg1, Arg2, ...)</code> and use the return value to populate the templates <code>src/mail/view/foo_message.txt</code> and <code>src/mail/view/foo_message.html</code>, then send the email in a background process. If <code>Callback</code> is provided, the return value from the email delivery will be passed to it, either <code>{ok, Receipt}</code> or <code>{error, Reason}</code>.</p>
 
-<p>Your mail controller function should return:</div>
-<div class="code">
-    {ok, FromAddress, ToAddress, HeaderFields} | <br />
-    {ok, FromAddress, ToAddress, HeaderFields, Variables} | <br />
-    {ok, FromAddress, ToAddress, HeaderFields, Variables, Options} | <br />
+<p>Your mail controller function should return:</p>
+<pre class="code">
+    {ok, FromAddress, ToAddress, HeaderFields} |
+    {ok, FromAddress, ToAddress, HeaderFields, Variables} |
+    {ok, FromAddress, ToAddress, HeaderFields, Variables, Options} |
     nevermind
-</div>
+</pre>
 <p>If the return value is <code>nevermind</code>, no email will be sent. Otherwise,</p>
 <ul>
     <li><p><code>FromAddress</code> is the sender's email address. The address should <em>not</em> be in "friendly" form, i.e. "foo@example.com" is OK, but "Kai Foo &lt;foo@example.com&gt;" is not.</p></li>

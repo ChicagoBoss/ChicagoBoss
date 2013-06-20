@@ -4,16 +4,18 @@
 <p>The BossNews API lets you cleanly separate notification logic from your models and controllers. You can specify model attributes and collections to watch, and have a callback function invoked when that part of the model changes. BossNews might be used to send email updates about changes occuring on a website, or it might be used in conjunction with BossMQ to provide users with real-time events (for example, to fire an alert when someone replies to a user's forum post).</p>
 <h3>The <code>boss_news</code> module</h3>
 <p>The <code>boss_news</code> module provides functions for creating and managing event listeners, called watches. Watches take a <code>TopicString</code>, which is a comma-separated list of topics to watch, and then execute the provided function when a topic changes. The following table summarizes valid topics and the events that the callback function will receive:</p>
-<table>
+
+<table class="code">
     <tr><th>Topic</th><th>Event</th><th>EventInfo</th></tr>
-    <tr><td>RecordId.Attribute</td><td>updated</td><td>{Record, Attribute::atom(), OldValue, NewValue}</td></tr>
-    <tr><td>RecordId.*</td><td>updated</td><td>{Record, Attribute::atom(), OldValue, NewValue}</td></tr>
-    <tr><td>RecordId</td><td>deleted</td><td>DeletedRecord</td></tr>
-    <tr><td>Type-*.Attribute</td><td>updated</td><td>{Record, Attribute::atom(), OldValue, NewValue}</td></tr>
-    <tr><td>Type-*.*</td><td>updated</td><td>{Record, Attribute::atom(), OldValue, NewValue}</td></tr>
-    <tr><td>Collection</td><td>created</td><td>NewRecord</td></tr>
-    <tr><td>Collection</td><td>deleted</td><td>DeletedRecord</td></tr>
+    <tr><td><code>RecordId.Attribute</code></td><td>updated</td><td><code>{Record,&nbsp;Attribute<span class="typevar">::atom()</span>,&nbsp;OldValue,&nbsp;NewValue}</code></td></tr>
+    <tr><td><code>RecordId.*</code></td><td>updated</td><td><code>{Record, Attribute<span class="typevar">::atom()</span>, OldValue, NewValue}</code></td></tr>
+    <tr><td><code>RecordId</code></td><td>deleted</td><td><code>DeletedRecord</code></td></tr>
+    <tr><td><code>Type-*.Attribute</code></td><td>updated</td><td><code>{Record, Attribute<span class="typevar">::atom()</span>, OldValue, NewValue}</code></td></tr>
+    <tr><td><code>Type-*.*</code></td><td>updated</td><td><code>{Record, Attribute<span class="typevar">::atom()</span>, OldValue, NewValue}</code></td></tr>
+    <tr><td><code>Collection</code></td><td>created</td><td><code>NewRecord</code></td></tr>
+    <tr><td><code>Collection</code></td><td>deleted</td><td><code>DeletedRecord</code></td></tr>
 </table>
+
 <p>Examples of valid topics are:</p>
 <ul>
     <li><code>"user-42.status"</code></li>
@@ -29,14 +31,18 @@
 </ul>
 <p>(Other return values are ignored.)</p>
 <p>Functions for managing watches are:</p>
+
 {% for function in functions %}
-{% if function.description_long %}
-<div class="code spec">
-    {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
-</div>
-<p>{{ function.description_long }}</p>
-{% endif %}
+    {% if function.description_long %}
+        <div class="example {% cycle 'row1' 'row2' %}">
+          <div class="code">
+                {{ function.function }}{% if function.typespec %}{{ function.typespec }}{% endif %}
+            </div>
+            <p>{{ function.description_long }}</p>
+        </div>
+    {% endif %}
 {% endfor %}
+
 
 <h3>The <code>*_news.erl</code> startup script</h3>
 <p>Listeners should be set up in the <code>priv/init/&lt;appname&gt;_news.erl</code> file in your project directory. The module should have one exported function, <code>init/0</code>, which is executed at server startup. This function is a convenient place to set up listeners before any web requests are received, but listeners can be set up anywhere in the application.</p>
@@ -45,11 +51,13 @@
 
 <h3>HTTP API for supporting other frameworks</h3>
 <p>If the admin application is installed, other applications can post data update notifications to a Chicago Boss server via a simple HTTP API:</p>
-<div class="code">
-    POST /admin/news_api/created/&lt;record-id&gt;<br />
-    POST /admin/news_api/updated/&lt;record-id&gt;<br />
+
+<pre class="code">
+    POST /admin/news_api/created/&lt;record-id&gt;
+    POST /admin/news_api/updated/&lt;record-id&gt;
     POST /admin/news_api/deleted/&lt;record-id&gt;
-</div>
+</pre>
+
 <p>The body of the <code>POST</code> request should include model attributes in the form <code>new[&lt;attr&gt;]=&lt;val&gt;</code> and <code>old[&lt;attr&gt;]=&lt;val&gt;</code>. The <code>created</code> API takes only "new" attributes. The <code>deleted</code> API takes only "old" attributes. The <code>updated</code> API takes both "new" attributes and their corresponding "old" attributes.</p>
 <p>When invoked via the HTTP API, all values are passed to the listeners as strings.</p>
 {% endblock %}

@@ -2,10 +2,12 @@
     <head>
         <meta http-equiv="content-type" content="text/html; charset=UTF-8">
         <title>Chicago Boss: The Official API Reference</title>
-    </head>
-    <body>
         <link rel="stylesheet" type="text/css" href="boss.css" />
-        <p><em><a href="/">Chicago Boss home</a></em></p>
+    </head>
+
+<body>
+<header>
+        <p id="link-home"><em><a href="/">Chicago Boss home</a></em></p>
 
 <div style="text-align: center; font-style: italic;">
 <p>The Chicago Boss API is mostly stable, but still might change before 1.0.</p>
@@ -71,7 +73,8 @@
     <a href="api-test.html">Tests</a>
     {% endifequal %}
 </div>
-<div style="padding-top: 20px;">
+</header>
+<div id="api-content">
 {% block api_content %}
 {% endblock %}
 </div>
