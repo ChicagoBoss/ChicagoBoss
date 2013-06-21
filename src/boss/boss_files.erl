@@ -175,7 +175,8 @@ web_controller(AppName, Controller, ControllerList) ->
 compiler_adapters() -> [boss_compiler_adapter_erlang, boss_compiler_adapter_elixir].
 
 compiler_adapter_for_extension("."++Extension) ->
-    adapter_for_extension(Extension, compiler_adapters()).
+    adapter_for_extension(Extension, compiler_adapters());
+compiler_adapter_for_extension(_) -> undefined.
 
 template_adapters() -> [boss_template_adapter_erlydtl, boss_template_adapter_jade, boss_template_adapter_eex].
 
