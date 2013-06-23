@@ -94,7 +94,7 @@ Notes:
    the 'vm_name' and 'vm_cookie' options in boss.config.
 
 2. Create a table for each model as well a table called '_ids_' with attributes
-   for [type, id, count]. For more details see
+   for [type, id]. For more details see
 
    https://github.com/evanmiller/ChicagoBoss/wiki/Automatic-schema-initialization-for-mnesia
 
