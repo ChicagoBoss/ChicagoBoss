@@ -59,27 +59,28 @@ init(Config) ->
 
     Env = boss_env:setup_boss_env(),
     error_logger:info_msg("Starting Boss in ~p mode....~n", [Env]),
-	
+
     DBOptions = lists:foldl(fun(OptName, Acc) ->
                 case application:get_env(OptName) of
                     {ok, Val} -> [{OptName, Val}|Acc];
                     _ -> Acc
                 end
         end, [], [db_port, db_host, db_username, db_password, db_database,
-            db_replication_set, db_read_mode, db_write_mode, db_write_host, db_write_host_port]),
+                  db_replication_set, db_read_mode, db_write_mode, db_write_host, db_write_host_port,
+                  db_read_capacity, db_write_capacity, db_model_read_capacity, db_model_write_capacity]),
     DBAdapter = boss_env:get_env(db_adapter, mock),
     DBShards = boss_env:get_env(db_shards, []),
     CacheEnable = boss_env:get_env(cache_enable, false),
     IsMasterNode = boss_env:is_master_node(),
     DBCacheEnable = boss_env:get_env(db_cache_enable, false) andalso CacheEnable,
-    DBOptions1 = [{adapter, DBAdapter}, {cache_enable, DBCacheEnable}, 
+    DBOptions1 = [{adapter, DBAdapter}, {cache_enable, DBCacheEnable},
         {shards, DBShards}, {is_master_node, IsMasterNode}|DBOptions],
 
     boss_db:start(DBOptions1),
 
     case CacheEnable of
         false -> ok;
-        true -> 
+        true ->
             CacheAdapter = boss_env:get_env(cache_adapter, memcached_bin),
             CacheOptions = [{adapter, CacheAdapter},
                             {cache_servers, boss_env:get_env(cache_servers, [{"127.0.0.1", 11211, 1}])}],
@@ -90,7 +91,7 @@ init(Config) ->
 
     ThisNode = erlang:node(),
     MasterNode = boss_env:master_node(),
-    if 
+    if
         MasterNode =:= ThisNode ->
             error_logger:info_msg("Starting master services on ~p~n", [MasterNode]),
             boss_mq:start(),
@@ -113,7 +114,7 @@ init(Config) ->
             error_logger:info_msg("Pinging master node ~p from ~p~n", [MasterNode, ThisNode]),
             pong = net_adm:ping(MasterNode)
     end,
-	
+
     MailDriver = boss_env:get_env(mail_driver, boss_mail_driver_smtp),
     boss_mail:start([{driver, MailDriver}]),
 
@@ -133,12 +134,12 @@ init(Config) ->
 				    {ok, undefined}
 			    end,
 
-    ServerConfig = [{loop, fun(Req) -> 
+    ServerConfig = [{loop, fun(Req) ->
                     ?MODULE:handle_request(Req, RequestMod, ResponseMod)
             end} | Config],
     Pid = case ServerMod of
         mochiweb_http -> mochiweb_http:start([{ssl, SSLEnable}, {ssl_opts, SSLOptions} | ServerConfig]);
-        misultin -> 
+        misultin ->
             case SSLEnable of
                 true -> misultin:start_link([{ssl, SSLOptions} | ServerConfig]);
                 false -> misultin:start_link(ServerConfig)
@@ -150,22 +151,22 @@ init(Config) ->
 		  application:start(cowboy),
 		  HttpPort = boss_env:get_env(port, 8001),
           AcceptorCount = boss_env:get_env(acceptor_processes, 100),
-          case SSLEnable of 
-              false -> 
+          case SSLEnable of
+              false ->
                   error_logger:info_msg("Starting http listener... on ~p ~n", [HttpPort]),
                   cowboy:start_http(boss_http_listener, AcceptorCount, [{port, HttpPort}], [{env, []}]);
               true ->
                   error_logger:info_msg("Starting https listener... on ~p ~n", [HttpPort]),
-                  SSLConfig = [{port, HttpPort}]++SSLOptions, 
+                  SSLConfig = [{port, HttpPort}]++SSLOptions,
                   cowboy:start_https(boss_https_listener, AcceptorCount, SSLConfig, [{env, []}])
 		  end,
-		  if 
+		  if
               MasterNode =:= ThisNode ->
                   boss_service_sup:start_services(ServicesSupPid, boss_websocket_router);
               true ->
                   ok
 		  end
-		  
+
 	  end,
     {ok, #state{ service_sup_pid = ServicesSupPid, http_pid = Pid, is_master_node = (ThisNode =:= MasterNode) }, 0}.
 
@@ -182,13 +183,13 @@ handle_info(timeout, State) ->
                 ModelList = boss_files:model_list(AppName),
                 ViewList = boss_files:view_module_list(AppName),
                 IsMasterNode = boss_env:is_master_node(),
-                if 
+                if
                     IsMasterNode ->
                         case boss_env:get_env(server, misultin) of
                             cowboy ->
                                 WebSocketModules = boss_files:websocket_list(AppName),
                                 MappingServices  = boss_files:websocket_mapping(BaseURL,
-                                    atom_to_list(AppName), 
+                                    atom_to_list(AppName),
                                     WebSocketModules),
                                 boss_service_sup:start_services(ServicesSupPid, MappingServices);
                             _Any ->
@@ -196,7 +197,7 @@ handle_info(timeout, State) ->
                         end;
                     true ->
                         ok
-                end,				    				    
+                end,
                 ControllerList = boss_files:web_controller_list(AppName),
                 {ok, RouterSupPid} = boss_router:start([{application, AppName},
                         {controllers, ControllerList}]),
@@ -205,7 +206,7 @@ handle_info(timeout, State) ->
                     true -> boss_load:load_all_modules(AppName, TranslatorSupPid);
                     false -> ok
                 end,
-                InitData = run_init_scripts(AppName), 
+                InitData = run_init_scripts(AppName),
                 #boss_app_info{ application = AppName,
                     init_data = InitData,
                     router_sup_pid = RouterSupPid,
@@ -221,11 +222,11 @@ handle_info(timeout, State) ->
         end, Applications),
 
     %% cowboy dispatch rule for static content
-    case boss_env:get_env(server, misultin) of	    
+    case boss_env:get_env(server, misultin) of
         cowboy ->
             AppStaticDispatches = lists:map(
                 fun(AppName) ->
-                        BaseURL = boss_env:get_env(AppName, base_url, "/"),					    
+                        BaseURL = boss_env:get_env(AppName, base_url, "/"),
                         StaticPrefix = boss_env:get_env(AppName, static_prefix, "/static"),
 					    Path = BaseURL++StaticPrefix,
 					    Handler = cowboy_static,
@@ -238,7 +239,7 @@ handle_info(timeout, State) ->
 
             BossDispatch = [{'_', boss_mochicow_handler, [{loop, {boss_mochicow_handler, loop}}]}],
             % [{"/", boss_mochicow_handler, []}],
-            %Dispatch = [{'_', 
+            %Dispatch = [{'_',
 
             Dispatch = [{'_', AppStaticDispatches ++ BossDispatch}],
             CowboyListener = case boss_env:get_env(ssl_enable, false) of
@@ -246,7 +247,7 @@ handle_info(timeout, State) ->
                 _ -> boss_http_listener
             end,
             cowboy:set_env(CowboyListener, dispatch, cowboy_router:compile(Dispatch));
-        _Oops -> 		       
+        _Oops ->
             _Oops
     end,
     {noreply, State#state{ applications = AppInfoList }}.
@@ -462,13 +463,13 @@ build_dynamic_response(App, Request, Response, Url) ->
     RouterPid = boss_web:router_pid(App),
     ControllerList = boss_files:web_controller_list(App),
     {Time, {StatusCode, Headers, Payload}} = timer:tc(?MODULE, process_request, [
-            AppInfo#boss_app_info{ 
-                translator_pid = TranslatorPid, 
+            AppInfo#boss_app_info{
+                translator_pid = TranslatorPid,
                 router_pid = RouterPid,
                 controller_modules = ControllerList
-            }, 
+            },
             Request, Mode, Url]),
-    ErrorFormat = "~s ~s [~p] ~p ~pms", 
+    ErrorFormat = "~s ~s [~p] ~p ~pms",
     RequestMethod = Request:request_method(),
     FullUrl = Request:path(),
     ErrorArgs = [RequestMethod, FullUrl, App, StatusCode, Time div 1000],
@@ -674,7 +675,7 @@ process_result(AppInfo, Req, {redirect, "http://"++Where, Headers}) ->
 process_result(AppInfo, Req, {redirect, "https://"++Where, Headers}) ->
     process_result(AppInfo, Req, {redirect_external, "https://"++Where, Headers});
 process_result(AppInfo, Req, {redirect, {Application, Controller, Action, Params}, Headers}) ->
-    RouterPid = if 
+    RouterPid = if
         AppInfo#boss_app_info.application =:= Application ->
             AppInfo#boss_app_info.router_pid;
         true ->
@@ -701,7 +702,7 @@ process_result(_, _, {StatusCode, Payload, Headers}) when is_integer(StatusCode)
     {StatusCode, merge_headers(Headers, [{"Content-Type", "text/html"}]), Payload}.
 
 load_and_execute(Mode, {Controller, _, _} = Location, AppInfo, Req, SessionID) when Mode =:= production; Mode =:= testing->
-    case boss_files:is_controller_present(AppInfo#boss_app_info.application, Controller, 
+    case boss_files:is_controller_present(AppInfo#boss_app_info.application, Controller,
             AppInfo#boss_app_info.controller_modules) of
         true -> execute_action(Location, AppInfo, Req, SessionID);
         false -> {render_view(Location, AppInfo, Req, SessionID), SessionID}
@@ -753,7 +754,7 @@ load_and_execute(development, {Controller, _, _} = Location, AppInfo, Req, Sessi
     case Res5 of
         {ok, Controllers} ->
             case boss_files:is_controller_present(Application, Controller,
-                    lists:map(fun atom_to_list/1, Controllers)) of 
+                    lists:map(fun atom_to_list/1, Controllers)) of
                 true ->
                     case boss_load:load_models(Application) of
                         {ok, _} ->
@@ -769,7 +770,7 @@ load_and_execute(development, {Controller, _, _} = Location, AppInfo, Req, Sessi
     end.
 
 render_errors(ErrorList, AppInfo, Req) ->
-    case boss_html_error_template:render([{errors, ErrorList}, {request, Req}, 
+    case boss_html_error_template:render([{errors, ErrorList}, {request, Req},
                 {application, AppInfo#boss_app_info.application}]) of
         {ok, Payload} ->
             {ok, Payload, []};
@@ -795,7 +796,7 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
 
             Adapter = lists:foldl(fun
                     (A, false) ->
-                        case A:accept(AppInfo#boss_app_info.application, Controller, 
+                        case A:accept(AppInfo#boss_app_info.application, Controller,
                                 AppInfo#boss_app_info.controller_modules) of
                             true -> A;
                             _ -> false
@@ -805,7 +806,7 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
 
             SessionID1 = case SessionID of
                 undefined ->
-                    case Adapter:wants_session(AppInfo#boss_app_info.application, Controller, 
+                    case Adapter:wants_session(AppInfo#boss_app_info.application, Controller,
                             AppInfo#boss_app_info.controller_modules) of
                         true -> generate_session_id(Req);
                         _ -> SessionID
@@ -813,7 +814,7 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
                 _ -> SessionID
             end,
 
-            AdapterInfo = Adapter:init(AppInfo#boss_app_info.application, Controller, 
+            AdapterInfo = Adapter:init(AppInfo#boss_app_info.application, Controller,
                 AppInfo#boss_app_info.controller_modules, Req, SessionID1),
             RequestMethod = Req:request_method(),
 
@@ -846,7 +847,7 @@ execute_action1(Adapter, AdapterInfo, Info, {Controller, Action, Tokens} = Locat
 
     CacheKey = {Controller, Action, Tokens, LangResult},
 
-    CacheInfo = case (boss_env:get_env(cache_enable, false) andalso 
+    CacheInfo = case (boss_env:get_env(cache_enable, false) andalso
             EffectiveRequestMethod =:= 'GET') of
         true -> Adapter:cache_info(AdapterInfo, Action, Tokens, Info);
         false -> none
@@ -870,7 +871,7 @@ execute_action1(Adapter, AdapterInfo, Info, {Controller, Action, Tokens} = Locat
 
     RenderedResult = case CachedRenderedResult of
         undefined ->
-            ActionResult = execute_action2(CacheInfo, CacheKey, CacheTTL, CacheWatchString, 
+            ActionResult = execute_action2(CacheInfo, CacheKey, CacheTTL, CacheWatchString,
                 Adapter, AdapterInfo, EffectiveRequestMethod, Info, Action, Tokens),
 
             LangHeaders = case LangResult of
@@ -882,7 +883,7 @@ execute_action1(Adapter, AdapterInfo, Info, {Controller, Action, Tokens} = Locat
                 undefined ->
                     render_view(Location, AppInfo, Req, SessionID1, [{"_before", Info}], LangHeaders);
                 ActionResult ->
-                    process_action_result({Location, Req, SessionID1, [Location|LocationTrail]}, 
+                    process_action_result({Location, Req, SessionID1, [Location|LocationTrail]},
                         ActionResult, LangHeaders, AppInfo, Info)
             end;
         Other ->
@@ -921,14 +922,14 @@ execute_action2(CacheInfo, CacheKey, CacheTTL, CacheWatchString, Adapter, Adapte
                 undefined -> ok;
                 _ ->
                     boss_news:set_watch({?VARIABLES_CACHE_PREFIX, CacheKey}, CacheWatchString,
-                        fun ?MODULE:handle_news_for_cache/3, {?VARIABLES_CACHE_PREFIX, CacheKey}, 
+                        fun ?MODULE:handle_news_for_cache/3, {?VARIABLES_CACHE_PREFIX, CacheKey},
                         CacheTTL)
             end,
             boss_cache:set(?VARIABLES_CACHE_PREFIX, CacheKey, ActionResult, CacheTTL);
         false ->
             ok
     end,
-    
+
     ActionResult.
 
 handle_news_for_cache(_, _, {Prefix, Key}) ->
@@ -1024,10 +1025,10 @@ render_view({Controller, Template, _}, AppInfo, Req, SessionID, Variables, Heade
     LoadResult = lists:foldl(fun
             (Ext, {error, not_found}) ->
                 ViewPath = boss_files:web_view_path(Controller, Template, Ext),
-                boss_load:load_view_if_dev(AppInfo#boss_app_info.application, 
+                boss_load:load_view_if_dev(AppInfo#boss_app_info.application,
                     ViewPath, AppInfo#boss_app_info.view_modules,
                     AppInfo#boss_app_info.translator_pid);
-            (_, Acc) -> 
+            (_, Acc) ->
                 Acc
         end, {error, not_found}, TryExtensions),
     BossFlash = boss_flash:get_and_clear(SessionID),
@@ -1035,8 +1036,8 @@ render_view({Controller, Template, _}, AppInfo, Req, SessionID, Variables, Heade
     case LoadResult of
         {ok, Module, TemplateAdapter} ->
             TranslatableStrings = TemplateAdapter:translatable_strings(Module),
-            {Lang, TranslationFun} = choose_translation_fun(AppInfo#boss_app_info.translator_pid, 
-                TranslatableStrings, Req:header(accept_language), 
+            {Lang, TranslationFun} = choose_translation_fun(AppInfo#boss_app_info.translator_pid,
+                TranslatableStrings, Req:header(accept_language),
                 proplists:get_value("Content-Language", Headers)),
             RenderVars = BossFlash ++ [{"_lang", Lang}, {"_session", SessionData},
                             {"_base_url", AppInfo#boss_app_info.base_url}|Variables],
@@ -1055,7 +1056,7 @@ render_view({Controller, Template, _}, AppInfo, Req, SessionID, Variables, Heade
             {not_found, io_lib:format("The requested template (~p) was not found.", [AnyViewPath]) };
         {error, {File, [{0, _Module, "Failed to read file"}]}} ->
             {not_found, io_lib:format("The requested template (~p) was not found.", [File]) };
-        {error, Error}-> 
+        {error, Error}->
             render_errors([Error], AppInfo, Req)
     end.
 
@@ -1094,7 +1095,7 @@ choose_language_from_qvalues(TranslatorPid, Strings, QValues) ->
                 {ThisLang, ThisQValue}; % translation coverage is 100%
             ({ThisLang, ThisQValue}, {BestLang, BestTranslationScore}) ->
                 TranslationCoverage = translation_coverage(Strings, ThisLang, TranslatorPid),
-                TranslationScore = ThisQValue * TranslationCoverage + 
+                TranslationScore = ThisQValue * TranslationCoverage +
                                     AssumedLocaleQValue * (1-TranslationCoverage),
                 case TranslationScore > BestTranslationScore andalso TranslationCoverage > 0.0 of
                     true -> {ThisLang, TranslationScore};
@@ -1117,6 +1118,6 @@ translation_coverage(Strings, Locale, TranslatorPid) ->
             0.0
     end.
 
-% merges headers with preference on Headers1. 
+% merges headers with preference on Headers1.
 merge_headers(Headers1, Headers2) ->
     simple_bridge_util:ensure_headers(Headers1, Headers2).
