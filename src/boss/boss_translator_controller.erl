@@ -25,13 +25,8 @@ init(Options) ->
 
 handle_call({lookup, Key, Locale}, _From, State) ->
     Return = case dict:find(Locale, State#state.strings) of
-        {ok, Dict} ->
-            case dict:find(Key, Dict) of
-                {ok, Trans} -> Trans;
-                error -> undefined
-            end;
-        _ ->
-            undefined
+        {ok, Dict} -> lookup_key(Key, Dict);
+        _ -> undefined
     end,
     {reply, Return, State};
 
@@ -63,3 +58,14 @@ code_change(_OldVsn, State, _Extra) ->
 
 handle_info(_Info, State) ->
     {noreply, State}.
+
+lookup_key(Key, Dict) when is_binary(Key) ->
+    case dict:find(binary_to_list(Key), Dict) of
+        {ok, Trans} -> list_to_binary(Trans);
+        error -> undefined
+    end;
+lookup_key(Key, Dict) ->
+    case dict:find(Key, Dict) of
+        {ok, Trans} -> Trans;
+        error -> undefined
+    end.
