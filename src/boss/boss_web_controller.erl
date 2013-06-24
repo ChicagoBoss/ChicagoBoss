@@ -481,9 +481,13 @@ build_dynamic_response(App, Request, Response, Url) ->
     Response2 = lists:foldl(fun({K, V}, Acc) -> Acc:header(K, V) end, Response1, Headers),
     case Payload of
         {stream, Generator, Acc0} ->
-            Response3 = Response2:data(chunked),
+            Version = Request:protocol_version(),
+            {Response3, TransferEncoding} = case Version of
+                {1, 1} -> {Response2:data(chunked), chunked};
+                _ -> {Response2, identity}
+            end,
             Response3:build_response(),
-            process_stream_generator(Request, RequestMethod, Generator, Acc0);
+            process_stream_generator(Request, TransferEncoding, RequestMethod, Generator, Acc0);
         _ ->
             (Response2:data(Payload)):build_response()
     end.
@@ -594,21 +598,26 @@ process_error(Payload, #boss_app_info{ router_pid = RouterPid } = AppInfo, Req, 
             {error, ["Error: <pre>", io_lib:print(Payload), "</pre>"], []}
     end.
 
-process_stream_generator(_Req, 'HEAD', _Generator, _Acc) ->
+process_stream_generator(_Req, _TransferEncoding, 'HEAD', _Generator, _Acc) ->
     ok;
-process_stream_generator(Req, Method, Generator, Acc) ->
+process_stream_generator(Req, chunked, Method, Generator, Acc) ->
     case Generator(Acc) of
         {output, Data, Acc1} ->
             case iolist_size(Data) of
                 0 -> ok;
-                Length -> 
+                Length ->
                     Chunk = [io_lib:format("~.16b\r\n", [Length]), Data, <<"\r\n">>],
                     ok = mochiweb_socket:send(Req:socket(), Chunk)
             end,
-            process_stream_generator(Req, Method, Generator, Acc1);
-        done ->
-            mochiweb_socket:send(Req:socket(), ["0\r\n\r\n"]),
-            ok
+            process_stream_generator(Req, chunked, Method, Generator, Acc1);
+        done -> ok = mochiweb_socket:send(Req:socket(), ["0\r\n\r\n"])
+    end;
+process_stream_generator(Req, identity, Method, Generator, Acc) ->
+    case Generator(Acc) of
+        {output, Data, Acc1} ->
+            mochiweb_socket:send(Req:socket(), Data),
+            process_stream_generator(Req, identity, Method, Generator, Acc1);
+        done -> ok
     end.
 
 process_result(AppInfo, Req, Result, SessionID) ->
