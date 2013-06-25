@@ -538,6 +538,8 @@ process_dynamic_request(#boss_app_info{ router_pid = RouterPid } = AppInfo, Req,
                     {{error, Reason}, undefined};
                 {{not_found, Message}, S1} ->
                     {process_not_found(Message, AppInfo, Req, Mode, S1), S1};
+                {not_found, S1} ->
+                    {process_not_found("File not found.", AppInfo, Req, Mode, S1), S1};
                 Ok ->
                     Ok
             end;
