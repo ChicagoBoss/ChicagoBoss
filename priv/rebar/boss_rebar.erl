@@ -18,6 +18,7 @@
          start_dev_cmd/3,
          stop_cmd/3,
          reload_cmd/3,
+         attach_cmd/3,
          boss_config_value/3,
          boss_config_value/4,
          boss_load/2,
@@ -34,7 +35,8 @@
 		 {start_cmd, "Generates the start shell command"},
 		 {start_dev_cmd, "Generates the start-dev shell command"},
 		 {stop_cmd, "Generates the stop shell command"},
-		 {reload_cmd, "Generates the hot reload shell command"}
+		 {reload_cmd, "Generates the hot reload shell command"},
+                 {attach_cmd, "Attach the production system console"}
 		]).
 
 -define(BOSS_PLUGIN_VERSION, 1).
@@ -194,6 +196,24 @@ reload_cmd(_RebarConf, BossConf, AppFile) ->
                 [CookieOpt, SName, ReloadCode, ReloadRoutes, ReloadLangs])
     end,
 	ok.
+%%--------------------------------------------------------------------
+%% @doc attach_cmd
+%% @spec attach_cmd(RebarConf, BossConf, AppFile) -> ok | {error, Reason}
+%%       Attach to the production system console
+%% @end
+%%--------------------------------------------------------------------
+attach_cmd(_RebarConf, BossConf, AppFile) ->
+    rebar_log:log(info, "Generating dynamic attach command~n", []),
+    case vm_sname(BossConf, AppFile) of
+        undefined ->
+            io:format("echo 'The attach command requires a vm_name in boss.config'", []);
+        SName ->
+            AppName = app_name(AppFile),
+            CookieOpt = cookie_option(BossConf),
+            io:format("~s ~s -remsh ~s -sname ~s-console-~s",
+                [erl_command (), CookieOpt, SName, AppName, os:getpid ()])
+    end,
+    ok.
 
 %%--------------------------------------------------------------------
 %% @doc help print known commands
