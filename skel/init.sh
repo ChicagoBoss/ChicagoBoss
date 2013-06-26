@@ -57,9 +57,17 @@ case "${1:-''}" in
         $0 stop
         $0 start
         ;;
+
+  'attach')
+        # Boss attach running system's console
+        echo "Connecting production system..."
+        ATTACH=$(./rebar boss c=attach_cmd|grep -v "==>")
+        do_start "$ATTACH"
+        ;;
+
   *)
         echo "Chicago Boss Boot System"
-        echo "Usage: $SELF start|start-dev|stop|reload|restart"
+        echo "Usage: $SELF start|start-dev|stop|reload|restart|attach"
         exit 1
         ;;
 esac
