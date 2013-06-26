@@ -171,8 +171,8 @@ stop_cmd(_RebarConf, BossConf, AppFile) ->
             CookieOpt = cookie_option(BossConf),
             StopCommand = io_lib:format("rpc:call('~s', init, stop, []).", [SName]),
 
-            io:format("erl -noshell -pa ebin ~s -sname stopper_~s -eval \"~s\" -s init stop", 
-                [CookieOpt, SName, StopCommand])
+            io:format("~s -noshell -pa ebin ~s -sname stopper_~s -eval \"~s\" -s init stop", 
+                [erl_command(), CookieOpt, SName, StopCommand])
     end,
 	ok.
 
@@ -192,8 +192,8 @@ reload_cmd(_RebarConf, BossConf, AppFile) ->
             ReloadCode = io_lib:format("rpc:call('~s', boss_load, reload_all, [])", [SName]),
             ReloadRoutes = io_lib:format("rpc:call('~s', boss_web, reload_routes, [])", [SName]),
             ReloadLangs = io_lib:format("rpc:call('~s', boss_web, reload_all_translations, [])", [SName]),
-            io:format("erl -noshell -pa ebin ~s -sname reloader_~s -eval \"~s, ~s, ~s.\" -s init stop", 
-                [CookieOpt, SName, ReloadCode, ReloadRoutes, ReloadLangs])
+            io:format("~s -noshell -pa ebin ~s -sname reloader_~s -eval \"~s, ~s, ~s.\" -s init stop", 
+                [erl_command(), CookieOpt, SName, ReloadCode, ReloadRoutes, ReloadLangs])
     end,
 	ok.
 %%--------------------------------------------------------------------
@@ -211,7 +211,7 @@ attach_cmd(_RebarConf, BossConf, AppFile) ->
             AppName = app_name(AppFile),
             CookieOpt = cookie_option(BossConf),
             io:format("~s ~s -remsh ~s -sname ~s-console-~s",
-                [erl_command (), CookieOpt, SName, AppName, os:getpid ()])
+                [erl_command(), CookieOpt, SName, AppName, os:getpid()])
     end,
     ok.
 
