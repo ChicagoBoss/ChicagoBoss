@@ -8,6 +8,7 @@
 -define(PAGE_CACHE_DEFAULT_TTL, 60).
 -define(VARIABLES_CACHE_PREFIX, "boss_web_controller_variables").
 -define(VARIABLES_CACHE_DEFAULT_TTL, 60).
+-define(DEFAULT_WEB_SERVER, cowboy).
 
 -record(state, {
         applications = [],
@@ -46,8 +47,7 @@ terminate(_Reason, State) ->
     boss_db:stop(),
     boss_cache:stop(),
     mochiweb_http:stop(),
-    application:stop(elixir),
-    misultin:stop().
+    application:stop(elixir).
 
 init(Config) ->
     case boss_env:get_env(log_enable, true) of
@@ -118,9 +118,8 @@ init(Config) ->
     MailDriver = boss_env:get_env(mail_driver, boss_mail_driver_smtp),
     boss_mail:start([{driver, MailDriver}]),
 
-    {ServerMod, RequestMod, ResponseMod} = case boss_env:get_env(server, misultin) of
+    {ServerMod, RequestMod, ResponseMod} = case boss_env:get_env(server, ?DEFAULT_WEB_SERVER) of
         mochiweb -> {mochiweb_http, mochiweb_request_bridge, mochiweb_response_bridge};
-        misultin -> {misultin, misultin_request_bridge, misultin_response_bridge};
         cowboy -> {cowboy, mochiweb_request_bridge, mochiweb_response_bridge}
     end,
     SSLEnable = boss_env:get_env(ssl_enable, false),
@@ -139,11 +138,6 @@ init(Config) ->
             end} | Config],
     Pid = case ServerMod of
         mochiweb_http -> mochiweb_http:start([{ssl, SSLEnable}, {ssl_opts, SSLOptions} | ServerConfig]);
-        misultin ->
-            case SSLEnable of
-                true -> misultin:start_link([{ssl, SSLOptions} | ServerConfig]);
-                false -> misultin:start_link(ServerConfig)
-            end;
         cowboy ->
 		  %Dispatch = [{'_', [{'_', boss_mochicow_handler, [{loop, {boss_mochicow_handler, loop}}]}]}],
 		  error_logger:info_msg("Starting cowboy... on ~p~n", [MasterNode]),
@@ -185,7 +179,7 @@ handle_info(timeout, State) ->
                 IsMasterNode = boss_env:is_master_node(),
                 if
                     IsMasterNode ->
-                        case boss_env:get_env(server, misultin) of
+                        case boss_env:get_env(server, ?DEFAULT_WEB_SERVER) of
                             cowboy ->
                                 WebSocketModules = boss_files:websocket_list(AppName),
                                 MappingServices  = boss_files:websocket_mapping(BaseURL,
@@ -222,7 +216,7 @@ handle_info(timeout, State) ->
         end, Applications),
 
     %% cowboy dispatch rule for static content
-    case boss_env:get_env(server, misultin) of
+    case boss_env:get_env(server, ?DEFAULT_WEB_SERVER) of
         cowboy ->
             AppStaticDispatches = lists:map(
                 fun(AppName) ->
@@ -794,7 +788,8 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
         false ->
             % do not convert a list to an atom until we are sure the controller/action
             % pair exists. this prevents a memory leak due to atom creation.
-            Adapters = [boss_controller_adapter_pmod, boss_controller_adapter_elixir],
+            Adapters = [boss_controller_adapter_pmod, 
+                        boss_controller_adapter_elixir],
 
             Adapter = lists:foldl(fun
                     (A, false) ->

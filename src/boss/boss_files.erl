@@ -172,7 +172,7 @@ web_controller(AppName, Controller, ControllerList) ->
             (_, Acc) -> Acc
         end, undefined, CompilerAdapters).
 
-compiler_adapters() -> [boss_compiler_adapter_erlang, boss_compiler_adapter_elixir].
+compiler_adapters() -> [boss_compiler_adapter_erlang, boss_compiler_adapter_elixir, boss_compiler_adapter_lfe].
 
 compiler_adapter_for_extension("."++Extension) ->
     adapter_for_extension(Extension, compiler_adapters());

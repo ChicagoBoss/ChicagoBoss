@@ -1,4 +1,4 @@
-Using Elxir with Chicago Boss
+Using Elixir with Chicago Boss
 ==
 
 Elixir is a nifty new language for the Erlang VM which you can use in parts of
