@@ -20,12 +20,11 @@ from the controller arguments.
 
 Example controller module:
 
-(defmodule (myapp_cool_controller req session_id)
-    (export all))
+    (defmodule (myapp_cool_controller req session_id)
+        (export all))
 
-(defun index (http_method tokens)
-    (tuple 'output '"Yeee-haw!"))
-
+    (defun index (http_method tokens)
+        (tuple 'output '"Yeee-haw!"))
 
 ...then visit /cool/index for a special greeting.
 
