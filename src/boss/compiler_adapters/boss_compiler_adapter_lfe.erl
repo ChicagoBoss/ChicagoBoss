@@ -14,16 +14,21 @@ compile(File, Options) ->
     do_compile(File, Options).
 
 do_compile(File, Options) ->
-    case lfe_comp:file(File, lfe_compiler_options(Options)) of
+    {OutFile, CompilerOptions} = lfe_compiler_options(File, Options),
+    case lfe_comp:file(File, CompilerOptions) of
         {ok, Module, _Warnings} ->
+            io:format("Loading ~p~n", [OutFile]),
+            {module, Module} = code:load_abs(OutFile),
             {ok, Module};
         Other ->
             Other
     end.
 
-lfe_compiler_options(Options) ->
+lfe_compiler_options(File, Options) ->
     CompilerOptions = [verbose, return, proplists:get_value(compiler_options, Options, [])],
-    case proplists:get_value(out_dir, Options) of
-        undefined -> CompilerOptions;
-        OutDir -> [{outdir, OutDir} | CompilerOptions]
-    end.
+    WriteDir = case proplists:get_value(out_dir, Options) of
+        undefined -> "/tmp";
+        Dir -> Dir
+    end,
+    WriteFile = filename:join([WriteDir, filename:basename(File, ".lfe")]),
+    {WriteFile, [{outdir, WriteDir}|CompilerOptions]}.
