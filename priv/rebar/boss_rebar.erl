@@ -395,7 +395,7 @@ all_boss_app_ebin_dirs(BossConf, AppFile) ->
                                     filename:join(["..", X, "ebin"]);
                                 {undefined, false} ->
                                     filename:join(["deps", X, "ebin"]);
-                                Path ->
+                                {Path, _} ->
                                     filename:join(Path, "ebin")
                             end     
                     end
