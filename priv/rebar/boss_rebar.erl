@@ -291,7 +291,9 @@ boss_load(BossConf, AppFile) ->
 	
 	AllDirs = lists:foldl(fun({App, Config}, Dirs) ->
 		case {lists:keyfind(path, 1, Config), AppCurrent =:= App}  of
-			{false, _} -> 
+            {false, false} ->
+                [filename:join(["deps", atom_to_list(App)])|Dirs];
+            {false, _} -> 
 				Dirs;
 			{{path, Path}, true} ->
 				case filelib:is_regular(filename:join(["ebin", atom_to_list(App) ++ ".app"])) of
@@ -314,7 +316,7 @@ boss_load(BossConf, AppFile) ->
               end, AllDirs),
     %% Fix starting mimetypes app in boss.erl->ensure_started(mimetypes)
     %% mimetyps.app not found, adding deps/*/ebin don't work
-    BossPath = boss_config_value(BossConf, boss, path),
+    BossPath = get_boss_path(BossConf),
     code:add_path(BossPath++"/deps/mimetypes/ebin"),
     code:add_path(BossPath++"/deps/lager/ebin").
 
@@ -356,9 +358,9 @@ boss_start_wait([App|Rest]) ->
 %%       Gets all ebin dirs for the apps defined in boss.config
 %% @end
 %%--------------------------------------------------------------------
-all_ebin_dirs(BossConf, _AppFile) ->
-    BossAppEbinDir = all_boss_app_ebin_dirs(BossConf),
-    BossAppEbinDir ++ lists:foldl(fun({_App, Config}, EbinDirs) ->
+all_ebin_dirs(BossConf, AppFile) ->
+    BossAppEbinDir = all_boss_app_ebin_dirs(BossConf, AppFile) ++ all_deps_ebin_dirs(AppFile),
+    BossAppEbinDir ++ lists:foldl(fun({App, Config}, EbinDirs) ->
                         case lists:keyfind(path, 1, Config) of
                             false -> EbinDirs;
                             {path, Path} ->
@@ -374,7 +376,10 @@ all_ebin_dirs(BossConf, _AppFile) ->
                         end
                 end, [], lists:reverse(BossConf)).
 
-all_boss_app_ebin_dirs(BossConf) ->
+all_deps_ebin_dirs(AppFile)->
+    filelib:wildcard(filename:dirname(AppFile) ++ "/../deps/*/ebin").
+
+all_boss_app_ebin_dirs(BossConf, AppFile) ->
     Boss = proplists:get_value(boss, BossConf),
     BossApp = proplists:get_value(applications, Boss),
     BinDir= fun(X) ->
@@ -385,12 +390,12 @@ all_boss_app_ebin_dirs(BossConf) ->
                                           "config of your BossApp ~p is missing~n", 
                                           [X]);
                         _ ->
-                            case proplists:get_value(path, Conf) of
-                                undefined ->
-                                    rebar_log:log(error, 
-                                                  "path of your BossApp ~p is missing~n", 
-                                                  [X]);
-                                Path ->
+                            case {proplists:get_value(path, Conf), app_name(AppFile) =:= X} of
+                                {undefined, true} ->
+                                    filename:join(["..", X, "ebin"]);
+                                {undefined, false} ->
+                                    filename:join(["deps", X, "ebin"]);
+                                {Path, _} ->
                                     filename:join(Path, "ebin")
                             end     
                     end
@@ -415,7 +420,7 @@ all_ebin_dirs1(Path, EbinDirs) ->
     ElixirEbins = case os:type() of
                       {win32, _} ->
                           case file:list_dir(filename:join([Path, "deps", "elixir", "lib"])) of
-                              {ok, ElixirLibs} -> lists:maps(fun(Dir) ->
+                              {ok, ElixirLibs} -> lists:map(fun(Dir) ->
                                                                      filename:join([Path, "deps", "elixir", "lib", Dir, "ebin"])
                                                              end, ElixirLibs);
                               {error, _} -> []
@@ -467,6 +472,14 @@ app_name(AppFile) ->
 host_name() ->
 	{ok, Host} = inet:gethostname(),
 	Host.
+
+get_boss_path(BossConf)->
+    case boss_config_value(BossConf, boss, path) of
+        {error, _}->
+            filename:join("deps", "boss");
+        Path ->
+            Path
+    end.
 
 vm_sname(BossConf, AppFile) ->
     boss_config_value(BossConf, boss, vm_sname, io_lib:format("~s@~s", [app_name(AppFile), host_name()])).

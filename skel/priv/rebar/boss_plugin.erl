@@ -7,8 +7,8 @@
 -module(boss_plugin).
 
 -export([boss/2,
-		 pre_compile/2,
-		 pre_eunit/2]).
+     pre_compile/2,
+     pre_eunit/2]).
 
 -define(BOSS_PLUGIN_CLIENT_VERSION, 1).
 -define(BOSS_CONFIG_FILE, "boss.config").
@@ -28,7 +28,7 @@
 boss(RebarConf, AppFile) ->
   case is_base_dir(RebarConf) of
     true -> 
-            Command = rebar_config:get_global(RebarConf, c, "help"),
+      Command = rebar_config:get_global(RebarConf, c, "help"),
       {ok, BossConf} = init(RebarConf, AppFile, Command),
       case boss_rebar:run(?BOSS_PLUGIN_CLIENT_VERSION, Command, RebarConf, BossConf, AppFile) of
         {error, command_not_found} ->
@@ -61,8 +61,7 @@ init(RebarConf, AppFile, Command) ->
     {BossConf, BossConfFile} = boss_config(Command),
   BossPath = case boss_config_value(boss, path, BossConf) of
            {error, _} ->
-             io:format("FATAL: Failed to read boss=>path config in ~p.~n", [BossConfFile]),
-             halt(1);
+             filename:join([rebar_config:get_xconf(RebarConf, base_dir, undefined), "deps", "boss"]);
            Val -> Val
          end,
   RebarErls = rebar_utils:find_files(filename:join([BossPath, "priv", "rebar"]), ".*\\.erl\$"),
@@ -82,10 +81,10 @@ init(RebarConf, AppFile, Command) ->
 
   %% add all cb_apps defined in config file to code path
   %% including the deps ebin dirs
-  [code:add_path(CodePath) || CodePath <- boss_rebar:all_ebin_dirs(BossConf, AppFile)],
+  
   case is_base_dir(RebarConf) of
   true ->
-    ok;
+    code:add_paths(["ebin" | filelib:wildcard(rebar_config:get_xconf(RebarConf, base_dir, undefined) ++ "/deps/*/ebin")]);
   false ->
     code:add_paths(filelib:wildcard(rebar_utils:get_cwd() ++ "/../*/ebin"))
   end,
