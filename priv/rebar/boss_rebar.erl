@@ -358,9 +358,9 @@ boss_start_wait([App|Rest]) ->
 %%       Gets all ebin dirs for the apps defined in boss.config
 %% @end
 %%--------------------------------------------------------------------
-all_ebin_dirs(BossConf, _AppFile) ->
-    BossAppEbinDir = all_boss_app_ebin_dirs(BossConf),
-    BossAppEbinDir ++ lists:foldl(fun({_App, Config}, EbinDirs) ->
+all_ebin_dirs(BossConf, AppFile) ->
+    BossAppEbinDir = all_boss_app_ebin_dirs(BossConf, AppFile) ++ all_deps_ebin_dirs(AppFile),
+    BossAppEbinDir ++ lists:foldl(fun({App, Config}, EbinDirs) ->
                         case lists:keyfind(path, 1, Config) of
                             false -> EbinDirs;
                             {path, Path} ->
@@ -376,7 +376,10 @@ all_ebin_dirs(BossConf, _AppFile) ->
                         end
                 end, [], lists:reverse(BossConf)).
 
-all_boss_app_ebin_dirs(BossConf) ->
+all_deps_ebin_dirs(AppFile)->
+    filelib:wildcard(filename:dirname(AppFile) ++ "/../deps/*/ebin").
+
+all_boss_app_ebin_dirs(BossConf, AppFile) ->
     Boss = proplists:get_value(boss, BossConf),
     BossApp = proplists:get_value(applications, Boss),
     BinDir= fun(X) ->
@@ -387,11 +390,11 @@ all_boss_app_ebin_dirs(BossConf) ->
                                           "config of your BossApp ~p is missing~n", 
                                           [X]);
                         _ ->
-                            case proplists:get_value(path, Conf) of
-                                undefined ->
-                                    rebar_log:log(error, 
-                                                  "path of your BossApp ~p is missing~n", 
-                                                  [X]);
+                            case {proplists:get_value(path, Conf), app_name(AppFile) =:= X} of
+                                {undefined, true} ->
+                                    filename:join(["..", X, "ebin"]);
+                                {undefined, false} ->
+                                    filename:join(["deps", X, "ebin"]);
                                 Path ->
                                     filename:join(Path, "ebin")
                             end     
