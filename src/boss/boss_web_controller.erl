@@ -82,8 +82,18 @@ init(Config) ->
         false -> ok;
         true ->
             CacheAdapter = boss_env:get_env(cache_adapter, memcached_bin),
-            CacheOptions = [{adapter, CacheAdapter},
-                            {cache_servers, boss_env:get_env(cache_servers, [{"127.0.0.1", 11211, 1}])}],
+            CacheOptions =
+                case CacheAdapter of
+                    ets ->
+                        MaxSize = boss_env:get_env(ets_maxsize, 32 * 1024 * 1024),
+                        Threshold = boss_env:get_env(ets_threshold, 0.85),
+                        Weight = boss_env:get_env(ets_weight, 30),
+                        [{adapter, ets}, {ets_maxsize, MaxSize},
+                         {ets_threshold, Threshold}, {ets_weight, Weight}];
+                    _ ->
+                        [{adapter, CacheAdapter},
+                         {cache_servers, boss_env:get_env(cache_servers, [{"127.0.0.1", 11211, 1}])}]
+                end,
             boss_cache:start(CacheOptions)
     end,
 
