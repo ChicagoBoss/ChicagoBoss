@@ -46,6 +46,13 @@ GOTO :EOF
 :: example how to invoke: windows-make.bat app PROJECT=awesomename
 :app
 CALL rebar.cmd create template=skel dest=../%APPNAME% src=../%PARENTDIR% appid=%APPNAME% skip_deps=true
+mkdir ..\%APPNAME%\deps\
+:: copy ChicagoBoss into deps\boss of the new app
+xcopy ..\%PARENTDIR%\*.* ..\%APPNAME%\deps\boss\ /E /H /R /Y
+:: move boss deps folders into app deps folder
+SET src_folder=..\%APPNAME%\deps\boss\deps
+SET tar_folder=..\%APPNAME%\deps
+for /f %%a IN ('dir "%src_folder%" /b') do move %src_folder%\%%a %tar_folder%
 GOTO :EOF
 
 :End

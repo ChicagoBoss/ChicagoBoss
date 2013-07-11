@@ -24,6 +24,9 @@ edoc:
 app:
 	@(if ! echo "$(PROJECT)" | grep -qE '^[a-z]+[a-zA-Z0-9_@]*$$'; then echo "Project name should be a valid Erlang atom."; exit 1; fi)
 	@$(REBAR) create template=skel dest=$(DEST) src=$(PWD) appid=$(PROJECT) skip_deps=true
+	@mkdir -p $(DEST)/deps
+	@cp -Rn $(PWD) $(DEST)/deps/boss
+	@mv -n $(DEST)/deps/boss/deps/* $(DEST)/deps/
 
 get-deps:
 	@$(REBAR) get-deps
