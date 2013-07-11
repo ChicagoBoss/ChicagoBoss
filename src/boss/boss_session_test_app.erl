@@ -15,7 +15,7 @@ start(_Type, _StartArgs) ->
                  {ets_threshold, Threshold}, {ets_weight, Weight}];
             _ ->
                 [{adapter, CacheAdapter},
-                 {cache_servers, boss_env:get_env(cache_servers, [{"127.0.0.1", 11211, 1}])}],
+                 {cache_servers, boss_env:get_env(cache_servers, [{"127.0.0.1", 11211, 1}])}]
         end,
     case application:get_env(session_adapter) of
         {ok, mnesia} ->
