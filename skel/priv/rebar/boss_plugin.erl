@@ -58,13 +58,7 @@ init(RebarConf, AppFile, Command) ->
   %% - This plugin compiles and loads the boss_rebar code in ["cb/priv/rebar"],
   %%   so we can extend/bugfix/tweak the framework without the need of manually
   %%   recopy code to user apps
-    {BossConf, BossConfFile} = boss_config(Command),
-  BossPath = case boss_config_value(boss, path, BossConf) of
-           {error, _} ->
-             filename:join([rebar_config:get_xconf(RebarConf, base_dir, undefined), "deps", "boss"]);
-           Val -> Val
-         end,
-  RebarErls = rebar_utils:find_files(filename:join([BossPath, "priv", "rebar"]), ".*\\.erl\$"),
+  RebarErls = rebar_utils:find_files(filename:join(["deps", "boss", "priv", "rebar"]), ".*\\.erl\$"),
   
   rebar_log:log(debug, "Auto-loading boss rebar modules ~p~n", [RebarErls]),
   
