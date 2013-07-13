@@ -15,7 +15,7 @@ render(Module, Variables, _Options) ->
 compile_file(ViewPath, Module, Options) ->
     OutDir = proplists:get_value(out_dir, Options),
     CompilerOptions = proplists:get_value(compiler_options, Options, []),
-    EExAst = 'Elixir-EEx':compile_file(ViewPath),
+    EExAst = 'Elixir.EEx':compile_file(ViewPath),
     {ErlAst, _} = elixir:translate_forms([EExAst], [{ assigns, [] }], [{delegate_locals_to, ?MODULE}]),
 
     Render0FunctionAst = erl_syntax:function(erl_syntax:atom(render),

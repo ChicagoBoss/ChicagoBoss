@@ -110,7 +110,9 @@ defmodule Boss.WebController do
   defp to_action(action),       do: action
 
   defp to_route_tokens({_, _, nil}), do: []
-  defp to_route_tokens(tokens),      do: lc token inlist tokens, do: to_route_token(token)
+  defp to_route_tokens(tokens) do
+    lc token inlist tokens, do: to_route_token(token)
+  end
 
   defp to_route_token(token) do
     case token do
