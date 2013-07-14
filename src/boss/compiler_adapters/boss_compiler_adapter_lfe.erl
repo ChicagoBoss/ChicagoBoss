@@ -14,21 +14,20 @@ compile(File, Options) ->
     do_compile(File, Options).
 
 do_compile(File, Options) ->
-    {OutFile, CompilerOptions} = lfe_compiler_options(File, Options),
+    CompilerOptions = lfe_compiler_options(Options),
     case lfe_comp:file(File, CompilerOptions) of
-        {ok, Module, _Warnings} ->
-            io:format("Loading ~p~n", [OutFile]),
-            {module, Module} = code:load_abs(OutFile),
+        {ok, Module, Binary, _Warnings} ->
+            {module, Module} = code:load_binary(Module, File, Binary),
+            ok = case proplists:get_value(out_dir, Options) of
+                undefined -> ok;
+                OutDir ->
+                    OutFile = filename:join([OutDir, filename:basename(File, ".lfe") ++ ".beam"]),
+                    file:write_file(OutFile, Binary)
+            end,
             {ok, Module};
         Other ->
             Other
     end.
 
-lfe_compiler_options(File, Options) ->
-    CompilerOptions = [verbose, return, proplists:get_value(compiler_options, Options, [])],
-    WriteDir = case proplists:get_value(out_dir, Options) of
-        undefined -> "/tmp";
-        Dir -> Dir
-    end,
-    WriteFile = filename:join([WriteDir, filename:basename(File, ".lfe")]),
-    {WriteFile, [{outdir, WriteDir}|CompilerOptions]}.
+lfe_compiler_options(Options) ->
+    [verbose, return, binary] ++ proplists:get_value(compiler_options, Options, []).
