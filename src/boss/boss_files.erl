@@ -41,7 +41,13 @@
 
 root_dir() -> filename:absname(""). %filename:join([filename:dirname(code:which(?MODULE)), ".."]).
 root_src_dir() -> "src".
-root_priv_dir(App) -> filename:join([root_dir(), "priv"]).
+root_priv_dir(App) -> 
+    case code:priv_dir(App) of
+        {error, bad_name} -> 
+            filename:join([root_dir(), "priv"]);
+        Dir ->
+            Dir
+    end.
 
 
 web_view_path() ->
