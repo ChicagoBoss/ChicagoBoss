@@ -1,6 +1,10 @@
 -module(boss_controller_adapter_elixir).
 -compile(export_all).
 
+convert_tokens(Tokens) -> lists:map(fun list_to_binary/1, Tokens).
+convert_session_id(undefined) -> undefined;
+convert_session_id(SessionID) -> list_to_binary(SessionID).
+
 accept(Application, Controller, ControllerList) ->
     Module = boss_compiler_adapter_elixir:controller_module(Application, Controller),
     lists:member(Module, ControllerList).
@@ -16,7 +20,7 @@ init(Application, Controller, ControllerList, Req, SessionID) ->
     {Module, ExportStrings, Req, SessionID}.
 
 before_filter({Module, ExportStrings, Req, SessionID}, Action, RequestMethod, Tokens) ->
-    BinTokens = lists:map(fun list_to_binary/1, Tokens),
+    BinTokens = convert_tokens(Tokens),
     case proplists:get_value("before_", ExportStrings) of
         3 -> Module:before_(Req, SessionID, Action);
         5 -> Module:before_(Req, SessionID, Action, RequestMethod, BinTokens);
@@ -24,7 +28,7 @@ before_filter({Module, ExportStrings, Req, SessionID}, Action, RequestMethod, To
     end.
 
 cache_info({Module, ExportStrings, Req, SessionID}, Action, Tokens, AuthInfo) ->
-    BinTokens = lists:map(fun list_to_binary/1, Tokens),
+    BinTokens = convert_tokens(Tokens),
     case proplists:get_value("cache_", ExportStrings) of
         4 -> Module:cache_(Req, SessionID, Action, BinTokens);
         5 -> Module:cache_(Req, SessionID, Action, BinTokens, AuthInfo);
@@ -32,9 +36,9 @@ cache_info({Module, ExportStrings, Req, SessionID}, Action, Tokens, AuthInfo) ->
     end.
 
 action({Module, ExportStrings, Req, SessionID}, Action, RequestMethod, Tokens, AuthInfo) ->
-    BinTokens = lists:map(fun list_to_binary/1, Tokens),
+    BinTokens = convert_tokens(Tokens),
     put(<<"BOSS_INTERNAL_REQUEST_OBJECT">>, Req),
-    put(<<"BOSS_INTERNAL_SESSION_ID">>, SessionID),
+    put(<<"BOSS_INTERNAL_SESSION_ID">>, convert_session_id(SessionID)),
     Result = case proplists:get_value(Action, ExportStrings) of
         Arity when Arity >= 2, Arity =< 5 ->
             ActionAtom = list_to_atom(Action),

@@ -25,7 +25,7 @@ To enable Elixir, you need to do the following:
 1. Uncomment {elixir, ...} in the "deps" section of rebar.config in the
 ChicagoBoss directory
 
-2. Copy priv/web_controller.ex to the src/ directory in ChicagoBoss
+2. Copy priv/elixir to the src/ directory in ChicagoBoss
 
 3. Download Elixir:
 
@@ -53,11 +53,11 @@ Open up the controller and write a basic module, like:
     defmodule MyApplication.PuppyController do
         use Boss.WebController
 
-        get :index, [] do
+        def index(:GET, []) do
             {:output, "Hello, world!"}
         end
 
-        get about, [] do
+        def about(:GET, []) do
             {:output, "Hello, world!"}
         end
 
@@ -67,22 +67,11 @@ To test it out, start the server and visit:
 
 http://localhost:8001/puppy/index
 
-The ChicagoBoss API is essentially the same as the Erlang one. Note that
-functions corresponding to the same action should be grouped together:
-
-    get :index, [] do {:output, "Good"} end
-    get :index2, [] do {:output, "Still good"} end
-    post :index2, [] do {:output, "Fine"} end
-    post :index, [] do {:output, "BAD"} end
+The ChicagoBoss API is essentially the same as the Erlang one.
 
 There are two variables implicitly available to your handlers: "req" (the
 SimpleBridge request object) and "session_id" (the session identifier, if
-present). If you don't like implicit variables, you can write your handlers
-in an explicit style:
-
-    def index(req, session_id, :GET, []) do
-        {:output, "Hello, world!"}
-    end
+present). 
 
 Other macros available include "before_", "cache_", "after_", and "lang_",
 which take the same arguments as their Erlang counterparts.
@@ -116,7 +105,7 @@ Note that top-level variables should be prefixed with @.
 
 To populate this template, you'll want something in your controller like:
 
-    get :index, [] do
+    def index(:GET, []) do
         {:ok, [{:puppy, [{:name, "Fido"}]}]}
     end
 
