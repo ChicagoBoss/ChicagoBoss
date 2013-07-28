@@ -33,15 +33,22 @@ cache_info({Module, ExportStrings, Req, SessionID}, Action, Tokens, AuthInfo) ->
 
 action({Module, ExportStrings, Req, SessionID}, Action, RequestMethod, Tokens, AuthInfo) ->
     BinTokens = lists:map(fun list_to_binary/1, Tokens),
-    case proplists:get_value(Action, ExportStrings) of
-        4 ->
+    put(<<"BOSS_INTERNAL_REQUEST_OBJECT">>, Req),
+    put(<<"BOSS_INTERNAL_SESSION_ID">>, SessionID),
+    Result = case proplists:get_value(Action, ExportStrings) of
+        Arity when Arity >= 2, Arity =< 5 ->
             ActionAtom = list_to_atom(Action),
-            Module:ActionAtom(Req, SessionID, RequestMethod, BinTokens);
-        5 ->
-            ActionAtom = list_to_atom(Action),
-            Module:ActionAtom(Req, SessionID, RequestMethod, BinTokens, AuthInfo);
+            case Arity of
+                2 -> Module:ActionAtom(RequestMethod, BinTokens);
+                3 -> Module:ActionAtom(RequestMethod, BinTokens, AuthInfo);
+                4 -> Module:ActionAtom(Req, SessionID, RequestMethod, BinTokens);
+                5 -> Module:ActionAtom(Req, SessionID, RequestMethod, BinTokens, AuthInfo)
+            end;
         _ -> undefined
-    end.
+    end,
+    put(<<"BOSS_INTERNAL_REQUEST_OBJECT">>, undefined),
+    put(<<"BOSS_INTERNAL_SESSION_ID">>, undefined),
+    Result.
 
 language({Module, ExportStrings, Req, SessionID}, Action, AuthInfo) ->
     case proplists:get_value("lang_", ExportStrings) of

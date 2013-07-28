@@ -88,6 +88,18 @@ defmodule Boss.WebController do
     end
   end
 
+  defmacro req() do
+    quote do
+      :erlang.get("BOSS_INTERNAL_REQUEST_OBJECT")
+    end
+  end
+
+  defmacro session_id() do
+    quote do
+      :erlang.get("BOSS_INTERNAL_SESSION_ID")
+    end
+  end
+
   defp handle(method, action, tokens, block) do
     action = to_action(action)
     route = {action, to_route_tokens(tokens)}
