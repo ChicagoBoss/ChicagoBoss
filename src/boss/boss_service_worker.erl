@@ -40,13 +40,13 @@ incoming(Service, ServiceUrl, WebSocketId, SessionId, Msg) ->
     gen_server:cast({global, Service}, {incoming_msg, ServiceUrl, WebSocketId, SessionId, Msg}).
 
 join(Service, ServiceUrl, WebSocketId, SessionId) ->
-    gen_server:call({global, Service}, {join_service, ServiceUrl, WebSocketId, SessionId }).
+    gen_server:cast({global, Service}, {join_service, ServiceUrl, WebSocketId, SessionId }).
 
 broadcast(Service, Message) ->
     gen_server:cast({global, Service}, {broadcast, Message}).
 
 close(Service, ServiceUrl, WebSocketId, SessionId) ->
-    gen_server:call({global, Service}, {terminate_service, ServiceUrl, WebSocketId, SessionId}).
+    gen_server:cast({global, Service}, {terminate_service, ServiceUrl, WebSocketId, SessionId}).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -92,22 +92,29 @@ init([Handler, ServiceUrl]) when is_atom(Handler) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call({join_service, ServiceUrl, WebSocketId, SessionId}, _From, State) ->
+handle_call(_Request, _From, State) ->
+    Reply = ok,
+    {reply, Reply, State}.
+
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% Handling cast messages
+%%
+%% @spec handle_cast(Msg, State) -> {noreply, State} |
+%%                                  {noreply, State, Timeout} |
+%%                                  {stop, Reason, State}
+%% @end
+%%--------------------------------------------------------------------
+handle_cast({join_service, ServiceUrl, WebSocketId, SessionId}, State) ->
     #state{handler=Handler, internal=Internal} = State,
     try 
 	Handler:handle_join(ServiceUrl, WebSocketId, SessionId, Internal) of
-	{reply, Reply, NewInternal} ->
-	    {reply, Reply, #state{handler=Handler, internal=NewInternal}};
-	{reply, Reply, State, NewInternal, Timeout} ->
-	    {reply, Reply, #state{handler=Handler, internal=NewInternal}, Timeout};
-
 	{noreply, NewInternal} ->
 	    {noreply, #state{handler=Handler, internal=NewInternal}};
 	{noreply, NewInternal, Timeout} ->
 	    {noreply, #state{handler=Handler, internal=NewInternal}, Timeout};
 
-	{stop, InternalReason, Reply, NewInternal} ->
-	    {stop, InternalReason, Reply, #state{handler=Handler, internal=NewInternal}};
 	{stop, InternalReason, NewInternal} ->
 	    {stop, InternalReason, #state{handler=Handler, internal=NewInternal}}
 
@@ -124,21 +131,14 @@ handle_call({join_service, ServiceUrl, WebSocketId, SessionId}, _From, State) ->
 		   SessionId, Internal, erlang:get_stacktrace()])
 	end;
 
-handle_call({terminate_service, ServiceUrl, WebSocketId, SessionId}, _From,  State) ->   
+handle_cast({terminate_service, ServiceUrl, WebSocketId, SessionId}, State) ->   
     #state{handler=Handler, internal=Internal} = State,    
     try Handler:handle_close(ServiceUrl, WebSocketId, SessionId, Internal) of
-	{reply, Reply, NewInternal} ->
-	    {reply, Reply, #state{handler=Handler, internal=NewInternal}};
-	{reply, Reply, NewInternal, Timeout} ->
-	    {reply, Reply, #state{handler=Handler, internal=NewInternal}, Timeout};
-	
 	{noreply, NewInternal} ->
 	    {noreply, #state{handler=Handler, internal=NewInternal}};
 	{noreply, NewInternal, Timeout} ->
 	    {noreply, #state{handler=Handler, internal=NewInternal}, Timeout};
 	
-	{stop, InternalReason, Reply, NewInternal} ->
-	    {stop, InternalReason, Reply, #state{handler=Handler, internal=NewInternal}};
 	{stop, InternalReason, NewInternal} ->
 	    {stop, InternalReason, #state{handler=Handler, internal=NewInternal}}
 		
@@ -155,20 +155,6 @@ handle_call({terminate_service, ServiceUrl, WebSocketId, SessionId}, _From,  Sta
 	       SessionId, Internal, erlang:get_stacktrace()])	
     end;
 
-handle_call(_Request, _From, State) ->
-    Reply = ok,
-    {reply, Reply, State}.
-
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% Handling cast messages
-%%
-%% @spec handle_cast(Msg, State) -> {noreply, State} |
-%%                                  {noreply, State, Timeout} |
-%%                                  {stop, Reason, State}
-%% @end
-%%--------------------------------------------------------------------
 handle_cast({incoming_msg, ServiceUrl, WebSocketId, SessionId, Message}, State) ->
     #state{handler=Handler, internal=Internal} = State,
     try Handler:handle_incoming(ServiceUrl, WebSocketId, SessionId, Message, Internal) of
