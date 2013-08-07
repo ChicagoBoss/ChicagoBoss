@@ -12,7 +12,7 @@
 
 %% API
 -export([start_link/2]).
--export([incoming/5, join/4, close/4, broadcast/2]).
+-export([incoming/6, join/5, close/5, broadcast/2]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -36,17 +36,17 @@
 start_link(Handler, ServiceUrl) when is_atom(Handler)->
     gen_server:start_link({global, Handler}, ?MODULE, [Handler, ServiceUrl], []).
 
-incoming(Service, ServiceUrl, WebSocketId, SessionId, Msg) ->
-    gen_server:cast({global, Service}, {incoming_msg, ServiceUrl, WebSocketId, SessionId, Msg}).
+incoming(Service, ServiceUrl, WebSocketId, Req, SessionId, Msg) ->
+    gen_server:cast({global, Service}, {incoming_msg, ServiceUrl, WebSocketId, Req, SessionId, Msg}).
 
-join(Service, ServiceUrl, WebSocketId, SessionId) ->
-    gen_server:cast({global, Service}, {join_service, ServiceUrl, WebSocketId, SessionId }).
+join(Service, ServiceUrl, WebSocketId, Req, SessionId) ->
+    gen_server:cast({global, Service}, {join_service, ServiceUrl, WebSocketId, Req, SessionId}).
 
 broadcast(Service, Message) ->
     gen_server:cast({global, Service}, {broadcast, Message}).
 
-close(Service, ServiceUrl, WebSocketId, SessionId) ->
-    gen_server:cast({global, Service}, {terminate_service, ServiceUrl, WebSocketId, SessionId}).
+close(Service, ServiceUrl, WebSocketId, Req, SessionId) ->
+    gen_server:cast({global, Service}, {terminate_service, ServiceUrl, WebSocketId, Req, SessionId}).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -65,7 +65,7 @@ close(Service, ServiceUrl, WebSocketId, SessionId) ->
 %%--------------------------------------------------------------------
 init([Handler, ServiceUrl]) when is_atom(Handler) ->
     % todo option to init
-    try Handler:init() of
+    try apply_function_with_default({Handler, undefined, undefined}, init, [], {ok, undefined}) of
 	{ok, Internal} ->
 	    boss_websocket_router:register(ServiceUrl, Handler),
 	    {ok, #state{handler=Handler, internal=Internal}}
@@ -106,10 +106,11 @@ handle_call(_Request, _From, State) ->
 %%                                  {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_cast({join_service, ServiceUrl, WebSocketId, SessionId}, State) ->
+handle_cast({join_service, ServiceUrl, WebSocketId, Req, SessionId}, State) ->
     #state{handler=Handler, internal=Internal} = State,
     try 
-	Handler:handle_join(ServiceUrl, WebSocketId, SessionId, Internal) of
+	apply_function_with_default({Handler, Req, SessionId}, handle_join,
+                             [ServiceUrl, WebSocketId, Internal], {noreply, Internal}) of
 	{noreply, NewInternal} ->
 	    {noreply, #state{handler=Handler, internal=NewInternal}};
 	{noreply, NewInternal, Timeout} ->
@@ -131,9 +132,10 @@ handle_cast({join_service, ServiceUrl, WebSocketId, SessionId}, State) ->
 		   SessionId, Internal, erlang:get_stacktrace()])
 	end;
 
-handle_cast({terminate_service, ServiceUrl, WebSocketId, SessionId}, State) ->   
+handle_cast({terminate_service, ServiceUrl, WebSocketId, Req, SessionId}, State) ->   
     #state{handler=Handler, internal=Internal} = State,    
-    try Handler:handle_close(ServiceUrl, WebSocketId, SessionId, Internal) of
+    try apply_function_with_default({Handler, Req, SessionId}, handle_close,
+                                    [ServiceUrl, WebSocketId, Internal], {noreply, Internal}) of
 	{noreply, NewInternal} ->
 	    {noreply, #state{handler=Handler, internal=NewInternal}};
 	{noreply, NewInternal, Timeout} ->
@@ -155,9 +157,11 @@ handle_cast({terminate_service, ServiceUrl, WebSocketId, SessionId}, State) ->
 	       SessionId, Internal, erlang:get_stacktrace()])	
     end;
 
-handle_cast({incoming_msg, ServiceUrl, WebSocketId, SessionId, Message}, State) ->
+handle_cast({incoming_msg, ServiceUrl, WebSocketId, Req, SessionId, Message}, State) ->
     #state{handler=Handler, internal=Internal} = State,
-    try Handler:handle_incoming(ServiceUrl, WebSocketId, SessionId, Message, Internal) of
+    try apply_function_with_default({Handler, Req, SessionId}, handle_incoming, 
+                                    [ServiceUrl, WebSocketId, Message, Internal],
+                                   {noreply, Internal}) of
 	{noreply, NewInternal} ->
 	    {noreply, #state{handler=Handler, internal=NewInternal}};
 	{noreply, NewInternal, Timeout} ->
@@ -180,7 +184,8 @@ handle_cast({incoming_msg, ServiceUrl, WebSocketId, SessionId, Message}, State) 
 
 handle_cast({broadcast, Message}, State) ->
     #state{handler=Handler, internal=Internal} = State,
-    try Handler:handle_broadcast(Message, Internal) of
+    try apply_function_with_default({Handler, undefined, undefined}, handle_broadcast,
+                                    [Message, Internal], {noreply, Internal}) of
 	{noreply, NewInternal} ->
 	    {noreply, #state{handler=Handler, internal=NewInternal}};
 	{noreply, NewInternal, Timeout} ->
@@ -212,7 +217,8 @@ handle_cast(_Msg, State) ->
 %%--------------------------------------------------------------------
 handle_info(_Info, State) ->
     #state{handler=Handler, internal=Internal} = State,
-    try Handler:handle_info(_Info, Internal) of
+    try apply_function_with_default({Handler, undefined, undefined}, handle_info, 
+                                    [_Info, Internal], {noreply, Internal}) of
 	{noreply, NewInternal} ->
 	    {noreply, #state{handler=Handler, internal=NewInternal}};
 	{noreply, NewInternal, Timeout} ->
@@ -243,7 +249,8 @@ handle_info(_Info, State) ->
 %%--------------------------------------------------------------------
 terminate(_Reason, _State) ->
     #state{handler=Handler, internal=Internal} = _State,
-    try Handler:terminate(_Reason, Internal) of
+    try apply_function_with_default({Handler, undefined, undefined}, terminate,
+                                    [_Reason, Internal], ok) of
 	ok ->
 	    ok
     catch Class:Reason ->
@@ -268,3 +275,12 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+
+apply_function_with_default(Module, Function, Args, Default) when is_tuple(Module) ->
+    ModuleAtom = element(1, Module),
+    case proplists:get_value(Function, ModuleAtom:module_info(exports)) of
+        N when N =:= 1 + length(Args) ->
+            erlang:apply(Module, Function, Args);
+        _ ->
+            Default
+    end.

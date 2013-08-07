@@ -29,14 +29,14 @@ websocket_init(_Any, Req, _Opts) ->
     State= #state{websocket_id=WebsocketId, 
 		  session_id=SessionId,
 		  service_url=ServiceUrl},
-    boss_websocket_router:join(ServiceUrl, WebsocketId, SessionId),
+    boss_websocket_router:join(ServiceUrl, WebsocketId, Req, SessionId),
     {ok, Req, State, hibernate}.
 
 websocket_handle({text, Msg}, Req, State) ->
     #state{websocket_id=WebsocketId, 
 	   session_id=SessionId, 
 	   service_url=ServiceUrl } = State,
-    boss_websocket_router:incoming(ServiceUrl, WebsocketId, SessionId, Msg),
+    boss_websocket_router:incoming(ServiceUrl, WebsocketId, Req, SessionId, Msg),
     {ok, Req, State, hibernate};
 
 websocket_handle(_Any, Req, State) ->
@@ -48,9 +48,9 @@ websocket_info({text, Msg}, Req, State) ->
 websocket_info(_Info, Req, State) ->
     {ok, Req, State, hibernate}.
 
-websocket_terminate(_Reason, _Req, State) ->
+websocket_terminate(_Reason, Req, State) ->
     #state{websocket_id=WebsocketId, 
 	   session_id=SessionId, 
 	   service_url=ServiceUrl } = State,
-    boss_websocket_router:close(ServiceUrl, WebsocketId, SessionId),
+    boss_websocket_router:close(ServiceUrl, WebsocketId, Req, SessionId),
     ok.
