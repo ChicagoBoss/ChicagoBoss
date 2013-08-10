@@ -53,9 +53,9 @@ websocket_info({text, Msg}, Req, State) ->
 websocket_info(_Info, Req, State) ->
     {ok, Req, State, hibernate}.
 
-websocket_terminate(_Reason, Req, State) ->
+websocket_terminate(Reason, Req, State) ->
     #state{websocket_id=WebsocketId, 
 	   session_id=SessionId, 
 	   service_url=ServiceUrl } = State,
-    boss_websocket_router:close(ServiceUrl, WebsocketId, Req, SessionId),
+    boss_websocket_router:close(Reason, ServiceUrl, WebsocketId, Req, SessionId),
     ok.
