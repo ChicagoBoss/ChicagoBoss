@@ -30,7 +30,12 @@ websocket_init(_Any, Req, _Opts) ->
 		  session_id=SessionId,
 		  service_url=ServiceUrl},
     boss_websocket_router:join(ServiceUrl, WebsocketId, Req, SessionId),
-    {ok, Req, State, hibernate}.
+    case boss_env:get_env(websocket_timeout, undefined) of
+        undefined ->
+            {ok, Req, State, hibernate};
+        Timeout ->
+            {ok, Req, State, Timeout, hibernate}
+    end.
 
 websocket_handle({text, Msg}, Req, State) ->
     #state{websocket_id=WebsocketId, 
