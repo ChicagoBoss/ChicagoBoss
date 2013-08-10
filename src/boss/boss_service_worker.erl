@@ -12,7 +12,7 @@
 
 %% API
 -export([start_link/2]).
--export([incoming/6, join/5, close/5, broadcast/2]).
+-export([incoming/6, join/5, close/6, broadcast/2]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -45,8 +45,8 @@ join(Service, ServiceUrl, WebSocketId, Req, SessionId) ->
 broadcast(Service, Message) ->
     gen_server:cast({global, Service}, {broadcast, Message}).
 
-close(Service, ServiceUrl, WebSocketId, Req, SessionId) ->
-    gen_server:cast({global, Service}, {terminate_service, ServiceUrl, WebSocketId, Req, SessionId}).
+close(Reason, Service, ServiceUrl, WebSocketId, Req, SessionId) ->
+    gen_server:cast({global, Service}, {terminate_service, Reason, ServiceUrl, WebSocketId, Req, SessionId}).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -132,10 +132,10 @@ handle_cast({join_service, ServiceUrl, WebSocketId, Req, SessionId}, State) ->
 		   SessionId, Internal, erlang:get_stacktrace()])
 	end;
 
-handle_cast({terminate_service, ServiceUrl, WebSocketId, Req, SessionId}, State) ->   
+handle_cast({terminate_service, Reason, ServiceUrl, WebSocketId, Req, SessionId}, State) ->   
     #state{handler=Handler, internal=Internal} = State,    
     try apply_function_with_default({Handler, Req, SessionId}, handle_close,
-                                    [ServiceUrl, WebSocketId, Internal], {noreply, Internal}) of
+                                    [Reason, ServiceUrl, WebSocketId, Internal], {noreply, Internal}) of
 	{noreply, NewInternal} ->
 	    {noreply, #state{handler=Handler, internal=NewInternal}};
 	{noreply, NewInternal, Timeout} ->
