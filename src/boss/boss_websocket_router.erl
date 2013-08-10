@@ -18,7 +18,7 @@
 -export([register/2, 
 	 unregister/2,
 	 join/4,
-	 close/4,
+	 close/5,
 	 incoming/5,
 	 service/1,
 	 services/0,
@@ -86,8 +86,8 @@ consumers() ->
 join(ServiceUrl, WebSocketId, Req, SessionId) ->
     gen_server:cast({global, ?SERVER}, {join_service, ServiceUrl, WebSocketId, Req, SessionId}).
 
-close(ServiceUrl, WebSocketId, Req, SessionId) ->
-    gen_server:cast({global, ?SERVER}, {terminate_service, ServiceUrl, WebSocketId, Req, SessionId}).
+close(Reason, ServiceUrl, WebSocketId, Req, SessionId) ->
+    gen_server:cast({global, ?SERVER}, {terminate_service, Reason, ServiceUrl, WebSocketId, Req, SessionId}).
 
 incoming(ServiceUrl, WebSocketId, Req, SessionId, Message) ->
     gen_server:cast({global, ?SERVER}, {incoming_msg, ServiceUrl, WebSocketId, Req, SessionId, Message}).
@@ -194,11 +194,11 @@ handle_cast({incoming_msg, ServiceUrl, WebSocketId, Req, SessionId, Msg}, State)
             {noreply, State}
     end;
 
-handle_cast({terminate_service, ServiceUrl, WebSocketId, Req, SessionId}, State) ->
+handle_cast({terminate_service, Reason, ServiceUrl, WebSocketId, Req, SessionId}, State) ->
     #state{consumers=Consumers, services=Services, nb_consumer=NbConsumer} = State,    
     case dict:find(ServiceUrl, Services) of
         {ok, ServiceId} ->                
-            boss_service_worker:close(ServiceId, binary_to_list(ServiceUrl), WebSocketId, Req, SessionId),
+            boss_service_worker:close(Reason, ServiceId, binary_to_list(ServiceUrl), WebSocketId, Req, SessionId),
             NewConsumers = dict:erase(WebSocketId, Consumers),
             NewState = #state{consumers=NewConsumers, services=Services, nb_consumer=NbConsumer-1},
             {noreply, NewState};
