@@ -27,11 +27,22 @@
 <p>Handle a client joining a service.</p>
 
 <div class="code spec">
-    handle_close(ServiceURL::string(), WebSocket::pid(), State) -&gt; <br>
+    handle_close(Reason::terminate_reason(), ServiceURL::string(), WebSocket::pid(), State) -&gt; <br>
     &nbsp;&nbsp;{noreply, NewState} |<br>
     &nbsp;&nbsp;{noreply, NewState, Timeout} |<br>
-    &nbsp;&nbsp;{stop, Reason, NewState
+    &nbsp;&nbsp;{stop, Reason, NewState}
+    <br>
+    &nbsp;&nbsp;-type terminate_reason() :: {normal, shutdown}<br>
+    &nbsp;&nbsp;| {normal, timeout}<br>
+    &nbsp;&nbsp;| {error, closed}<br>
+    &nbsp;&nbsp;| {remote, closed}<br>
+    &nbsp;&nbsp;| {remote, cowboy_websocket:close_code(), binary()}<br>
+    &nbsp;&nbsp;| {error, badencoding}<br>
+    &nbsp;&nbsp;| {error, badframe}<br>
+    &nbsp;&nbsp;| {error, atom()}.<br>
 </div>
+
+
 <p>Handle a client leaving a service.</p>
 
 <div class="code spec">
