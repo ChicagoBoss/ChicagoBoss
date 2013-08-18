@@ -425,7 +425,7 @@ handle_request(Req, RequestMod, ResponseMod) ->
 			StaticPrefix = boss_web:static_prefix(App),
 			Url = lists:nthtail(length(BaseURL), FullUrl),
 			Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
-			case lists:member(Url, boss_env:get_env(App, static_files, ["/favicon.ico", "/apple-touch-icon.png", "robots.txt"])) of
+			case lists:member(Url, boss_env:get_env(App, static_files, ["/favicon.ico", "/apple-touch-icon.png", "/robots.txt"])) of
 				true ->
 					(Response:file(Url)):build_response();
 				false ->
