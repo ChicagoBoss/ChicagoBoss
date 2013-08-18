@@ -411,42 +411,40 @@ run_init_scripts(AppName) ->
         end, [], boss_files:init_file_list(AppName)).
 
 handle_request(Req, RequestMod, ResponseMod) ->
-    LoadedApplications = boss_web:get_all_applications(),
-    Request = simple_bridge:make_request(RequestMod, Req),
-    FullUrl = Request:path(),
-    case find_application_for_path(Request:header(host), FullUrl, LoadedApplications) of
-        undefined ->
-            Response = simple_bridge:make_response(ResponseMod, {Req, undefined}),
-            Response1 = (Response:status_code(404)):data(["No application configured at this URL"]),
-            Response1:build_response();
-        App ->
-            BaseURL = boss_web:base_url(App),
-            DocRoot = boss_files:static_path(App),
-            StaticPrefix = boss_web:static_prefix(App),
-            Url = lists:nthtail(length(BaseURL), FullUrl),
-            Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
-            case Url of
-                "/apple-touch-icon.png" = File ->
-                    (Response:file(File)):build_response();
-                "/favicon.ico" = File ->
-                    (Response:file(File)):build_response();
-                _ ->
-                    case string:substr(Url, 1, length(StaticPrefix)) of
-                        StaticPrefix ->
-                            [$/|File] = lists:nthtail(length(StaticPrefix), Url),
-                            Response2 = case boss_env:boss_env() of
-                                development ->
-                                    Response:header("Cache-Control", "no-cache");
-                                _ ->
-                                    Response
-                            end,
-                            Response3 = Response2:file([$/|File]),
-                            Response3:build_response();
-                        _ ->
-                            build_dynamic_response(App, Request, Response, Url)
-                    end
-            end
-    end.
+	LoadedApplications = boss_web:get_all_applications(),
+	Request = simple_bridge:make_request(RequestMod, Req),
+	FullUrl = Request:path(),
+	case find_application_for_path(Request:header(host), FullUrl, LoadedApplications) of
+		undefined ->
+			Response = simple_bridge:make_response(ResponseMod, {Req, undefined}),
+			Response1 = (Response:status_code(404)):data(["No application configured at this URL"]),
+			Response1:build_response();
+		App ->
+			BaseURL = boss_web:base_url(App),
+			DocRoot = boss_files:static_path(App),
+			StaticPrefix = boss_web:static_prefix(App),
+			Url = lists:nthtail(length(BaseURL), FullUrl),
+			Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
+			case lists:member(Url, boss_env:get_env(App, static_files, ["/favicon.ico", "/apple-touch-icon.png", "robots.txt"])) of
+				true ->
+					(Response:file(Url)):build_response();
+				false ->
+					case string:substr(Url, 1, length(StaticPrefix)) of
+						StaticPrefix ->
+							[$/|File] = lists:nthtail(length(StaticPrefix), Url),
+							Response2 = case boss_env:boss_env() of
+								development ->
+									Response:header("Cache-Control", "no-cache");
+								_ ->
+									Response
+							end,
+							Response3 = Response2:file([$/|File]),
+							Response3:build_response();
+						_ ->
+							build_dynamic_response(App, Request, Response, Url)
+					end
+			end
+	end.
 
 generate_session_id(Request) ->
     case boss_env:get_env(session_enable, true) of
