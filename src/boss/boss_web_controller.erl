@@ -486,11 +486,8 @@ build_dynamic_response(App, Request, Response, Url) ->
     Response2 = lists:foldl(fun({K, V}, Acc) -> Acc:header(K, V) end, Response1, Headers),
     case Payload of
         {stream, Generator, Acc0} ->
-            Version = Request:protocol_version(),
-            {Response3, TransferEncoding} = case Version of
-                {1, 1} -> {Response2:data(chunked), chunked};
-                _ -> {Response2, identity}
-            end,
+            TransferEncoding = case Request:protocol_version() of {1, 1} -> chunked; _ -> identity end, 
+            Response3 = Response2:data(chunked),
             Response3:build_response(),
             process_stream_generator(Request, TransferEncoding, RequestMethod, Generator, Acc0);
         _ ->
