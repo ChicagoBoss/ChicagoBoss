@@ -528,5 +528,5 @@ report_bad_client_version_and_exit(BossConf) ->
     halt(1).
 
 report_old_erlang_version_and_exit(Vsn) ->
-    io:format("ERROR: Your Erlang runtime version is too old. Requited at least ~s, Found ~s\n ", [?ERLANG_MIN_VERSION, Vsn]),
+    io:format("ERROR: Your Erlang version is too old. Required at least ~s, found ~s\n ", [?ERLANG_MIN_VERSION, Vsn]),
     halt(1).
