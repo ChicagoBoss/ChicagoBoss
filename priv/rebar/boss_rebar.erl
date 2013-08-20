@@ -40,6 +40,7 @@
 		]).
 
 -define(BOSS_PLUGIN_VERSION, 1).
+-define(ERLANG_MIN_VERSION, "R15").
 
 %%--------------------------------------------------------------------
 %% @doc run
@@ -52,10 +53,13 @@ run(_,_,BossConf,_) ->
 run(Version, Command, RebarConf, BossConf, AppFile) when is_list(Command)->
 	run(Version, list_to_atom(Command), RebarConf, BossConf, AppFile);
 run(Version, Command, RebarConf, BossConf, AppFile) ->
-	rebar_log:log(debug, "Checking rebar plugin client version '~s'~n", [Command]),
+	rebar_log:log(debug, "Checking rebar plugin client version and Erlang runtime version'~s'~n", [Command]),
+	ErlVsn = erlang:system_info(otp_release),
     case Version =:= ?BOSS_PLUGIN_VERSION of
         false ->
             report_bad_client_version_and_exit(BossConf);
+        true when ErlVsn < ?ERLANG_MIN_VERSION ->.
+	    report_old_erlang_version_and_exit(ErlVsn);
         true ->
             rebar_log:log(debug, "About to run command '~s'~n", [Command]),
         	case lists:keyfind(Command, 1, ?COMMANDS) of
@@ -521,4 +525,8 @@ erl_command() ->
 
 report_bad_client_version_and_exit(BossConf) ->
     io:format("ERROR: Your boss_rebar plugin is outdated~nPlease copy it again from your updated ChicagoBoss installation:~nGuessed command:~ncp ~s/skel/priv/rebar/boss_plugin.erl priv/rebar/boss_plugin.erl~n", [boss_config_value(BossConf, boss, path)]), 
+    halt(1).
+
+report_old_erlang_version_and_exit(Vsn) ->
+    io:format("ERROR: Your Erlang version is too old. Required at least ~s, found ~s\n ", [?ERLANG_MIN_VERSION, Vsn]),
     halt(1).
