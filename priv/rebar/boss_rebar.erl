@@ -58,7 +58,7 @@ run(Version, Command, RebarConf, BossConf, AppFile) ->
     case Version =:= ?BOSS_PLUGIN_VERSION of
         false ->
             report_bad_client_version_and_exit(BossConf);
-        true when ErlVsn < ?ERLANG_MIN_VERSION ->.
+        true when ErlVsn < ?ERLANG_MIN_VERSION ->
 	    report_old_erlang_version_and_exit(ErlVsn);
         true ->
             rebar_log:log(debug, "About to run command '~s'~n", [Command]),
