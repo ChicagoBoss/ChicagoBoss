@@ -711,25 +711,39 @@ load_and_execute(Mode, {Controller, _, _} = Location, AppInfo, Req, SessionID) w
         true -> execute_action(Location, AppInfo, Req, SessionID);
         false -> {render_view(Location, AppInfo, Req, SessionID), SessionID}
     end;
+%% @desc handle requests to /doc and return EDoc generated html
 load_and_execute(development, {"doc", ModelName, _}, AppInfo, Req, SessionID) ->
     Result = case boss_load:load_models(AppInfo#boss_app_info.application) of
         {ok, ModelModules} ->
+            % check if ModelName is in list of models
             case lists:member(ModelName, lists:map(fun atom_to_list/1, ModelModules)) of
                 true ->
                     Model = list_to_atom(ModelName),
                     {Model, Edoc} = boss_model_manager:edoc_module(
                         boss_files:model_path(ModelName++".erl"), [{private, true}]),
-                    {ok, edoc:layout(Edoc), []};
+                    {ok, correct_edoc_html(Edoc, AppInfo#boss_app_info.application), []};
                 false ->
-                    case boss_html_doc_template:render([
-                                {application, AppInfo#boss_app_info.application},
-                                {'_doc', AppInfo#boss_app_info.doc_prefix},
-                                {'_base_url', AppInfo#boss_app_info.base_url},
-                                {models, ModelModules}]) of
-                        {ok, Payload} ->
-                            {ok, Payload, []};
-                        Err ->
-                            Err
+                    % ok, it's not model, so it could be web controller
+                    {ok, Controllers} = boss_load:load_web_controllers(AppInfo#boss_app_info.application),
+                    case lists:member(ModelName, lists:map(fun atom_to_list/1, Controllers)) of
+                            true ->
+                                Controller = list_to_atom(ModelName),  
+                                {Controller, Edoc} = edoc:get_doc(boss_files:web_controller_path(ModelName++".erl"), [{private, true}]),
+                                {ok, correct_edoc_html(Edoc, AppInfo#boss_app_info.application), []};
+                            false ->
+                                % nope, so just render index page
+                                case boss_html_doc_template:render([
+                                            {application, AppInfo#boss_app_info.application},
+                                            {'_doc', AppInfo#boss_app_info.doc_prefix},
+                                            {'_static', AppInfo#boss_app_info.static_prefix},
+                                            {'_base_url', AppInfo#boss_app_info.base_url},
+                                            {models, ModelModules},
+                                            {controllers, Controllers}]) of
+                                    {ok, Payload} ->
+                                        {ok, Payload, []};
+                                    Err ->
+                                        Err
+                                end
                     end
             end;
         {error, ErrorList} ->
@@ -772,6 +786,13 @@ load_and_execute(development, {Controller, _, _} = Location, AppInfo, Req, Sessi
         {error, ErrorList} ->
             {render_errors(ErrorList, AppInfo, Req), SessionID}
     end.
+
+%% @desc function to correct path errors in HTML output produced by Edoc
+correct_edoc_html(Edoc, App) ->
+    Result = edoc:layout(Edoc, [{stylesheet, boss_web:static_prefix(App)++"/edoc/stylesheet.css"}]),
+    Result2 = re:replace(Result, "overview-summary.html", "./", [{return,list}, global]),
+    Result3 = re:replace(Result2, "erlang.png",boss_web:static_prefix(App)++"/edoc/erlang.png", [{return,list}, global]),
+    Result3.
 
 render_errors(ErrorList, AppInfo, Req) ->
     case boss_html_error_template:render([{errors, ErrorList}, {request, Req},
