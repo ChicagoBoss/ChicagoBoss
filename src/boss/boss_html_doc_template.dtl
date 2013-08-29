@@ -1,7 +1,7 @@
 <html>
     <head>
         <title>{{ _doc }} ({{ application }})</title>
-        <link rel="stylesheet" type="text/css" href="{{ _static }}/edoc/stylesheet.css" title="EDoc">
+        <link rel="stylesheet" type="text/css" href="{{ _base_url }}{{ _static }}/edoc/stylesheet.css" title="EDoc">
     </head>
     <body>
     <div class="container">
