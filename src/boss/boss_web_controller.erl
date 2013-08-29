@@ -796,21 +796,26 @@ correct_edoc_html(Edoc, AppInfo) ->
     Result3.
 
 %% @desc generates HTLM output for errors. called from process_error/5
+%% (seems to be called on runtime error)
 render_error(Error, ExtraMessage, AppInfo, Req) ->
     case boss_html_error_template:render([{error, Error}, {extra_message, ExtraMessage}, 
-                                     {request, Req},
-                                     {appinfo, AppInfo},
-                                     {'_base_url', AppInfo#boss_app_info.base_url},
-                                     {'_static', AppInfo#boss_app_info.static_prefix}]) of
-        {ok, Payload2} ->
-            {error, Payload2, []};
+                                          {request, Req},
+                                          {appinfo, AppInfo},
+                                          {'_base_url', AppInfo#boss_app_info.base_url},
+                                          {'_static', AppInfo#boss_app_info.static_prefix}]) of
+        {ok, Payload} ->
+            {error, Payload, []};
         Err ->
             Err
     end.
 
+%% @desc generates HTLM output for errors. called from load_and_execute/5
+%% (seems to be called on parse error)
 render_errors(ErrorList, AppInfo, Req) ->
-    case boss_html_errors_template:render([{errors, ErrorList}, {request, Req},
-                {application, AppInfo#boss_app_info.application}]) of
+    case boss_html_errors_template:render([{errors, ErrorList}, 
+                                           {request, Req},
+                                           {'_base_url', AppInfo#boss_app_info.base_url},
+                                           {'_static', AppInfo#boss_app_info.static_prefix}]) of
         {ok, Payload} ->
             {ok, Payload, []};
         Err ->
