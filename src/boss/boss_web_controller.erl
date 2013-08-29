@@ -585,7 +585,8 @@ process_error(Payload, AppInfo, _Req, development, _SessionID) ->
         _Route ->
             "(Don't worry, this message will not appear in production.)"
     end,
-    {error, ["Error: <pre>", io_lib:print(Payload), "</pre>", "<p>", ExtraMessage, "</p>"], []};
+    render_error(io_lib:print(Payload), ExtraMessage, AppInfo, _Req);
+    
 process_error(Payload, #boss_app_info{ router_pid = RouterPid } = AppInfo, Req, Mode, SessionID) ->
     error_logger:error_report(Payload),
     case boss_router:handle(RouterPid, 500) of
@@ -600,7 +601,7 @@ process_error(Payload, #boss_app_info{ router_pid = RouterPid } = AppInfo, Req, 
         {ok, OtherLocation} ->
             {redirect, OtherLocation};
         not_found ->
-            {error, ["Error: <pre>", io_lib:print(Payload), "</pre>"], []}
+            render_error(io_lib:print(Payload), [], AppInfo, Req)
     end.
 
 process_stream_generator(_Req, _TransferEncoding, 'HEAD', _Generator, _Acc) ->
@@ -721,7 +722,7 @@ load_and_execute(development, {"doc", ModelName, _}, AppInfo, Req, SessionID) ->
                     Model = list_to_atom(ModelName),
                     {Model, Edoc} = boss_model_manager:edoc_module(
                         boss_files:model_path(ModelName++".erl"), [{private, true}]),
-                    {ok, correct_edoc_html(Edoc, AppInfo#boss_app_info.application), []};
+                    {ok, correct_edoc_html(Edoc, AppInfo), []};
                 false ->
                     % ok, it's not model, so it could be web controller
                     {ok, Controllers} = boss_load:load_web_controllers(AppInfo#boss_app_info.application),
@@ -729,7 +730,7 @@ load_and_execute(development, {"doc", ModelName, _}, AppInfo, Req, SessionID) ->
                             true ->
                                 Controller = list_to_atom(ModelName),  
                                 {Controller, Edoc} = edoc:get_doc(boss_files:web_controller_path(ModelName++".erl"), [{private, true}]),
-                                {ok, correct_edoc_html(Edoc, AppInfo#boss_app_info.application), []};
+                                {ok, correct_edoc_html(Edoc, AppInfo), []};
                             false ->
                                 % nope, so just render index page
                                 case boss_html_doc_template:render([
@@ -788,15 +789,33 @@ load_and_execute(development, {Controller, _, _} = Location, AppInfo, Req, Sessi
     end.
 
 %% @desc function to correct path errors in HTML output produced by Edoc
-correct_edoc_html(Edoc, App) ->
-    Result = edoc:layout(Edoc, [{stylesheet, boss_web:static_prefix(App)++"/edoc/stylesheet.css"}]),
+correct_edoc_html(Edoc, AppInfo) ->
+    Result = edoc:layout(Edoc, [{stylesheet, AppInfo#boss_app_info.base_url++AppInfo#boss_app_info.static_prefix++"/edoc/stylesheet.css"}]),
     Result2 = re:replace(Result, "overview-summary.html", "./", [{return,list}, global]),
-    Result3 = re:replace(Result2, "erlang.png",boss_web:static_prefix(App)++"/edoc/erlang.png", [{return,list}, global]),
+    Result3 = re:replace(Result2, "erlang.png", AppInfo#boss_app_info.base_url++AppInfo#boss_app_info.static_prefix++"/edoc/erlang.png", [{return,list}, global]),
     Result3.
 
+%% @desc generates HTLM output for errors. called from process_error/5
+%% (seems to be called on runtime error)
+render_error(Error, ExtraMessage, AppInfo, Req) ->
+    case boss_html_error_template:render([{error, Error}, {extra_message, ExtraMessage}, 
+                                          {request, Req},
+                                          {appinfo, AppInfo},
+                                          {'_base_url', AppInfo#boss_app_info.base_url},
+                                          {'_static', AppInfo#boss_app_info.static_prefix}]) of
+        {ok, Payload} ->
+            {error, Payload, []};
+        Err ->
+            Err
+    end.
+
+%% @desc generates HTLM output for errors. called from load_and_execute/5
+%% (seems to be called on parse error)
 render_errors(ErrorList, AppInfo, Req) ->
-    case boss_html_error_template:render([{errors, ErrorList}, {request, Req},
-                {application, AppInfo#boss_app_info.application}]) of
+    case boss_html_errors_template:render([{errors, ErrorList}, 
+                                           {request, Req},
+                                           {'_base_url', AppInfo#boss_app_info.base_url},
+                                           {'_static', AppInfo#boss_app_info.static_prefix}]) of
         {ok, Payload} ->
             {ok, Payload, []};
         Err ->
