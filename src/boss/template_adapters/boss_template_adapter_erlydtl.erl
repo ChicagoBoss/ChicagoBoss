@@ -1,7 +1,7 @@
 -module(boss_template_adapter_erlydtl).
 -compile(export_all).
 
-file_extensions() -> ["dtl", "html", "txt"].
+file_extensions() -> ["dtl", "html", "txt", "js"].
 
 translatable_strings(Module) ->
     Module:translatable_strings().
