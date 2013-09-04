@@ -54,6 +54,8 @@ url(Variables, Options) ->
     BaseURL = case proplists:get_value(base_url, Options) of
         undefined ->
             boss_web:base_url(list_to_atom(lists:concat([LinkedApp])));
+        "" ->
+            boss_web:base_url(list_to_atom(lists:concat([LinkedApp])));
         ProvidedBaseURL ->
             ProvidedBaseURL
     end,
