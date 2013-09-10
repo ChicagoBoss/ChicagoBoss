@@ -12,10 +12,10 @@
 behaviour_info(callbacks) ->
     [
         {init, 0}, 
-        {handle_join, 4}, 
-        {handle_close, 4}, 
-        {handle_incoming, 5}, 
-        {handle_info, 2}, 
+        {handle_join, 3},
+        {handle_close, 4},
+        {handle_incoming, 4},
+        {handle_info, 2},
         {terminate, 2}
     ];
 behaviour_info(_Other) ->
