@@ -1009,6 +1009,13 @@ process_action_result({Location, Req, SessionID, _}, {ok, Data, Headers}, ExtraH
 
 process_action_result(Info, {render_other, OtherLocation}, ExtraHeaders, AppInfo, AuthInfo) ->
     process_action_result(Info, {render_other, OtherLocation, []}, ExtraHeaders, AppInfo, AuthInfo);
+process_action_result(Info, {render_other, [{application,Application},_,_]=OtherLocation, Data}, ExtraHeaders, _AppInfo, AuthInfo) ->
+	 AppInfo1 = boss_web:application_info(Application),
+   TranslatorPid = boss_web:translator_pid(Application),
+   RouterPid = boss_web:router_pid(Application),
+   AppInfo2 = AppInfo1#boss_app_info{ translator_pid = TranslatorPid, router_pid = RouterPid },
+   
+   process_action_result(Info, {render_other, OtherLocation, Data, []}, ExtraHeaders, AppInfo2, AuthInfo);
 process_action_result(Info, {render_other, OtherLocation, Data}, ExtraHeaders, AppInfo, AuthInfo) ->
     process_action_result(Info, {render_other, OtherLocation, Data, []}, ExtraHeaders, AppInfo, AuthInfo);
 process_action_result({{Controller, _, _}, Req, SessionID, _}, {render_other, OtherLocation, Data, Headers}, ExtraHeaders, AppInfo, AuthInfo) ->
