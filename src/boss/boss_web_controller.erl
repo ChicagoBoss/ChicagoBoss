@@ -1007,6 +1007,13 @@ process_action_result(Info, {ok, Data}, ExtraHeaders, AppInfo, AuthInfo) ->
 process_action_result({Location, Req, SessionID, _}, {ok, Data, Headers}, ExtraHeaders, AppInfo, AuthInfo) ->
     render_view(Location, AppInfo, Req, SessionID, [{"_before", AuthInfo}|Data], merge_headers(Headers, ExtraHeaders));
 
+process_action_result(Info, js, ExtraHeaders, AppInfo, AuthInfo) ->
+    process_action_result(Info, {js, []}, ExtraHeaders, AppInfo, AuthInfo);
+process_action_result(Info, {js, Data}, ExtraHeaders, AppInfo, AuthInfo) ->
+    process_action_result(Info, {js, Data, [{"Content-Type","application/javascript"}]}, ExtraHeaders, AppInfo, AuthInfo);
+process_action_result({Location, Req, SessionID, _}, {js, Data, Headers}, ExtraHeaders, AppInfo, AuthInfo) ->
+    render_view(Location, AppInfo, Req, SessionID, [{"_before", AuthInfo}|Data], merge_headers(Headers, ExtraHeaders));
+
 process_action_result(Info, {render_other, OtherLocation}, ExtraHeaders, AppInfo, AuthInfo) ->
     process_action_result(Info, {render_other, OtherLocation, []}, ExtraHeaders, AppInfo, AuthInfo);
 process_action_result(Info, {render_other, OtherLocation, Data}, ExtraHeaders, AppInfo, AuthInfo) ->
