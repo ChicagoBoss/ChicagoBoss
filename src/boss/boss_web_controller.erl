@@ -980,9 +980,15 @@ execute_action2(CacheInfo, CacheKey, CacheTTL, CacheWatchString, Adapter, Adapte
 process_before_filter_result({ok, Context}, _) -> {ok, Context};
 process_before_filter_result(NotOK, Context) -> {not_ok, Context, NotOK}.
 
-default_filter_config(Filter) ->
-    case proplists:get_value('default_config', Filter:module_info(exports)) of
-        0 -> Filter:default_config();
+filter_config_default_value(Filter) ->
+    case proplists:get_value('config_default_value', Filter:module_info(exports)) of
+        0 -> Filter:config_default_value();
+        _ -> undefined
+    end.
+
+filter_config_key(Filter) ->
+    case proplists:get_value('config_key', Filter:module_info(exports)) of
+        0 -> Filter:config_key();
         _ -> undefined
     end.
 
@@ -995,8 +1001,9 @@ apply_before_filters(Adapter, AdapterInfo, RequestContext) ->
             ActionFilters = Adapter:filters('before', AdapterInfo, RequestContext, GlobalFilters),
             lists:foldl(fun
                     (Filter, {ok, Context}) when is_atom(Filter) ->
-                        DefaultConfig = default_filter_config(Filter),
-                        FilterConfig = Adapter:filter_config(AdapterInfo, Filter, DefaultConfig, RequestContext),
+                        DefaultConfig = filter_config_default_value(Filter),
+                        FilterKey = filter_config_key(Filter),
+                        FilterConfig = Adapter:filter_config(AdapterInfo, FilterKey, DefaultConfig, RequestContext),
                         FilterResult = case proplists:get_value(before_filter, Filter:module_info(exports)) of
                             2 -> Filter:before_filter(FilterConfig, Context);
                             _ -> {ok, Context}
@@ -1020,8 +1027,9 @@ apply_middle_filters(Adapter, AdapterInfo, RequestContext, ActionResult) ->
             (_Filter, {ok, Payload, Headers}) ->
                 {ok, Payload, Headers};
             (Filter, Result) ->
-                DefaultConfig = default_filter_config(Filter),
-                FilterConfig = Adapter:filter_config(AdapterInfo, Filter, DefaultConfig, RequestContext),
+                DefaultConfig = filter_config_default_value(Filter),
+                FilterKey = filter_config_key(Filter),
+                FilterConfig = Adapter:filter_config(AdapterInfo, FilterKey, DefaultConfig, RequestContext),
                 if
                     is_atom(Filter) ->
                         case proplists:get_value(middle_filter, Filter:module_info(exports)) of
@@ -1043,8 +1051,9 @@ apply_after_filters(Adapter, AdapterInfo, RequestContext, RenderedResult) ->
     % new API
     lists:foldl(fun
             (Filter, Rendered) when is_atom(Filter) ->
-                DefaultConfig = default_filter_config(Filter),
-                FilterConfig = Adapter:filter_config(AdapterInfo, Filter, DefaultConfig, RequestContext),
+                DefaultConfig = filter_config_default_value(Filter),
+                FilterKey = filter_config_key(Filter),
+                FilterConfig = Adapter:filter_config(AdapterInfo, FilterKey, DefaultConfig, RequestContext),
                 case proplists:get_value(after_filter, Filter:module_info(exports)) of
                     3 -> Filter:after_filter(Rendered, FilterConfig, RequestContext);
                     _ -> Rendered

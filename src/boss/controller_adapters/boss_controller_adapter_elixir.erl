@@ -92,8 +92,7 @@ action({Module, ExportStrings}, RequestContext) ->
     put(<<"BOSS_INTERNAL_SESSION_ID">>, undefined),
     Result.
 
-filter_config({Module, ExportStrings}, CacheFilter, Default, RequestContext) when CacheFilter =:= boss_cache_page_filter;
-                                                                                              CacheFilter =:= boss_cache_vars_filter ->
+filter_config({Module, ExportStrings}, 'cache', Default, RequestContext) ->
     Req = proplists:get_value(request, RequestContext),
     SessionID = proplists:get_value(session_id, RequestContext),
     Action = proplists:get_value(action, RequestContext),
@@ -104,9 +103,9 @@ filter_config({Module, ExportStrings}, CacheFilter, Default, RequestContext) whe
     case proplists:get_value("cache_", ExportStrings) of
         4 -> Module:cache_(Req, SessionID, Action, BinTokens);
         5 -> Module:cache_(Req, SessionID, Action, BinTokens, AuthInfo);
-        _ -> filter_config1({Module, ExportStrings}, CacheFilter, Default, RequestContext)
+        _ -> filter_config1({Module, ExportStrings}, 'cache', Default, RequestContext)
     end;
-filter_config({Module, ExportStrings}, boss_lang_filter, Default, RequestContext) ->
+filter_config({Module, ExportStrings}, 'lang', Default, RequestContext) ->
     Req = proplists:get_value(request, RequestContext),
     SessionID = proplists:get_value(session_id, RequestContext),
     Action = proplists:get_value(action, RequestContext),
@@ -115,13 +114,13 @@ filter_config({Module, ExportStrings}, boss_lang_filter, Default, RequestContext
     case proplists:get_value("lang_", ExportStrings) of
         3 -> Module:lang_(Req, SessionID, Action);
         4 -> Module:lang_(Req, SessionID, Action, AuthInfo);
-        _ -> filter_config1({Module, ExportStrings}, boss_lang_filter, Default, RequestContext)
+        _ -> filter_config1({Module, ExportStrings}, 'lang', Default, RequestContext)
     end;
-filter_config(Info, FilterModule, Default, RequestContext) ->
-    filter_config1(Info, FilterModule, Default, RequestContext).
+filter_config(Info, FilterKey, Default, RequestContext) ->
+    filter_config1(Info, FilterKey, Default, RequestContext).
 
-filter_config1({Module, ExportStrings}, FilterModule, Default, RequestContext) ->
-    case proplists:get_value("filter_config", ExportStrings) of
-        3 -> Module:filter_config(FilterModule, Default, RequestContext);
+filter_config1({Module, ExportStrings}, FilterKey, Default, RequestContext) ->
+    case proplists:get_value("config", ExportStrings) of
+        3 -> Module:config(FilterKey, Default, RequestContext);
         _ -> Default
     end.

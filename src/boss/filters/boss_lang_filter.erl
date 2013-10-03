@@ -1,7 +1,9 @@
 -module(boss_lang_filter).
--export([default_config/0, before_filter/2, after_filter/3]).
+-export([config_default_value/0, config_key/0, before_filter/2, after_filter/3]).
 
-default_config() -> auto.
+config_default_value() -> auto.
+
+config_key() -> lang.
 
 before_filter(auto, RequestContext) ->
     {ok, proplists:delete(language, RequestContext)};
