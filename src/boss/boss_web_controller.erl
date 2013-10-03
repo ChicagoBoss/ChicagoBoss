@@ -8,6 +8,7 @@
 -define(PAGE_CACHE_DEFAULT_TTL, 60).
 -define(VARIABLES_CACHE_PREFIX, "boss_web_controller_variables").
 -define(VARIABLES_CACHE_DEFAULT_TTL, 60).
+-define(BUILTIN_CONTROLLER_FILTERS, []).
 -define(DEFAULT_WEB_SERVER, cowboy).
 
 -record(state, {
@@ -864,18 +865,20 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, RequestContext,
 
             RequestMethod = Req:request_method(),
 
-            RequestContext1 = [{request, Req}, {session_id, SessionID1}, 
-                {action, Action}, {method, RequestMethod}, {tokens, Tokens}],
+            RequestContext1 = [{request, Req}, {session_id, SessionID1}, {method, RequestMethod}, 
+                {action, Action}, {tokens, Tokens}],
 
             AdapterInfo = Adapter:init(AppInfo#boss_app_info.application, Controller,
                 AppInfo#boss_app_info.controller_modules, RequestContext1),
 
-            Result = case Adapter:before_filter(AdapterInfo, RequestContext1) of
-                {ok, RequestContext2} ->
-                    execute_action1(Adapter, AdapterInfo, Location, AppInfo, RequestContext2, LocationTrail);
-                Other ->
-                    ExpandedResult = expand_action_result(Other),
-                    process_action_result({Location, RequestContext1, [Location|LocationTrail]},
+            RequestContext2 = [{controller_module, element(1, AdapterInfo)}|RequestContext1],
+
+            Result = case apply_before_filters(Adapter, AdapterInfo, RequestContext2) of 
+                {ok, RequestContext3} ->
+                    execute_action1(Adapter, AdapterInfo, Location, AppInfo, RequestContext3, LocationTrail);
+                {not_ok, RequestContext3, NotOK} ->
+                    ExpandedResult = expand_action_result(NotOK),
+                    process_action_result({Location, RequestContext3, [Location|LocationTrail]},
                         ExpandedResult, [], AppInfo)
             end,
 
@@ -950,7 +953,7 @@ execute_action1(Adapter, AdapterInfo, {Controller, Action, Tokens} = Location, A
             ok
     end,
 
-    Adapter:after_filter(AdapterInfo, RequestContext, RenderedResult).
+    apply_after_filters(Adapter, AdapterInfo, RequestContext, RenderedResult).
 
 execute_action2(CacheInfo, CacheKey, CacheTTL, CacheWatchString, Adapter, AdapterInfo, RequestContext) ->
     CachedActionResult = case CacheInfo of
@@ -977,7 +980,68 @@ execute_action2(CacheInfo, CacheKey, CacheTTL, CacheWatchString, Adapter, Adapte
             ok
     end,
 
-    ActionResult.
+    apply_middle_filters(Adapter, AdapterInfo, RequestContext, ActionResult).
+
+process_before_filter_result({ok, Context}, _) -> {ok, Context};
+process_before_filter_result(NotOK, Context) -> {not_ok, Context, NotOK}.
+
+apply_before_filters(Adapter, AdapterInfo, RequestContext) ->
+    % legacy API
+    case Adapter:before_filter(AdapterInfo, RequestContext) of
+        {ok, RequestContext1} ->
+            % new API
+            GlobalFilters = filters_for_function('before_filter'),
+            ActionFilters = Adapter:filters('before', AdapterInfo, RequestContext, GlobalFilters),
+            lists:foldl(fun
+                    (Filter, {ok, Context}) when is_atom(Filter) ->
+                        FilterResult = case proplists:get_value(before_filter, Filter:module_info(exports)) of
+                            1 -> Filter:before_filter(Context);
+                            _ -> {ok, Context}
+                        end,
+                        process_before_filter_result(FilterResult, Context);
+                    (Filter, {ok, Context}) when is_function(Filter) ->
+                        process_before_filter_result(Filter(Context), Context);
+                    (_Filter, NotOK) -> NotOK
+                end, {ok, RequestContext1}, ActionFilters);
+        Other ->
+            {not_ok, RequestContext, Other}
+    end.
+
+apply_middle_filters(Adapter, AdapterInfo, RequestContext, ActionResult) ->
+    GlobalFilters = filters_for_function('middle_filter'),
+    ActionFilters = Adapter:filters('middle', AdapterInfo, RequestContext, GlobalFilters),
+
+    lists:foldl(fun
+            (_Filter, {StatusCode, Payload, Headers}) when is_integer(StatusCode) ->
+                {StatusCode, Payload, Headers};
+            (_Filter, {ok, Payload, Headers}) ->
+                {ok, Payload, Headers};
+            (Filter, Result) when is_atom(Filter) ->
+                case proplists:get_value(middle_filter, Filter:module_info(exports)) of
+                    2 -> Filter:middle_filter(Result, RequestContext);
+                    _ -> Result
+                end;
+            (Filter, Result) when is_function(Filter) ->
+                Filter(Result, RequestContext)
+        end, ActionResult, ActionFilters).
+
+apply_after_filters(Adapter, AdapterInfo, RequestContext, RenderedResult) ->
+    GlobalFilters = filters_for_function('after_filter'),
+    ActionFilters = Adapter:filters('after', AdapterInfo, RequestContext, GlobalFilters),
+
+    % legacy API
+    RenderedResult1 = Adapter:after_filter(AdapterInfo, RequestContext, RenderedResult),
+
+    % new API
+    lists:foldl(fun
+            (Filter, Rendered) when is_atom(Filter) ->
+                case proplists:get_value(after_filter, Filter:module_info(exports)) of
+                    2 -> Filter:after_filter(Rendered, RequestContext);
+                    _ -> Rendered
+                end;
+            (Filter, Rendered) when is_function(Filter) ->
+                Filter(Rendered, RequestContext)
+        end, RenderedResult1, ActionFilters).
 
 handle_news_for_cache(_, _, {Prefix, Key}) ->
     boss_cache:delete(Prefix, Key),
@@ -1185,3 +1249,12 @@ translation_coverage(Strings, Locale, TranslatorPid) ->
 % merges headers with preference on Headers1.
 merge_headers(Headers1, Headers2) ->
     simple_bridge_util:ensure_headers(Headers1, Headers2).
+
+filters_for_function(Function) ->
+    lists:foldr(fun(Module, List) ->
+                Exports = Module:module_info(exports),
+                case proplists:get_value(Function, Exports) of
+                    undefined -> List;
+                    _ -> [Module|List]
+                end
+        end, [], ?BUILTIN_CONTROLLER_FILTERS ++ boss_env:get_env(controller_filter_modules, [])).

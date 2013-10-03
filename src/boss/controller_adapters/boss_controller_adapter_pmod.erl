@@ -23,6 +23,15 @@ init(Application, Controller, ControllerList, RequestContext) ->
     end,
     {ControllerInstance, ExportStrings}.
 
+filters(Type, {ControllerInstance, ExportStrings}, RequestContext, GlobalFilters) ->
+    FunctionString = lists:concat([Type, "_filters"]),
+    case proplists:get_value(FunctionString, ExportStrings) of
+        3 -> 
+            FunctionAtom = list_to_atom(FunctionString),
+            ControllerInstance:FunctionAtom(RequestContext, GlobalFilters);
+        _ -> GlobalFilters
+    end.
+
 before_filter({ControllerInstance, ExportStrings}, RequestContext) ->
     Action = proplists:get_value(action, RequestContext),
     RequestMethod = proplists:get_value(method, RequestContext),
@@ -31,11 +40,13 @@ before_filter({ControllerInstance, ExportStrings}, RequestContext) ->
     AuthResult = case proplists:get_value("before_", ExportStrings) of
         2 -> ControllerInstance:before_(Action);
         4 -> ControllerInstance:before_(Action, RequestMethod, Tokens);
-        _ -> ok
+        _ -> no_before_function
     end,
     case AuthResult of
-        ok ->
+        no_before_function ->
             {ok, RequestContext};
+        ok ->
+            {ok, [{'_before', undefined}|RequestContext]};
         {ok, Info} ->
             {ok, [{'_before', Info}|RequestContext]};
         Other ->
@@ -45,7 +56,7 @@ before_filter({ControllerInstance, ExportStrings}, RequestContext) ->
 cache_info({ControllerInstance, ExportStrings}, RequestContext) ->
     Action = proplists:get_value(action, RequestContext),
     Tokens = proplists:get_value(tokens, RequestContext),
-    AuthInfo = proplists:get_value('_before', RequestContext),
+    AuthInfo = proplists:get_value('_before', RequestContext, RequestContext),
 
     case proplists:get_value("cache_", ExportStrings) of
         3 -> ControllerInstance:cache_(Action, Tokens);
@@ -57,7 +68,7 @@ action({ControllerInstance, ExportStrings}, RequestContext) ->
     Action = proplists:get_value(action, RequestContext),
     RequestMethod = proplists:get_value(method, RequestContext),
     Tokens = proplists:get_value(tokens, RequestContext),
-    AuthInfo = proplists:get_value('_before', RequestContext),
+    AuthInfo = proplists:get_value('_before', RequestContext, RequestContext),
 
     case proplists:get_value(Action, ExportStrings) of
         3 ->
@@ -71,7 +82,7 @@ action({ControllerInstance, ExportStrings}, RequestContext) ->
 
 language({ControllerInstance, ExportStrings}, RequestContext) ->
     Action = proplists:get_value(action, RequestContext),
-    AuthInfo = proplists:get_value('_before', RequestContext),
+    AuthInfo = proplists:get_value('_before', RequestContext, RequestContext),
 
     case proplists:get_value("lang_", ExportStrings) of
         2 -> ControllerInstance:lang_(Action);
@@ -81,7 +92,7 @@ language({ControllerInstance, ExportStrings}, RequestContext) ->
 
 after_filter({ControllerInstance, ExportStrings}, RequestContext, Result) ->
     Action = proplists:get_value(action, RequestContext),
-    AuthInfo = proplists:get_value('_before', RequestContext),
+    AuthInfo = proplists:get_value('_before', RequestContext, RequestContext),
 
     case proplists:get_value("after_", ExportStrings) of
         3 -> ControllerInstance:after_(Action, Result);

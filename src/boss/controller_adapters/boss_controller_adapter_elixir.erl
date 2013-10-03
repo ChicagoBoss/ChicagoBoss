@@ -19,6 +19,15 @@ init(Application, Controller, ControllerList, _RequestContext) ->
         Module:module_info(exports)),
     {Module, ExportStrings}.
 
+filters(Type, {Module, ExportStrings}, RequestContext, GlobalFilters) ->
+    FunctionString = lists:concat([Type, "_filters"]),
+    case proplists:get_value(FunctionString, ExportStrings) of
+        2 -> 
+            FunctionAtom = list_to_atom(FunctionString),
+            Module:FunctionAtom(RequestContext, GlobalFilters);
+        _ -> GlobalFilters
+    end.
+
 before_filter({Module, ExportStrings}, RequestContext) ->
     Req = proplists:get_value(request, RequestContext),
     SessionID = proplists:get_value(session_id, RequestContext),
