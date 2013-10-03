@@ -642,8 +642,12 @@ process_result_and_add_session(AppInfo, RequestContext, Result) ->
                 CookieDomain ->
                     lists:merge(CookieOptions, [{domain, CookieDomain}])
             end,
+            HttpOnly = boss_env:get_env(session_cookie_http_only, false),
+            Secure = boss_env:get_env(session_cookie_secure, false),
+            CookieOptions3 = lists:merge (CookieOptions2, [{http_only, HttpOnly},
+                                                           {secure, Secure}]),
             SessionKey = boss_session:get_session_key(),
-            lists:merge(Headers, [ mochiweb_cookies:cookie(SessionKey, SessionID, CookieOptions2) ])
+            lists:merge(Headers, [ mochiweb_cookies:cookie(SessionKey, SessionID, CookieOptions3) ])
     end,
     {StatusCode, Headers1, Payload}.
 
