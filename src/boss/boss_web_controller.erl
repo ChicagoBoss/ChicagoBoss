@@ -496,13 +496,13 @@ build_dynamic_response(App, Request, Response, Url) ->
     end.
 
 process_request(#boss_app_info{ doc_prefix = DocPrefix } = AppInfo, Req, development, DocPrefix) ->
-    {Result, SessionID1} = case catch load_and_execute(development, {"doc", [], []}, AppInfo, Req, undefined) of
+    {Result, SessionID1} = case catch load_and_execute(development, {"doc", [], []}, AppInfo, [{request, Req}]) of
         {'EXIT', Reason} ->
             {{error, Reason}, generate_session_id(Req)};
         {R, S} ->
             {R, S}
     end,
-    process_result(AppInfo, Req, Result, SessionID1);
+    process_result_and_add_session(AppInfo, [{request, Req}, {session_id, SessionID1}], Result);
 process_request(AppInfo, Req, development, Url) ->
     DocPrefixPlusSlash = AppInfo#boss_app_info.doc_prefix ++ "/",
     {Result, SessionID1} = case string:substr(Url, 1, length(DocPrefixPlusSlash)) of
@@ -510,7 +510,7 @@ process_request(AppInfo, Req, development, Url) ->
             ModelName = lists:nthtail(length(DocPrefixPlusSlash), Url),
             case string:chr(ModelName, $.) of
                 0 ->
-                    case catch load_and_execute(development, {"doc", ModelName, []}, AppInfo, Req, undefined) of
+                    case catch load_and_execute(development, {"doc", ModelName, []}, AppInfo, [{request, Req}]) of
                         {'EXIT', Reason} ->
                             {{error, Reason}, undefined};
                         {R, S} ->
@@ -526,44 +526,44 @@ process_request(AppInfo, Req, development, Url) ->
             boss_router:reload(RouterPid),
             process_dynamic_request(AppInfo, Req, development, Url)
     end,
-    process_result(AppInfo, Req, Result, SessionID1);
+    process_result_and_add_session(AppInfo, [{request, Req}, {session_id, SessionID1}], Result);
 process_request(AppInfo, Req, Mode, Url) ->
     {Result, SessionID1} = process_dynamic_request(AppInfo, Req, Mode, Url),
-    process_result(AppInfo, Req, Result, SessionID1).
+    process_result_and_add_session(AppInfo, [{request, Req}, {session_id, SessionID1}], Result).
 
 process_dynamic_request(#boss_app_info{ router_pid = RouterPid } = AppInfo, Req, Mode, Url) ->
     {Result, SessionID1} = case boss_router:route(RouterPid, Url) of
         {ok, {Application, Controller, Action, Tokens}} when Application =:= AppInfo#boss_app_info.application ->
             Location = {Controller, Action, Tokens},
-            case catch load_and_execute(Mode, Location, AppInfo, Req, undefined) of
+            case catch load_and_execute(Mode, Location, AppInfo, [{request, Req}]) of
                 {'EXIT', Reason} ->
                     {{error, Reason}, undefined};
                 {{not_found, Message}, S1} ->
-                    {process_not_found(Message, AppInfo, Req, Mode, S1), S1};
+                    {process_not_found(Message, AppInfo, [{request, Req}, {session_id, S1}], Mode), S1};
                 {not_found, S1} ->
-                    {process_not_found("File not found.", AppInfo, Req, Mode, S1), S1};
+                    {process_not_found("File not found.", AppInfo, [{request, Req}, {session_id, S1}], Mode), S1};
                 Ok ->
                     Ok
             end;
         {ok, {OtherApplication, Controller, Action, Tokens}} ->
             {{redirect, {OtherApplication, Controller, Action, Tokens}}, undefined};
         not_found ->
-            {process_not_found("No routes matched the requested URL.", AppInfo, Req, Mode, undefined),
+            {process_not_found("No routes matched the requested URL.", AppInfo, [{request, Req}], Mode),
                 undefined}
     end,
     FinalResult = case Result of
         {error, Payload} ->
-            process_error(Payload, AppInfo, Req, Mode, SessionID1);
+            process_error(Payload, AppInfo, [{request, Req}, {session_id, SessionID1}], Mode);
         _ ->
             Result
     end,
     {FinalResult, SessionID1}.
 
-process_not_found(Message, #boss_app_info{ router_pid = RouterPid } = AppInfo, Req, Mode, SessionID) ->
+process_not_found(Message, #boss_app_info{ router_pid = RouterPid } = AppInfo, RequestContext, Mode) ->
     case boss_router:handle(RouterPid, 404) of
         {ok, {Application, Controller, Action, Tokens}} when Application =:= AppInfo#boss_app_info.application ->
             Location = {Controller, Action, Tokens},
-            case catch load_and_execute(Mode, Location, AppInfo, Req, SessionID) of
+            case catch load_and_execute(Mode, Location, AppInfo, RequestContext) of
                 {'EXIT', Reason} ->
                     {error, Reason};
                 {{ok, Payload, Headers}, _} ->
@@ -577,7 +577,7 @@ process_not_found(Message, #boss_app_info{ router_pid = RouterPid } = AppInfo, R
                     "You probably want to modify ", boss_files:routes_file(AppInfo#boss_app_info.application), " to prevent errors like this one."]}
     end.
 
-process_error(Payload, AppInfo, _Req, development, _SessionID) ->
+process_error(Payload, AppInfo, RequestContext, development) ->
     error_logger:error_report(Payload),
     ExtraMessage = case boss_router:handle(AppInfo#boss_app_info.router_pid, 500) of
         not_found ->
@@ -585,14 +585,14 @@ process_error(Payload, AppInfo, _Req, development, _SessionID) ->
         _Route ->
             "(Don't worry, this message will not appear in production.)"
     end,
-    render_error(io_lib:print(Payload), ExtraMessage, AppInfo, _Req);
+    render_error(io_lib:print(Payload), ExtraMessage, AppInfo, RequestContext);
     
-process_error(Payload, #boss_app_info{ router_pid = RouterPid } = AppInfo, Req, Mode, SessionID) ->
+process_error(Payload, #boss_app_info{ router_pid = RouterPid } = AppInfo, RequestContext, Mode) ->
     error_logger:error_report(Payload),
     case boss_router:handle(RouterPid, 500) of
         {ok, {Application, Controller, Action, Tokens}} when Application =:= AppInfo#boss_app_info.application ->
             ErrorLocation = {Controller, Action, Tokens},
-            case catch load_and_execute(Mode, ErrorLocation, AppInfo, Req, SessionID) of
+            case catch load_and_execute(Mode, ErrorLocation, AppInfo, RequestContext) of
                 {'EXIT', Reason} ->
                     {error, ["Error in 500 handler: <pre>", io_lib:print(Reason), "</pre>"], []};
                 {Result, _Session} ->
@@ -601,7 +601,7 @@ process_error(Payload, #boss_app_info{ router_pid = RouterPid } = AppInfo, Req, 
         {ok, OtherLocation} ->
             {redirect, OtherLocation};
         not_found ->
-            render_error(io_lib:print(Payload), [], AppInfo, Req)
+            render_error(io_lib:print(Payload), [], AppInfo, RequestContext)
     end.
 
 process_stream_generator(_Req, _TransferEncoding, 'HEAD', _Generator, _Acc) ->
@@ -626,12 +626,13 @@ process_stream_generator(Req, identity, Method, Generator, Acc) ->
         done -> ok
     end.
 
-process_result(AppInfo, Req, Result, SessionID) ->
+process_result_and_add_session(AppInfo, RequestContext, Result) ->
+    Req = proplists:get_value(request, RequestContext),
     {StatusCode, Headers, Payload} = process_result(AppInfo, Req, Result),
-    Headers1 = case SessionID of
+    Headers1 = case proplists:get_value(session_id, RequestContext) of
         undefined ->
             Headers;
-        _ ->
+        SessionID ->
             SessionExpTime = boss_session:get_session_exp_time(),
             CookieOptions = [{path, "/"}, {max_age, SessionExpTime}],
             CookieOptions2 = case boss_env:get_env(session_domain, undefined) of
@@ -706,14 +707,14 @@ process_result(_, _, {error, Payload, Headers}) ->
 process_result(_, _, {StatusCode, Payload, Headers}) when is_integer(StatusCode) ->
     {StatusCode, merge_headers(Headers, [{"Content-Type", "text/html"}]), Payload}.
 
-load_and_execute(Mode, {Controller, _, _} = Location, AppInfo, Req, SessionID) when Mode =:= production; Mode =:= testing->
+load_and_execute(Mode, {Controller, _, _} = Location, AppInfo, RequestContext) when Mode =:= production; Mode =:= testing->
     case boss_files:is_controller_present(AppInfo#boss_app_info.application, Controller,
             AppInfo#boss_app_info.controller_modules) of
-        true -> execute_action(Location, AppInfo, Req, SessionID);
-        false -> {render_view(Location, AppInfo, Req, SessionID), SessionID}
+        true -> execute_action(Location, AppInfo, RequestContext);
+        false -> {render_view(Location, AppInfo, RequestContext)}
     end;
 %% @desc handle requests to /doc and return EDoc generated html
-load_and_execute(development, {"doc", ModelName, _}, AppInfo, Req, SessionID) ->
+load_and_execute(development, {"doc", ModelName, _}, AppInfo, RequestContext) ->
     Result = case boss_load:load_models(AppInfo#boss_app_info.application) of
         {ok, ModelModules} ->
             % check if ModelName is in list of models
@@ -748,10 +749,11 @@ load_and_execute(development, {"doc", ModelName, _}, AppInfo, Req, SessionID) ->
                     end
             end;
         {error, ErrorList} ->
-            render_errors(ErrorList, AppInfo, Req)
+            render_errors(ErrorList, AppInfo, RequestContext)
     end,
-    {Result, SessionID};
-load_and_execute(development, {Controller, _, _} = Location, AppInfo, Req, SessionID) ->
+    {Result, proplists:get_value(session_id, RequestContext)};
+load_and_execute(development, {Controller, _, _} = Location, AppInfo, RequestContext) ->
+    SessionID = proplists:get_value(session_id, RequestContext),
     Application = AppInfo#boss_app_info.application,
     Res1 = boss_load:load_mail_controllers(Application),
     Res2 = case Res1 of
@@ -777,15 +779,15 @@ load_and_execute(development, {Controller, _, _} = Location, AppInfo, Req, Sessi
                 true ->
                     case boss_load:load_models(Application) of
                         {ok, _} ->
-                            execute_action(Location, AppInfo, Req, SessionID);
+                            execute_action(Location, AppInfo, RequestContext);
                         {error, ErrorList} ->
-                            {render_errors(ErrorList, AppInfo, Req), SessionID}
+                            {render_errors(ErrorList, AppInfo, RequestContext), SessionID}
                     end;
                 false ->
-                    {render_view(Location, AppInfo, Req, SessionID), SessionID}
+                    {render_view(Location, AppInfo, RequestContext), SessionID}
             end;
         {error, ErrorList} ->
-            {render_errors(ErrorList, AppInfo, Req), SessionID}
+            {render_errors(ErrorList, AppInfo, RequestContext), SessionID}
     end.
 
 %% @desc function to correct path errors in HTML output produced by Edoc
@@ -795,41 +797,42 @@ correct_edoc_html(Edoc, AppInfo) ->
     Result3 = re:replace(Result2, "erlang.png", AppInfo#boss_app_info.base_url++AppInfo#boss_app_info.static_prefix++"/edoc/erlang.png", [{return,list}, global]),
     Result3.
 
-%% @desc generates HTLM output for errors. called from process_error/5
+%% @desc generates HTML output for errors. called from process_error/5
 %% (seems to be called on runtime error)
-render_error(Error, ExtraMessage, AppInfo, Req) ->
-    case boss_html_error_template:render([{error, Error}, {extra_message, ExtraMessage}, 
-                                          {request, Req},
-                                          {appinfo, AppInfo},
-                                          {'_base_url', AppInfo#boss_app_info.base_url},
-                                          {'_static', AppInfo#boss_app_info.static_prefix}]) of
+render_error(Error, ExtraMessage, AppInfo, RequestContext) ->
+    case boss_html_error_template:render(RequestContext ++ [
+                {error, Error}, {extra_message, ExtraMessage}, {appinfo, AppInfo},
+                {'_base_url', AppInfo#boss_app_info.base_url},
+                {'_static', AppInfo#boss_app_info.static_prefix}]) of
         {ok, Payload} ->
             {error, Payload, []};
         Err ->
             Err
     end.
 
-%% @desc generates HTLM output for errors. called from load_and_execute/5
+%% @desc generates HTML output for errors. called from load_and_execute/5
 %% (seems to be called on parse error)
-render_errors(ErrorList, AppInfo, Req) ->
-    case boss_html_errors_template:render([{errors, ErrorList}, 
-                                           {request, Req},
-                                           {'_base_url', AppInfo#boss_app_info.base_url},
-                                           {'_static', AppInfo#boss_app_info.static_prefix}]) of
+render_errors(ErrorList, AppInfo, RequestContext) ->
+    case boss_html_errors_template:render(RequestContext ++ [
+                {errors, ErrorList}, 
+                {'_base_url', AppInfo#boss_app_info.base_url},
+                {'_static', AppInfo#boss_app_info.static_prefix}]) of
         {ok, Payload} ->
             {ok, Payload, []};
         Err ->
             Err
     end.
 
-execute_action(Location, AppInfo, Req, SessionID) ->
-    execute_action(Location, AppInfo, Req, SessionID, []).
+execute_action(Location, AppInfo, RequestContext) ->
+    execute_action(Location, AppInfo, RequestContext, []).
 
-execute_action({Controller, Action}, AppInfo, Req, SessionID, LocationTrail) ->
-    execute_action({Controller, Action, []}, AppInfo, Req, SessionID, LocationTrail);
-execute_action({Controller, Action, Tokens}, AppInfo, Req, SessionID, LocationTrail) when is_atom(Action) ->
-    execute_action({Controller, atom_to_list(Action), Tokens}, AppInfo, Req, SessionID, LocationTrail);
-execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID, LocationTrail) ->
+execute_action({Controller, Action}, AppInfo, RequestContext, LocationTrail) ->
+    execute_action({Controller, Action, []}, AppInfo, RequestContext, LocationTrail);
+execute_action({Controller, Action, Tokens}, AppInfo, RequestContext, LocationTrail) when is_atom(Action) ->
+    execute_action({Controller, atom_to_list(Action), Tokens}, AppInfo, RequestContext, LocationTrail);
+execute_action({Controller, Action, Tokens} = Location, AppInfo, RequestContext, LocationTrail) ->
+    Req = proplists:get_value(request, RequestContext),
+    SessionID = proplists:get_value(session_id, RequestContext),
     case lists:member(Location, LocationTrail) of
         true ->
             {{error, "Circular redirect!"}, SessionID};
@@ -874,7 +877,7 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
 
             Result = case AuthInfo of
                 {ok, Info} ->
-                    execute_action1(Adapter, AdapterInfo, Info, Location, AppInfo, Req, SessionID1, LocationTrail);
+                    execute_action1(Adapter, AdapterInfo, Info, Location, AppInfo, [{request, Req}, {session_id, SessionID1}], LocationTrail);
                 {redirect, Where} ->
                     {redirect, process_redirect(Controller, Where, AppInfo)}
             end,
@@ -882,7 +885,8 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, Req, SessionID,
             {Result, SessionID1}
     end.
 
-execute_action1(Adapter, AdapterInfo, Info, {Controller, Action, Tokens} = Location, AppInfo, Req, SessionID1, LocationTrail) ->
+execute_action1(Adapter, AdapterInfo, Info, {Controller, Action, Tokens} = Location, AppInfo, RequestContext, LocationTrail) ->
+    Req = proplists:get_value(request, RequestContext),
     EffectiveRequestMethod = case Req:request_method() of
         'HEAD' -> 'GET';
         Method -> Method
@@ -926,10 +930,11 @@ execute_action1(Adapter, AdapterInfo, Info, {Controller, Action, Tokens} = Locat
 
             case ActionResult of
                 undefined ->
-                    render_view(Location, AppInfo, Req, SessionID1, [{"_before", Info}], LangHeaders);
+                    render_view(Location, AppInfo, RequestContext, [{"_before", Info}], LangHeaders);
                 ActionResult ->
-                    process_action_result({Location, Req, SessionID1, [Location|LocationTrail]},
-                        ActionResult, LangHeaders, AppInfo, Info)
+                    ExpandedResult = expand_action_result(ActionResult),
+                    process_action_result({Location, RequestContext, [Location|LocationTrail]},
+                        ExpandedResult, LangHeaders, AppInfo, Info)
             end;
         Other ->
             Other
@@ -1000,35 +1005,43 @@ process_redirect(Controller, [{_, _}|_] = Where, AppInfo) ->
 process_redirect(_, Where, _) ->
     Where.
 
-process_action_result(Info, ok, ExtraHeaders, AppInfo, AuthInfo) ->
-    process_action_result(Info, {ok, []}, ExtraHeaders, AppInfo, AuthInfo);
-process_action_result(Info, {ok, Data}, ExtraHeaders, AppInfo, AuthInfo) ->
-    process_action_result(Info, {ok, Data, []}, ExtraHeaders, AppInfo, AuthInfo);
-process_action_result({Location, Req, SessionID, _}, {ok, Data, Headers}, ExtraHeaders, AppInfo, AuthInfo) ->
-    render_view(Location, AppInfo, Req, SessionID, [{"_before", AuthInfo}|Data], merge_headers(Headers, ExtraHeaders));
+expand_action_result(Keyword) when Keyword =:= ok; Keyword =:= render ->
+    {render, [], []};
+expand_action_result({Keyword, Data}) when Keyword =:= ok; Keyword =:= render ->
+    {render, Data, []};
+expand_action_result({ok, Data, Headers}) ->
+    {render, Data, Headers};
+expand_action_result({render_other, OtherLocation}) ->
+    {render_other, OtherLocation, [], []};
+expand_action_result({render_other, OtherLocation, Data}) ->
+    {render_other, OtherLocation, Data, []};
+expand_action_result({redirect, Where}) ->
+    {redirect, Where, []};
+expand_action_result({js, Data}) ->
+    {js, Data, []};
+expand_action_result({json, Data}) ->
+    {json, Data, []};
+expand_action_result({jsonp, Callback, Data}) ->
+    {jsonp, Callback, Data, []};
+expand_action_result({output, Payload}) ->
+    {output, Payload, []};
+expand_action_result(Other) ->
+    Other.
 
-process_action_result(Info, js, ExtraHeaders, AppInfo, AuthInfo) ->
-    process_action_result(Info, {js, []}, ExtraHeaders, AppInfo, AuthInfo);
-process_action_result(Info, {js, Data}, ExtraHeaders, AppInfo, AuthInfo) ->
-    process_action_result(Info, {js, Data, [{"Content-Type","application/javascript"}]}, ExtraHeaders, AppInfo, AuthInfo);
-process_action_result({Location, Req, SessionID, _}, {js, Data, Headers}, ExtraHeaders, AppInfo, AuthInfo) ->
-    render_view(Location, AppInfo, Req, SessionID, [{"_before", AuthInfo}|Data], merge_headers(Headers, ExtraHeaders));
+process_action_result({Location, RequestContext, _}, {render, Data, Headers}, ExtraHeaders, AppInfo, AuthInfo) ->
+    render_view(Location, AppInfo, RequestContext, [{"_before", AuthInfo}|Data], merge_headers(Headers, ExtraHeaders));
 
-process_action_result(Info, {render_other, OtherLocation}, ExtraHeaders, AppInfo, AuthInfo) ->
-    process_action_result(Info, {render_other, OtherLocation, []}, ExtraHeaders, AppInfo, AuthInfo);
-process_action_result(Info, {render_other, OtherLocation, Data}, ExtraHeaders, AppInfo, AuthInfo) ->
-    process_action_result(Info, {render_other, OtherLocation, Data, []}, ExtraHeaders, AppInfo, AuthInfo);
-process_action_result({{Controller, _, _}, Req, SessionID, _}, {render_other, OtherLocation, Data, Headers}, ExtraHeaders, AppInfo, AuthInfo) ->
+process_action_result({{Controller, _, _}, RequestContext, _}, {render_other, OtherLocation, Data, Headers}, ExtraHeaders, AppInfo, AuthInfo) ->
     render_view(process_location(Controller, OtherLocation, AppInfo),
-        AppInfo, Req, SessionID, [{"_before", AuthInfo}|Data], merge_headers(Headers, ExtraHeaders));
+        AppInfo, RequestContext, [{"_before", AuthInfo}|Data], merge_headers(Headers, ExtraHeaders));
 
-process_action_result({{Controller, _, _}, Req, SessionID, LocationTrail}, {action_other, OtherLocation}, _, AppInfo, _) ->
-    execute_action(process_location(Controller, OtherLocation, AppInfo), AppInfo, Req, SessionID, LocationTrail);
+process_action_result({{Controller, _, _}, RequestContext, LocationTrail}, {action_other, OtherLocation}, _, AppInfo, _) ->
+    execute_action(process_location(Controller, OtherLocation, AppInfo), AppInfo, RequestContext, LocationTrail);
 
-process_action_result({_, Req, SessionID, LocationTrail}, not_found, _, AppInfo, _) ->
+process_action_result({_, RequestContext, LocationTrail}, not_found, _, AppInfo, _) ->
     case boss_router:handle(AppInfo#boss_app_info.router_pid, 404) of
         {ok, {Application, Controller, Action, Params}} when Application =:= AppInfo#boss_app_info.application ->
-            case execute_action({Controller, Action, Params}, AppInfo, Req, SessionID, LocationTrail) of
+            case execute_action({Controller, Action, Params}, AppInfo, RequestContext, LocationTrail) of
                 {ok, Payload, Headers} ->
                     {not_found, Payload, Headers};
                 Other ->
@@ -1040,39 +1053,37 @@ process_action_result({_, Req, SessionID, LocationTrail}, not_found, _, AppInfo,
             {not_found, "The requested page was not found. Additionally, no handler was found for processing 404 errors."}
     end;
 
-process_action_result(Info, {redirect, Where}, ExtraHeaders, AppInfo, AuthInfo) ->
-    process_action_result(Info, {redirect, Where, []}, ExtraHeaders, AppInfo, AuthInfo);
-process_action_result({{Controller, _, _}, _, _, _}, {redirect, Where, Headers}, ExtraHeaders, AppInfo, _) ->
+process_action_result({{Controller, _, _}, _, _}, {redirect, Where, Headers}, ExtraHeaders, AppInfo, _) ->
     {redirect, process_redirect(Controller, Where, AppInfo), merge_headers(Headers, ExtraHeaders)};
 
-process_action_result(Info, {json, Data}, ExtraHeaders, AppInfo, AuthInfo) ->
-    process_action_result(Info, {json, Data, []}, ExtraHeaders, AppInfo, AuthInfo);
+process_action_result(Info, {js, Data, Headers}, ExtraHeaders, AppInfo, AuthInfo) ->
+    process_action_result(Info, {output, Data, merge_headers(Headers, [{"Content-Type", "application/javascript"}])},
+        ExtraHeaders, AppInfo, AuthInfo);
+
 process_action_result(Info, {json, Data, Headers}, ExtraHeaders, AppInfo, AuthInfo) ->
     process_action_result(Info, {output, boss_json:encode(Data, AppInfo#boss_app_info.model_modules),
             merge_headers(Headers, [{"Content-Type", "application/json"}])}, ExtraHeaders, AppInfo, AuthInfo);
 
-process_action_result(Info, {jsonp, Callback, Data}, ExtraHeaders, AppInfo, AuthInfo) ->
-    process_action_result(Info, {jsonp, Callback, Data, []}, ExtraHeaders, AppInfo, AuthInfo);
 process_action_result(Info, {jsonp, Callback, Data, Headers}, ExtraHeaders, AppInfo, AuthInfo) ->
     JsonData  = boss_json:encode(Data, AppInfo#boss_app_info.model_modules),
     process_action_result(Info, {output, Callback ++ "(" ++ JsonData ++ ");",
             merge_headers(Headers, [{"Content-Type", "application/javascript"}])}, ExtraHeaders, AppInfo, AuthInfo);
 
-process_action_result(Info, {output, Payload}, ExtraHeaders, AppInfo, AuthInfo) ->
-    process_action_result(Info, {output, Payload, []}, ExtraHeaders, AppInfo, AuthInfo);
 process_action_result(_, {output, Payload, Headers}, ExtraHeaders, _, _) ->
     {ok, Payload, merge_headers(Headers, ExtraHeaders)};
 
 process_action_result(_, Else, _, _, _) ->
     Else.
 
-render_view(Location, AppInfo, Req, SessionID) ->
-    render_view(Location, AppInfo, Req, SessionID, []).
+render_view(Location, AppInfo, RequestContext) ->
+    render_view(Location, AppInfo, RequestContext, []).
 
-render_view(Location, AppInfo, Req, SessionID, Variables) ->
-    render_view(Location, AppInfo, Req, SessionID, Variables, []).
+render_view(Location, AppInfo, RequestContext, Variables) ->
+    render_view(Location, AppInfo, RequestContext, Variables, []).
 
-render_view({Controller, Template, _}, AppInfo, Req, SessionID, Variables, Headers) ->
+render_view({Controller, Template, _}, AppInfo, RequestContext, Variables, Headers) ->
+    Req = proplists:get_value(request, RequestContext),
+    SessionID = proplists:get_value(session_id, RequestContext),
     TryExtensions = boss_files:template_extensions(),
     LoadResult = lists:foldl(fun
             (Ext, {error, not_found}) ->
@@ -1109,7 +1120,7 @@ render_view({Controller, Template, _}, AppInfo, Req, SessionID, Variables, Heade
         {error, {File, [{0, _Module, "Failed to read file"}]}} ->
             {not_found, io_lib:format("The requested template (~p) was not found.", [File]) };
         {error, Error}->
-            render_errors([Error], AppInfo, Req)
+            render_errors([Error], AppInfo, RequestContext)
     end.
 
 choose_translation_fun(_, _, undefined, undefined) ->
