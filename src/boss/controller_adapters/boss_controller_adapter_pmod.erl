@@ -28,7 +28,7 @@ filters(Type, {ControllerInstance, ExportStrings}, RequestContext, GlobalFilters
     case proplists:get_value(FunctionString, ExportStrings) of
         3 -> 
             FunctionAtom = list_to_atom(FunctionString),
-            ControllerInstance:FunctionAtom(RequestContext, GlobalFilters);
+            ControllerInstance:FunctionAtom(GlobalFilters, RequestContext);
         _ -> GlobalFilters
     end.
 

@@ -24,7 +24,7 @@ filters(Type, {Module, ExportStrings}, RequestContext, GlobalFilters) ->
     case proplists:get_value(FunctionString, ExportStrings) of
         2 -> 
             FunctionAtom = list_to_atom(FunctionString),
-            Module:FunctionAtom(RequestContext, GlobalFilters);
+            Module:FunctionAtom(GlobalFilters, RequestContext);
         _ -> GlobalFilters
     end.
 
