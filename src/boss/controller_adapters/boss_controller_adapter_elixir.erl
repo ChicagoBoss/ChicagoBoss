@@ -50,18 +50,16 @@ before_filter({Module, ExportStrings}, RequestContext) ->
             Other
     end.
 
-cache_info({Module, ExportStrings}, RequestContext) ->
+after_filter({Module, ExportStrings}, RequestContext, Result) ->
     Req = proplists:get_value(request, RequestContext),
     SessionID = proplists:get_value(session_id, RequestContext),
     Action = proplists:get_value(action, RequestContext),
-    Tokens = proplists:get_value(tokens, RequestContext),
     AuthInfo = proplists:get_value('_before', RequestContext),
-
-    BinTokens = convert_tokens(Tokens),
-    case proplists:get_value("cache_", ExportStrings) of
-        4 -> Module:cache_(Req, SessionID, Action, BinTokens);
-        5 -> Module:cache_(Req, SessionID, Action, BinTokens, AuthInfo);
-        _ -> ok
+    
+    case proplists:get_value("after_", ExportStrings) of
+        4 -> Module:after_(Req, SessionID, Action, Result);
+        5 -> Module:after_(Req, SessionID, Action, Result, AuthInfo);
+        _ -> Result
     end.
 
 action({Module, ExportStrings}, RequestContext) ->
@@ -94,26 +92,36 @@ action({Module, ExportStrings}, RequestContext) ->
     put(<<"BOSS_INTERNAL_SESSION_ID">>, undefined),
     Result.
 
-language({Module, ExportStrings}, RequestContext) ->
+filter_config({Module, ExportStrings}, CacheFilter, Default, RequestContext) when CacheFilter =:= boss_cache_page_filter;
+                                                                                              CacheFilter =:= boss_cache_vars_filter ->
     Req = proplists:get_value(request, RequestContext),
     SessionID = proplists:get_value(session_id, RequestContext),
     Action = proplists:get_value(action, RequestContext),
-    AuthInfo = proplists:get_value('_before', RequestContext),
+    Tokens = proplists:get_value(tokens, RequestContext),
+    AuthInfo = proplists:get_value('_before', RequestContext, RequestContext),
+
+    BinTokens = convert_tokens(Tokens),
+    case proplists:get_value("cache_", ExportStrings) of
+        4 -> Module:cache_(Req, SessionID, Action, BinTokens);
+        5 -> Module:cache_(Req, SessionID, Action, BinTokens, AuthInfo);
+        _ -> filter_config1({Module, ExportStrings}, CacheFilter, Default, RequestContext)
+    end;
+filter_config({Module, ExportStrings}, boss_lang_filter, Default, RequestContext) ->
+    Req = proplists:get_value(request, RequestContext),
+    SessionID = proplists:get_value(session_id, RequestContext),
+    Action = proplists:get_value(action, RequestContext),
+    AuthInfo = proplists:get_value('_before', RequestContext, RequestContext),
 
     case proplists:get_value("lang_", ExportStrings) of
         3 -> Module:lang_(Req, SessionID, Action);
         4 -> Module:lang_(Req, SessionID, Action, AuthInfo);
-        _ -> auto
-    end.
+        _ -> filter_config1({Module, ExportStrings}, boss_lang_filter, Default, RequestContext)
+    end;
+filter_config(Info, FilterModule, Default, RequestContext) ->
+    filter_config1(Info, FilterModule, Default, RequestContext).
 
-after_filter({Module, ExportStrings}, RequestContext, Result) ->
-    Req = proplists:get_value(request, RequestContext),
-    SessionID = proplists:get_value(session_id, RequestContext),
-    Action = proplists:get_value(action, RequestContext),
-    AuthInfo = proplists:get_value('_before', RequestContext),
-    
-    case proplists:get_value("after_", ExportStrings) of
-        4 -> Module:after_(Req, SessionID, Action, Result);
-        5 -> Module:after_(Req, SessionID, Action, Result, AuthInfo);
-        _ -> Result
+filter_config1({Module, ExportStrings}, FilterModule, Default, RequestContext) ->
+    case proplists:get_value("filter_config", ExportStrings) of
+        3 -> Module:filter_config(FilterModule, Default, RequestContext);
+        _ -> Default
     end.

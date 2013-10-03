@@ -2,13 +2,14 @@
 -behaviour(gen_server).
 -export([start_link/0, start_link/1, handle_request/3, process_request/4]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
+-export([merge_headers/2]).
 -export([handle_news_for_cache/3]).
 -define(DEBUGPRINT(A), error_logger:info_report("~~o)> " ++ A)).
 -define(PAGE_CACHE_PREFIX, "boss_web_controller_page").
 -define(PAGE_CACHE_DEFAULT_TTL, 60).
 -define(VARIABLES_CACHE_PREFIX, "boss_web_controller_variables").
 -define(VARIABLES_CACHE_DEFAULT_TTL, 60).
--define(BUILTIN_CONTROLLER_FILTERS, []).
+-define(BUILTIN_CONTROLLER_FILTERS, [boss_lang_filter]).
 -define(DEFAULT_WEB_SERVER, cowboy).
 
 -record(state, {
@@ -887,14 +888,13 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, RequestContext,
 
 execute_action1(Adapter, AdapterInfo, {Controller, Action, Tokens} = Location, AppInfo, RequestContext, LocationTrail) ->
     Req = proplists:get_value(request, RequestContext),
+    Language = proplists:get_value(language, RequestContext, auto),
     EffectiveRequestMethod = case Req:request_method() of
         'HEAD' -> 'GET';
         Method -> Method
     end,
 
-    LangResult = Adapter:language(AdapterInfo, RequestContext),
-
-    CacheKey = {Controller, Action, Tokens, LangResult},
+    CacheKey = {Controller, Action, Tokens, Language},
 
     CacheInfo = case (boss_env:get_env(cache_enable, false) andalso
             EffectiveRequestMethod =:= 'GET') of
@@ -923,18 +923,13 @@ execute_action1(Adapter, AdapterInfo, {Controller, Action, Tokens} = Location, A
             ActionResult = execute_action2(CacheInfo, CacheKey, CacheTTL, CacheWatchString, Adapter, AdapterInfo, 
                 lists:keyreplace(method, 1, RequestContext, {method, EffectiveRequestMethod})),
 
-            LangHeaders = case LangResult of
-                auto -> [];
-                _ -> [{"Content-Language", LangResult}]
-            end,
-
             case ActionResult of
                 undefined ->
-                    render_view(Location, AppInfo, RequestContext, [], LangHeaders);
+                    render_view(Location, AppInfo, RequestContext, [], []);
                 ActionResult ->
                     ExpandedResult = expand_action_result(ActionResult),
                     process_action_result({Location, RequestContext, [Location|LocationTrail]},
-                        ExpandedResult, LangHeaders, AppInfo)
+                        ExpandedResult, [], AppInfo)
             end;
         Other ->
             Other
@@ -985,6 +980,12 @@ execute_action2(CacheInfo, CacheKey, CacheTTL, CacheWatchString, Adapter, Adapte
 process_before_filter_result({ok, Context}, _) -> {ok, Context};
 process_before_filter_result(NotOK, Context) -> {not_ok, Context, NotOK}.
 
+default_filter_config(Filter) ->
+    case proplists:get_value('default_config', Filter:module_info(exports)) of
+        0 -> Filter:default_config();
+        _ -> undefined
+    end.
+
 apply_before_filters(Adapter, AdapterInfo, RequestContext) ->
     % legacy API
     case Adapter:before_filter(AdapterInfo, RequestContext) of
@@ -994,8 +995,10 @@ apply_before_filters(Adapter, AdapterInfo, RequestContext) ->
             ActionFilters = Adapter:filters('before', AdapterInfo, RequestContext, GlobalFilters),
             lists:foldl(fun
                     (Filter, {ok, Context}) when is_atom(Filter) ->
+                        DefaultConfig = default_filter_config(Filter),
+                        FilterConfig = Adapter:filter_config(AdapterInfo, Filter, DefaultConfig, RequestContext),
                         FilterResult = case proplists:get_value(before_filter, Filter:module_info(exports)) of
-                            1 -> Filter:before_filter(Context);
+                            2 -> Filter:before_filter(FilterConfig, Context);
                             _ -> {ok, Context}
                         end,
                         process_before_filter_result(FilterResult, Context);
@@ -1016,13 +1019,18 @@ apply_middle_filters(Adapter, AdapterInfo, RequestContext, ActionResult) ->
                 {StatusCode, Payload, Headers};
             (_Filter, {ok, Payload, Headers}) ->
                 {ok, Payload, Headers};
-            (Filter, Result) when is_atom(Filter) ->
-                case proplists:get_value(middle_filter, Filter:module_info(exports)) of
-                    2 -> Filter:middle_filter(Result, RequestContext);
-                    _ -> Result
-                end;
-            (Filter, Result) when is_function(Filter) ->
-                Filter(Result, RequestContext)
+            (Filter, Result) ->
+                DefaultConfig = default_filter_config(Filter),
+                FilterConfig = Adapter:filter_config(AdapterInfo, Filter, DefaultConfig, RequestContext),
+                if
+                    is_atom(Filter) ->
+                        case proplists:get_value(middle_filter, Filter:module_info(exports)) of
+                            3 -> Filter:middle_filter(Result, FilterConfig, RequestContext);
+                            _ -> Result
+                        end;
+                    is_function(Filter) ->
+                        Filter(Result, FilterConfig, RequestContext)
+                end
         end, ActionResult, ActionFilters).
 
 apply_after_filters(Adapter, AdapterInfo, RequestContext, RenderedResult) ->
@@ -1035,8 +1043,10 @@ apply_after_filters(Adapter, AdapterInfo, RequestContext, RenderedResult) ->
     % new API
     lists:foldl(fun
             (Filter, Rendered) when is_atom(Filter) ->
+                DefaultConfig = default_filter_config(Filter),
+                FilterConfig = Adapter:filter_config(AdapterInfo, Filter, DefaultConfig, RequestContext),
                 case proplists:get_value(after_filter, Filter:module_info(exports)) of
-                    2 -> Filter:after_filter(Rendered, RequestContext);
+                    3 -> Filter:after_filter(Rendered, FilterConfig, RequestContext);
                     _ -> Rendered
                 end;
             (Filter, Rendered) when is_function(Filter) ->
@@ -1162,7 +1172,7 @@ render_view({Controller, Template, _}, AppInfo, RequestContext, Variables, Heade
             TranslatableStrings = TemplateAdapter:translatable_strings(Module),
             {Lang, TranslationFun} = choose_translation_fun(AppInfo#boss_app_info.translator_pid,
                 TranslatableStrings, Req:header(accept_language),
-                proplists:get_value("Content-Language", Headers)),
+                proplists:get_value(language, RequestContext)),
             BeforeVars = case proplists:get_value('_before', RequestContext) of
                 undefined -> [];
                 AuthInfo -> [{"_before", AuthInfo}]
@@ -1175,7 +1185,7 @@ render_view({Controller, Template, _}, AppInfo, RequestContext, Variables, Heade
                         {controller, Controller}, {action, Template},
                         {router_pid, AppInfo#boss_app_info.router_pid}]) of
                 {ok, Payload} ->
-                    {ok, Payload, Headers};
+                    {ok, Payload, merge_headers([{"Content-Language", Lang}], Headers)};
                 Err ->
                     Err
             end;

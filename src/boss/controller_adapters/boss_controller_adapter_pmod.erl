@@ -53,15 +53,14 @@ before_filter({ControllerInstance, ExportStrings}, RequestContext) ->
             Other
     end.
 
-cache_info({ControllerInstance, ExportStrings}, RequestContext) ->
+after_filter({ControllerInstance, ExportStrings}, RequestContext, Result) ->
     Action = proplists:get_value(action, RequestContext),
-    Tokens = proplists:get_value(tokens, RequestContext),
     AuthInfo = proplists:get_value('_before', RequestContext, RequestContext),
 
-    case proplists:get_value("cache_", ExportStrings) of
-        3 -> ControllerInstance:cache_(Action, Tokens);
-        4 -> ControllerInstance:cache_(Action, Tokens, AuthInfo);
-        _ -> ok
+    case proplists:get_value("after_", ExportStrings) of
+        3 -> ControllerInstance:after_(Action, Result);
+        4 -> ControllerInstance:after_(Action, Result, AuthInfo);
+        _ -> Result
     end.
 
 action({ControllerInstance, ExportStrings}, RequestContext) ->
@@ -80,22 +79,31 @@ action({ControllerInstance, ExportStrings}, RequestContext) ->
         _ -> undefined
     end.
 
-language({ControllerInstance, ExportStrings}, RequestContext) ->
+filter_config({ControllerInstance, ExportStrings}, CacheFilter, Default, RequestContext) when CacheFilter =:= boss_cache_page_filter;
+                                                                                              CacheFilter =:= boss_cache_vars_filter ->
+    Action = proplists:get_value(action, RequestContext),
+    Tokens = proplists:get_value(tokens, RequestContext),
+    AuthInfo = proplists:get_value('_before', RequestContext, RequestContext),
+
+    case proplists:get_value("cache_", ExportStrings) of
+        3 -> ControllerInstance:cache_(Action, Tokens);
+        4 -> ControllerInstance:cache_(Action, Tokens, AuthInfo);
+        _ -> filter_config1({ControllerInstance, ExportStrings}, CacheFilter, Default, RequestContext)
+    end;
+filter_config({ControllerInstance, ExportStrings}, boss_lang_filter, Default, RequestContext) ->
     Action = proplists:get_value(action, RequestContext),
     AuthInfo = proplists:get_value('_before', RequestContext, RequestContext),
 
     case proplists:get_value("lang_", ExportStrings) of
         2 -> ControllerInstance:lang_(Action);
         3 -> ControllerInstance:lang_(Action, AuthInfo);
-        _ -> auto
-    end.
+        _ -> filter_config1({ControllerInstance, ExportStrings}, boss_lang_filter, Default, RequestContext)
+    end;
+filter_config(Info, FilterModule, Default, RequestContext) ->
+    filter_config1(Info, FilterModule, Default, RequestContext).
 
-after_filter({ControllerInstance, ExportStrings}, RequestContext, Result) ->
-    Action = proplists:get_value(action, RequestContext),
-    AuthInfo = proplists:get_value('_before', RequestContext, RequestContext),
-
-    case proplists:get_value("after_", ExportStrings) of
-        3 -> ControllerInstance:after_(Action, Result);
-        4 -> ControllerInstance:after_(Action, Result, AuthInfo);
-        _ -> Result
+filter_config1({ControllerInstance, ExportStrings}, FilterModule, Default, RequestContext) ->
+    case proplists:get_value("filter_config", ExportStrings) of
+        4 -> ControllerInstance:filter_config(FilterModule, Default, RequestContext);
+        _ -> Default
     end.
