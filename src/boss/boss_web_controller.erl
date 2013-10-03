@@ -1116,8 +1116,12 @@ process_action_result({Location, RequestContext, _}, {render, Data, Headers}, Ex
     render_view(Location, AppInfo, RequestContext, Data, merge_headers(Headers, ExtraHeaders));
 
 process_action_result({{Controller, _, _}, RequestContext, _}, {render_other, OtherLocation, Data, Headers}, ExtraHeaders, AppInfo) ->
-    render_view(process_location(Controller, OtherLocation, AppInfo),
-        AppInfo, RequestContext, Data, merge_headers(Headers, ExtraHeaders));
+    TheApplication = proplists:get_value(application, OtherLocation, AppInfo#boss_app_info.application),
+    TheAppInfo = boss_web:application_info(TheApplication),
+    TheAppInfo1 = TheAppInfo#boss_app_info{ translator_pid = boss_web:translator_pid(TheApplication),
+                                            router_pid = boss_web:router_pid(TheApplication) },
+    render_view(process_location(Controller, OtherLocation, TheAppInfo1),
+        TheAppInfo1, RequestContext, Data, merge_headers(Headers, ExtraHeaders));
 
 process_action_result({{Controller, _, _}, RequestContext, LocationTrail}, {action_other, OtherLocation}, _, AppInfo) ->
     execute_action(process_location(Controller, OtherLocation, AppInfo), AppInfo, RequestContext, LocationTrail);
