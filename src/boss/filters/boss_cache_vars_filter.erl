@@ -32,7 +32,9 @@ before_filter({vars, _}, RequestContext) ->
             end;
         false ->
             {ok, RequestContext}
-    end.
+    end;
+before_filter(_, RequestContext) ->
+    {ok, RequestContext}.
 
 middle_filter({render, _, _} = ActionResult, {vars, CacheOptions}, RequestContext) ->
     case proplists:get_value(cache_vars, RequestContext, false) of

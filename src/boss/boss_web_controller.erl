@@ -5,11 +5,7 @@
 -export([merge_headers/2]).
 -export([handle_news_for_cache/3]).
 -define(DEBUGPRINT(A), error_logger:info_report("~~o)> " ++ A)).
--define(PAGE_CACHE_PREFIX, "boss_web_controller_page").
--define(PAGE_CACHE_DEFAULT_TTL, 60).
--define(VARIABLES_CACHE_PREFIX, "boss_web_controller_variables").
--define(VARIABLES_CACHE_DEFAULT_TTL, 60).
--define(BUILTIN_CONTROLLER_FILTERS, [boss_lang_filter]).
+-define(BUILTIN_CONTROLLER_FILTERS, [boss_lang_filter, boss_cache_page_filter, boss_cache_vars_filter]).
 -define(DEFAULT_WEB_SERVER, cowboy).
 
 -record(state, {

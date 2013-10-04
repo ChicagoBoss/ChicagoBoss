@@ -71,11 +71,11 @@ action({Module, ExportStrings}, RequestContext) ->
     AuthInfo = proplists:get_value('_before', RequestContext),
 
     BinTokens = convert_tokens(Tokens),
-    put(<<"BOSS_INTERNAL_REQUEST_OBJECT">>, Req),
-    put(<<"BOSS_INTERNAL_SESSION_ID">>, convert_session_id(SessionID)),
     Result = case proplists:get_value("handle_request", ExportStrings) of
         3 -> Module:handle_request(lists:keyreplace(tokens, 1, RequestContext, {tokens, BinTokens}));
         _ -> 
+            put(<<"BOSS_INTERNAL_REQUEST_OBJECT">>, Req),
+            put(<<"BOSS_INTERNAL_SESSION_ID">>, convert_session_id(SessionID)),
             case proplists:get_value(Action, ExportStrings) of
                 Arity when Arity >= 2, Arity =< 5 ->
                     ActionAtom = list_to_atom(Action),
@@ -86,10 +86,10 @@ action({Module, ExportStrings}, RequestContext) ->
                         5 -> Module:ActionAtom(Req, SessionID, RequestMethod, BinTokens, AuthInfo)
                     end;
                 _ -> undefined
-            end
+            end,
+            put(<<"BOSS_INTERNAL_REQUEST_OBJECT">>, undefined),
+            put(<<"BOSS_INTERNAL_SESSION_ID">>, undefined)
     end,
-    put(<<"BOSS_INTERNAL_REQUEST_OBJECT">>, undefined),
-    put(<<"BOSS_INTERNAL_SESSION_ID">>, undefined),
     Result.
 
 filter_config({Module, ExportStrings}, 'cache', Default, RequestContext) ->
