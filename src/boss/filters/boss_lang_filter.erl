@@ -2,7 +2,6 @@
 -export([config_default_value/0, config_key/0, before_filter/2, after_filter/3]).
 
 config_default_value() -> auto.
-
 config_key() -> lang.
 
 before_filter(auto, RequestContext) ->

@@ -2,6 +2,14 @@
 -module(boss_controller_adapter_pmod).
 -compile(export_all).
 
+get_instance({ControllerModule, ExportStrings}, RequestContext) ->
+    Req = proplists:get_value(request, RequestContext),
+    SessionID = proplists:get_value(session_id, RequestContext),
+    case proplists:get_value("new", ExportStrings) of
+        1 -> ControllerModule:new(Req);
+        2 -> ControllerModule:new(Req, SessionID)
+    end.
+
 accept(Application, Controller, ControllerList) ->
     Module = boss_compiler_adapter_erlang:controller_module(Application, Controller),
     lists:member(Module, ControllerList).
@@ -10,20 +18,15 @@ wants_session(Application, Controller, ControllerList) ->
     Module = list_to_atom(boss_files:web_controller(Application, Controller, ControllerList)),
     lists:member({'new', 2}, Module:module_info(exports)).
 
-init(Application, Controller, ControllerList, RequestContext) ->
-    Req = proplists:get_value(request, RequestContext),
-    SessionID = proplists:get_value(session_id, RequestContext),
+init(Application, Controller, ControllerList, _RequestContext) ->
     Module = list_to_atom(boss_files:web_controller(Application, Controller, ControllerList)),
     ExportStrings = lists:map(
         fun({Function, Arity}) -> {atom_to_list(Function), Arity} end,
         Module:module_info(exports)),
-    ControllerInstance = case proplists:get_value("new", ExportStrings) of
-        1 -> Module:new(Req);
-        2 -> Module:new(Req, SessionID)
-    end,
-    {ControllerInstance, ExportStrings}.
+    {Module, ExportStrings}.
 
-filters(Type, {ControllerInstance, ExportStrings}, RequestContext, GlobalFilters) ->
+filters(Type, {_, ExportStrings} = Info, RequestContext, GlobalFilters) ->
+    ControllerInstance = get_instance(Info, RequestContext),
     FunctionString = lists:concat([Type, "_filters"]),
     case proplists:get_value(FunctionString, ExportStrings) of
         3 -> 
@@ -32,7 +35,8 @@ filters(Type, {ControllerInstance, ExportStrings}, RequestContext, GlobalFilters
         _ -> GlobalFilters
     end.
 
-before_filter({ControllerInstance, ExportStrings}, RequestContext) ->
+before_filter({_, ExportStrings} = Info, RequestContext) ->
+    ControllerInstance = get_instance(Info, RequestContext),
     Action = proplists:get_value(action, RequestContext),
     RequestMethod = proplists:get_value(method, RequestContext),
     Tokens = proplists:get_value(tokens, RequestContext),
@@ -53,7 +57,8 @@ before_filter({ControllerInstance, ExportStrings}, RequestContext) ->
             Other
     end.
 
-after_filter({ControllerInstance, ExportStrings}, RequestContext, Result) ->
+after_filter({_, ExportStrings} = Info, RequestContext, Result) ->
+    ControllerInstance = get_instance(Info, RequestContext),
     Action = proplists:get_value(action, RequestContext),
     AuthInfo = proplists:get_value('_before', RequestContext, RequestContext),
 
@@ -63,7 +68,8 @@ after_filter({ControllerInstance, ExportStrings}, RequestContext, Result) ->
         _ -> Result
     end.
 
-action({ControllerInstance, ExportStrings}, RequestContext) ->
+action({_, ExportStrings} = Info, RequestContext) ->
+    ControllerInstance = get_instance(Info, RequestContext),
     Action = proplists:get_value(action, RequestContext),
     RequestMethod = proplists:get_value(method, RequestContext),
     Tokens = proplists:get_value(tokens, RequestContext),
@@ -79,7 +85,8 @@ action({ControllerInstance, ExportStrings}, RequestContext) ->
         _ -> undefined
     end.
 
-filter_config({ControllerInstance, ExportStrings}, 'cache', Default, RequestContext) ->
+filter_config({_, ExportStrings} = Info, 'cache', Default, RequestContext) ->
+    ControllerInstance = get_instance(Info, RequestContext),
     Action = proplists:get_value(action, RequestContext),
     Tokens = proplists:get_value(tokens, RequestContext),
     AuthInfo = proplists:get_value('_before', RequestContext, RequestContext),
@@ -87,21 +94,23 @@ filter_config({ControllerInstance, ExportStrings}, 'cache', Default, RequestCont
     case proplists:get_value("cache_", ExportStrings) of
         3 -> ControllerInstance:cache_(Action, Tokens);
         4 -> ControllerInstance:cache_(Action, Tokens, AuthInfo);
-        _ -> filter_config1({ControllerInstance, ExportStrings}, 'cache', Default, RequestContext)
+        _ -> filter_config1(Info, 'cache', Default, RequestContext)
     end;
-filter_config({ControllerInstance, ExportStrings}, 'lang', Default, RequestContext) ->
+filter_config({_, ExportStrings} = Info, 'lang', Default, RequestContext) ->
+    ControllerInstance = get_instance(Info, RequestContext),
     Action = proplists:get_value(action, RequestContext),
     AuthInfo = proplists:get_value('_before', RequestContext, RequestContext),
 
     case proplists:get_value("lang_", ExportStrings) of
         2 -> ControllerInstance:lang_(Action);
         3 -> ControllerInstance:lang_(Action, AuthInfo);
-        _ -> filter_config1({ControllerInstance, ExportStrings}, 'lang', Default, RequestContext)
+        _ -> filter_config1(Info, 'lang', Default, RequestContext)
     end;
 filter_config(Info, FilterModule, Default, RequestContext) ->
     filter_config1(Info, FilterModule, Default, RequestContext).
 
-filter_config1({ControllerInstance, ExportStrings}, FilterKey, Default, RequestContext) ->
+filter_config1({_, ExportStrings} = Info, FilterKey, Default, RequestContext) ->
+    ControllerInstance = get_instance(Info, RequestContext),
     case proplists:get_value("config", ExportStrings) of
         4 -> ControllerInstance:config(FilterKey, Default, RequestContext);
         _ -> Default

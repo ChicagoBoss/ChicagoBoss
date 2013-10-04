@@ -878,123 +878,51 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, RequestContext,
 
             RequestContext2 = [{controller_module, element(1, AdapterInfo)}|RequestContext1],
 
-            Result = case apply_before_filters(Adapter, AdapterInfo, RequestContext2) of 
-                {ok, RequestContext3} ->
-                    execute_action1(Adapter, AdapterInfo, Location, AppInfo, RequestContext3, LocationTrail);
-                {not_ok, RequestContext3, NotOK} ->
-                    ExpandedResult = expand_action_result(NotOK),
-                    process_action_result({Location, RequestContext3, [Location|LocationTrail]},
-                        ExpandedResult, [], AppInfo)
+            {ActionResult, RequestContext3} = case apply_before_filters(Adapter, AdapterInfo, RequestContext2) of 
+                {ok, RC3} ->
+                    EffectiveRequestMethod = case Req:request_method() of
+                        'HEAD' -> 'GET';
+                        Method -> Method
+                    end,
+
+                    {Adapter:action(AdapterInfo, lists:keyreplace(method, 1, RC3, {method, EffectiveRequestMethod})), RC3};
+                {not_ok, RC3, NotOK} ->
+                    {NotOK, RC3}
             end,
 
-            {Result, SessionID1}
-    end.
-
-execute_action1(Adapter, AdapterInfo, {Controller, Action, Tokens} = Location, AppInfo, RequestContext, LocationTrail) ->
-    Req = proplists:get_value(request, RequestContext),
-    Language = proplists:get_value(language, RequestContext, auto),
-    EffectiveRequestMethod = case Req:request_method() of
-        'HEAD' -> 'GET';
-        Method -> Method
-    end,
-
-    CacheKey = {Controller, Action, Tokens, Language},
-
-    CacheInfo = case (boss_env:get_env(cache_enable, false) andalso
-            EffectiveRequestMethod =:= 'GET') of
-        true -> Adapter:cache_info(AdapterInfo, RequestContext);
-        false -> none
-    end,
-
-    CachedRenderedResult = case CacheInfo of
-        {page, _} -> boss_cache:get(?PAGE_CACHE_PREFIX, CacheKey);
-        _ -> undefined
-    end,
-
-    {CacheTTL, CacheWatchString} = case CacheInfo of
-        {page, CacheOptions} ->
-            {proplists:get_value(seconds, CacheOptions, ?PAGE_CACHE_DEFAULT_TTL),
-                proplists:get_value(watch, CacheOptions)};
-        {vars, CacheOptions} ->
-            {proplists:get_value(seconds, CacheOptions, ?VARIABLES_CACHE_DEFAULT_TTL),
-                proplists:get_value(watch, CacheOptions)};
-        _ ->
-            {undefined, undefined}
-    end,
-
-    RenderedResult = case CachedRenderedResult of
-        undefined ->
-            ActionResult = execute_action2(CacheInfo, CacheKey, CacheTTL, CacheWatchString, Adapter, AdapterInfo, 
-                lists:keyreplace(method, 1, RequestContext, {method, EffectiveRequestMethod})),
-
-            case ActionResult of
+            RenderedResult = case ActionResult of
                 undefined ->
-                    render_view(Location, AppInfo, RequestContext, [], []);
-                ActionResult ->
+                    render_view(Location, AppInfo, RequestContext3, [], []);
+                _ ->
                     ExpandedResult = expand_action_result(ActionResult),
-                    process_action_result({Location, RequestContext, [Location|LocationTrail]},
-                        ExpandedResult, [], AppInfo)
-            end;
-        Other ->
-            Other
-    end,
-
-    case (CachedRenderedResult =/= undefined andalso is_tuple(RenderedResult) andalso element(1, RenderedResult) =:= ok) of
-        true ->
-            case CacheWatchString of
-                undefined -> ok;
-                _ ->
-                    boss_news:set_watch({?PAGE_CACHE_PREFIX, CacheKey}, CacheWatchString,
-                        fun ?MODULE:handle_news_for_cache/3, {?PAGE_CACHE_PREFIX, CacheKey}, CacheTTL)
+                    TransformedResult = apply_middle_filters(Adapter, AdapterInfo, 
+                        RequestContext, ExpandedResult),
+                    process_action_result({Location, RequestContext3, [Location|LocationTrail]},
+                        TransformedResult, [], AppInfo)
             end,
-            boss_cache:set(?PAGE_CACHE_PREFIX, CacheKey, RenderedResult, CacheTTL);
-        false ->
-            ok
-    end,
 
-    apply_after_filters(Adapter, AdapterInfo, RequestContext, RenderedResult).
+            FinalResult = apply_after_filters(Adapter, AdapterInfo, RequestContext3, RenderedResult),
 
-execute_action2(CacheInfo, CacheKey, CacheTTL, CacheWatchString, Adapter, AdapterInfo, RequestContext) ->
-    CachedActionResult = case CacheInfo of
-        {vars, _} -> boss_cache:get(?VARIABLES_CACHE_PREFIX, CacheKey);
-        _ -> undefined
-    end,
-
-    ActionResult = case CachedActionResult of
-        undefined -> Adapter:action(AdapterInfo, RequestContext);
-        _ -> CachedActionResult
-    end,
-
-    case (CachedActionResult =/= undefined andalso is_tuple(ActionResult) andalso element(1, ActionResult) =:= ok) of
-        true ->
-            case CacheWatchString of
-                undefined -> ok;
-                _ ->
-                    boss_news:set_watch({?VARIABLES_CACHE_PREFIX, CacheKey}, CacheWatchString,
-                        fun ?MODULE:handle_news_for_cache/3, {?VARIABLES_CACHE_PREFIX, CacheKey},
-                        CacheTTL)
-            end,
-            boss_cache:set(?VARIABLES_CACHE_PREFIX, CacheKey, ActionResult, CacheTTL);
-        false ->
-            ok
-    end,
-
-    apply_middle_filters(Adapter, AdapterInfo, RequestContext, ActionResult).
+            {FinalResult, SessionID1}
+    end.
 
 process_before_filter_result({ok, Context}, _) -> {ok, Context};
 process_before_filter_result(NotOK, Context) -> {not_ok, Context, NotOK}.
 
-filter_config_default_value(Filter) ->
-    case proplists:get_value('config_default_value', Filter:module_info(exports)) of
-        0 -> Filter:config_default_value();
-        _ -> undefined
-    end.
-
-filter_config_key(Filter) ->
-    case proplists:get_value('config_key', Filter:module_info(exports)) of
+filter_config(Filter) ->
+    FilterKey = case proplists:get_value('config_key', Filter:module_info(exports)) of
         0 -> Filter:config_key();
-        _ -> undefined
-    end.
+        _ -> Filter
+    end,
+    FilterValue = case proplists:get_value(FilterKey, boss_env:get_env(controller_filter_config, [])) of
+        undefined ->
+            case proplists:get_value('config_default_value', Filter:module_info(exports)) of
+                0 -> Filter:config_default_value();
+                _ -> undefined
+            end;
+        Value -> Value
+    end,
+    {FilterKey, FilterValue}.
 
 apply_before_filters(Adapter, AdapterInfo, RequestContext) ->
     % legacy API
@@ -1005,16 +933,13 @@ apply_before_filters(Adapter, AdapterInfo, RequestContext) ->
             ActionFilters = Adapter:filters('before', AdapterInfo, RequestContext, GlobalFilters),
             lists:foldl(fun
                     (Filter, {ok, Context}) when is_atom(Filter) ->
-                        DefaultConfig = filter_config_default_value(Filter),
-                        FilterKey = filter_config_key(Filter),
+                        {FilterKey, DefaultConfig} = filter_config(Filter),
                         FilterConfig = Adapter:filter_config(AdapterInfo, FilterKey, DefaultConfig, RequestContext),
                         FilterResult = case proplists:get_value(before_filter, Filter:module_info(exports)) of
                             2 -> Filter:before_filter(FilterConfig, Context);
                             _ -> {ok, Context}
                         end,
                         process_before_filter_result(FilterResult, Context);
-                    (Filter, {ok, Context}) when is_function(Filter) ->
-                        process_before_filter_result(Filter(Context), Context);
                     (_Filter, NotOK) -> NotOK
                 end, {ok, RequestContext1}, ActionFilters);
         Other ->
@@ -1030,18 +955,12 @@ apply_middle_filters(Adapter, AdapterInfo, RequestContext, ActionResult) ->
                 {StatusCode, Payload, Headers};
             (_Filter, {ok, Payload, Headers}) ->
                 {ok, Payload, Headers};
-            (Filter, Result) ->
-                DefaultConfig = filter_config_default_value(Filter),
-                FilterKey = filter_config_key(Filter),
+            (Filter, Result) when is_atom(Filter) ->
+                {FilterKey, DefaultConfig} = filter_config(Filter),
                 FilterConfig = Adapter:filter_config(AdapterInfo, FilterKey, DefaultConfig, RequestContext),
-                if
-                    is_atom(Filter) ->
-                        case proplists:get_value(middle_filter, Filter:module_info(exports)) of
-                            3 -> Filter:middle_filter(Result, FilterConfig, RequestContext);
-                            _ -> Result
-                        end;
-                    is_function(Filter) ->
-                        Filter(Result, FilterConfig, RequestContext)
+                case proplists:get_value(middle_filter, Filter:module_info(exports)) of
+                    3 -> Filter:middle_filter(Result, FilterConfig, RequestContext);
+                    _ -> Result
                 end
         end, ActionResult, ActionFilters).
 
@@ -1055,15 +974,12 @@ apply_after_filters(Adapter, AdapterInfo, RequestContext, RenderedResult) ->
     % new API
     lists:foldl(fun
             (Filter, Rendered) when is_atom(Filter) ->
-                DefaultConfig = filter_config_default_value(Filter),
-                FilterKey = filter_config_key(Filter),
+                {FilterKey, DefaultConfig} = filter_config(Filter),
                 FilterConfig = Adapter:filter_config(AdapterInfo, FilterKey, DefaultConfig, RequestContext),
                 case proplists:get_value(after_filter, Filter:module_info(exports)) of
                     3 -> Filter:after_filter(Rendered, FilterConfig, RequestContext);
                     _ -> Rendered
-                end;
-            (Filter, Rendered) when is_function(Filter) ->
-                Filter(Rendered, RequestContext)
+                end
         end, RenderedResult1, ActionFilters).
 
 handle_news_for_cache(_, _, {Prefix, Key}) ->
