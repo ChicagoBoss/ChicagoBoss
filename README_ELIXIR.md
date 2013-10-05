@@ -12,7 +12,7 @@ Supported features:
 
 Requirements:
 
-* Erlang R15B01 or later
+* Erlang R16B or later
 * A love of danger
 
 Learn more about Elixir at http://www.elixir-lang.org/
@@ -31,11 +31,15 @@ ChicagoBoss directory
 
     ./rebar get-deps
 
-4. Compile everything:
+4. Download Elixir dependencies:
+
+    PATH=./deps/elixir/bin:.:$PATH mix deps.get
+
+5. Compile everything:
 
     ./rebar compile
 
-5. Make a new project:
+6. Make a new project:
 
     make app PROJECT=my_application
 

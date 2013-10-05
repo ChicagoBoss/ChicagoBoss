@@ -42,7 +42,7 @@ terminate(_Reason, State) ->
     error_logger:logfile(close),
     boss_translator:stop(),
     boss_router:stop(),
-    boss_db:stop(),
+    boss_model_manager:stop(),
     boss_cache:stop(),
     mochiweb_http:stop(),
     application:stop(elixir).
@@ -56,27 +56,12 @@ init(Config) ->
     application:start(elixir),
 
     Env = boss_env:setup_boss_env(),
+
     error_logger:info_msg("Starting Boss in ~p mode....~n", [Env]),
 
-    DBOptions = lists:foldl(fun(OptName, Acc) ->
-                case application:get_env(OptName) of
-                    {ok, Val} -> [{OptName, Val}|Acc];
-                    _ -> Acc
-                end
-        end, [], [db_port, db_host, db_username, db_password, db_database,
-                  db_replication_set, db_read_mode, db_write_mode, db_write_host, db_write_host_port,
-                  db_read_capacity, db_write_capacity, db_model_read_capacity, db_model_write_capacity]),
-    DBAdapter = boss_env:get_env(db_adapter, mock),
-    DBShards = boss_env:get_env(db_shards, []),
-    CacheEnable = boss_env:get_env(cache_enable, false),
-    IsMasterNode = boss_env:is_master_node(),
-    DBCacheEnable = boss_env:get_env(db_cache_enable, false) andalso CacheEnable,
-    DBOptions1 = [{adapter, DBAdapter}, {cache_enable, DBCacheEnable},
-        {shards, DBShards}, {is_master_node, IsMasterNode}|DBOptions],
+    boss_model_manager:start(),
 
-    boss_db:start(DBOptions1),
-
-    case CacheEnable of
+    case boss_env:get_env(cache_enable, false) of
         false -> ok;
         true ->
             CacheAdapter = boss_env:get_env(cache_adapter, memcached_bin),
@@ -774,7 +759,7 @@ load_and_execute(development, {Controller, _, _} = Location, AppInfo, RequestCon
         {ok, _} -> boss_load:load_web_controllers(Application);
         _ -> Res4
     end,
-    case Res5 of
+    Res6 = case Res5 of
         {ok, Controllers} ->
             case boss_files:is_controller_present(Application, Controller,
                     lists:map(fun atom_to_list/1, Controllers)) of
@@ -790,7 +775,8 @@ load_and_execute(development, {Controller, _, _} = Location, AppInfo, RequestCon
             end;
         {error, ErrorList} ->
             {render_errors(ErrorList, AppInfo, RequestContext), SessionID}
-    end.
+    end,
+    Res6.
 
 %% @desc function to correct path errors in HTML output produced by Edoc
 correct_edoc_html(Edoc, AppInfo) ->
