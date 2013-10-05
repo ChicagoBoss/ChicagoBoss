@@ -37,5 +37,5 @@ is_model_instance(Object, AvailableModels) ->
 dummy_instance(Model) ->
     Model:new([]).
 
-to_json(_Object) ->
-    not_implemented.
+to_json(Object) ->
+    {struct, Object:'__record__'(fields)}.

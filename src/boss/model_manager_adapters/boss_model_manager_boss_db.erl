@@ -54,7 +54,7 @@ is_model_instance(Object, AvailableModels) ->
 dummy_instance(Model) ->
   boss_record_lib:dummy_record(Model).
 
-to_json (Object) ->
+to_json(Object) ->
   Data = lists:map (fun
     ({Attr, Val}) when is_list (Val) ->
        {Attr, list_to_binary (Val)};
@@ -64,7 +64,7 @@ to_json (Object) ->
        {Attr, list_to_binary (erlydtl_filters:date (Val, "F d, Y H:i:s"))};
     (Other) ->
        Other
-  end, Object:attributes ()),
+  end, Object:attributes()),
   {struct, Data}.
 
 %% vim: fdm=syntax:fdn=3:tw=74:ts=2:syn=erlang
