@@ -7,6 +7,7 @@ your project instead of regular Erlang if you prefer.
 Supported features:
 
 * Elixir web controllers
+* Ecto models
 * Embedded Elixir views
 * Elixir library files in src/lib/ (but no inter-file macros!)
 
@@ -125,5 +126,45 @@ This is a comment:
 
 Of course, you're free to continue using Django templates with extension ".dtl"
 if you prefer a dedicated template language.
+
+
+Model API
+--
+
+Ecto is database wrapper and query system written in Elixir. You can use it
+instead of BossDB for a pure-Elixir data modeling experience. Read more about
+Ecto here:
+
+    https://github.com/elixir-lang/ecto
+
+To enable Ecto in your project, set the `model_manager' config key to `ecto':
+
+    [{boss, [
+        ...
+        {model_manager, ecto},
+        ...
+        ]
+    }]
+
+Model files go in src/model as usual. A simple model file might look like:
+
+    defmodule MyApp.Greeting do
+      use Ecto.Model
+
+      queryable "greeting" do
+        field :greeting_text, :string
+      end
+    end
+
+To interact with the database, use `Boss.Repo', e.g.:
+
+    greeting = MyApp.Greeting.new(greeting_text: "Hello, world!")
+
+    saved_greeting = Boss.Repo.create(greeting)
+
+    all_greetings = Boss.Repo.all(MyApp.Greeting)
+
+You can display query results seamlessly from ErlyDTL templates. The template
+engine will automatically call "get" and "to_list" on associations as needed.
 
 Enjoy!
