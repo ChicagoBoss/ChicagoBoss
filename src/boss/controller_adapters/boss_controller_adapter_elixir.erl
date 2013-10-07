@@ -46,10 +46,8 @@ before_filter({Module, ExportStrings}, RequestContext) ->
     case AuthResult of
         ok ->
             {ok, RequestContext};
-        {ok, Info} ->
-            {ok, [{'_before', Info}|RequestContext]};
-        Other ->
-            Other
+        {ok, AuthInfo} ->
+            {ok, [{'_before', AuthInfo}|RequestContext]}
     end.
 
 after_filter({Module, ExportStrings}, RequestContext, Result) ->
