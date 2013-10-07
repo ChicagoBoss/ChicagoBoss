@@ -1093,7 +1093,7 @@ render_view({Controller, Template, _}, AppInfo, RequestContext, Variables, Heade
                 AuthInfo -> [{"_before", AuthInfo}]
             end,
             RenderVars = BossFlash ++ BeforeVars ++ [{"_lang", Lang}, {"_session", SessionData},
-                            {"_base_url", AppInfo#boss_app_info.base_url}|Variables],
+                            {"_req", Req}, {"_base_url", AppInfo#boss_app_info.base_url}|Variables],
             case TemplateAdapter:render(Module, [{"_vars", RenderVars}|RenderVars],
                     [{translation_fun, TranslationFun}, {locale, Lang},
                         {host, Req:header(host)}, {application, atom_to_list(AppInfo#boss_app_info.application)},
