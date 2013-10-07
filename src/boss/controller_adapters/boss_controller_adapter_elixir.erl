@@ -41,11 +41,13 @@ before_filter({Module, ExportStrings}, RequestContext) ->
     AuthResult = case proplists:get_value("before_", ExportStrings) of
         3 -> Module:before_(Req, SessionID, Action);
         5 -> Module:before_(Req, SessionID, Action, RequestMethod, BinTokens);
-        _ -> ok
+        _ -> no_before_function
     end,
     case AuthResult of
-        ok ->
+        no_before_function ->
             {ok, RequestContext};
+        ok ->
+            {ok, [{'_before', undefined}|RequestContext]};
         {ok, Info} ->
             {ok, [{'_before', Info}|RequestContext]};
         Other ->
