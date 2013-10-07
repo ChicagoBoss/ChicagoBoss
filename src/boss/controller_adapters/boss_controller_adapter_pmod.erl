@@ -51,8 +51,8 @@ before_filter({_, ExportStrings} = Info, RequestContext) ->
             {ok, RequestContext};
         ok ->
             {ok, [{'_before', undefined}|RequestContext]};
-        {ok, Info} ->
-            {ok, [{'_before', Info}|RequestContext]};
+        {ok, AuthInfo} ->
+            {ok, [{'_before', AuthInfo}|RequestContext]};
         Other ->
             Other
     end.
