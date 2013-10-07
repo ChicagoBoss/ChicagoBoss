@@ -51,16 +51,14 @@ before_filter({_, ExportStrings} = Info, RequestContext) ->
             {ok, RequestContext};
         ok ->
             {ok, [{'_before', undefined}|RequestContext]};
-        {ok, Info} ->
-            {ok, [{'_before', Info}|RequestContext]};
-        Other ->
-            Other
+        {ok, AuthInfo} ->
+            {ok, [{'_before', AuthInfo}|RequestContext]}
     end.
 
 after_filter({_, ExportStrings} = Info, RequestContext, Result) ->
     ControllerInstance = get_instance(Info, RequestContext),
     Action = proplists:get_value(action, RequestContext),
-    AuthInfo = proplists:get_value('_before', RequestContext, RequestContext),
+    AuthInfo = proplists:get_value('_before', RequestContext),
 
     case proplists:get_value("after_", ExportStrings) of
         3 -> ControllerInstance:after_(Action, Result);
@@ -73,7 +71,7 @@ action({_, ExportStrings} = Info, RequestContext) ->
     Action = proplists:get_value(action, RequestContext),
     RequestMethod = proplists:get_value(method, RequestContext),
     Tokens = proplists:get_value(tokens, RequestContext),
-    AuthInfo = proplists:get_value('_before', RequestContext, RequestContext),
+    AuthInfo = proplists:get_value('_before', RequestContext),
 
     case proplists:get_value(Action, ExportStrings) of
         3 ->
@@ -89,7 +87,7 @@ filter_config({_, ExportStrings} = Info, 'cache', Default, RequestContext) ->
     ControllerInstance = get_instance(Info, RequestContext),
     Action = proplists:get_value(action, RequestContext),
     Tokens = proplists:get_value(tokens, RequestContext),
-    AuthInfo = proplists:get_value('_before', RequestContext, RequestContext),
+    AuthInfo = proplists:get_value('_before', RequestContext),
 
     case proplists:get_value("cache_", ExportStrings) of
         3 -> ControllerInstance:cache_(Action, Tokens);
@@ -99,7 +97,7 @@ filter_config({_, ExportStrings} = Info, 'cache', Default, RequestContext) ->
 filter_config({_, ExportStrings} = Info, 'lang', Default, RequestContext) ->
     ControllerInstance = get_instance(Info, RequestContext),
     Action = proplists:get_value(action, RequestContext),
-    AuthInfo = proplists:get_value('_before', RequestContext, RequestContext),
+    AuthInfo = proplists:get_value('_before', RequestContext),
 
     case proplists:get_value("lang_", ExportStrings) of
         2 -> ControllerInstance:lang_(Action);

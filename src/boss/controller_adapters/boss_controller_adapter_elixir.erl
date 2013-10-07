@@ -46,10 +46,8 @@ before_filter({Module, ExportStrings}, RequestContext) ->
     case AuthResult of
         ok ->
             {ok, RequestContext};
-        {ok, Info} ->
-            {ok, [{'_before', Info}|RequestContext]};
-        Other ->
-            Other
+        {ok, AuthInfo} ->
+            {ok, [{'_before', AuthInfo}|RequestContext]}
     end.
 
 after_filter({Module, ExportStrings}, RequestContext, Result) ->
@@ -99,7 +97,7 @@ filter_config({Module, ExportStrings}, 'cache', Default, RequestContext) ->
     SessionID = proplists:get_value(session_id, RequestContext),
     Action = proplists:get_value(action, RequestContext),
     Tokens = proplists:get_value(tokens, RequestContext),
-    AuthInfo = proplists:get_value('_before', RequestContext, RequestContext),
+    AuthInfo = proplists:get_value('_before', RequestContext),
 
     BinTokens = convert_tokens(Tokens),
     case proplists:get_value("cache_", ExportStrings) of
@@ -111,7 +109,7 @@ filter_config({Module, ExportStrings}, 'lang', Default, RequestContext) ->
     Req = proplists:get_value(request, RequestContext),
     SessionID = proplists:get_value(session_id, RequestContext),
     Action = proplists:get_value(action, RequestContext),
-    AuthInfo = proplists:get_value('_before', RequestContext, RequestContext),
+    AuthInfo = proplists:get_value('_before', RequestContext),
 
     case proplists:get_value("lang_", ExportStrings) of
         3 -> Module:lang_(Req, SessionID, Action);
