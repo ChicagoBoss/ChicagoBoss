@@ -9,34 +9,38 @@
 -module (boss_model_manager).
 -behaviour (boss_model_manager_adapter).
 -export ([
-  compile/1, compile/2,
-  edoc_module/1, edoc_module/2,
-
+  start/0,
+  stop/0,
+  compile/2,
+  edoc_module/2,
   is_model_instance/2,
   dummy_instance/1,
-
   to_json/1 %, from_json/1
 ]).
 
-get_adapter () ->
+get_adapter() ->
   list_to_atom (lists:concat (["boss_model_manager_",
     boss_env:get_env (model_manager, boss_db)])).
 
-compile (ModulePath) -> compile (ModulePath, []).
-compile (ModulePath, CompilerOptions) ->
+start() ->
+  (get_adapter ()):start().
+
+stop() ->
+  (get_adapter ()):stop().
+
+compile(ModulePath, CompilerOptions) ->
   (get_adapter ()):compile (ModulePath, CompilerOptions).
 
-edoc_module (ModulePath) -> edoc_module (ModulePath, []).
-edoc_module (ModulePath, Options) ->
+edoc_module(ModulePath, Options) ->
   (get_adapter ()):edoc_module (ModulePath, Options).
 
-is_model_instance (Object, AvailableModels) ->
+is_model_instance(Object, AvailableModels) ->
   (get_adapter ()):is_model_instance (Object, AvailableModels).
 
-dummy_instance (Model) ->
+dummy_instance(Model) ->
   (get_adapter ()):dummy_instance (Model).
 
-to_json (Object) ->
+to_json(Object) ->
   (get_adapter ()):to_json (Object).
 
 %from_json (Data) ->

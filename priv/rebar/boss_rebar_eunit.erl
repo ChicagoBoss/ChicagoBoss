@@ -200,7 +200,7 @@ ebin_dir() ->
 perform_eunit(Config, Modules) ->
     %% suite defined, so only specify the module that relates to the
     %% suite (if any). Suite can be a comma seperated list of modules to run.
-    Suite = rebar_config:get_global(suite, undefined),
+    Suite = rebar_config:get_global(Config, suite, undefined),
     EunitOpts = get_eunit_opts(Config),
 
     %% Move down into ?EUNIT_DIR while we run tests so any generated files
@@ -223,7 +223,7 @@ perform_eunit(EunitOpts, _Modules, Suites) ->
 
 get_eunit_opts(Config) ->
     %% Enable verbose in eunit if so requested..
-    BaseOpts = case rebar_config:is_verbose() of
+    BaseOpts = case rebar_config:is_verbose(Config) of
                    true ->
                        [verbose];
                    false ->
@@ -287,7 +287,7 @@ cover_analyze(_Config, [], _SrcModules) ->
 cover_analyze(Config, Modules, SrcModules) ->
     %% suite can be a comma seperated list of modules to test
     Suite = [list_to_atom(S) ||
-                S <- string:tokens(rebar_config:get_global(suite, ""), ",")],
+                S <- string:tokens(rebar_config:get_global(Config, suite, ""), ",")],
     FilteredModules = case Suite of
                           [] -> Modules;
                           _  -> [M || M <- Modules, lists:member(M, Suite)]

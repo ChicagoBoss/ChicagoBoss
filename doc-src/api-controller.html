@@ -127,7 +127,7 @@ profile('GET', [UserId]) -&gt;
     <div class="code spec">
         {ok, ExtraInfo}
     </div>
-    <p><code>ExtraInfo</code> will be passed as the third argument to the action, and as a variable called "before_" to the templates.</p>
+    <p><code>ExtraInfo</code> will be passed as the third argument to the action, and as a variable called "_before" to the templates.</p>
 </div>
 <div class="example row2">
     <div class="code spec">
@@ -169,6 +169,24 @@ before_(_, _, _) -&gt;
         {ok, Variables<span class="typevar">::proplist()</span>, Headers<span class="typevar">::proplist()</span>}
     </div>
     <p><code>Variables</code> will be passed into the associated Django template, and <code>Headers</code> are HTTP headers you want to set (e.g., <code>Content-Type</code>).</p>
+</div>
+<div class="example row1">
+    <div class="code spec">
+        js
+    </div>
+    <p>The template will be rendered without any variables and served as <code>Content-Type: application/javascript</code>.</p>
+</div>
+<div class="example row2">
+    <div class="code spec">
+        {js, Variables<span class="typevar">::proplist()</span>}
+    </div>
+    <p><code>Variables</code> will be passed into the associated <a href="api-view.html#nav">Django template</a> and the result will be served as <code>Content-Type: application/javascript</code>.</p>
+</div>
+<div class="example row1">
+    <div class="code spec">
+        {js, Variables<span class="typevar">::proplist()</span>, Headers<span class="typevar">::proplist()</span>}
+    </div>
+    <p><code>Variables</code> will be passed into the associated Django template, the result served as <code>Content-Type: application/javascript</code>, and <code>Headers</code> are HTTP headers you want to set.</p>
 </div>
 <div class="example row2">
     <div class="code spec">

@@ -1,0 +1,20 @@
+<html>
+    <head>
+        <title>Oops!</title>
+        <link rel="stylesheet" type="text/css" href="{{ _base_url }}{{ _static }}/edoc/stylesheet.css" title="EDoc">
+    </head>
+    <body>
+        <h1>We got a problem!</h1>
+        {% for filename, error in errors %}
+        <p><em>In file</em> {{ filename }}:</p>
+        <ul>
+        {% for lineno, module, msg in error %}
+        <li>Line {{ lineno }}: {{ msg }}</li>
+        {% endfor %}
+        </ul>
+        {% endfor %}
+        <br />
+        <br />
+        <p><em>{% now "D, j F Y g:i a" %}</em></p>
+    </body>
+</html>

@@ -34,6 +34,7 @@
         web_controller/3,
         web_controller_list/1,
         web_controller_path/0,
+        web_controller_path/1,
         web_view_path/0,
         web_view_path/2,
 	 web_view_path/3
@@ -110,6 +111,7 @@ view_tag_helper_list(AppName) -> module_list(AppName, [view_tag_helper_path()]).
 view_filter_helper_list(AppName) -> module_list(AppName, [view_filter_helper_path()]).
 
 web_controller_path() -> [filename:join([root_src_dir(), "controller"])].
+web_controller_path(Controller) -> filename:join([hd(web_controller_path()), Controller]).
 
 mail_controller_path() -> [filename:join([root_src_dir(), "mail"])].
 
