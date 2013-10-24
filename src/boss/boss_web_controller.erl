@@ -170,6 +170,14 @@ handle_info(timeout, State) ->
                 ModelList = boss_files:model_list(AppName),
                 ViewList = boss_files:view_module_list(AppName),
                 IsMasterNode = boss_env:is_master_node(),
+                ControllerList = boss_files:web_controller_list(AppName),
+                {ok, RouterSupPid} = boss_router:start([{application, AppName},
+                        {controllers, ControllerList}]),
+                {ok, TranslatorSupPid} = boss_translator:start([{application, AppName}]),
+                case boss_env:is_developing_app(AppName) of
+                    true -> boss_load:load_all_modules(AppName, TranslatorSupPid);
+                    false -> ok
+                end,
                 if
                     IsMasterNode ->
                         case boss_env:get_env(server, ?DEFAULT_WEB_SERVER) of
@@ -184,14 +192,6 @@ handle_info(timeout, State) ->
                         end;
                     true ->
                         ok
-                end,
-                ControllerList = boss_files:web_controller_list(AppName),
-                {ok, RouterSupPid} = boss_router:start([{application, AppName},
-                        {controllers, ControllerList}]),
-                {ok, TranslatorSupPid} = boss_translator:start([{application, AppName}]),
-                case boss_env:is_developing_app(AppName) of
-                    true -> boss_load:load_all_modules(AppName, TranslatorSupPid);
-                    false -> ok
                 end,
                 InitData = run_init_scripts(AppName),
                 #boss_app_info{ application = AppName,
