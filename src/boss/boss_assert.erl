@@ -75,15 +75,15 @@ tag_with_text(Tag, Text, {_, _, ParseTree} = _Response) ->
 %% @spec header(Key, Value, Response) -> {Passed, ErrorMessage}
 %% @doc Compares the `Key' header in `Response' (HTTP or email) to `Value'.
 header(Key, Value, {_, _, Headers, _} = _Response) ->
-    ActualValue = any_to_list(proplists:get_value(Key, Headers)),
-    Value2 = any_to_list(Value),
+    ActualValue = any_to_binary(proplists:get_value(Key, Headers)),
+    Value2 = any_to_binary(Value),
     {Value2 =:= ActualValue,
-        "\"" ++ Key ++ "\"(=:= \"" ++ ActualValue ++ "\") header is not equal to \"" ++ Value2 ++ "\""};
+        io_lib:format("\"~s\"(=:= \"~s\") header is not equal to \"~s\"", [Key, ActualValue, Value2])};
 header(Key, Value, {Headers, _, _} = _Response) ->
-    ActualValue = any_to_list(proplists:get_value(list_to_binary(Key), Headers)),
-    Value2 = any_to_list(Value),
+    ActualValue = any_to_binary(proplists:get_value(list_to_binary(Key), Headers)),
+    Value2 = any_to_binary(Value),
     {Value2 =:= ActualValue,
-        "\"" ++ Key ++ "\"(=:= \"" ++ ActualValue ++ "\") header is not equal to \"" ++ Value2 ++ "\""}.
+        io_lib:format("\"~s\"(=:= \"~s\") header is not equal to \"~s\"", [Key, ActualValue, Value2])}.
 
 %% @spec location_header(Url, Response) -> {Passed, ErrorMessage}
 %% @doc Compares `Url' to the Location: header of `Response'.
@@ -170,11 +170,11 @@ has_tag_with_text(Tag, Text, [{Tag, _, [Text]}|_Rest]) ->
 has_tag_with_text(Tag, Text, [{_OtherTag, _, Children}|Rest]) ->
     has_tag_with_text(Tag, Text, Children) orelse has_tag_with_text(Tag, Text, Rest).
 
-any_to_list(V) when is_list(V) ->
+any_to_binary(V) when is_list(V) ->
+    list_to_binary(V);
+any_to_binary(V) when is_atom(V) ->
+    atom_to_binary(V, utf8);
+any_to_binary(V) when is_binary(V) ->
     V;
-any_to_list(V) when is_atom(V) ->
-    atom_to_list(V);
-any_to_list(V) when is_binary(V) ->
-    binary_to_list(V);
-any_to_list(V) when is_integer(V) ->
-    integer_to_list(V).
+any_to_binary(V) when is_integer(V) ->
+    integer_to_binary(V).
