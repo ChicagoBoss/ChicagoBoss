@@ -130,7 +130,9 @@ init(Config) ->
                     ?MODULE:handle_request(Req, RequestMod, ResponseMod)
             end} | Config],
     Pid = case ServerMod of
-        mochiweb_http -> mochiweb_http:start([{ssl, SSLEnable}, {ssl_opts, SSLOptions} | ServerConfig]);
+        mochiweb_http ->
+            application:start(mochiweb),
+            mochiweb_http:start([{ssl, SSLEnable}, {ssl_opts, SSLOptions} | ServerConfig]);
         cowboy ->
 		  %Dispatch = [{'_', [{'_', boss_mochicow_handler, [{loop, {boss_mochicow_handler, loop}}]}]}],
 		  error_logger:info_msg("Starting cowboy... on ~p~n", [MasterNode]),
