@@ -1047,7 +1047,7 @@ process_action_result({{Controller, _, _}, _, _}, {redirect, Where, Headers}, Ex
     {redirect, process_redirect(Controller, Where, AppInfo), merge_headers(Headers, ExtraHeaders)};
 
 process_action_result(Info, {js, Data, Headers}, ExtraHeaders, AppInfo) ->
-    process_action_result(Info, {output, Data, merge_headers(Headers, [{"Content-Type", "application/javascript"}])},
+    process_action_result(Info, {render, Data, merge_headers(Headers, [{"Content-Type", "application/javascript"}])},
         ExtraHeaders, AppInfo);
 
 process_action_result(Info, {json, Data, Headers}, ExtraHeaders, AppInfo) ->
