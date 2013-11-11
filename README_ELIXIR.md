@@ -40,11 +40,15 @@ ChicagoBoss directory
 
     PATH=./deps/elixir/bin:.:$PATH mix deps.get
 
-6. Compile everything:
+6. Workaround for poolboy error:
 
-    ./rebar compile
+    cp rebar deps/poolboy
 
-7. Make a new project:
+7. Retry Elixir dependencies:
+
+    PATH=./deps/elixir/bin:.:$PATH mix deps.get
+
+8. Make a new project:
 
     make app PROJECT=my_application
 
