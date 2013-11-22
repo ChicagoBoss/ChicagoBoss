@@ -10,7 +10,10 @@ that are weak or bad, and then send us a pull request.
 
 How to run tests:
 
+At the command prompt, run
 
-	$ ct_run -dir ct -suite <yourtestname>_SUITE from command line
+	$ ct_run -dir ct -suite <yourtestname>_SUITE 
+
+
 
 
