@@ -12,7 +12,7 @@ How to run tests:
 
 At the command prompt, run
 
-	$ ct_run -dir ct -suite <yourtestname>_SUITE 
+	$ ct_run -dir src/tests/ct -logdir src/tests/ct/results -suite <yourtestname>_SUITE 
 
 
 
