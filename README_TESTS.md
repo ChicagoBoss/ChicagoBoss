@@ -6,3 +6,12 @@ contribute as well.
 
 Fork the project, write Common Test tests that are not written yet, or fix tests
 that are weak or bad, and then send us a pull request.
+
+
+How to run tests:
+
+	1 $cd to ChicagoBoss/ct directory
+
+	2 run ct_run -suite <yourtestname>_SUITE from command line
+
+
