@@ -86,7 +86,7 @@ After filters
 An after filter transforms a `{StatusCode, Payload, Headers}' tuple just
 before a response is returned to the client:
 
-    after_filter({StatusCode, Payload, Headers}, RequestContext) -> {NewStatusCode, NewPayload, NewHeaders}
+    after_filter({StatusCode, Payload, Headers}, FilterConfig, RequestContext) -> {NewStatusCode, NewPayload, NewHeaders}
 
 You might use it to implement a custom compression or caching scheme.
 
