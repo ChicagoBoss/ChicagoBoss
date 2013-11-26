@@ -161,5 +161,5 @@ same_host(Referer, Protocol, Host) ->
     string:equal(ProtocolHost, CutReferer).
 
 template_field(Token) ->
-    io_lib:format("<input type=\"text\" value=\"~s\" name=\"~s\" />", [Token, ?CSRFTOKEN_PARAM_NAME]).
+    io_lib:format("<input type=\"hidden\" value=\"~s\" name=\"~s\" />", [Token, ?CSRFTOKEN_PARAM_NAME]).
 
