@@ -5,7 +5,7 @@
 -define(CSRFTOKEN_PARAM_NAME, "csrfmiddlewaretoken").
 -define(CSRFTOKEN_HEADER, http_x_csrftoken).
 
-before_filter(_, RequestContext) ->
+before_filter(Config, RequestContext) ->
     %% Get Request
     Request = proplists:get_value(request, RequestContext),
 
@@ -14,7 +14,7 @@ before_filter(_, RequestContext) ->
                       ['GET', 'HEAD', 'OPTIONS', 'TRACE']) of
         true -> accept_(RequestContext, NewToken);
         false ->
-            case proplists:is_defined(do_not_enforce_csrf_checks, RequestContext) of
+            case proplists:is_defined(do_not_enforce_csrf_checks, Config) of
                 true -> accept_(RequestContext, NewToken);
                 false ->
                     case check_referer(Request) of
@@ -41,7 +41,7 @@ middle_filter({render, ReturnValue, SomethingElse}, _, Context) ->
                              proplists:delete(?CSRFTOKEN_NAME, ReturnValue)
                      end,
 
-    {render, [{?CSRFTOKEN_NAME, TemplateTokenField} | NewReturnValue], SomethingElse};
+    {render, [{atom_to_list(?CSRFTOKEN_NAME), TemplateTokenField} | NewReturnValue], SomethingElse};
 middle_filter(Other, _, _) ->
     Other.
 
