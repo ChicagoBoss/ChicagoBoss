@@ -9,12 +9,19 @@ before_filter(Config, RequestContext) ->
     %% Get Request
     Request = proplists:get_value(request, RequestContext),
 
+    ReConfig = case Config =:= undefined of
+                   true ->
+                       RequestContext;
+                   false ->
+                       Config
+               end,
+
     [CSRF_Token, NewToken] = get_csrf_token(Request),
     case lists:member(proplists:get_value(method, RequestContext),
                       ['GET', 'HEAD', 'OPTIONS', 'TRACE']) of
         true -> accept_(RequestContext, NewToken);
         false ->
-            case proplists:is_defined(do_not_enforce_csrf_checks, Config) of
+            case proplists:is_defined(do_not_enforce_csrf_checks, ReConfig) of
                 true -> accept_(RequestContext, NewToken);
                 false ->
                     case check_referer(Request) of
@@ -60,14 +67,7 @@ after_filter(Other, _, _) ->
     Other.
 
 accept_(RequestContext, Token) ->
-    Request = proplists:get_value(request, RequestContext),
-    UpdatedToken = case proplists:get_value(?CSRFTOKEN_PARAM_NAME, Request:post_params(), undefined) of
-                       undefined ->
-                           Token; % Current token hasn't been used, let's reuse it.
-                       _ ->
-                           new_token()
-                   end,
-    {ok, [{?CSRFTOKEN_NAME, UpdatedToken} | RequestContext]}.
+    {ok, [{?CSRFTOKEN_NAME, Token} | RequestContext]}.
 
 reject_(Reason) ->
     {error, {csrf, Reason}}.
