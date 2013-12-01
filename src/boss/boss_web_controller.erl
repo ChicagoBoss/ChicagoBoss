@@ -11,17 +11,19 @@
 -define(DEFAULT_WEB_SERVER, cowboy).
 
 -record(state, {
-        applications = [],
+        applications	= [],
         service_sup_pid,
         http_pid,
         smtp_pid,
-        is_master_node = false
+        is_master_node	= false
     }).
 
 -include("boss_web.hrl").
 
 start_link() ->
-    start_link([]).
+    init_master_node().
+
+init_master_node() -> start_link([]).
 
 start_link(Config) ->
     gen_server:start_link({local, boss_web}, ?MODULE, Config, []).
@@ -49,20 +51,14 @@ terminate(_Reason, State) ->
     mochiweb_http:stop(),
     application:stop(elixir).
 
-init(Config) ->
+init_lager() ->
     case boss_env:get_env(log_enable, true) of
         false -> ok;
         true -> lager:start()
-    end,
+    end.
 
-    application:start(elixir),
 
-    Env = boss_env:setup_boss_env(),
-
-    error_logger:info_msg("Starting Boss in ~p mode....~n", [Env]),
-
-    boss_model_manager:start(),
-
+init_cache() ->
     case boss_env:get_env(cache_enable, false) of
         false -> ok;
         true ->
@@ -70,9 +66,9 @@ init(Config) ->
             CacheOptions =
                 case CacheAdapter of
                     ets ->
-                        MaxSize = boss_env:get_env(ets_maxsize, 32 * 1024 * 1024),
-                        Threshold = boss_env:get_env(ets_threshold, 0.85),
-                        Weight = boss_env:get_env(ets_weight, 30),
+                        MaxSize		= boss_env:get_env(ets_maxsize, 32 * 1024 * 1024),
+                        Threshold	= boss_env:get_env(ets_threshold, 0.85),
+                        Weight		= boss_env:get_env(ets_weight, 30),
                         [{adapter, ets}, {ets_maxsize, MaxSize},
                          {ets_threshold, Threshold}, {ets_weight, Weight}];
                     _ ->
@@ -80,11 +76,10 @@ init(Config) ->
                          {cache_servers, boss_env:get_env(cache_servers, [{"127.0.0.1", 11211, 1}])}]
                 end,
             boss_cache:start(CacheOptions)
-    end,
+    end.
 
-    boss_session:start(),
 
-    ThisNode = erlang:node(),
+init_master_node(Env, ThisNode) ->
     MasterNode = boss_env:master_node(),
     if
         MasterNode =:= ThisNode ->
@@ -96,10 +91,10 @@ init(Config) ->
             case boss_env:get_env(smtp_server_enable, false) of
                 true ->
                     Options = [
-                        {domain, boss_env:get_env(smtp_server_domain, "localhost")},
-                        {address, boss_env:get_env(smtp_server_address, {0, 0, 0, 0})},
-                        {port, boss_env:get_env(smtp_server_port, 25)},
-                        {protocol, boss_env:get_env(smtp_server_protocol, tcp)},
+                        {domain,	boss_env:get_env(smtp_server_domain, "localhost")},
+                        {address,	boss_env:get_env(smtp_server_address, {0, 0, 0, 0})},
+                        {port,		boss_env:get_env(smtp_server_port, 25)},
+                        {protocol,	boss_env:get_env(smtp_server_protocol, tcp)},
                         {sessionoptions, [{boss_env, Env}]}],
                     gen_smtp_server:start({global, boss_smtp_server}, boss_smtp_server, [Options]);
                 _ ->
@@ -109,73 +104,113 @@ init(Config) ->
             error_logger:info_msg("Pinging master node ~p from ~p~n", [MasterNode, ThisNode]),
             pong = net_adm:ping(MasterNode)
     end,
+    {ok,MasterNode}.
 
-    MailDriver = boss_env:get_env(mail_driver, boss_mail_driver_smtp),
-    boss_mail:start([{driver, MailDriver}]),
 
+init_webserver(ThisNode, MasterNode, ServerMod, SSLEnable, SSLOptions,
+               ServicesSupPid, ServerConfig) ->
+    case ServerMod of
+  mochiweb_http ->
+      application:start(mochiweb),
+      mochiweb_http:start([{ssl, SSLEnable}, {ssl_opts, SSLOptions} | ServerConfig]);
+  cowboy ->
+	    %Dispatch = [{'_', [{'_', boss_mochicow_handler, [{loop, {boss_mochicow_handler, loop}}]}]}],
+	    error_logger:info_msg("Starting cowboy... on ~p~n", [MasterNode]),
+	    application:start(ranch),
+            application:start(cowboy),
+            HttpPort = boss_env:get_env(port, 8001),
+            AcceptorCount = boss_env:get_env(acceptor_processes, 100),
+            case SSLEnable of
+                false ->
+                    error_logger:info_msg("Starting http listener... on ~p ~n", [HttpPort]),
+                    cowboy:start_http(boss_http_listener, AcceptorCount, [{port, HttpPort}], [{env, []}]);
+                true ->
+                    error_logger:info_msg("Starting https listener... on ~p ~n", [HttpPort]),
+		    SSLConfig = [{port, HttpPort}] ++ SSLOptions,
+		    cowboy:start_https(boss_https_listener, AcceptorCount, SSLConfig, [{env, []}])
+            end,
+            if
+        MasterNode =:= ThisNode ->
+            boss_service_sup:start_services(ServicesSupPid, boss_websocket_router);
+	true ->
+	    ok
+            end
+    end.
+
+init_web_server_options() ->
     {ServerMod, RequestMod, ResponseMod} = case boss_env:get_env(server, ?DEFAULT_WEB_SERVER) of
         mochiweb -> {mochiweb_http, mochiweb_request_bridge, mochiweb_response_bridge};
         cowboy -> {cowboy, mochiweb_request_bridge, mochiweb_response_bridge}
-    end,
+                                           end,
+    {RequestMod, ResponseMod, ServerMod}.
+
+
+init_ssl() ->
     SSLEnable = boss_env:get_env(ssl_enable, false),
     SSLOptions = boss_env:get_env(ssl_options, []),
     error_logger:info_msg("SSL:~p~n", [SSLOptions]),
+    {SSLEnable, SSLOptions}.
 
+
+init_master_services(ThisNode, MasterNode) ->
     {ok, ServicesSupPid}  = case MasterNode of
 				ThisNode ->
 				    boss_service_sup:start_link();
 				_AnyNode ->
 				    {ok, undefined}
 			    end,
+    ServicesSupPid.
 
-    ServerConfig = [{loop, fun(Req) ->
-                    ?MODULE:handle_request(Req, RequestMod, ResponseMod)
-            end} | Config],
-    Pid = case ServerMod of
-        mochiweb_http ->
-            application:start(mochiweb),
-            mochiweb_http:start([{ssl, SSLEnable}, {ssl_opts, SSLOptions} | ServerConfig]);
-        cowboy ->
-		  %Dispatch = [{'_', [{'_', boss_mochicow_handler, [{loop, {boss_mochicow_handler, loop}}]}]}],
-		  error_logger:info_msg("Starting cowboy... on ~p~n", [MasterNode]),
-		  application:start(ranch),
-		  application:start(cowboy),
-		  HttpPort = boss_env:get_env(port, 8001),
-          AcceptorCount = boss_env:get_env(acceptor_processes, 100),
-          case SSLEnable of
-              false ->
-                  error_logger:info_msg("Starting http listener... on ~p ~n", [HttpPort]),
-                  cowboy:start_http(boss_http_listener, AcceptorCount, [{port, HttpPort}], [{env, []}]);
-              true ->
-                  error_logger:info_msg("Starting https listener... on ~p ~n", [HttpPort]),
-                  SSLConfig = [{port, HttpPort}]++SSLOptions,
-                  cowboy:start_https(boss_https_listener, AcceptorCount, SSLConfig, [{env, []}])
-		  end,
-		  if
-              MasterNode =:= ThisNode ->
-                  boss_service_sup:start_services(ServicesSupPid, boss_websocket_router);
-              true ->
-                  ok
-		  end
 
-	  end,
+init_mail_service() ->
+    MailDriver = boss_env:get_env(mail_driver, boss_mail_driver_smtp),
+    boss_mail:start([{driver, MailDriver}]).
+
+
+
+init(Config) ->
+    init_lager(),
+    application:start(elixir),
+
+    Env = boss_env:setup_boss_env(),
+    error_logger:info_msg("Starting Boss in ~p mode....~n", [Env]),
+    boss_model_manager:start(),
+    init_cache(),
+    boss_session:start(),
+    ThisNode   = erlang:node(),
+    {ok,MasterNode} = init_master_node(Env, ThisNode),
+    init_mail_service(),
+
+    {RequestMod, ResponseMod, ServerMod} = init_web_server_options(),
+    {SSLEnable, SSLOptions} = init_ssl(),
+
+    ServicesSupPid	= init_master_services(ThisNode, MasterNode),
+
+    ServerConfig	= [{loop, fun(Req) ->
+					  ?MODULE:handle_request(Req, RequestMod, ResponseMod)
+				  end} | Config],
+    Pid = init_webserver(ThisNode, MasterNode, ServerMod, SSLEnable,
+                         SSLOptions, ServicesSupPid, ServerConfig),
     {ok, #state{ service_sup_pid = ServicesSupPid, http_pid = Pid, is_master_node = (ThisNode =:= MasterNode) }, 0}.
 
+
+
+
 handle_info(timeout, State) ->
-    Applications = boss_env:get_env(applications, []),
-    ServicesSupPid = State#state.service_sup_pid,
-    AppInfoList = lists:map(fun
+    Applications	= boss_env:get_env(applications, []),
+    ServicesSupPid	= State#state.service_sup_pid,
+    AppInfoList		= lists:map(fun
             (AppName) ->
                 application:start(AppName),
-                BaseURL = boss_env:get_env(AppName, base_url, "/"),
-                StaticPrefix = boss_env:get_env(AppName, static_prefix, "/static"),
-                DocPrefix = boss_env:get_env(AppName, doc_prefix, "/doc"),
-                DomainList = boss_env:get_env(AppName, domains, all),
-                ModelList = boss_files:model_list(AppName),
-                ViewList = boss_files:view_module_list(AppName),
-                IsMasterNode = boss_env:is_master_node(),
-                ControllerList = boss_files:web_controller_list(AppName),
-                {ok, RouterSupPid} = boss_router:start([{application, AppName},
+                BaseURL			= boss_env:get_env(AppName, base_url, "/"),
+                StaticPrefix		= boss_env:get_env(AppName, static_prefix, "/static"),
+                DocPrefix		= boss_env:get_env(AppName, doc_prefix, "/doc"),
+                DomainList		= boss_env:get_env(AppName, domains, all),
+                ModelList		= boss_files:model_list(AppName),
+                ViewList		= boss_files:view_module_list(AppName),
+                IsMasterNode		= boss_env:is_master_node(),
+                ControllerList		= boss_files:web_controller_list(AppName),
+                {ok, RouterSupPid}	= boss_router:start([{application, AppName},
                         {Controllers, ControllerList}]),
                 {ok, TranslatorSupPid} = boss_translator:start([{application, AppName}]),
                 case boss_env:is_developing_app(AppName) of
@@ -183,36 +218,14 @@ handle_info(timeout, State) ->
                     false -> ok
                 end,
                 
-                if
-                    IsMasterNode ->
-                        case boss_env:get_env(server, ?DEFAULT_WEB_SERVER) of
-                            cowboy ->
-                                WebSocketModules = boss_files:websocket_list(AppName),
-                                MappingServices  = boss_files:websocket_mapping(BaseURL,
-                                    atom_to_list(AppName),
-                                    WebSocketModules),
-                                boss_service_sup:start_services(ServicesSupPid, MappingServices);
-                            _Any ->
-                                _Any
-                        end;
-                    true ->
-                        ok
-                end,
+                enable_master_apps(ServicesSupPid, AppName, BaseURL,
+                                   IsMasterNode),
                 
-                InitData = run_init_scripts(AppName),
-                #boss_app_info{ application = AppName,
-                    init_data = InitData,
-                    router_sup_pid = RouterSupPid,
-                    translator_sup_pid = TranslatorSupPid,
-                    base_url = (if BaseURL =:= "/" -> ""; true -> BaseURL end),
-                    static_prefix = StaticPrefix,
-                    doc_prefix = DocPrefix,
-                    domains = DomainList,
-                    model_modules = ModelList,
-                    view_modules = ViewList,
-                    controller_modules = ControllerList
-                }
-        end, Applications),
+                make_boss_app_info(AppName, BaseURL, StaticPrefix, DocPrefix,
+                                   DomainList, ModelList, ViewList,
+				   ControllerList, RouterSupPid,
+				   TranslatorSupPid)
+				    end, Applications),
 
     %% cowboy dispatch rule for static content
     case boss_env:get_env(server, ?DEFAULT_WEB_SERVER) of
@@ -244,6 +257,43 @@ handle_info(timeout, State) ->
             _Oops
     end,
     {noreply, State#state{ applications = AppInfoList }}.
+
+enable_master_apps(ServicesSupPid, AppName, BaseURL, IsMasterNode) ->
+    if
+        IsMasterNode ->
+            case boss_env:get_env(server, ?DEFAULT_WEB_SERVER) of
+                cowboy ->
+                    WebSocketModules = boss_files:websocket_list(AppName),
+                    MappingServices  = boss_files:websocket_mapping(BaseURL,
+                        atom_to_list(AppName),
+                        WebSocketModules),
+                    boss_service_sup:start_services(ServicesSupPid, MappingServices);
+                _Any ->
+                    _Any
+            end;
+        true ->
+            ok
+    end.
+
+
+make_boss_app_info(AppName, BaseURL, StaticPrefix, DocPrefix,
+                   DomainList, ModelList, ViewList, ControllerList,
+		   RouterSupPid, TranslatorSupPid) ->
+    InitData = run_init_scripts(AppName),
+    #boss_app_info{
+		    application         = AppName,
+		    init_data           = InitData,
+		    router_sup_pid      = RouterSupPid,
+		    translator_sup_pid  = TranslatorSupPid,
+		    base_url            =  if BaseURL =:= "/" -> ""; true -> BaseURL end,
+		    static_prefix       = StaticPrefix,
+		    doc_prefix          = DocPrefix,
+		    domains             = DomainList,
+                    model_modules       = ModelList,
+                    view_modules        = ViewList,
+                    controller_modules  = ControllerList
+    }.
+
 
 handle_call({reload_translation, Locale}, _From, State) ->
     lists:map(fun(AppInfo) ->
