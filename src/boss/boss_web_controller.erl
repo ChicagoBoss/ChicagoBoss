@@ -706,21 +706,23 @@ process_result_and_add_session(AppInfo, RequestContext, Result) ->
     {StatusCode, Headers1, Payload}.
 
 add_session_to_headers(Headers, SessionID) ->
-    SessionExpTime = boss_session:get_session_exp_time(),
-    CookieOptions = [{path, "/"}, {max_age, SessionExpTime}],
-    CookieOptions2 = case boss_env:get_env(session_domain, undefined) of
-        undefined ->
-            CookieOptions;
-        CookieDomain ->
-            lists:merge(CookieOptions, [{domain, CookieDomain}])
-                     end,
-    HttpOnly = boss_env:get_env(session_cookie_http_only, false),
-    Secure = boss_env:get_env(session_cookie_secure, false),
-    CookieOptions3 = lists:merge (CookieOptions2, [{http_only, HttpOnly},
-                                                   {secure, Secure}]),
-    SessionKey = boss_session:get_session_key(),
+    SessionExpTime	= boss_session:get_session_exp_time(),
+    CookieOptions	= [{path, "/"}, {max_age, SessionExpTime}],
+    CookieOptions2	= case boss_env:get_env(session_domain, undefined) of
+			      undefined ->
+				  CookieOptions;
+			      CookieDomain ->
+				  lists:merge(CookieOptions, [{domain, CookieDomain}])
+			  end,
+    HttpOnly		= boss_env:get_env(session_cookie_http_only, false),
+    Secure		= boss_env:get_env(session_cookie_secure, false),
+    CookieOptions3	= lists:merge(CookieOptions2, [{http_only, HttpOnly},
+							{secure, Secure}]),
+    SessionKey		= boss_session:get_session_key(),
     lists:merge(Headers, [mochiweb_cookies:cookie(SessionKey, SessionID, CookieOptions3)]).
 
+
+%TODO: Refactor this
 process_result(AppInfo, Req, {Status, Payload}) ->
     process_result(AppInfo, Req, {Status, Payload, []});
 process_result(_, _, {ok, Payload, Headers}) ->
@@ -916,33 +918,38 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, RequestContext,
         true ->
             {{error, "Circular redirect!"}, SessionID};
         false ->
-            % do not convert a list to an atom until we are sure the controller/action
-            % pair exists. this prevents a memory leak due to atom creation.
-            Adapters				= [boss_controller_adapter_pmod, 
-						   boss_controller_adapter_elixir],
-            Adapter				= make_action_adapter(Controller, AppInfo, Adapters),
-            SessionID1				= make_action_session_id(Controller, AppInfo, Req,
-									 SessionID, Adapter),
-            RequestMethod			= Req:request_method(),
-            RequestContext1			= [{request, Req}, 
-						   {session_id, SessionID1},
-						   {method, RequestMethod}, 
-						   {action, Action}, 
-						   {tokens, Tokens}],
-            AdapterInfo				= Adapter:init(AppInfo#boss_app_info.application, Controller,
-							       AppInfo#boss_app_info.controller_modules, RequestContext1),
-	    
-            RequestContext2			= [{controller_module, element(1, AdapterInfo)}|RequestContext1],
-
-            {ActionResult, RequestContext3}     = apply_action(Req, Adapter,
-							       AdapterInfo,
-							       RequestContext2),
-            RenderedResult			= render_result(Location, AppInfo, RequestContext,
-								LocationTrail, Adapter, AdapterInfo,
-								ActionResult, RequestContext3),
-            FinalResult				= apply_after_filters(Adapter, AdapterInfo, RequestContext3, RenderedResult),
-            {FinalResult, SessionID1}
+            execute_action_inner(Controller, Action, Tokens, Location, AppInfo,
+                                 RequestContext, LocationTrail, Req, SessionID)
     end.
+
+execute_action_inner(Controller, Action, Tokens, Location, AppInfo,
+		     RequestContext, LocationTrail, Req, SessionID) ->
+    % do not convert a list to an atom until we are sure the controller/action
+    % pair exists. this prevents a memory leak due to atom creation.
+    Adapters                            = [boss_controller_adapter_pmod,
+                                           boss_controller_adapter_elixir],
+    Adapter                             = make_action_adapter(Controller, AppInfo, Adapters),
+    SessionID1                          = make_action_session_id(Controller, AppInfo, Req,
+						                 SessionID, Adapter),
+    RequestMethod                       = Req:request_method(),
+    RequestContext1                     = [{request, Req},
+                                           {session_id, SessionID1},
+					   {method, RequestMethod},
+                                           {action, Action},
+                                           {tokens, Tokens}],
+    AdapterInfo                         = Adapter:init(AppInfo#boss_app_info.application, Controller,
+                                                       AppInfo#boss_app_info.controller_modules, RequestContext1),
+	    
+    RequestContext2                     = [{controller_module, element(1, AdapterInfo)}|RequestContext1],
+
+    {ActionResult, RequestContext3}     = apply_action(Req, Adapter,
+						       AdapterInfo,
+						       RequestContext2),
+    RenderedResult                      = render_result(Location, AppInfo, RequestContext,
+							LocationTrail, Adapter, AdapterInfo,
+							ActionResult, RequestContext3),
+    FinalResult                         = apply_after_filters(Adapter, AdapterInfo, RequestContext3, RenderedResult),
+    {FinalResult, SessionID1}.
 
 apply_action(Req, Adapter, AdapterInfo, RequestContext2) ->
     case apply_before_filters(Adapter, AdapterInfo, RequestContext2) of
@@ -1037,18 +1044,18 @@ apply_middle_filters(Adapter, AdapterInfo, RequestContext, ActionResult) ->
     ActionFilters = Adapter:filters('middle', AdapterInfo, RequestContext, GlobalFilters),
 
     lists:foldl(fun
-            (_Filter, {StatusCode, Payload, Headers}) when is_integer(StatusCode) ->
-                {StatusCode, Payload, Headers};
-            (_Filter, {ok, Payload, Headers}) ->
-                {ok, Payload, Headers};
-            (Filter, Result) when is_atom(Filter) ->
-                {FilterKey, DefaultConfig} = filter_config(Filter),
-                FilterConfig = Adapter:filter_config(AdapterInfo, FilterKey, DefaultConfig, RequestContext),
-                case proplists:get_value(middle_filter, Filter:module_info(exports)) of
-                    3 -> Filter:middle_filter(Result, FilterConfig, RequestContext);
-                    _ -> Result
-                end
-        end, ActionResult, ActionFilters).
+		    (_Filter, {StatusCode, Payload, Headers}) when is_integer(StatusCode) ->
+			{StatusCode, Payload, Headers};
+		    (_Filter, {ok, Payload, Headers}) ->
+			{ok, Payload, Headers};
+		    (Filter, Result) when is_atom(Filter) ->
+			{FilterKey, DefaultConfig} = filter_config(Filter),
+			FilterConfig = Adapter:filter_config(AdapterInfo, FilterKey, DefaultConfig, RequestContext),
+			case proplists:get_value(middle_filter, Filter:module_info(exports)) of
+			    3 -> Filter:middle_filter(Result, FilterConfig, RequestContext);
+			    _ -> Result
+			end
+		end, ActionResult, ActionFilters).
 
 apply_after_filters(Adapter, AdapterInfo, RequestContext, RenderedResult) ->
     GlobalFilters = filters_for_function('after_filter'),
@@ -1170,42 +1177,17 @@ render_view(Location, AppInfo, RequestContext, Variables) ->
     render_view(Location, AppInfo, RequestContext, Variables, []).
 
 render_view({Controller, Template, _}, AppInfo, RequestContext, Variables, Headers) ->
-    Req = proplists:get_value(request, RequestContext),
-    SessionID = proplists:get_value(session_id, RequestContext),
-    TryExtensions = boss_files:template_extensions(),
-    LoadResult = lists:foldl(fun
-            (Ext, {error, not_found}) ->
-                ViewPath = boss_files:web_view_path(Controller, Template, Ext),
-                boss_load:load_view_if_dev(AppInfo#boss_app_info.application,
-                    ViewPath, AppInfo#boss_app_info.view_modules,
-                    AppInfo#boss_app_info.translator_pid);
-            (_, Acc) ->
-                Acc
-        end, {error, not_found}, TryExtensions),
-    BossFlash = boss_flash:get_and_clear(SessionID),
-    SessionData = boss_session:get_session_data(SessionID),
+    Req			= proplists:get_value(request, RequestContext),
+    SessionID		= proplists:get_value(session_id, RequestContext),
+    TryExtensions	= boss_files:template_extensions(),
+    LoadResult		= load_result(Controller, Template, AppInfo, TryExtensions),
+    BossFlash		= boss_flash:get_and_clear(SessionID),
+    SessionData		= boss_session:get_session_data(SessionID),
     case LoadResult of
         {ok, Module, TemplateAdapter} ->
-            TranslatableStrings = TemplateAdapter:translatable_strings(Module),
-            {Lang, TranslationFun} = choose_translation_fun(AppInfo#boss_app_info.translator_pid,
-                TranslatableStrings, Req:header(accept_language),
-                proplists:get_value(language, RequestContext)),
-            BeforeVars = case proplists:get_value('_before', RequestContext) of
-                undefined -> [];
-                AuthInfo -> [{"_before", AuthInfo}]
-            end,
-            RenderVars = BossFlash ++ BeforeVars ++ [{"_lang", Lang}, {"_session", SessionData},
-                            {"_req", Req}, {"_base_url", AppInfo#boss_app_info.base_url}|Variables],
-            case TemplateAdapter:render(Module, [{"_vars", RenderVars}|RenderVars],
-                    [{translation_fun, TranslationFun}, {locale, Lang},
-                        {host, Req:header(host)}, {application, atom_to_list(AppInfo#boss_app_info.application)},
-                        {controller, Controller}, {action, Template},
-                        {router_pid, AppInfo#boss_app_info.router_pid}]) of
-                {ok, Payload} ->
-                    {ok, Payload, merge_headers([{"Content-Language", Lang}], Headers)};
-                Err ->
-                    Err
-            end;
+            render_with_template(Controller, Template, AppInfo, RequestContext,
+                                 Variables, Headers, Req, BossFlash,
+                                 SessionData, Module, TemplateAdapter);
         {error, not_found} ->
             AnyViewPath = boss_files:web_view_path(Controller, Template, "{" ++ string:join(TryExtensions, ",") ++ "}"),
             {not_found, io_lib:format("The requested template (~p) was not found.", [AnyViewPath]) };
@@ -1214,6 +1196,41 @@ render_view({Controller, Template, _}, AppInfo, RequestContext, Variables, Heade
         {error, Error}->
             render_errors([Error], AppInfo, RequestContext)
     end.
+
+render_with_template(Controller, Template, AppInfo, RequestContext,
+                     Variables, Headers, Req, BossFlash, SessionData, Module,
+                     TemplateAdapter) ->
+    TranslatableStrings = TemplateAdapter:translatable_strings(Module),
+    {Lang, TranslationFun} = choose_translation_fun(AppInfo#boss_app_info.translator_pid,
+        TranslatableStrings, Req:header(accept_language),
+        proplists:get_value(language, RequestContext)),
+    BeforeVars = case proplists:get_value('_before', RequestContext) of
+        undefined -> [];
+        AuthInfo -> [{"_before", AuthInfo}]
+                 end,
+    RenderVars = BossFlash ++ BeforeVars ++ [{"_lang", Lang}, {"_session", SessionData},
+                    {"_req", Req}, {"_base_url", AppInfo#boss_app_info.base_url}|Variables],
+    case TemplateAdapter:render(Module, [{"_vars", RenderVars}|RenderVars],
+            [{translation_fun, TranslationFun}, {locale, Lang},
+                {host, Req:header(host)}, {application, atom_to_list(AppInfo#boss_app_info.application)},
+                {controller, Controller}, {action, Template},
+                {router_pid, AppInfo#boss_app_info.router_pid}]) of
+        {ok, Payload} ->
+            {ok, Payload, merge_headers([{"Content-Language", Lang}], Headers)};
+        Err ->
+            Err
+    end.
+
+load_result(Controller, Template, AppInfo, TryExtensions) ->
+    lists:foldl(fun
+		    (Ext, {error, not_found}) ->
+			ViewPath = boss_files:web_view_path(Controller, Template, Ext),
+			boss_load:load_view_if_dev(AppInfo#boss_app_info.application,
+						   ViewPath, AppInfo#boss_app_info.view_modules,
+				                   AppInfo#boss_app_info.translator_pid);
+		    (_, Acc) ->
+			Acc
+                end, {error, not_found}, TryExtensions).
 
 choose_translation_fun(_, _, undefined, undefined) ->
     DefaultLang = boss_env:get_env(assume_locale, "en"),
