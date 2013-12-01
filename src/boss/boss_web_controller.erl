@@ -1,9 +1,11 @@
 -module(boss_web_controller).
 -behaviour(gen_server).
+
 -export([start_link/0, start_link/1, handle_request/3, process_request/4]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 -export([merge_headers/2]).
 -export([handle_news_for_cache/3]).
+
 -define(DEBUGPRINT(A), error_logger:info_report("~~o)> " ++ A)).
 -define(BUILTIN_CONTROLLER_FILTERS, [boss_lang_filter, boss_cache_page_filter, boss_cache_vars_filter]).
 -define(DEFAULT_WEB_SERVER, cowboy).
@@ -174,7 +176,7 @@ handle_info(timeout, State) ->
                 IsMasterNode = boss_env:is_master_node(),
                 ControllerList = boss_files:web_controller_list(AppName),
                 {ok, RouterSupPid} = boss_router:start([{application, AppName},
-                        {controllers, ControllerList}]),
+                        {Controllers, ControllerList}]),
                 {ok, TranslatorSupPid} = boss_translator:start([{application, AppName}]),
                 case boss_env:is_developing_app(AppName) of
                     true -> boss_load:load_all_modules(AppName, TranslatorSupPid);
@@ -815,10 +817,13 @@ render_errors(ErrorList, AppInfo, RequestContext) ->
 execute_action(Location, AppInfo, RequestContext) ->
     execute_action(Location, AppInfo, RequestContext, []).
 
+%TODO REFACTOR THIS
 execute_action({Controller, Action}, AppInfo, RequestContext, LocationTrail) ->
     execute_action({Controller, Action, []}, AppInfo, RequestContext, LocationTrail);
+
 execute_action({Controller, Action, Tokens}, AppInfo, RequestContext, LocationTrail) when is_atom(Action) ->
     execute_action({Controller, atom_to_list(Action), Tokens}, AppInfo, RequestContext, LocationTrail);
+
 execute_action({Controller, Action, Tokens} = Location, AppInfo, RequestContext, LocationTrail) ->
     Req = proplists:get_value(request, RequestContext),
     SessionID = proplists:get_value(session_id, RequestContext),
@@ -834,7 +839,7 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, RequestContext,
             Adapter = lists:foldl(fun
                     (A, false) ->
                         case A:accept(AppInfo#boss_app_info.application, Controller,
-                                AppInfo#boss_app_info.controller_modules) of
+				      AppInfo#boss_app_info.controller_modules) of
                             true -> A;
                             _ -> false
                         end;
@@ -1029,8 +1034,6 @@ process_action_result({_, RequestContext, LocationTrail}, not_found, _, AppInfo)
     case boss_router:handle(AppInfo#boss_app_info.router_pid, 404) of
         {ok, {Application, Controller, Action, Params}} when Application =:= AppInfo#boss_app_info.application ->
             case execute_action({Controller, Action, Params}, AppInfo, RequestContext, LocationTrail) of
-                {ok, Payload, Headers} ->
-                    {not_found, Payload, Headers};
                 Other ->
                     Other
             end;
