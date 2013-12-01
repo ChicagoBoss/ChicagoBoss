@@ -353,6 +353,7 @@ post_request_loop(AppInfo) ->
 							 Req, 
 							 testing, 
 							 FullUrl),
+
             From ! {self(), FullUrl, Result};
         Other ->
             error_logger:error_msg("Unexpected message in post_request_loop: ~p~n", [Other])

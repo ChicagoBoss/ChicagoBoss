@@ -1,5 +1,4 @@
-Filters
-==
+# Filters
 
 The functionality of Chicago Boss can be extended with filter modules. Filters
 are ideal for implementing site-wide or controller-specific features, such as
@@ -12,8 +11,7 @@ after filters. A filter module can implement multiple kinds of filters as
 described below.
 
 
-Before filters
-==
+## Before filters
 
 Before filters can either transform an incoming request before it is handled
 by a controller action, or it can short-circuit the request processing and
@@ -22,26 +20,26 @@ authentication and authorization; the filter can attach the identity of the
 logged-in user to the incoming request, and immediately redirect unidentified or 
 unauthorized users.
 
-A before filter should export a function `before_filter/2':
+A before filter should export a function `before_filter/2`:
 
     before_filter(FilterConfig, RequestContext) -> {ok, RequestContext} | <controller return value>
 
-The first argument is the filter's configuration value (see "Filter
-configuration" below). This value can be defined in the configuration file and
+The first argument is the filter's configuration value (see "[Filter
+configuration](#filter_configuration)" below). This value can be defined in the configuration file and
 overridden by controllers on a per-request basis.
 
 The second argument is the request context. The request context is a proplist
 with the following keys:
 
-* `request'
-* `session_id'
-* `action'
-* `controller_module'
-* `tokens'
+* `request`
+* `session_id`
+* `action`
+* `controller_module`
+* `tokens`
 
-If the `before_filter' function returns `{ok, NewContext}', the `NewContext' will be
+If the `before_filter` function returns `{ok, NewContext}`, the `NewContext` will be
 used for the rest of the request. You are free to modify values in the context
-or insert new values (e.g. `logged_in_user').
+or insert new values (e.g. `logged_in_user`).
 
 Example:
 
@@ -53,18 +51,17 @@ Example:
         {ok, [{is_admin, IsAdmin}|RequestContext]}.
 
 
-Middle filters
-==
+## Middle filters
 
 A middle filter transforms a controller return value to another controller
-return value. Because controllers can return `{StatusCode, Payload, Headers}',
+return value. Because controllers can return `{StatusCode, Payload, Headers}`,
 you can also use it to implement custom return values. 
 
-A middle filter should export a function `middle_filter/3':
+A middle filter should export a function `middle_filter/3`:
 
     middle_filter(ReturnValue, FilterConfig, RequestContext) -> NewReturnValue
 
-For example, if you wanted to implement a file handler `{file, PathToFile}':
+For example, if you wanted to implement a file handler `{file, PathToFile}`:
 
     -module(my_middle_filter).
     -export([middle_filter/3]).
@@ -80,21 +77,19 @@ You might also use middle filters to insert commonly used values into
 the variable list before template rendering.
 
 
-After filters
-==
+## After filters
 
-An after filter transforms a `{StatusCode, Payload, Headers}' tuple just
+An after filter transforms a `{StatusCode, Payload, Headers}` tuple just
 before a response is returned to the client:
 
-    after_filter({StatusCode, Payload, Headers}, RequestContext) -> {NewStatusCode, NewPayload, NewHeaders}
+    after_filter({StatusCode, Payload, Headers}, FilterConfig, RequestContext) -> {NewStatusCode, NewPayload, NewHeaders}
 
 You might use it to implement a custom compression or caching scheme.
 
 
-Filter installation
-==
+## <a name="filter_installation"></a>Filter installation
 
-Filter module can be installed with the `controller_filter_modules' config
+Filter module can be installed with the `controller_filter_modules` config
 option:
 
     {controller_filter_modules, [my_awesome_filter1, my_awesome_filter2]}
@@ -115,13 +110,12 @@ request.
 For now just put filter modules into your project's "lib" directory.
 
 
-Filter configuration
-==
+## <a name="filter_configuration"></a>Filter configuration
 
-The `FilterConfig' argument passed to the filter functions is set in your
+The `FilterConfig` argument passed to the filter functions is set in your
 boss.config and can be overridden by the controllers.
 
-To set a default config value for `my_awesome_filter' in your boss.config:
+To set a default config value for `my_awesome_filter` in your boss.config:
 
     {boss, [
         {controller_filter_config, [
@@ -129,7 +123,7 @@ To set a default config value for `my_awesome_filter' in your boss.config:
             ]}
         ]}
 
-Then to override the value for a given request, export a `config/2' function
+Then to override the value for a given request, export a `config/2` function
 from your controller:
 
     -module(my_cool_controller, [Req, SessionId]).
@@ -144,8 +138,7 @@ be shared by multiple filters, in which case they will receive the same config
 value.
 
 
-Setting a short name and default config value
-==
+## Setting a short name and default config value
 
 Filter modules can export two functions to set a short name for themselves and
 to provide a default config value:
@@ -157,8 +150,40 @@ to provide a default config value:
     config_default_value() -> [{awesomeness, 50}].
 
 
-Accessing the request context
-==
+## Accessing the request context
 
 If a controller action function takes three arguments, the request context proplist
 will be passed in as the third argument.
+
+## Build in filters
+
+CB has 4 build in filters:
+
+ - `boss_lang_filter`
+ - `boss_cache_page_filter`
+ - `boss_cache_vars_filter`
+ - `boss_csrf_filter`
+
+First 3 are enabled by default, CSRF verification filter is not
+enabled.
+
+## `boss_csrf_filter`
+
+### Installing CSRF verification filter
+
+CSRF verification isn't enabled by default,
+please read [Filter Installation](#filter_installation) to enabled it.
+
+### Using CSRF verification
+
+* Templates: you can use `{{ csrf_token }}` variable to display hidden
+  input with csrf token in it.
+* Controllers: `csrf_token` string is passed into controllers as part
+  of `RequestContext` proplist (third parameter passed into controller)
+
+### Disabling CSRF verification
+
+Add `{do_not_enforce_csrf_checks, true}` tuple into filter config ([see
+above](#filter_configuration)).
+CSRF verification can be disabled application wide or on per
+controller basis.

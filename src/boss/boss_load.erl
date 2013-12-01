@@ -312,9 +312,7 @@ load_view_if_old(Application, ViewPath, Module, TemplateAdapter, TranslatorPid) 
                         undefined, TranslatorPid);
                 false ->
                     {ok, Module}
-            end;
-        Err ->
-            Err
+            end
     end.
 
 load_view_if_dev(Application, ViewPath, ViewModules, TranslatorPid) ->
