@@ -33,8 +33,9 @@ start() ->
     DBShards = boss_env:get_env(db_shards, []),
     CacheEnable = boss_env:get_env(cache_enable, false),
     IsMasterNode = boss_env:is_master_node(),
+    CachePrefix = boss_env:get_env(cache_prefix, db),
     DBCacheEnable = boss_env:get_env(db_cache_enable, false) andalso CacheEnable,
-    DBOptions1 = [{adapter, DBAdapter}, {cache_enable, DBCacheEnable},
+    DBOptions1 = [{adapter, DBAdapter}, {cache_enable, DBCacheEnable}, {cache_prefix, CachePrefix},
         {shards, DBShards}, {is_master_node, IsMasterNode}|DBOptions],
 
     boss_db:start(DBOptions1).

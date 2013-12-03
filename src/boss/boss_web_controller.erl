@@ -130,7 +130,9 @@ init(Config) ->
                     ?MODULE:handle_request(Req, RequestMod, ResponseMod)
             end} | Config],
     Pid = case ServerMod of
-        mochiweb_http -> mochiweb_http:start([{ssl, SSLEnable}, {ssl_opts, SSLOptions} | ServerConfig]);
+        mochiweb_http ->
+            application:start(mochiweb),
+            mochiweb_http:start([{ssl, SSLEnable}, {ssl_opts, SSLOptions} | ServerConfig]);
         cowboy ->
 		  %Dispatch = [{'_', [{'_', boss_mochicow_handler, [{loop, {boss_mochicow_handler, loop}}]}]}],
 		  error_logger:info_msg("Starting cowboy... on ~p~n", [MasterNode]),
@@ -170,6 +172,15 @@ handle_info(timeout, State) ->
                 ModelList = boss_files:model_list(AppName),
                 ViewList = boss_files:view_module_list(AppName),
                 IsMasterNode = boss_env:is_master_node(),
+                ControllerList = boss_files:web_controller_list(AppName),
+                {ok, RouterSupPid} = boss_router:start([{application, AppName},
+                        {controllers, ControllerList}]),
+                {ok, TranslatorSupPid} = boss_translator:start([{application, AppName}]),
+                case boss_env:is_developing_app(AppName) of
+                    true -> boss_load:load_all_modules(AppName, TranslatorSupPid);
+                    false -> ok
+                end,
+                
                 if
                     IsMasterNode ->
                         case boss_env:get_env(server, ?DEFAULT_WEB_SERVER) of
@@ -185,14 +196,7 @@ handle_info(timeout, State) ->
                     true ->
                         ok
                 end,
-                ControllerList = boss_files:web_controller_list(AppName),
-                {ok, RouterSupPid} = boss_router:start([{application, AppName},
-                        {controllers, ControllerList}]),
-                {ok, TranslatorSupPid} = boss_translator:start([{application, AppName}]),
-                case boss_env:is_developing_app(AppName) of
-                    true -> boss_load:load_all_modules(AppName, TranslatorSupPid);
-                    false -> ok
-                end,
+                
                 InitData = run_init_scripts(AppName),
                 #boss_app_info{ application = AppName,
                     init_data = InitData,
@@ -467,11 +471,8 @@ build_dynamic_response(App, Request, Response, Url) ->
     Response2 = lists:foldl(fun({K, V}, Acc) -> Acc:header(K, V) end, Response1, Headers),
     case Payload of
         {stream, Generator, Acc0} ->
-            Version = Request:protocol_version(),
-            {Response3, TransferEncoding} = case Version of
-                {1, 1} -> {Response2:data(chunked), chunked};
-                _ -> {Response2, identity}
-            end,
+            TransferEncoding = case Request:protocol_version() of {1, 1} -> chunked; _ -> identity end, 
+            Response3 = Response2:data(chunked),
             Response3:build_response(),
             process_stream_generator(Request, TransferEncoding, RequestMethod, Generator, Acc0);
         _ ->

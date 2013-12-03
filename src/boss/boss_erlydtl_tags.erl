@@ -8,6 +8,7 @@ url(Variables, Options) ->
         end, Variables),
     ThisApp = proplists:get_value(application, Options),
     LinkedApp = proplists:get_value(application, ListVars, ThisApp),
+    LinkedAppAtom = list_to_atom(lists:concat([LinkedApp])),
     ControllerList = boss_files:web_controller_list(LinkedApp),
     ThisController = proplists:get_value(controller, Options),
     LinkedController = proplists:get_value(controller, ListVars, ThisController),
@@ -33,7 +34,7 @@ url(Variables, Options) ->
     ProtocolPlusDomain = case ThisApp =:= LinkedApp of
         true -> "";
         false ->
-            case boss_web:domains(list_to_atom(lists:concat([LinkedApp]))) of
+            case boss_web:domains(LinkedAppAtom) of
                 all -> "";
                 Domains -> 
                     UseSameDomain = case proplists:get_value(host, Options) of
@@ -50,12 +51,10 @@ url(Variables, Options) ->
     end,
 
     RouterPid = proplists:get_value(router_pid, Options),
-    URL = boss_router:unroute(RouterPid, LinkedApp, ControllerList, LinkedController, Action, NoUndefinedVars),
+    URL = boss_router:unroute(RouterPid, LinkedAppAtom, ControllerList, LinkedController, Action, NoUndefinedVars),
     BaseURL = case proplists:get_value(base_url, Options) of
-        undefined ->
-            boss_web:base_url(list_to_atom(lists:concat([LinkedApp])));
-        "" ->
-            boss_web:base_url(list_to_atom(lists:concat([LinkedApp])));
+        undefined -> boss_web:base_url(LinkedAppAtom);
+        "" -> boss_web:base_url(LinkedAppAtom);
         ProvidedBaseURL ->
             ProvidedBaseURL
     end,

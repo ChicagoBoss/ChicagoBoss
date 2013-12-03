@@ -28,19 +28,27 @@ ChicagoBoss directory
 
 2. Copy priv/elixir to the src/ directory in ChicagoBoss
 
-3. Download Elixir:
+3. Download Elixir and friends:
 
     ./rebar get-deps
 
-4. Download Elixir dependencies:
-
-    PATH=./deps/elixir/bin:.:$PATH mix deps.get
-
-5. Compile everything:
+4. First pass compile:
 
     ./rebar compile
 
-6. Make a new project:
+5. Download Elixir dependencies:
+
+    PATH=./deps/elixir/bin:.:$PATH mix deps.get
+
+6. Workaround for poolboy error:
+
+    cp rebar deps/poolboy
+
+7. Retry Elixir dependencies:
+
+    PATH=./deps/elixir/bin:.:$PATH mix deps.get
+
+8. Make a new project:
 
     make app PROJECT=my_application
 
