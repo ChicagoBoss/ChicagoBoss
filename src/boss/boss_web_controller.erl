@@ -232,7 +232,8 @@ handle_info(timeout, State) ->
             % [{"/", boss_mochicow_handler, []}],
             %Dispatch = [{'_',
 
-            Dispatch = [{'_', AppStaticDispatches ++ BossDispatch}],
+	    ExternalDispatch =  boss_env:get_env(cowboy_routes, []),
+            Dispatch = [{'_', AppStaticDispatches ++ ExternalDispatch ++ BossDispatch}],
             CowboyListener = case boss_env:get_env(ssl_enable, false) of
                 true -> boss_https_listener;
                 _ -> boss_http_listener
