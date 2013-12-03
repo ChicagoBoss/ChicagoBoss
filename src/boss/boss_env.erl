@@ -35,6 +35,6 @@ is_master_node() ->
     master_node() =:= erlang:node().
 
 is_developing_app(AppName) ->
-    BossEnv = boss_env:boss_env(),
-    DevelopingApp = boss_env:get_env(developing_app, undefined),
-    AppName =:= DevelopingApp andalso BossEnv =:= development.
+    BossEnv		= boss_env:boss_env(),
+    DevelopingApp	= boss_env:get_env(developing_app, undefined),
+    AppName		=:= DevelopingApp andalso BossEnv =:= development.
