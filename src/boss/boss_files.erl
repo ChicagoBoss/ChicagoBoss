@@ -14,6 +14,7 @@
         mail_view_path/0,
         mail_view_path/2,
         model_list/1,
+        lib_module_list/1,
         model_path/0,
         model_path/1,
         routes_file/1,
@@ -140,6 +141,14 @@ model_list(AppName) ->
             lists:map(fun atom_to_list/1, boss_env:get_env(AppName, model_modules, []))
     end.
 
+lib_module_list(AppName) ->
+    case boss_env:is_developing_app(AppName) of
+        true ->
+            module_list(AppName, boss_files:lib_path());
+        false ->
+            lists:map(fun atom_to_list/1, boss_env:get_env(AppName, lib_modules, []))
+    end.
+
 web_controller_list(AppName) when is_list(AppName) ->
     web_controller_list(list_to_atom(AppName));
 web_controller_list(AppName) ->
@@ -242,19 +251,29 @@ module_list1([Dir|Rest], Application, ModuleAcc) ->
                 lists:map(fun(Ext) -> {Ext, Adapter} end, Adapter:file_extensions()) ++ Acc
         end, [], CompilerAdapters),
     ModuleAcc1 = case file:list_dir(Dir) of
-        {ok, Files} ->
-            lists:foldl(fun
-                    ("."++_, Acc) -> Acc;
-                    (File, Acc) ->
-                        [$.|Extension] = filename:extension(File),
-                        case proplists:get_value(Extension, ExtensionProplist) of
-                            undefined -> Acc;
-                            Adapter -> [Adapter:module_name_for_file(Application, File)|Acc]
-                        end
-                end, ModuleAcc, Files);
-        _ ->
-            ModuleAcc
-    end,
+                     {ok, Files} ->
+                         lists:foldl(
+                           fun("."++_, Acc) -> Acc;
+                              (File, Acc) ->
+                                   %% TODO check is_file/is_dir?
+                                   case filename:extension(File) of 
+                                       [$.|Extension] ->                                       
+                                           case proplists:get_value(Extension, ExtensionProplist) of
+                                               undefined -> 
+                                                   Acc;
+                                               Adapter -> 
+                                                   [Adapter:module_name_for_file(Application, File)|Acc]
+                                           end;
+                                       _ -> []
+                                   end
+                                       
+                           end, 
+                           ModuleAcc, 
+                           Files);
+
+                     _ ->
+                         ModuleAcc
+                 end,
     module_list1(Rest, Application, ModuleAcc1).
 
 dot_app_src(AppName) ->
