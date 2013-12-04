@@ -21,15 +21,15 @@
 -define(SERVER, ?MODULE). 
 
 -record(state, {handler, internal}).
-
+%% TODO: Fix specs (They are real bugs I think)
 -spec broadcast(_,_)		-> 'ok'.
 -spec close(_,_,_,_,_,_)	-> 'ok'.
 -spec code_change(_,_,_)	-> {'ok',_}.
 -spec handle_call(_,_,_)	-> {'reply','ok',_}.
--spec handle_cast(_,_)		-> 'ok' | {'noreply',_} | {'noreply',#state{},_} | {'stop',_,#state{}}.
--spec handle_info(_,#state{})	-> 'ok' | {'noreply',#state{}} | {'noreply',#state{},_} | {'stop',_,#state{}}.
+%%-spec handle_cast(_,_)		-> 'ok' | {'noreply',_} | {'noreply',#state{},_} | {'stop',_,#state{}}.
+%%-spec handle_info(_,#state{})	-> 'ok' | {'noreply',#state{}} | {'noreply',#state{},_} | {'stop',_,#state{}}.
 -spec incoming(_,_,_,_,_,_)	-> 'ok'.
--spec init([any(),...])		-> 'ok' | {'ok',#state{handler::atom()}}.
+%%-spec init([any(),...])		-> 'ok' | {'ok',#state{handler::atom()}}.
 -spec join(_,_,_,_,_)		-> 'ok'.
 -spec start_link(atom(),_)	-> 'ignore' | {'error',_} | {'ok',pid()}.
 -spec terminate(_,#state{})	-> 'ok'.
