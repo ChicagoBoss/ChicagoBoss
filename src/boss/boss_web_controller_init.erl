@@ -13,6 +13,14 @@
 -export([init_master_services/2]).
 
 -export([init_mail_service/0]).
+-type cb_node() :: types:cb_node().
+-spec init_cache() -> 'ignore' | 'ok' | {'error',_} | {'ok',pid()}.
+-spec init_lager() -> 'ok'.
+-spec init_mail_service() -> any().
+-spec init_master_node(_,cb_node()) -> {'ok',_}.
+-spec init_master_services(cb_node(),cb_node()) -> any().
+-spec init_ssl() -> {boolean(),_}.
+-spec init_webserver(cb_node,cb_node(),types:webserver(),boolean(),_,pid()|undefined,_) -> any().
 
 init_lager() ->
     case boss_env:get_env(log_enable, true) of
@@ -23,7 +31,7 @@ init_lager() ->
 init_cache() ->
     case boss_env:get_env(cache_enable, false) of
         false -> ok;
-        true ->
+        true  ->
             CacheAdapter = boss_env:get_env(cache_adapter, memcached_bin),
             CacheOptions =
                 case CacheAdapter of
@@ -31,8 +39,10 @@ init_cache() ->
                         MaxSize		= boss_env:get_env(ets_maxsize, 32 * 1024 * 1024),
                         Threshold	= boss_env:get_env(ets_threshold, 0.85),
                         Weight		= boss_env:get_env(ets_weight, 30),
-                        [{adapter, ets}, {ets_maxsize, MaxSize},
-                         {ets_threshold, Threshold}, {ets_weight, Weight}];
+                        [{adapter, ets}, 
+			 {ets_maxsize, MaxSize},
+                         {ets_threshold, Threshold},
+			 {ets_weight, Weight}];
                     _ ->
                         [{adapter, CacheAdapter},
                          {cache_servers, boss_env:get_env(cache_servers, [{"127.0.0.1", 11211, 1}])}]
@@ -47,9 +57,7 @@ init_master_node(Env, ThisNode) ->
         MasterNode =:= ThisNode ->
             error_logger:info_msg("Starting master services on ~p~n", [MasterNode]),
             boss_mq:start(),
-
             boss_news:start(),
-
             case boss_env:get_env(smtp_server_enable, false) of
                 true ->
                     Options = [
