@@ -683,6 +683,7 @@ load_and_execute(Mode, {Controller, _, _} = Location, AppInfo, RequestContext) w
         false -> {render_view(Location, AppInfo, RequestContext)}
     end;
 %% @desc handle requests to /doc and return EDoc generated html
+%% Really a MONAD would be good here
 load_and_execute(development, {"doc", ModelName, _}, AppInfo, RequestContext) ->
     Result = case boss_load:load_models(AppInfo#boss_app_info.application) of
         {ok, ModelModules} ->
@@ -721,6 +722,7 @@ load_and_execute(development, {"doc", ModelName, _}, AppInfo, RequestContext) ->
             render_errors(ErrorList, AppInfo, RequestContext)
     end,
     {Result, proplists:get_value(session_id, RequestContext)};
+%% Really a MONAD would be good here too
 load_and_execute(development, {Controller, _, _} = Location, AppInfo, RequestContext) ->
     SessionID = proplists:get_value(session_id, RequestContext),
     Application = AppInfo#boss_app_info.application,

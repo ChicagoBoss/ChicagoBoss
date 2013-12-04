@@ -17,9 +17,8 @@
 init_lager() ->
     case boss_env:get_env(log_enable, true) of
         false -> ok;
-        true -> lager:start()
+        true  -> lager:start()
     end.
-
 
 init_cache() ->
     case boss_env:get_env(cache_enable, false) of
