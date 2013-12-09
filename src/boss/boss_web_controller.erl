@@ -1,7 +1,7 @@
 -module(boss_web_controller).
 -behaviour(gen_server).
 
--export([start_link/0, start_link/1, handle_request/3, process_request/4]).
+-export([start_link/0, start_link/1, process_request/4]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 -export([merge_headers/2]).
 -export([handle_news_for_cache/3]).
@@ -22,34 +22,37 @@ init_master_node() -> start_link([]).
 start_link(Config) ->
     gen_server:start_link({local, boss_web}, ?MODULE, Config, []).
 
-terminate_smtp(Pid) when is_pid(Pid) ->
-    gen_smtp_server:stop(Pid);
-terminate_smtp(_) ->
-    ok.
 
 terminate(Reason, #state{ is_master_node = true } = State) ->
     boss_news:stop(),
     boss_mq:stop(),
     boss_session:stop(),
+    stop_smtp(),
+    terminate(Reason, State#state{ is_master_node = false });
+
+terminate(_Reason, State) ->
+    lists:map(fun(AppInfo) ->
+                stop_init_scripts(AppInfo#boss_app_info.application, AppInfo#boss_app_info.init_data)
+        end, State#state.applications),
+    Services = [error_logger, boss_translator, boss_router, boss_model_manager, boss_cache, mochiweb_http],
+    [Service:stop() ||Service <- Services],
+    application:stop(elixir).
+
+
+terminate_smtp(Pid) when is_pid(Pid) ->
+    gen_smtp_server:stop(Pid);
+terminate_smtp(_) ->
+    ok.
+
+
+stop_smtp() ->
     case boss_env:get_env(smtp_server_enable, false) of
         true ->
             SMTPPid = global:whereis_name(boss_smtp_server),
 	    terminate_smtp(SMTPPid);
         _ ->
             ok
-    end,
-    terminate(Reason, State#state{ is_master_node = false });
-terminate(_Reason, State) ->
-    lists:map(fun(AppInfo) ->
-                stop_init_scripts(AppInfo#boss_app_info.application, AppInfo#boss_app_info.init_data)
-        end, State#state.applications),
-    error_logger:logfile(close),
-    boss_translator:stop(),
-    boss_router:stop(),
-    boss_model_manager:stop(),
-    boss_cache:stop(),
-    mochiweb_http:stop(),
-    application:stop(elixir).
+    end.
 
 init_web_server_options() ->
     {ServerMod, RequestMod, ResponseMod} = case boss_env:get_env(server, ?DEFAULT_WEB_SERVER) of
@@ -62,7 +65,7 @@ init_web_server_options() ->
 
 init(Config) ->
     ThisNode					= erlang:node(),
-    Env = boss_web_controller_init:init_services(),
+    Env						= boss_web_controller_init:init_services(),
    
     {ok,MasterNode}				= boss_web_controller_init:init_master_node(Env, ThisNode),
     boss_web_controller_init:init_mail_service(),
@@ -81,7 +84,7 @@ init(Config) ->
 
 init_server_config(Config, RequestMod, ResponseMod) ->
     [{loop, fun(Req) ->
-		    ?MODULE:handle_request(Req, RequestMod, ResponseMod)
+		    boss_web_controller_handle_request:handle_request(Req, RequestMod, ResponseMod)
             end} | Config].
 
 
@@ -249,62 +252,27 @@ stop_init_scripts(Application, InitData) ->
                 end
         end, ok, boss_files:init_file_list(Application)).
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 run_init_scripts(AppName) ->
     lists:foldl(fun(File, Acc) ->
-                case boss_compiler:compile(File, [{include_dirs, [boss_files:include_dir() | boss_env:get_env(boss, include_dirs, [])]}]) of
-                    {ok, Module} ->
-                        case catch Module:init() of
-                            {ok, Info} ->
-                                [{Module, Info}|Acc];
-                            ok ->
-                                [{Module, true}|Acc];
-                            Error ->
-                                error_logger:error_msg("Execution of ~p failed: ~p~n", [File, Error]),
-                                Acc
-                        end;
-                    Error ->
-                        error_logger:error_msg("Compilation of ~p failed: ~p~n", [File, Error]),
-                        Acc
-                end
-        end, [], boss_files:init_file_list(AppName)).
+			CompileResult = boss_compiler:compile(File, [{include_dirs, [boss_files:include_dir() | boss_env:get_env(boss, include_dirs, [])]}]),
+			process_compile_result(File, Acc, CompileResult)
+		end, [], boss_files:init_file_list(AppName)).
 
+process_compile_result(File, Acc, {ok, Module}) ->
+    InitResult =  Module:init(),
+    init_result(File, Acc, Module, InitResult);
+process_compile_result(File, Acc, Error) ->
+    error_logger:error_msg("Compilation of ~p failed: ~p~n", [File, Error]),
+    Acc.
 
-%% TODO REFACTOR AND TEST
-handle_request(Req, RequestMod, ResponseMod) ->
-	LoadedApplications = boss_web:get_all_applications(),
-	Request = simple_bridge:make_request(RequestMod, Req),
-	FullUrl = Request:path(),
-	case boss_web_controller_util:find_application_for_path(Request:header(host), FullUrl, LoadedApplications) of
-		undefined ->
-			Response = simple_bridge:make_response(ResponseMod, {Req, undefined}),
-			Response1 = (Response:status_code(404)):data(["No application configured at this URL"]),
-			Response1:build_response();
-		App ->
-			BaseURL = boss_web:base_url(App),
-			DocRoot = boss_files:static_path(App),
-			StaticPrefix = boss_web:static_prefix(App),
-			Url = lists:nthtail(length(BaseURL), FullUrl),
-			Response = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
-			case lists:member(Url, boss_env:get_env(App, static_files, ["/favicon.ico", "/apple-touch-icon.png", "/robots.txt"])) of
-				true ->
-					(Response:file(Url)):build_response();
-				false ->
-					case string:substr(Url, 1, length(StaticPrefix)) of
-						StaticPrefix ->
-							[$/|File] = lists:nthtail(length(StaticPrefix), Url),
-							Response2 = case boss_env:boss_env() of
-								development ->
-									Response:header("Cache-Control", "no-cache");
-								_ ->
-									Response
-							end,
-							Response3 = Response2:file([$/|File]),
-							Response3:build_response();
-						_ ->
-							build_dynamic_response(App, Request, Response, Url)
-					end
-			end
-	end.
+init_result(_File, Acc, Module, {ok, Info}) ->
+    [{Module, Info}|Acc];
+init_result(_File, Acc, Module, ok) ->
+    [{Module, true}|Acc];
+init_result(File, Acc, _Module,Error) ->
+    error_logger:error_msg("Execution of ~p failed: ~p~n", [File, Error]),
+    Acc.
 
 generate_session_id(Request) ->
     case boss_env:get_env(session_enable, true) of
@@ -313,51 +281,6 @@ generate_session_id(Request) ->
             boss_session:new_session(Request:cookie(SessionKey));
         false ->
             undefined
-    end.
-
-%% TODO: Refactor
-build_dynamic_response(App, Request, Response, Url) ->
-    Mode                = boss_web_controller_util:execution_mode(App),
-    AppInfo		= boss_web:application_info(App),
-    TranslatorPid	= boss_web:translator_pid(App),
-    RouterPid		= boss_web:router_pid(App),
-    ControllerList	= boss_files:web_controller_list(App),
-    {Time, {StatusCode, Headers, Payload}} = timer:tc(?MODULE, process_request, [
-            AppInfo#boss_app_info{
-                translator_pid		= TranslatorPid,
-                router_pid		= RouterPid,
-                controller_modules	= ControllerList
-            },
-            Request, Mode, Url]),
-    ErrorFormat		= "~s ~s [~p] ~p ~pms",
-    RequestMethod	= Request:request_method(),
-    FullUrl		= Request:path(),
-    ErrorArgs		= [RequestMethod, FullUrl, App, StatusCode, Time div 1000],
-    log_status_code(StatusCode, ErrorFormat, ErrorArgs),
-    Response1		= (Response:status_code(StatusCode)):data(Payload),
-    Response2		= lists:foldl(fun({K, V}, Acc) -> Acc:header(K, V) end, Response1, Headers),
-    handle_response(Request, Payload, RequestMethod, Response2).
-
-handle_response(Request, Payload, RequestMethod, Response2) ->
-    case Payload of
-        {stream, Generator, Acc0} ->
-            TransferEncoding = 
-		case Request:protocol_version() of 
-		    {1, 1} -> chunked;
-		    _ -> identity
-		end,
-            Response3 = Response2:data(chunked),
-            Response3:build_response(),
-            process_stream_generator(Request, TransferEncoding, RequestMethod, Generator, Acc0);
-        _ ->
-            (Response2:data(Payload)):build_response()
-    end.
-
-log_status_code(StatusCode, ErrorFormat, ErrorArgs) ->
-    case StatusCode of
-        500 -> error_logger:error_msg(ErrorFormat, ErrorArgs);
-        404 -> error_logger:warning_msg(ErrorFormat, ErrorArgs);
-        _   -> error_logger:info_msg(ErrorFormat, ErrorArgs)
     end.
 
 process_request(#boss_app_info{ doc_prefix = DocPrefix } = AppInfo, Req, development, DocPrefix) ->
@@ -467,28 +390,6 @@ process_error(Payload, #boss_app_info{ router_pid = RouterPid } = AppInfo, Reque
             {redirect, OtherLocation};
         not_found ->
             boss_web_controller_render:render_error(io_lib:print(Payload), [], AppInfo, RequestContext)
-    end.
-
-process_stream_generator(_Req, _TransferEncoding, 'HEAD', _Generator, _Acc) ->
-    ok;
-process_stream_generator(Req, chunked, Method, Generator, Acc) ->
-    case Generator(Acc) of
-        {output, Data, Acc1} ->
-            case iolist_size(Data) of
-                0 -> ok;
-                Length ->
-                    Chunk = [io_lib:format("~.16b\r\n", [Length]), Data, <<"\r\n">>],
-                    ok = mochiweb_socket:send(Req:socket(), Chunk)
-            end,
-            process_stream_generator(Req, chunked, Method, Generator, Acc1);
-        done -> ok = mochiweb_socket:send(Req:socket(), ["0\r\n\r\n"])
-    end;
-process_stream_generator(Req, identity, Method, Generator, Acc) ->
-    case Generator(Acc) of
-        {output, Data, Acc1} ->
-            mochiweb_socket:send(Req:socket(), Data),
-            process_stream_generator(Req, identity, Method, Generator, Acc1);
-        done -> ok
     end.
 
 process_result_and_add_session(AppInfo, RequestContext, Result) ->
