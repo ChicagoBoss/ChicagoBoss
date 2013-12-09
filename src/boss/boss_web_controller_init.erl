@@ -13,6 +13,8 @@
 -export([init_master_services/2]).
 
 -export([init_mail_service/0]).
+
+-export([init_services/0]).
 -type cb_node() :: types:cb_node().
 -spec init_cache() -> 'ignore' | 'ok' | {'error',_} | {'ok',pid()}.
 -spec init_lager() -> 'ok'.
@@ -128,3 +130,15 @@ init_master_services(ThisNode, MasterNode) ->
 init_mail_service() ->
     MailDriver = boss_env:get_env(mail_driver, boss_mail_driver_smtp),
     boss_mail:start([{driver, MailDriver}]).
+
+
+init_services() ->
+    init_lager(),
+    application:start(elixir),
+
+    Env = boss_env:setup_boss_env(),
+    error_logger:info_msg("Starting Boss in ~p mode....~n", [Env]),
+    boss_model_manager:start(),
+    init_cache(),
+    boss_session:start(),
+    Env.

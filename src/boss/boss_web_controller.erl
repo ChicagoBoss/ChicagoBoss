@@ -11,17 +11,6 @@
 -export([execute_action/4, filter_config/1, filters_for_function/1
                       ]).
 
--define(DEBUGPRINT(A), error_logger:info_report("~~o)> " ++ A)).
--define(BUILTIN_CONTROLLER_FILTERS, [boss_lang_filter, boss_cache_page_filter, boss_cache_vars_filter]).
--define(DEFAULT_WEB_SERVER, cowboy).
-
--record(state, {
-        applications	= [],
-        service_sup_pid,
-        http_pid,
-        smtp_pid,
-        is_master_node	= false
-    }).
 
 -include("boss_web.hrl").
 
@@ -59,72 +48,47 @@ terminate(_Reason, State) ->
 init_web_server_options() ->
     {ServerMod, RequestMod, ResponseMod} = case boss_env:get_env(server, ?DEFAULT_WEB_SERVER) of
         mochiweb -> {mochiweb_http, mochiweb_request_bridge, mochiweb_response_bridge};
-        cowboy -> {cowboy, mochiweb_request_bridge, mochiweb_response_bridge}
+					       cowboy   -> {cowboy, mochiweb_request_bridge, mochiweb_response_bridge}
                                            end,
     {RequestMod, ResponseMod, ServerMod}.
 
 
 
 init(Config) ->
-    boss_web_controller_init:init_lager(),
-    application:start(elixir),
-
-    Env = boss_env:setup_boss_env(),
-    error_logger:info_msg("Starting Boss in ~p mode....~n", [Env]),
-    boss_model_manager:start(),
-    boss_web_controller_init:init_cache(),
-    boss_session:start(),
-    ThisNode   = erlang:node(),
-    {ok,MasterNode} = boss_web_controller_init:init_master_node(Env, ThisNode),
+    ThisNode					= erlang:node(),
+    Env = boss_web_controller_init:init_services(),
+   
+    {ok,MasterNode}				= boss_web_controller_init:init_master_node(Env, ThisNode),
     boss_web_controller_init:init_mail_service(),
 
-    {RequestMod, ResponseMod, ServerMod} = init_web_server_options(),
-    {SSLEnable, SSLOptions} = boss_web_controller_init:init_ssl(),
+    {RequestMod, ResponseMod, ServerMod}	= init_web_server_options(),
+    {SSLEnable, SSLOptions}			= boss_web_controller_init:init_ssl(),
 
-    ServicesSupPid        = boss_web_controller_init:init_master_services(ThisNode, MasterNode),
+    ServicesSupPid				= boss_web_controller_init:init_master_services(ThisNode, MasterNode),
 
-    ServerConfig	= [{loop, fun(Req) ->
-					  ?MODULE:handle_request(Req, RequestMod, ResponseMod)
-				  end} | Config],
-    Pid = boss_web_controller_init:init_webserver(ThisNode, MasterNode, ServerMod, SSLEnable,
-                                                  SSLOptions, ServicesSupPid, ServerConfig),
+    ServerConfig                                = init_server_config(Config,
+								     RequestMod,
+							             ResponseMod),
+    Pid						= boss_web_controller_init:init_webserver(ThisNode, MasterNode, ServerMod, SSLEnable,
+											  SSLOptions, ServicesSupPid, ServerConfig),
     {ok, #state{ service_sup_pid = ServicesSupPid, http_pid = Pid, is_master_node = (ThisNode =:= MasterNode) }, 0}.
 
+init_server_config(Config, RequestMod, ResponseMod) ->
+    [{loop, fun(Req) ->
+		    ?MODULE:handle_request(Req, RequestMod, ResponseMod)
+            end} | Config].
 
 
 
-handle_info(timeout, State) ->
+
+handle_info(timeout, State = #state{service_sup_pid = ServicesSupPid}) ->
     Applications	= boss_env:get_env(applications, []),
-    ServicesSupPid	= State#state.service_sup_pid,
     AppInfoList         = start_boss_applications(Applications,
 						  ServicesSupPid),
 
-    %% cowboy dispatch rule for static content
     case boss_env:get_env(server, ?DEFAULT_WEB_SERVER) of
         cowboy ->
-            AppStaticDispatches = lists:map(
-                fun(AppName) ->
-                        BaseURL      = boss_env:get_env(AppName, base_url, "/"),
-                        StaticPrefix = boss_env:get_env(AppName, static_prefix, "/static"),
-					    Path	= BaseURL++StaticPrefix,
-					    Handler	= cowboy_static,
-					    Opts	= [
-                            {directory, {priv_dir, AppName, [<<"static">>]}},
-						    {mimetypes, {fun mimetypes:path_to_mimes/2, default}}
-                        ],
-                       {Path ++ "[...]", Handler, Opts}
-                end, Applications),
-
-            BossDispatch = [{'_', boss_mochicow_handler, [{loop, {boss_mochicow_handler, loop}}]}],
-            % [{"/", boss_mochicow_handler, []}],
-            %Dispatch = [{'_',
-
-            Dispatch = [{'_', AppStaticDispatches ++ BossDispatch}],
-            CowboyListener = case boss_env:get_env(ssl_enable, false) of
-                true -> boss_https_listener;
-                _ -> boss_http_listener
-            end,
-            cowboy:set_env(CowboyListener, dispatch, cowboy_router:compile(Dispatch));
+            boss_web_controller_cowboy:dispatch_cowboy(Applications);
         _Oops ->
             _Oops
     end,

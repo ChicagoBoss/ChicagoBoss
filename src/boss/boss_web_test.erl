@@ -43,6 +43,7 @@ bootstrap_test_env(Application, Adapter) ->
         view_modules = boss_files:view_module_list(Application)
     }.
 
+-spec(run_tests(_) -> no_return()).
 % This function deliberately takes one argument so it can be invoked from the command-line.
 run_tests([Application, Adapter|TestList]) ->
     AppInfo = bootstrap_test_env(list_to_atom(Application), list_to_atom(Adapter)),

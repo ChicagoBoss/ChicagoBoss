@@ -3,6 +3,8 @@
 -behaviour(application).
 -export([start/2, stop/1]).
 
+
+-spec(start(_,_) -> no_return()).
 start(_Type, _StartArgs) ->
     CacheAdapter = boss_env:get_env(cache_adapter, memcached_bin),
     CacheOptions =

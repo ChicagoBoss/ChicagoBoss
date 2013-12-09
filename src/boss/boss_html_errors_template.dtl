@@ -1,4 +1,4 @@
-<html>
+g<html>
     <head>
         <title>Oops!</title>
         <link rel="stylesheet" type="text/css" href="{{ _base_url }}{{ _static }}/edoc/stylesheet.css" title="EDoc">
