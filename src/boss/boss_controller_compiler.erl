@@ -54,17 +54,18 @@ route_from_token_ast({cons, _, {string, _, String}, T}, Acc) ->
 route_from_token_ast(_, Acc) ->
     lists:reverse(Acc).
 
+%% REFACTOR THIS!
 function_for_routes(Routes) ->
     [erl_syntax:function(erl_syntax:atom('_routes'),
-            [erl_syntax:clause([], none,
-                    [erl_syntax:list(lists:map(fun({Name, Tokens}) ->
-                                        erl_syntax:tuple([
-                                                erl_syntax:atom(Name),
-                                                erl_syntax:list(lists:map(fun
-                                                            (T) when is_atom(T) ->
-                                                                erl_syntax:atom(T);
-                                                            (T) when is_list(T) ->
-                                                                erl_syntax:string(T)
-                                                        end, Tokens))
-                                            ])
-                                end, Routes))])])].
+			 [erl_syntax:clause([], none,
+					    [erl_syntax:list(lists:map(fun({Name, Tokens}) ->
+									       erl_syntax:tuple([
+												 erl_syntax:atom(Name),
+												 erl_syntax:list(lists:map(fun
+															       (T) when is_atom(T) ->
+																   erl_syntax:atom(T);
+															       (T) when is_list(T) ->
+																   erl_syntax:string(T)
+															   end, Tokens))
+												])
+								       end, Routes))])])].
