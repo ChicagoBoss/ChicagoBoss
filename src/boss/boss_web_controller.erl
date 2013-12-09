@@ -586,13 +586,24 @@ execute_action({Controller, Action, Tokens}, AppInfo, RequestContext, LocationTr
 execute_action({Controller, Action, Tokens} = Location, AppInfo, RequestContext, LocationTrail) ->
     Req		= proplists:get_value(request, RequestContext),
     SessionID	= proplists:get_value(session_id, RequestContext),
-    case lists:member(Location, LocationTrail) of
-        true ->
-            {{error, "Circular redirect!"}, SessionID};
-        false ->
-            execute_action_inner(Controller, Action, Tokens, Location, AppInfo,
-                                 RequestContext, LocationTrail, Req, SessionID)
-    end.
+    IsMemberOfList = lists:member(Location, LocationTrail),
+    execute_action_check_for_circular_redirect(Controller, Action, Tokens,
+                                               Location, AppInfo,
+                                               RequestContext, LocationTrail,
+                                               Req, SessionID, IsMemberOfList).
+
+execute_action_check_for_circular_redirect(_Controller, _Action, _Tokens,
+                                           _Location, _AppInfo, _RequestContext,
+                                           _LocationTrail, _Req, SessionID,
+                                           true) ->
+    {{error, "Circular redirect!"}, SessionID};
+execute_action_check_for_circular_redirect(Controller, Action, Tokens,
+                                           Location, AppInfo, RequestContext,
+                                           LocationTrail, Req, SessionID,
+                                           false) ->
+    execute_action_inner(Controller, Action, Tokens, Location, AppInfo,
+			 RequestContext, LocationTrail, Req, SessionID).
+
 
 execute_action_inner(Controller, Action, Tokens, Location, AppInfo,
 		     RequestContext, LocationTrail, Req, SessionID) ->
