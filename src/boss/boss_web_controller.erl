@@ -22,13 +22,19 @@ init_master_node() -> start_link([]).
 start_link(Config) ->
     gen_server:start_link({local, boss_web}, ?MODULE, Config, []).
 
+terminate_smtp(Pid) when is_pid(Pid) ->
+    gen_smtp_server:stop(Pid);
+terminate_smtp(_) ->
+    ok.
+
 terminate(Reason, #state{ is_master_node = true } = State) ->
     boss_news:stop(),
     boss_mq:stop(),
     boss_session:stop(),
     case boss_env:get_env(smtp_server_enable, false) of
         true ->
-            gen_smtp_server:stop({global, boss_smtp_server});
+            SMTPPid = global:whereis_name(boss_smtp_server),
+	    terminate_smtp(SMTPPid);
         _ ->
             ok
     end,
