@@ -1,6 +1,20 @@
 -module(boss_controller_compiler).
 -export([compile/1, compile/2, add_routes_to_forms/1]).
 
+-spec compile(binary() | [atom() | [any()] | char()]) -> any().
+-spec compile(binary() | [atom() | [any()] | char()],[any()]) -> any().
+-spec add_routes_to_forms([any()]) -> [any(),...].
+-spec add_routes_to_forms([any()],[any()],[{_,[any()]}]) -> [any(),...].
+-spec add_export_to_forms([any(),...]) -> [any(),...].
+-spec add_export_to_forms([any(),...],[any()]) -> [any(),...].
+-spec extract_routes_from_clauses(_,[any()]) -> [{_,[any()]}].
+-spec extract_routes_from_clauses(_,[any()],[{_,[any()]}]) -> [{_,[any()]}].
+-spec route_from_token_ast(_) -> [any()].
+-spec route_from_token_ast(_,[any()]) -> [any()].
+-spec function_for_routes([{_,[any()]}]) -> [{'tree',atom(),{'attr',0,[],'none'},_},...].
+-spec map_syntax_tuples([{_,[any()]}]) -> [{'tree',atom(),{_,_,_,_},_}].
+-spec map_tokens([any()]) -> [{'tree',atom(),{_,_,_,_},_}].
+
 compile(File) ->
     compile(File, []).
 
@@ -9,14 +23,15 @@ compile(File, Options) ->
         [{pre_revert_transform, fun ?MODULE:add_routes_to_forms/1}|Options]).
 
 add_routes_to_forms(Forms) ->
-    [{eof, _Line}|OtherForms] = lists:reverse(Forms),
-    Forms1 = add_export_to_forms(lists:reverse(OtherForms)),
+    [{eof, _Line}|OtherForms]	= lists:reverse(Forms),
+    Forms1			= add_export_to_forms(lists:reverse(OtherForms)),
     add_routes_to_forms(Forms1, [], []).
 
 add_routes_to_forms([], FormAcc, RouteAcc) ->
     RoutesFunction = function_for_routes(lists:reverse(RouteAcc)),
     lists:reverse(FormAcc, RoutesFunction);
-add_routes_to_forms([{function, _, Name, Arity, Clauses} = Fxn|Rest], FormAcc, RouteAcc) when Arity =:= 2; Arity =:= 3 ->
+add_routes_to_forms([{function, _, Name, Arity, Clauses} = Fxn|Rest], FormAcc, RouteAcc) 
+  when Arity =:= 2; Arity =:= 3 ->
     NewRoutes = extract_routes_from_clauses(Name, Clauses),
     add_routes_to_forms(Rest, [Fxn|FormAcc], lists:reverse(NewRoutes, RouteAcc));
 add_routes_to_forms([H|T], FormAcc, RouteAcc) ->
@@ -54,18 +69,25 @@ route_from_token_ast({cons, _, {string, _, String}, T}, Acc) ->
 route_from_token_ast(_, Acc) ->
     lists:reverse(Acc).
 
-%% REFACTOR THIS!
+
 function_for_routes(Routes) ->
     [erl_syntax:function(erl_syntax:atom('_routes'),
-			 [erl_syntax:clause([], none,
-					    [erl_syntax:list(lists:map(fun({Name, Tokens}) ->
-									       erl_syntax:tuple([
-												 erl_syntax:atom(Name),
-												 erl_syntax:list(lists:map(fun
-															       (T) when is_atom(T) ->
-																   erl_syntax:atom(T);
-															       (T) when is_list(T) ->
-																   erl_syntax:string(T)
-															   end, Tokens))
-												])
-								       end, Routes))])])].
+			 [erl_syntax:clause([], 
+					    none,
+					    [erl_syntax:list(map_syntax_tuples(Routes))])])].
+
+map_syntax_tuples(Routes) ->
+    lists:map(fun({Name, Tokens}) ->
+		      erl_syntax:tuple([
+					erl_syntax:atom(Name),
+					erl_syntax:list(map_tokens(Tokens))
+				       ])
+              end, Routes).
+
+
+map_tokens(Tokens) ->
+    lists:map(fun (T) when is_atom(T) ->
+		      erl_syntax:atom(T);
+		  (T) when is_list(T) ->
+		      erl_syntax:string(T)
+              end, Tokens).
