@@ -6,9 +6,11 @@
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
+-define(BOSS_REWRITES_TABLE, boss_rewrites).
 -define(BOSS_ROUTES_TABLE, boss_routes).
 -define(BOSS_REVERSE_ROUTES_TABLE, boss_reverse_routes).
 -define(BOSS_HANDLERS_TABLE, boss_handlers).
+-record(boss_rewrite, {pattern, indexed_split, vars}).
 -record(boss_route, {number, url, pattern, application, controller, action, params = []}).
 -record(boss_reverse_route, {application_controller_action_params, url}).
 -record(boss_handler, {status_code, application, controller, action, params = []}).
@@ -16,6 +18,7 @@
 -record(state, {
         application,
         controllers = [],
+        rewrites_table_id,
         routes_table_id,
         reverse_routes_table_id,
         handlers_table_id
@@ -30,10 +33,12 @@ start_link(Args) ->
 init(Options) ->
     BossApp = proplists:get_value(application, Options),
     Controllers = proplists:get_value(controllers, Options, []),
+    RewritesTableId = ets:new(?BOSS_REWRITES_TABLE, [ordered_set, public, {keypos, 2}]),
     RoutesTableId = ets:new(?BOSS_ROUTES_TABLE, [ordered_set, public, {keypos, 2}]),
     ReverseRoutesTableId = ets:new(?BOSS_REVERSE_ROUTES_TABLE, [ordered_set, public, {keypos, 2}]),
     HandlersTableId = ets:new(?BOSS_HANDLERS_TABLE, [ordered_set, public, {keypos, 2}]),
     State = #state{ application = BossApp, 
+        rewrites_table_id = RewritesTableId, 
         routes_table_id = RoutesTableId, 
         reverse_routes_table_id = ReverseRoutesTableId,
         handlers_table_id = HandlersTableId, 
@@ -60,9 +65,10 @@ handle_call({handle, StatusCode}, _From, State) ->
 handle_call({route, ""}, From, State) ->
     handle_call({route, "/"}, From, State);
 handle_call({route, Url}, _From, State) ->
-    Route = case get_match(Url, ets:tab2list(State#state.routes_table_id)) of
+    RewrittenUrl = rewrite(Url, ets:tab2list(State#state.rewrites_table_id)),
+    Route = case get_match(RewrittenUrl, ets:tab2list(State#state.routes_table_id)) of
         undefined -> 
-            case string:tokens(Url, "/") of
+            case string:tokens(RewrittenUrl, "/") of
                 [Controller] -> 
                     case is_controller(State, Controller) of
                         true -> {ok, {State#state.application, Controller, default_action(State, Controller), []}};
@@ -121,6 +127,20 @@ load(State) ->
     case file:consult(RoutesFile) of
         {ok, OrderedRoutes} -> 
             lists:foldl(fun
+                    ({rewrite, UrlPattern, RewritePattern}, Number) ->
+                        UrlSplitList = re:split(RewritePattern, "(\\'\\$\\w+\\')", [group, {return, list}]),
+                        {IndexedSplit, Vars} =
+                                    lists:mapfoldl(fun([Prefix, VarName], Acc) ->
+                                                           {{Prefix, length(Acc)+1}, [lists:sublist(VarName, 3, length(VarName)-3) | Acc]};
+                                                      ([String], Acc) ->
+                                                           {String, Acc}
+                                                   end, [], UrlSplitList),
+                        {ok, MP} = re:compile("^"++UrlPattern++"$"),
+                        NewRewriteRule = #boss_rewrite{pattern = MP,
+                                                       indexed_split = IndexedSplit,
+                                                       vars = lists:reverse(Vars)},
+                        true = ets:insert(State#state.rewrites_table_id, NewRewriteRule),
+                        Number;
                     ({UrlOrStatusCode, Proplist}, Number) when is_list(Proplist) ->
                         TheApplication = proplists:get_value(application, Proplist, State#state.application),
                         TheController = proplists:get_value(controller, Proplist),
@@ -217,4 +237,21 @@ get_match(Url, [Route = #boss_route{pattern = MP}|T]) ->
             Route;
         _ ->
             get_match(Url, T)
+    end.
+
+rewrite(Url, []) ->
+    Url;
+rewrite(Url, [#boss_rewrite{pattern = MP, indexed_split = IS, vars = Vars } | T]) ->
+    case re:run(Url, MP, [{capture, Vars, list}]) of
+        {match, Matches} ->
+            RewrittenUrl = lists:foldl(fun({Prefix, Index}, Acc) ->
+                                               Acc ++ Prefix ++ lists:nth(Index, Matches);
+                                          (String, Acc) ->
+                                               Acc ++ String
+                                       end, [], IS),
+            RewrittenUrl;
+        match ->
+            Url;
+        _ ->
+            rewrite(Url, T)
     end.
