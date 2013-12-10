@@ -33,14 +33,14 @@ bootstrap_test_env(Application, Adapter) ->
     {ok, TranslatorSupPid} = boss_translator:start([{application, Application}]),
     boss_load:load_all_modules(Application, TranslatorSupPid),
     #boss_app_info{ 
-        application = Application,
-        base_url = "",
-        init_data = [],
-        router_sup_pid = RouterSupPid,
-        translator_sup_pid = TranslatorSupPid,
-        model_modules = boss_files:model_list(Application),
-        controller_modules = boss_files:web_controller_list(Application),
-        view_modules = boss_files:view_module_list(Application)
+        application		= Application,
+        base_url		= "",
+        init_data		= [],
+        router_sup_pid		= RouterSupPid,
+        translator_sup_pid	= TranslatorSupPid,
+        model_modules		= boss_files:model_list(Application),
+        controller_modules	= boss_files:web_controller_list(Application),
+        view_modules		= boss_files:view_module_list(Application)
     }.
 
 -spec(run_tests(_) -> no_return()).
