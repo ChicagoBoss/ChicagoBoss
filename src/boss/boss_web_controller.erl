@@ -5,13 +5,8 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 -export([merge_headers/2]).
 -export([handle_news_for_cache/3]).
-
 -export([run_init_scripts/1]).
-
--export([execute_action/4, filter_config/1, filters_for_function/1
-                      ]).
-
-
+-export([execute_action/4, filter_config/1, filters_for_function/1]).
 -include("boss_web.hrl").
 
 start_link() ->
@@ -43,7 +38,6 @@ terminate_smtp(Pid) when is_pid(Pid) ->
     gen_smtp_server:stop(Pid);
 terminate_smtp(_) ->
     ok.
-
 
 stop_smtp() ->
     case boss_env:get_env(smtp_server_enable, false) of
@@ -507,19 +501,15 @@ load_and_execute(development, {"doc", ModelName, _}, AppInfo, RequestContext) ->
                                 {Controller, Edoc} = edoc:get_doc(boss_files:web_controller_path(ModelName++".erl"), [{private, true}]),
                                 {ok, correct_edoc_html(Edoc, AppInfo), []};
                             false ->
+                                RenderedTemplate = boss_html_doc_template:render([
+                                                          {application, AppInfo#boss_app_info.application},
+                                                          {'_doc', AppInfo#boss_app_info.doc_prefix},
+                                                          {'_static', AppInfo#boss_app_info.static_prefix},
+                                                          {'_base_url', AppInfo#boss_app_info.base_url},
+                                                          {models, ModelModules},
+                                                          {controllers, Controllers}]),
                                 % nope, so just render index page
-                                case boss_html_doc_template:render([
-                                            {application, AppInfo#boss_app_info.application},
-                                            {'_doc', AppInfo#boss_app_info.doc_prefix},
-                                            {'_static', AppInfo#boss_app_info.static_prefix},
-                                            {'_base_url', AppInfo#boss_app_info.base_url},
-                                            {models, ModelModules},
-                                            {controllers, Controllers}]) of
-                                    {ok, Payload} ->
-                                        {ok, Payload, []};
-                                    Err ->
-                                        Err
-                                end
+                                handle_rendered_template(RenderedTemplate)
                     end
             end;
         {error, ErrorList} ->
@@ -566,9 +556,15 @@ load_and_execute(development, {Controller, _, _} = Location, AppInfo, RequestCon
            end,
     Res6.
 
+handle_rendered_template({ok, Payload}) ->
+    {ok, Payload, []};
+handle_rendered_template( Payload) ->
+    Payload.
+
+
 %% @desc function to correct path errors in HTML output produced by Edoc
 correct_edoc_html(Edoc, AppInfo) ->
-    Result = edoc:layout(Edoc, [{stylesheet, AppInfo#boss_app_info.base_url++AppInfo#boss_app_info.static_prefix++"/edoc/stylesheet.css"}]),
+    Result  = edoc:layout(Edoc, [{stylesheet, AppInfo#boss_app_info.base_url++AppInfo#boss_app_info.static_prefix++"/edoc/stylesheet.css"}]),
     Result2 = re:replace(Result, "overview-summary.html", "./", [{return,list}, global]),
     Result3 = re:replace(Result2, "erlang.png", AppInfo#boss_app_info.base_url++AppInfo#boss_app_info.static_prefix++"/edoc/erlang.png", [{return,list}, global]),
     Result3.
