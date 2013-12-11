@@ -33,16 +33,17 @@ bootstrap_test_env(Application, Adapter) ->
     {ok, TranslatorSupPid} = boss_translator:start([{application, Application}]),
     boss_load:load_all_modules(Application, TranslatorSupPid),
     #boss_app_info{ 
-        application = Application,
-        base_url = "",
-        init_data = [],
-        router_sup_pid = RouterSupPid,
-        translator_sup_pid = TranslatorSupPid,
-        model_modules = boss_files:model_list(Application),
-        controller_modules = boss_files:web_controller_list(Application),
-        view_modules = boss_files:view_module_list(Application)
+        application		= Application,
+        base_url		= "",
+        init_data		= [],
+        router_sup_pid		= RouterSupPid,
+        translator_sup_pid	= TranslatorSupPid,
+        model_modules		= boss_files:model_list(Application),
+        controller_modules	= boss_files:web_controller_list(Application),
+        view_modules		= boss_files:view_module_list(Application)
     }.
 
+-spec(run_tests(_) -> no_return()).
 % This function deliberately takes one argument so it can be invoked from the command-line.
 run_tests([Application, Adapter|TestList]) ->
     AppInfo = bootstrap_test_env(list_to_atom(Application), list_to_atom(Adapter)),
@@ -342,14 +343,18 @@ post_request_loop(AppInfo) ->
             erlang:put(mochiweb_request_body, Body),
             erlang:put(mochiweb_request_body_length, length(Body)),
             erlang:put(mochiweb_request_post, mochiweb_util:parse_qs(Body)),
-            [{_, RouterPid, _, _}] = supervisor:which_children(AppInfo#boss_app_info.router_sup_pid),
-            [{_, TranslatorPid, _, _}] = supervisor:which_children(AppInfo#boss_app_info.translator_sup_pid),
+            [{_, RouterPid, _, _}]	= supervisor:which_children(AppInfo#boss_app_info.router_sup_pid),
+            [{_, TranslatorPid, _, _}]	= supervisor:which_children(AppInfo#boss_app_info.translator_sup_pid),
             Req = make_request('POST', Uri, 
-                [{"Content-Encoding", "application/x-www-form-urlencoded"} | Headers]),
+			       [{"Content-Encoding", "application/x-www-form-urlencoded"} | Headers]),
             FullUrl = Req:path(),
             Result = boss_web_controller:process_request(AppInfo#boss_app_info{
-                    router_pid = RouterPid, translator_pid = TranslatorPid }, 
-                Req, testing, FullUrl),
+							   router_pid     = RouterPid, 
+							   translator_pid = TranslatorPid }, 
+							 Req, 
+							 testing, 
+							 FullUrl),
+
             From ! {self(), FullUrl, Result};
         Other ->
             error_logger:error_msg("Unexpected message in post_request_loop: ~p~n", [Other])
@@ -362,30 +367,40 @@ make_request(Method, Uri, Headers) ->
     simple_bridge:make_request(mochiweb_request_bridge, Req).
 
 receive_response(RequesterPid, Assertions, Continuations) ->
-    PushFun = fun() ->
-            boss_db:push(),
-            boss_mail_driver_mock:push()
-    end,
-    PopFun = fun() ->
-            boss_db:pop(),
-            boss_mail_driver_mock:pop()
-    end,
+    {PushFun, PopFun} = make_stack_ops(),
     receive
         {RequesterPid, Uri, {Status, ResponseHeaders, ResponseBody}} ->
-            ParsedResponseBody = case ResponseBody of
-                [] -> [];
-                Other -> parse(ResponseHeaders, Other)
-            end,
-            exit(RequesterPid, kill),
-            ParsedResponse = {Status, Uri, ResponseHeaders, ParsedResponseBody},
-            boss_test:process_assertions_and_continuations(Assertions, Continuations, ParsedResponse, 
-                PushFun, PopFun, fun boss_db:dump/0);
+            receive_response_body(RequesterPid, Assertions, Continuations,
+                                  PushFun, PopFun, Uri, Status, ResponseHeaders,
+                                  ResponseBody);
         {'EXIT', _From, normal} ->
             receive_response(RequesterPid, Assertions, Continuations);
         Other ->
             error_logger:error_msg("Unexpected message in receive_response: ~p~n", [Other]),
             receive_response(RequesterPid, Assertions, Continuations)
     end.
+
+receive_response_body(RequesterPid, Assertions, Continuations, PushFun,
+                      PopFun, Uri, Status, ResponseHeaders, ResponseBody) ->
+    ParsedResponseBody	= case ResponseBody of
+			      []    -> [];
+			      Other -> parse(ResponseHeaders, Other)
+                         end,
+    exit(RequesterPid, kill),
+    ParsedResponse	= {Status, Uri, ResponseHeaders, ParsedResponseBody},
+    boss_test:process_assertions_and_continuations(Assertions, Continuations, ParsedResponse,
+        PushFun, PopFun, fun boss_db:dump/0).
+
+make_stack_ops() ->
+    PushFun = fun() ->
+		      boss_db:push(),
+		      boss_mail_driver_mock:push()
+	      end,
+    PopFun = fun() ->
+		     boss_db:pop(),
+		     boss_mail_driver_mock:pop()
+             end,
+    {PushFun, PopFun}.
 
 parse([], Body) ->
     mochiweb_html:parse([<<"<html>">>, Body, <<"</html>">>]);

@@ -9,6 +9,24 @@
         update_po/1,
         update_po/4]).
 
+-type application() :: types:application_name().
+-type lang() ::types:language().
+-type mode() :: all|filled.
+
+-spec create_lang(application(), lang())		-> 'ok' | {'error',atom()}.
+-spec delete_lang(application(), lang())		-> 'ok'.
+-spec escape_quotes([any()])				-> [any()].
+-spec extract_po_strings(application(),lang())		-> [{[any()],[any()]}].
+-spec extract_strings(application())			-> [any()].
+-spec extract_strings(application(),lang())		-> {[any()],[{_,_}]}.
+-spec lang_write_to_file(atom() | pid() | 
+			 {'file_descriptor',atom() | tuple(),_},
+			 [any()],[any()])	
+							-> 'ok' | {'error',atom()}.
+-spec update_po(application())				-> ['ok' | {'error',atom()}].
+-spec update_po(application(),lang(),mode(),[any()])	-> 'ok' | {'error',atom()}.
+
+
 create_lang(App, Lang) ->
     LangFile = boss_files:lang_path(App, Lang),
     {ok, IODevice} = file:open(LangFile, [write]),
