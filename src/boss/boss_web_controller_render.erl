@@ -202,9 +202,9 @@ render_view({Controller, Template, _}, AppInfo, RequestContext, Variables, Heade
                                  SessionData, Module, TemplateAdapter);
         {error, not_found} ->
             AnyViewPath = boss_files:web_view_path(Controller, Template, "{" ++ string:join(TryExtensions, ",") ++ "}"),
-            {not_found, io_lib:format("The requested template (~p) was not found.", [AnyViewPath]) };
+            {not_found, io_lib:format("The requested template (~p) was not found.~n", [AnyViewPath]) };
         {error, {File, [{0, _Module, "Failed to read file"}]}} ->
-            {not_found, io_lib:format("The requested template (~p) was not found.", [File]) };
+            {not_found, io_lib:format("The requested template (~p) was not found.~n", [File]) };
         {error, Error}->
             render_errors([Error], AppInfo, RequestContext)
     end.
