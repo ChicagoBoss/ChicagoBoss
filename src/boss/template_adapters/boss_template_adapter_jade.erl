@@ -3,11 +3,11 @@
 
 file_extensions() -> ["jade"].
 
-translatable_strings(Module) -> [].
+translatable_strings(_Module) -> [].
 
-source(Module) -> "".
+source(_Module) -> "".
 
-dependencies(Module) -> [].
+dependencies(_Module) -> [].
 
 render(Module, Variables, Options) ->
     Module:render(Variables, Options).

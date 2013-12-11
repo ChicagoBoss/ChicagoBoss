@@ -5,14 +5,9 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 -export([merge_headers/2]).
 -export([handle_news_for_cache/3]).
-
 -export([run_init_scripts/1]).
 
--export([execute_action/4, filter_config/1, filters_for_function/1
-                      ]).
-
--export([generate_session_id/1]).
-
+-export([execute_action/4, filter_config/1, filters_for_function/1]).
 
 -include("boss_web.hrl").
 
@@ -45,7 +40,6 @@ terminate_smtp(Pid) when is_pid(Pid) ->
     gen_smtp_server:stop(Pid);
 terminate_smtp(_) ->
     ok.
-
 
 stop_smtp() ->
     case boss_env:get_env(smtp_server_enable, false) of
@@ -295,13 +289,24 @@ execute_action({Controller, Action, Tokens}, AppInfo, RequestContext, LocationTr
 execute_action({Controller, Action, Tokens} = Location, AppInfo, RequestContext, LocationTrail) ->
     Req		= proplists:get_value(request, RequestContext),
     SessionID	= proplists:get_value(session_id, RequestContext),
-    case lists:member(Location, LocationTrail) of
-        true ->
-            {{error, "Circular redirect!"}, SessionID};
-        false ->
-            execute_action_inner(Controller, Action, Tokens, Location, AppInfo,
-                                 RequestContext, LocationTrail, Req, SessionID)
-    end.
+    IsMemberOfList = lists:member(Location, LocationTrail),
+    execute_action_check_for_circular_redirect(Controller, Action, Tokens,
+                                               Location, AppInfo,
+                                               RequestContext, LocationTrail,
+                                               Req, SessionID, IsMemberOfList).
+
+execute_action_check_for_circular_redirect(_Controller, _Action, _Tokens,
+                                           _Location, _AppInfo, _RequestContext,
+                                           _LocationTrail, _Req, SessionID,
+                                           true) ->
+    {{error, "Circular redirect!"}, SessionID};
+execute_action_check_for_circular_redirect(Controller, Action, Tokens,
+                                           Location, AppInfo, RequestContext,
+                                           LocationTrail, Req, SessionID,
+                                           false) ->
+    execute_action_inner(Controller, Action, Tokens, Location, AppInfo,
+			 RequestContext, LocationTrail, Req, SessionID).
+
 
 execute_action_inner(Controller, Action, Tokens, Location, AppInfo,
 		     RequestContext, LocationTrail, Req, SessionID) ->

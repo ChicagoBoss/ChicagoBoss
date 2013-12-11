@@ -12,7 +12,7 @@
 
 -spec execution_mode(types:application_name()) -> types:execution_mode().
 -spec find_application_for_path('undefined' | binary() | maybe_improper_list(binary() | maybe_improper_list(any(),binary() | []) | char(),binary() | []),_,[any()]) -> any().
--spec make_boss_app_info(types:application(),_,_,_,_,_,_,_,_,_) -> #boss_app_info{}.
+-spec make_boss_app_info(types:application_name(),_,_,_,_,_,_,_,_,_) -> #boss_app_info{}.
 -spec unpack_application_env(types:application_name()) -> {_,_,_,_,_,_,_,_,_,_}.
 
 make_boss_app_info(AppName, BaseURL, StaticPrefix, DocPrefix,

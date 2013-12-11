@@ -95,13 +95,13 @@ set_timer(Request, Url, Mode, AppInfo, TranslatorPid, RouterPid,
     timer:tc(?MODULE, process_request, [NewAppInfo, Request, Mode, Url]).
 
 
-handle_response(Request, Payload = {stream, Generator, Acc0}, RequestMethod, Response2) ->
+handle_response(Request, _Payload = {stream, Generator, Acc0}, RequestMethod, Response2) ->
     Protocol		= Request:protocol_version(),
     TransferEncoding	= handle_protocol(Protocol),
     Response3		= Response2:data(chunked),
     Response3:build_response(),
     process_stream_generator(Request, TransferEncoding, RequestMethod, Generator, Acc0);
-handle_response(Request, Payload , RequestMethod, Response2) ->
+handle_response(_Request, Payload , _RequestMethod, Response2) ->
     (Response2:data(Payload)):build_response().
 
 
