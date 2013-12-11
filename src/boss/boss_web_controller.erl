@@ -5,7 +5,7 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 -export([merge_headers/2]).
 -export([handle_news_for_cache/3]).
--export([run_init_scripts/1]).
+-export([run_init_scripts/1, generate_session_id/1]).
 
 -export([execute_action/4, filter_config/1, filters_for_function/1]).
 

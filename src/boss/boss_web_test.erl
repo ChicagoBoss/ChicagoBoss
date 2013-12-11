@@ -328,7 +328,7 @@ get_request_loop(AppInfo) ->
             FullUrl = Req:path(),
             [{_, RouterPid, _, _}] = supervisor:which_children(AppInfo#boss_app_info.router_sup_pid),
             [{_, TranslatorPid, _, _}] = supervisor:which_children(AppInfo#boss_app_info.translator_sup_pid),
-            Result = boss_web_controller:process_request(AppInfo#boss_app_info {
+            Result = boss_web_controller_handle_request:process_request(AppInfo#boss_app_info {
                     router_pid = RouterPid, translator_pid = TranslatorPid }, 
                 Req, testing, FullUrl),
             From ! {self(), FullUrl, Result};
@@ -348,7 +348,7 @@ post_request_loop(AppInfo) ->
             Req = make_request('POST', Uri, 
 			       [{"Content-Encoding", "application/x-www-form-urlencoded"} | Headers]),
             FullUrl = Req:path(),
-            Result = boss_web_controller:process_request(AppInfo#boss_app_info{
+            Result = boss_web_controller_handle_request:process_request(AppInfo#boss_app_info{
 							   router_pid     = RouterPid, 
 							   translator_pid = TranslatorPid }, 
 							 Req, 
