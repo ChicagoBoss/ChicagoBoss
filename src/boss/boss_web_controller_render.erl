@@ -192,6 +192,7 @@ render_view({Controller, Template, _}, AppInfo, RequestContext, Variables, Heade
     Req			= proplists:get_value(request, RequestContext),
     SessionID		= proplists:get_value(session_id, RequestContext),
     TryExtensions	= boss_files:template_extensions(),
+    ?PRINT("Controller", Controller),
     LoadResult		= load_result(Controller, Template, AppInfo, TryExtensions),
     BossFlash		= boss_flash:get_and_clear(SessionID),
     SessionData		= boss_session:get_session_data(SessionID),
@@ -202,7 +203,7 @@ render_view({Controller, Template, _}, AppInfo, RequestContext, Variables, Heade
                                  SessionData, Module, TemplateAdapter);
         {error, not_found} ->
             AnyViewPath = boss_files:web_view_path(Controller, Template, "{" ++ string:join(TryExtensions, ",") ++ "}"),
-            {not_found, io_lib:format("The requested template (~p) was not found.~n", [AnyViewPath]) };
+            {not_found, io_lib:format("The requested template (~p) was not found.~n If you controller did not run, check that it was exported~n~n", [AnyViewPath]) };
         {error, {File, [{0, _Module, "Failed to read file"}]}} ->
             {not_found, io_lib:format("The requested template (~p) was not found.~n", [File]) };
         {error, Error}->

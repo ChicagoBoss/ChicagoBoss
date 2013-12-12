@@ -413,7 +413,7 @@ load_and_execute(development,
 	     fun boss_load:load_web_controllers/1],
     Res  = fold_operations(Application, Ops),
     run_controller(Controller, Location, AppInfo, Application,
-                          RequestContext, SessionID, Res),
+                          RequestContext, SessionID, Res).
     
 
 run_controller(Controller, Location, AppInfo, Application,

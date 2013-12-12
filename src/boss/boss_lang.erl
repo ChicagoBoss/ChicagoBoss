@@ -9,7 +9,7 @@
         update_po/1,
         update_po/4]).
 
--type application() :: types:application_name().
+-type application() :: types:application().
 -type lang() ::types:language().
 -type mode() :: all|filled.
 
