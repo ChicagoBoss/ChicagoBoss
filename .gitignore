@@ -1,8 +1,10 @@
 ebin/*.beam
 ebin/boss.app
+*.beam
 deps
 erl_crash.dump
 *~
 #*#
 .*#
 *#
+.eunit

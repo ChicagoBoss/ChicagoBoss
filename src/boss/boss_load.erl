@@ -15,23 +15,46 @@
         reload_all/0
     ]).
 
+-type module_types() :: [{'controller_modules' | 'lib_modules' | 'mail_modules' | 'model_modules' | 'test_modules' | 'view_lib_helper_modules' | 'view_lib_tags_modules' | 'view_modules' | 'websocket_modules',maybe_improper_list()},...].
+-type reload_error_status_values() :: 'badfile' | 'native_code' | 'nofile' | 'not_purged' | 'on_load' | 'sticky_directory'.
+-type application() :: atom()|string()|number().
+
+     
+-spec incoming_mail_controller_module(application()) -> atom().
+-spec load_all_modules(application(), atom() | pid() | {atom(),atom()}) ->
+   {'ok',module_types()}.
+-spec load_all_modules(application(),atom() | pid() | {atom(),atom()},_) ->
+   {'ok',module_types()}.
+-spec load_all_modules_and_emit_app_file(application(),atom() | binary() | [atom() | [any()] | char()]) -> 
+   'ok' | {'error',atom()}.
+-spec load_libraries(application()) -> {'error',[any(),...]} | {'ok',[any()]}.
+-spec load_mail_controllers(application()) -> {'error',[any(),...]} | {'ok',[any()]}.
+-spec load_models(application()) -> {'error',[any(),...]} | {'ok',[any()]}.
+-spec load_services_websockets(application()) -> {'error',[any(),...]} | {'ok',[any()]}.
+-spec load_view_if_dev(application(), atom() | binary() | [atom() | [any()] | char()],_,_) -> any().
+-spec load_view_lib_modules(application()) -> {'error',[any(),...]} | {'ok',[any()]}.
+-spec load_web_controllers(application()) -> {'error',[any(),...]} | {'ok',[any()]}.
+-spec module_is_loaded(atom()) -> boolean().
+-spec reload_all() -> [{'error',reload_error_status_values()}|
+		       {'module', atom() | tuple()}].
+
 -define(CUSTOM_TAGS_DIR_MODULE, '_view_lib_tags').
 
 load_all_modules(Application, TranslatorSupPid) ->
     load_all_modules(Application, TranslatorSupPid, undefined).
 
 load_all_modules(Application, TranslatorSupPid, OutDir) ->
-    [{_, TranslatorPid, _, _}] = supervisor:which_children(TranslatorSupPid),
-    {ok, TestModules} = load_dirs(boss_files:test_path(), Application, OutDir, fun compile/2),
-    {ok, LibModules} = load_libraries(Application, OutDir),
-    {ok, WebSocketModules} = load_services_websockets(Application, OutDir),
-    {ok, MailModules} = load_mail_controllers(Application, OutDir),
-    {ok, ControllerModules} = load_web_controllers(Application, OutDir),
-    {ok, ModelModules} = load_models(Application, OutDir),
-    {ok, ViewHelperModules} = load_view_lib_modules(Application, OutDir),
-    {ok, ViewLibModules} = load_view_lib(Application, OutDir, TranslatorPid),
-    {ok, ViewModules} = load_views(Application, OutDir, TranslatorPid),
-    AllModules = [{test_modules, TestModules}, 
+    [{_, TranslatorPid, _, _}]	= supervisor:which_children(TranslatorSupPid),
+    {ok, TestModules}		= load_dirs(boss_files:test_path(), Application, OutDir, fun compile/2),
+    {ok, LibModules}		= load_libraries(Application, OutDir),
+    {ok, WebSocketModules}	= load_services_websockets(Application, OutDir),
+    {ok, MailModules}		= load_mail_controllers(Application, OutDir),
+    {ok, ControllerModules}	= load_web_controllers(Application, OutDir),
+    {ok, ModelModules}		= load_models(Application, OutDir),
+    {ok, ViewHelperModules}	= load_view_lib_modules(Application, OutDir),
+    {ok, ViewLibModules}	= load_view_lib(Application, OutDir, TranslatorPid),
+    {ok, ViewModules}		= load_views(Application, OutDir, TranslatorPid),
+    AllModules			= [{test_modules, TestModules}, 
 		  {lib_modules, LibModules}, {websocket_modules, WebSocketModules},
 		  {mail_modules, MailModules}, {controller_modules, ControllerModules},
 		  {model_modules, ModelModules}, {view_lib_tags_modules, ViewLibModules},
@@ -312,9 +335,7 @@ load_view_if_old(Application, ViewPath, Module, TemplateAdapter, TranslatorPid) 
                         undefined, TranslatorPid);
                 false ->
                     {ok, Module}
-            end;
-        Err ->
-            Err
+            end
     end.
 
 load_view_if_dev(Application, ViewPath, ViewModules, TranslatorPid) ->
