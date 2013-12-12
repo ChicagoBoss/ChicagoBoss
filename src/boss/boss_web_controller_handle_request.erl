@@ -4,16 +4,19 @@
 
 -export([process_request/4]).
 
-
+-ifdef(TEST).
+-compile(export_all).
+-endif.
 
 -include("boss_web.hrl").
 
 %% TODO REFACTOR AND TEST
 handle_request(Req, RequestMod, ResponseMod) ->
+  
     LoadedApplications	= boss_web:get_all_applications(),
     Request		= simple_bridge:make_request(RequestMod, Req),
     FullUrl		= Request:path(),
-    io:format("~s:~p (~p) URL ~p~n", [?FILE, ?LINE, self(), FullUrl]),
+
     ApplicationForPath	= boss_web_controller_util:find_application_for_path(Request:header(host),
 									     FullUrl, 
 									     LoadedApplications),
@@ -27,26 +30,28 @@ handle_application(Req, ResponseMod, _Request, _FullUrl, undefined) ->
     Response1:build_response();
 handle_application(Req, ResponseMod, Request, FullUrl,  App) ->
     BaseURL		= boss_web:base_url(App),
+  
     DocRoot		= boss_files:static_path(App),
     StaticPrefix	= boss_web:static_prefix(App),
    
     Url			= lists:nthtail(length(BaseURL), FullUrl),
-
+    
     Response		= simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
     SpecialFiles        = boss_env:get_env(App,
 					   static_files,
 					   ["/favicon.ico", "/apple-touch-icon.png", "/robots.txt"]),
     IsSpecialFile       = lists:member(Url,SpecialFiles),
+   
     handle_result(Request, App, StaticPrefix, Url, Response, IsSpecialFile).
 
-handle_result(_Request, _App, _StaticPrefix, Url, Response,
-              true) ->
-    (Response:file(Url)):build_response();
-handle_result(Request, App, StaticPrefix, Url, Response,
-              false) ->
+handle_result(_Request, _App, _StaticPrefix, Url, Response, true) ->
 
-    case string:substr(Url, 1, length(StaticPrefix)) of
+    (Response:file(Url)):build_response();
+handle_result(Request, App, StaticPrefix, Url, Response, false) ->
+    TestStaticPrefix = string:substr(Url, 1, length(StaticPrefix)),
+    case TestStaticPrefix of
 	StaticPrefix ->
+	   
 	    [$/|File] = lists:nthtail(length(StaticPrefix), Url),
 	    Response2 = case boss_env:boss_env() of
 			    development ->
@@ -57,6 +62,7 @@ handle_result(Request, App, StaticPrefix, Url, Response,
 	    Response3 = Response2:file([$/|File]),
 	    Response3:build_response();
 	_ ->
+	   
 	    build_dynamic_response(App, Request, Response, Url)
     end.
     
@@ -65,13 +71,15 @@ handle_result(Request, App, StaticPrefix, Url, Response,
 build_dynamic_response(App, Request, Response, Url) ->
     Mode                = boss_web_controller_util:execution_mode(App),
     AppInfo		= boss_web:application_info(App),
+
     TranslatorPid	= boss_web:translator_pid(App),
     RouterPid		= boss_web:router_pid(App),
     ControllerList	= boss_files:web_controller_list(App),
-    {Time, {StatusCode, Headers, Payload}} = set_timer(Request, Url, Mode,
-                                                       AppInfo, TranslatorPid,
-                                                       RouterPid,
-                                                       ControllerList),
+    TR                  = set_timer(Request, Url, Mode,
+				    AppInfo, TranslatorPid,
+				    RouterPid,
+				    ControllerList),
+    {Time, {StatusCode, Headers, Payload}} = TR,
     ErrorFormat		= "~s ~s [~p] ~p ~pms",
     RequestMethod	= Request:request_method(),
     FullUrl		= Request:path(),
@@ -92,7 +100,10 @@ set_timer(Request, Url, Mode, AppInfo, TranslatorPid, RouterPid,
 		   router_pid                = RouterPid,
 		   controller_modules        = ControllerList
 		  },
-    timer:tc(?MODULE, process_request, [NewAppInfo, Request, Mode, Url]).
+    %R = timer:tc(process_request,[NewAppInfo, Request, Mode, Url]),
+    R  = erlang:apply(?MODULE,process_request,[NewAppInfo, Request, Mode, Url]),
+    {1,R}.
+
 
 
 handle_response(Request, _Payload = {stream, Generator, Acc0}, RequestMethod, Response2) ->
@@ -149,6 +160,7 @@ process_request(#boss_app_info{ doc_prefix = DocPrefix } = AppInfo, Req, develop
     end,
     process_result_and_add_session(AppInfo, [{request, Req}, {session_id, SessionID1}], Result);
 process_request(AppInfo, Req, development, Url) ->
+  
     DocPrefixPlusSlash = AppInfo#boss_app_info.doc_prefix ++ "/",
     {Result, SessionID1} = case string:substr(Url, 1, length(DocPrefixPlusSlash)) of
         DocPrefixPlusSlash ->
@@ -177,27 +189,31 @@ process_request(AppInfo, Req, Mode, Url) ->
     process_result_and_add_session(AppInfo, [{request, Req}, {session_id, SessionID1}], Result).
 
 process_dynamic_request(#boss_app_info{ router_pid = RouterPid } = AppInfo, Req, Mode, Url) ->
+    
     {Result, SessionID1} = case boss_router:route(RouterPid, Url) of
-        {ok, {Application, Controller, Action, Tokens}} when Application =:= AppInfo#boss_app_info.application ->
-            Location = {Controller, Action, Tokens},
-            case catch load_and_execute(Mode, Location, AppInfo, [{request, Req}]) of
-                {'EXIT', Reason} ->
-                    {{error, Reason}, undefined};
-                {{not_found, Message}, S1} ->
-                    {process_not_found(Message, AppInfo, [{request, Req}, {session_id, S1}], Mode), S1};
-                {not_found, S1} ->
-                    {process_not_found("File not found.", AppInfo, [{request, Req}, {session_id, S1}], Mode), S1};
-                Ok ->
-                    Ok
-            end;
-        {ok, {OtherApplication, Controller, Action, Tokens}} ->
-            {{redirect, {OtherApplication, Controller, Action, Tokens}}, undefined};
-        not_found ->
-            {process_not_found("No routes matched the requested URL.", AppInfo, [{request, Req}], Mode),
-                undefined}
-    end,
+			       {ok, {Application, Controller, Action, Tokens}} when Application =:= AppInfo#boss_app_info.application ->
+				   Location = {Controller, Action, Tokens},
+				   
+				   ExecuteResults = load_and_execute(Mode, Location, AppInfo, [{request, Req}]),
+
+				   case  ExecuteResults of
+				       {'EXIT', Reason} ->
+					   {{error, Reason}, undefined};
+				       {{not_found, Message}, S1} ->
+					   {process_not_found(Message, AppInfo, [{request, Req}, {session_id, S1}], Mode), S1};
+				       {not_found, S1} ->
+					   {process_not_found("File not found.", AppInfo, [{request, Req}, {session_id, S1}], Mode), S1};
+				       Ok ->
+					   Ok
+				   end;
+			       {ok, {OtherApplication, Controller, Action, Tokens}} ->
+				   {{redirect, {OtherApplication, Controller, Action, Tokens}}, undefined};
+			       not_found ->
+				   {process_not_found("No routes matched the requested URL.", AppInfo, [{request, Req}], Mode),
+				    undefined}
+			   end,
     FinalResult = case Result of
-        {error, Payload} ->
+		      {error, Payload} ->
             process_error(Payload, AppInfo, [{request, Req}, {session_id, SessionID1}], Mode);
         _ ->
             Result
@@ -349,7 +365,7 @@ load_and_execute(development, {"doc", ModelName, _}, AppInfo, RequestContext) ->
     Result = case boss_load:load_models(AppInfo#boss_app_info.application) of
         {ok, ModelModules} ->
             % check if ModelName is in list of models
-            case lists:member(ModelName, lists:map(fun boss_web_controller:atom_to_list/1, ModelModules)) of
+            case lists:member(ModelName, lists:map(fun atom_to_list/1, ModelModules)) of
                 true ->
                     Model = list_to_atom(ModelName),
                     {Model, Edoc} = boss_model_manager:edoc_module(
@@ -358,7 +374,7 @@ load_and_execute(development, {"doc", ModelName, _}, AppInfo, RequestContext) ->
                 false ->
                     % ok, it's not model, so it could be web controller
                     {ok, Controllers} = boss_load:load_web_controllers(AppInfo#boss_app_info.application),
-                    case lists:member(ModelName, lists:map(fun boss_web_controller:atom_to_list/1, Controllers)) of
+                    case lists:member(ModelName, lists:map(fun atom_to_list/1, Controllers)) of
                             true ->
                                 Controller = list_to_atom(ModelName),  
                                 {Controller, Edoc} = edoc:get_doc(boss_files:web_controller_path(ModelName++".erl"), [{private, true}]),
@@ -383,45 +399,67 @@ load_and_execute(development, {"doc", ModelName, _}, AppInfo, RequestContext) ->
             boss_web_controller_render:render_errors(ErrorList, AppInfo, RequestContext)
              end,
     {Result, proplists:get_value(session_id, RequestContext)};
-%% Really a MONAD would be good here too
-load_and_execute(development, {Controller, _, _} = Location, AppInfo, RequestContext) ->
+
+load_and_execute(development,
+		 {Controller, _, _} = Location,
+		 AppInfo = #boss_app_info{ application = Application}, 
+		 RequestContext) ->
     SessionID = proplists:get_value(session_id, RequestContext),
-    Application = AppInfo#boss_app_info.application,
-    Res1 = boss_load:load_mail_controllers(Application),
-    Res2 = case Res1 of
-        {ok, _} -> boss_load:load_libraries(Application);
-        _ -> Res1
-    end,
-    Res3 = case Res2 of
-        {ok, _} -> boss_load:load_view_lib_modules(Application);
-        _ -> Res2
-    end,
-    Res4 = case Res3 of
-        {ok, _} -> boss_load:load_services_websockets(Application);
-        _ -> Res3
-    end,
-    Res5 = case Res4 of
-        {ok, _} -> boss_load:load_web_controllers(Application);
-        _ -> Res4
-    end,
-    Res6 = case Res5 of
-        {ok, Controllers} ->
-            case boss_files:is_controller_present(Application, Controller,
-                    lists:map(fun boss_web_controller:atom_to_list/1, Controllers)) of
-                true ->
-                    case boss_load:load_models(Application) of
-                        {ok, _} ->
-                            execute_action(Location, AppInfo, RequestContext);
-                        {error, ErrorList} ->
-                            {boss_web_controller_render:render_errors(ErrorList, AppInfo, RequestContext), SessionID}
-                    end;
-                false ->
-                    {boss_web_controller_render:render_view(Location, AppInfo, RequestContext), SessionID}
-            end;
-        {error, ErrorList} ->
-            {boss_web_controller_render:render_errors(ErrorList, AppInfo, RequestContext), SessionID}
-           end,
-    Res6.
+    
+    Ops   = [fun boss_load:load_mail_controllers/1, 
+	     fun boss_load:load_libraries/1, 
+	     fun boss_load:load_view_lib_modules/1,
+	     fun boss_load:load_services_websockets/1, 
+	     fun boss_load:load_web_controllers/1],
+    Res  = fold_operations(Application, Ops),
+    run_controller(Controller, Location, AppInfo, Application,
+                          RequestContext, SessionID, Res),
+    
+
+run_controller(Controller, Location, AppInfo, Application,
+               RequestContext, SessionID, {ok,Controllers}) ->
+    
+    ControllerNames   = make_controller_names(Controllers),
+    
+    ControllerPresent = boss_files:is_controller_present(Application, Controller,
+					                 ControllerNames),
+    
+    run_controller_if_present(Location, AppInfo, Application,
+	                      RequestContext, SessionID, ControllerPresent);
+run_controller(_Controller, _Location, AppInfo, _Application,
+               RequestContext, SessionID, {error, ErrorList}) ->
+     {boss_web_controller_render:render_errors(ErrorList, AppInfo, RequestContext), SessionID}.
+
+make_controller_names(Controllers) ->
+    lists:map(fun atom_to_list/1, Controllers).
+
+
+run_controller_if_present(Location, AppInfo, Application,
+                          RequestContext, SessionID, true) ->
+	    case boss_load:load_models(Application) of
+		{ok, _} ->
+		    execute_action(Location, AppInfo, RequestContext);
+		{error, ErrorList} ->
+		    {boss_web_controller_render:render_errors(ErrorList, AppInfo, RequestContext), 
+		     SessionID}
+	    end;
+run_controller_if_present(Location, AppInfo, _Application,
+                          RequestContext, SessionID, false) ->
+	    {boss_web_controller_render:render_view(Location, AppInfo, RequestContext), SessionID}.
+
+
+-spec(fold_operations(types:application(), 
+		      [fun((types:application()) ->
+				 {ok, _}|{error,_})]) ->
+			      {ok,_}| {error, _}).
+fold_operations(Application, Ops) ->
+    lists:foldl(fun(Operation, {ok, _}) ->
+			Operation(Application);
+		   (_, Acc = {error,_}) ->
+		        Acc
+		end,
+		{ok, start},
+                Ops).
 
 %% @desc function to correct path errors in HTML output produced by Edoc
 correct_edoc_html(Edoc, AppInfo) ->
