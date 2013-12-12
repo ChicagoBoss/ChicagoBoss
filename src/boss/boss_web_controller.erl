@@ -347,22 +347,40 @@ apply_action(Req, Adapter, AdapterInfo, RequestContext2) ->
 					 'HEAD' -> 'GET';
 					 Method -> Method
 				     end,
-	    
-	    {Adapter:action(AdapterInfo, lists:keyreplace(method, 1, RC3, {method, EffectiveRequestMethod})), RC3};
+	  
+            RequestContext = lists:keyreplace(method, 1, RC3, {method, EffectiveRequestMethod}),
+	    {call_controller_action(Adapter, AdapterInfo, RequestContext),
+	     RC3};
 	{not_ok, RC3, NotOK} ->
 	    {NotOK, RC3}
     end.
 
-make_action_session_id(Controller, AppInfo, Req, SessionID, Adapter) ->
-    case SessionID of
-	undefined ->
-	    case Adapter:wants_session(AppInfo#boss_app_info.application, Controller,
-				       AppInfo#boss_app_info.controller_modules) of
-		true -> generate_session_id(Req);
-		_ -> SessionID
-	    end;
-	_ -> SessionID
+call_controller_action(Adapter, AdapterInfo, RequestContext) ->
+    process_flag(trap_exit, true),
+    Ref		= make_ref(),
+    CHandlerPid = self(),
+    _N = spawn_link(fun() ->
+			    R = Adapter:action(AdapterInfo, RequestContext),
+			    CHandlerPid !{msg,Ref, R}
+	       end),
+    receive
+	{msg, Ref, R} ->
+	    R;
+	{'EXIT',From, Reason} ->
+	    lager:error("Controller Process Exited ~p ~p", [From, Reason]),
+	    {output, "Process Error see console.log for details\n"}
     end.
+
+make_action_session_id(Controller, AppInfo, Req, undefined, Adapter) ->
+    case Adapter:wants_session(AppInfo#boss_app_info.application,
+			       Controller,
+			       AppInfo#boss_app_info.controller_modules) of
+	true -> generate_session_id(Req);
+	_    -> undefined
+    end;
+make_action_session_id(_Controller, _AppInfo, _Req, SessionID, _Adapter) ->
+    SessionID.
+    
 
 make_action_adapter(Controller, AppInfo, Adapters) ->
     lists:foldl(fun
