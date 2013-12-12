@@ -7,7 +7,7 @@
 -spec accept(_,_,[any()]) -> boolean().
 -spec wants_session(_,_,_) -> boolean().
 -spec init(types:application(),types:controller(),[types:controller()],_) -> 
-    {types:module()(),[{_,_}]}.
+    {module(),[{_,_}]}.
 -spec filters(atom() | string() | number(),{atom() | tuple(),[any()]},[any()],_) -> any().
 -spec before_filter({atom() | tuple(),[any()]},[any()]) -> any().
 -spec after_filter({atom() | tuple(),[any()]},[any()],_) -> any().
