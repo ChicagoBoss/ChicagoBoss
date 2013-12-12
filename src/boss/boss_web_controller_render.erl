@@ -118,8 +118,16 @@ expand_action_result({jsonp, Callback, Data}) ->
     {jsonp, Callback, Data, []};
 expand_action_result({output, Payload}) ->
     {output, Payload, []};
+expand_action_result({Directive, _}) when is_list(Directive) ->
+    lager:error("Action returned an invalid return ~p should be an atom not a string", [Directive]),
+    {output, "bad return value from controller action\n",[]};
+expand_action_result({Directive,_, _}) when is_list(Directive) ->
+    lager:error("Action returned an invalid return ~p should be an atom not a string", [Directive]),
+    {output, "bad return value from controller action\n",[]};
 expand_action_result(Other) ->
-    Other.
+    lager:error("Action returned an invalid return ~p ", [Other]),
+    {output, Other, []}.
+
 
 
 process_action_result({Location, RequestContext, _},
@@ -192,7 +200,7 @@ render_view({Controller, Template, _}, AppInfo, RequestContext, Variables, Heade
     Req			= proplists:get_value(request, RequestContext),
     SessionID		= proplists:get_value(session_id, RequestContext),
     TryExtensions	= boss_files:template_extensions(),
-    ?PRINT("Controller", Controller),
+ 
     LoadResult		= load_result(Controller, Template, AppInfo, TryExtensions),
     BossFlash		= boss_flash:get_and_clear(SessionID),
     SessionData		= boss_session:get_session_data(SessionID),

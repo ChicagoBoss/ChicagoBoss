@@ -279,7 +279,7 @@ generate_session_id(Request) ->
             undefined
     end.
 
-%TODO REFACTOR THIS
+
 execute_action({Controller, Action}, AppInfo, RequestContext, LocationTrail) ->
     execute_action({Controller, Action, []}, AppInfo, RequestContext, LocationTrail);
 
@@ -334,7 +334,10 @@ execute_action_inner(Controller, Action, Tokens, Location, AppInfo,
     RenderedResult                      = boss_web_controller_render:render_result(Location, AppInfo, RequestContext,
 							                           LocationTrail, Adapter, AdapterInfo,
 							                           ActionResult, RequestContext3),
-    FinalResult                         = apply_after_filters(Adapter, AdapterInfo, RequestContext3, RenderedResult),
+    FinalResult                         = apply_after_filters(Adapter, 
+							      AdapterInfo, 
+							      RequestContext3,
+							      RenderedResult),
     {FinalResult, SessionID1}.
 
 apply_action(Req, Adapter, AdapterInfo, RequestContext2) ->

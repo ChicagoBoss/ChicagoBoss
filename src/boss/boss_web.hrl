@@ -3,7 +3,7 @@
 -define(BUILTIN_CONTROLLER_FILTERS, [boss_lang_filter, boss_cache_page_filter, boss_cache_vars_filter]).
 -define(DEFAULT_WEB_SERVER, cowboy).
 -define(PRINT(N,V),
-	io:format("~s:~p (~p) ~s ~p~n", [?FILE, ?LINE, self(), N,V])).
+	lager:notice(" ~s ~p", [ N,V])).
 -record(state, {
         applications	= []	::[atom()],
         service_sup_pid		::pid(),
