@@ -27,13 +27,13 @@
    {'ok',module_types()}.
 -spec load_all_modules_and_emit_app_file(application(),atom() | binary() | [atom() | [any()] | char()]) -> 
    'ok' | {'error',atom()}.
--spec load_libraries(_) -> {'error',[any(),...]} | {'ok',[any()]}.
--spec load_mail_controllers(_) -> {'error',[any(),...]} | {'ok',[any()]}.
--spec load_models(_) -> {'error',[any(),...]} | {'ok',[any()]}.
--spec load_services_websockets(_) -> {'error',[any(),...]} | {'ok',[any()]}.
+-spec load_libraries(application()) -> {'error',[any(),...]} | {'ok',[any()]}.
+-spec load_mail_controllers(application()) -> {'error',[any(),...]} | {'ok',[any()]}.
+-spec load_models(application()) -> {'error',[any(),...]} | {'ok',[any()]}.
+-spec load_services_websockets(application()) -> {'error',[any(),...]} | {'ok',[any()]}.
 -spec load_view_if_dev(application(), atom() | binary() | [atom() | [any()] | char()],_,_) -> any().
--spec load_view_lib_modules(_) -> {'error',[any(),...]} | {'ok',[any()]}.
--spec load_web_controllers(_) -> {'error',[any(),...]} | {'ok',[any()]}.
+-spec load_view_lib_modules(application()) -> {'error',[any(),...]} | {'ok',[any()]}.
+-spec load_web_controllers(application()) -> {'error',[any(),...]} | {'ok',[any()]}.
 -spec module_is_loaded(atom()) -> boolean().
 -spec reload_all() -> [{'error',reload_error_status_values()}|
 		       {'module', atom() | tuple()}].
