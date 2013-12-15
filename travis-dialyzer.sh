@@ -1,18 +1,30 @@
 #!/bin/bash
 
 
-PLT=plt/cb.plt
+PLT=plt/cb-$RANDOM.plt
 echo "PLT File $PLT"
 export PATH=$PATH:/usr/local/bin:/usr/bin
 echo "Building PLT, may take a few minutes"
-dialyzer  --build_plt --apps kernel stdlib mnesia  inets ssl crypto \
+dialyzer  --build_plt --apps kernel stdlib\
+       --output_plt $PLT > /dev/null
+for app in  mnesia  inets ssl crypto \
        erts public_key runtime_tools compiler asn1 hipe gs\
-       syntax_tools edoc xmerl \
-       --statistics\
-       --output_plt $PLT
+       syntax_tools edoc xmerl 
+do 
+    echo $app
+    dialyzer --add_to_plt --apps $app\
+       --plt $PLT > /dev/null
+done
 rm -f deps/riak_*/ebin/*_pb.beam  
 echo "********************************************************************************"
-dialyzer --add_to_plt deps/*/ebin						--plt $PLT
+for app in $(ls deps/)
+do
+   echo "Adding $app"
+   dialyzer --add_to_plt --apps deps/$app \
+       --plt $PLT > /dev/null
+
+
+done
 echo "********************************************************************************"
 echo ""
 
