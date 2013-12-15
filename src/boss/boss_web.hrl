@@ -28,3 +28,7 @@
         controller_modules = []
     }).
 
+
+-ifdef(TEST).
+-compile(export_all).
+-endif.
