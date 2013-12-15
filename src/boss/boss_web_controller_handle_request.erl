@@ -41,27 +41,34 @@ handle_application(Req, ResponseMod, Request, FullUrl,  App) ->
    
     handle_result(Request, App, StaticPrefix, Url, Response, IsSpecialFile).
 
-handle_result(_Request, _App, _StaticPrefix, Url, Response, true) ->
 
+handle_result(_Request, _App, _StaticPrefix, Url, Response, _IsSpecialFile = true) ->
     (Response:file(Url)):build_response();
-handle_result(Request, App, StaticPrefix, Url, Response, false) ->
+handle_result(Request, App, StaticPrefix, Url, Response, _IsSpecialFile =  false) ->
     TestStaticPrefix = string:substr(Url, 1, length(StaticPrefix)),
     case TestStaticPrefix of
 	StaticPrefix ->
-	    [$/|File] = lists:nthtail(length(StaticPrefix), Url),
-	    IsDevelopment = boss_env:boss_env(),
-	    Sha1 = make_etag(App, StaticPrefix, File),
-            Response2 = dev_headers(Response, IsDevelopment),
-	    Response3 = Response2:file([$/|File]),
-	    Response4 = Response3:header("Etag", Sha1),
-	    F = Response4:build_response(),
-
-	    F;
+	    build_static_response(App, StaticPrefix, Url, Response);
 	_ ->
-	   
 	    build_dynamic_response(App, Request, Response, Url)
     end.
 
+build_static_response(App, StaticPrefix, Url, Response) ->
+    [$/ |File]		= lists:nthtail(length(StaticPrefix), Url),
+    IsDevelopment	= boss_env:boss_env(),
+    Sha1		= make_etag(App, StaticPrefix, File),
+    Ops  = [
+	    fun(Resp) -> dev_headers(Resp, IsDevelopment)	end,
+	    fun(Resp) ->  Resp:file([$/ |File])			end,
+	    fun(Resp) ->  Resp:header("Etag",Sha1)		end,
+	    fun(Resp) ->  Resp:build_response()			end
+	   ],
+    lists:foldl(fun(Operation, Resp) ->
+			Operation(Resp) 
+		end, Response, Ops).
+
+
+-spec(dev_headers(any(), production|development)-> any()).
 dev_headers(Response, development) ->
     Response:header("Cache-Control", "no-cache");
 dev_headers(Response, _) ->
@@ -128,12 +135,12 @@ handle_protocol(_)     -> identity.
 
 
 
-log_status_code(StatusCode, ErrorFormat, ErrorArgs) ->
-    case StatusCode of
-        500 -> error_logger:error_msg(ErrorFormat, ErrorArgs);
-        404 -> error_logger:warning_msg(ErrorFormat, ErrorArgs);
-        _   -> error_logger:info_msg(ErrorFormat, ErrorArgs)
-    end.
+log_status_code(500, ErrorFormat, ErrorArgs) ->
+    error_logger:error_msg(ErrorFormat, ErrorArgs);
+log_status_code(404, ErrorFormat, ErrorArgs) ->
+    error_logger:warning_msg(ErrorFormat, ErrorArgs);
+log_status_code(_, ErrorFormat, ErrorArgs) ->
+    error_logger:info_msg(ErrorFormat, ErrorArgs).
 
 process_stream_generator(_Req, _TransferEncoding, 'HEAD', _Generator, _Acc) ->
     ok;
