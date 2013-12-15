@@ -8,8 +8,8 @@ echo "Building PLT, may take a few minutes"
 dialyzer  --build_plt --apps kernel stdlib\
        --output_plt $PLT > /dev/null
 for app in  mnesia  inets ssl crypto \
-       erts public_key runtime_tools compiler asn1 hipe gs\
-       syntax_tools edoc xmerl 
+       erts public_key runtime_tools compiler asn1 hipe\
+       syntax_tools 
 do 
     echo $app
     dialyzer --add_to_plt --apps $app\
