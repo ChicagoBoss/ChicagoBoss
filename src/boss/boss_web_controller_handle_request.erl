@@ -30,12 +30,9 @@ handle_application(Req, ResponseMod, _Request, _FullUrl, undefined) ->
     Response1:build_response();
 handle_application(Req, ResponseMod, Request, FullUrl,  App) ->
     BaseURL		= boss_web:base_url(App),
-  
     DocRoot		= boss_files:static_path(App),
     StaticPrefix	= boss_web:static_prefix(App),
-   
     Url			= lists:nthtail(length(BaseURL), FullUrl),
-    
     Response		= simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
     SpecialFiles        = boss_env:get_env(App,
 					   static_files,
@@ -51,20 +48,30 @@ handle_result(Request, App, StaticPrefix, Url, Response, false) ->
     TestStaticPrefix = string:substr(Url, 1, length(StaticPrefix)),
     case TestStaticPrefix of
 	StaticPrefix ->
-	   
 	    [$/|File] = lists:nthtail(length(StaticPrefix), Url),
-	    Response2 = case boss_env:boss_env() of
-			    development ->
-				Response:header("Cache-Control", "no-cache");
-			    _ ->
-				Response
-			end,
+	    IsDevelopment = boss_env:boss_env(),
+	    Sha1 = make_etag(App, StaticPrefix, File),
+            Response2 = dev_headers(Response, IsDevelopment),
 	    Response3 = Response2:file([$/|File]),
-	    Response3:build_response();
+	    Response4 = Response3:header("Etag", Sha1),
+	    F = Response4:build_response(),
+
+	    F;
 	_ ->
 	   
 	    build_dynamic_response(App, Request, Response, Url)
     end.
+
+dev_headers(Response, development) ->
+    Response:header("Cache-Control", "no-cache");
+dev_headers(Response, _) ->
+    Response.
+    
+
+make_etag(App, StaticPrefix, File) ->
+    FilePath      = code:priv_dir(App) ++ "/" ++ StaticPrefix ++ "/" ++ File,
+    {ok, Content} = file:read_file(FilePath),
+    binary_to_list(base64:encode(crypto:hash(sha, Content))).
     
 
 %% TODO: Refactor
