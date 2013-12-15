@@ -21,8 +21,8 @@ send_template(Application, Action, Args, Callback) ->
             send_message(Application, FromAddress, ToAddress, Action, HeaderFields, Variables, [], Callback);
         {ok, FromAddress, ToAddress, HeaderFields, Variables, Options} -> 
             send_message(Application, FromAddress, ToAddress, Action, HeaderFields, Variables, Options, Callback);
-        nevermind ->
-            ok
+        {nevermind, Reason} ->
+            {ok, Reason}
     end.
 
 send(FromAddress, ToAddress, Subject, Body) ->
