@@ -1,3 +1,4 @@
+%-*-Erlang-*-
 {variables, [{appid, "bossapp"},
     {port, 8001},
     {src, "../ChicagoBoss"},

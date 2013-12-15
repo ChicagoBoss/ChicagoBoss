@@ -149,12 +149,12 @@ start_cmd(_RebarConf, BossConf, AppFile) ->
 start_dev_cmd(_RebarConf, BossConf, AppFile) ->
   rebar_log:log(info, "Generating dynamic start-dev command~n", []),
 
-  AppName = app_name(AppFile),
-  NameArg = vm_name_arg(BossConf, AppFile),
-  ErlCmd = erl_command(),
-  EbinDirs = all_ebin_dirs(BossConf, AppFile),
-  CookieOpt = cookie_option(BossConf),
-  VmArgs = vm_args(BossConf),
+  AppName	= app_name(AppFile),
+  NameArg	= vm_name_arg(BossConf, AppFile),
+  ErlCmd	= erl_command(),
+  EbinDirs	= all_ebin_dirs(BossConf, AppFile),
+  CookieOpt	= cookie_option(BossConf),
+  VmArgs	= vm_args(BossConf),
   io:format("~s -pa ~s -boss developing_app ~s -boot start_sasl -config boss ~s -s reloader -s lager -s boss ~s~s~n",
     [ErlCmd, string:join(EbinDirs, " -pa "), AppName, CookieOpt, NameArg, VmArgs]),
   ok.
