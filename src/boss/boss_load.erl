@@ -304,10 +304,14 @@ load_view_lib_if_old(Application, TranslatorPid) ->
 
 load_views(Application, OutDir, TranslatorPid) ->
     ModuleList = lists:foldr(fun(Path, Acc) -> 
-                TemplateAdapter = boss_files:template_adapter_for_extension(
-                    filename:extension(Path)),
-                {ok, Module} = compile_view(Application, Path, TemplateAdapter, OutDir, TranslatorPid),
-                [Module|Acc]
+                TemplateAdapter = boss_files:template_adapter_for_extension(filename:extension(Path)),
+                case compile_view(Application, Path, TemplateAdapter, OutDir, TranslatorPid) of
+                    {ok, Module} -> 
+                        [Module|Acc];
+                    {error, Error} -> 
+                        error_logger:error_report(Error),
+                        [undefined|Acc]
+                end
         end, [], boss_files:view_file_list()),
     {ok, ModuleList}.
 
