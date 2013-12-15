@@ -14,10 +14,10 @@
         module_is_loaded/1,
         reload_all/0
     ]).
-
+-include("boss_web.hrl").
 -type module_types() :: [{'controller_modules' | 'lib_modules' | 'mail_modules' | 'model_modules' | 'test_modules' | 'view_lib_helper_modules' | 'view_lib_tags_modules' | 'view_modules' | 'websocket_modules',maybe_improper_list()},...].
 -type reload_error_status_values() :: 'badfile' | 'native_code' | 'nofile' | 'not_purged' | 'on_load' | 'sticky_directory'.
--type application() :: atom()|string()|number().
+-type application() :: types:application().
 
      
 -spec incoming_mail_controller_module(application()) -> atom().
@@ -44,8 +44,11 @@ load_all_modules(Application, TranslatorSupPid) ->
     load_all_modules(Application, TranslatorSupPid, undefined).
 
 load_all_modules(Application, TranslatorSupPid, OutDir) ->
+    lager:info("Loading application ~p", [Application]),
     [{_, TranslatorPid, _, _}]	= supervisor:which_children(TranslatorSupPid),
-    {ok, TestModules}		= load_dirs(boss_files:test_path(), Application, OutDir, fun compile/2),
+    {ok, TestModules}		= load_dirs(boss_files:test_path(),
+					    Application, 
+					    OutDir, fun compile/2),
     {ok, LibModules}		= load_libraries(Application, OutDir),
     {ok, WebSocketModules}	= load_services_websockets(Application, OutDir),
     {ok, MailModules}		= load_mail_controllers(Application, OutDir),
@@ -59,18 +62,19 @@ load_all_modules(Application, TranslatorSupPid, OutDir) ->
 		  {mail_modules, MailModules}, {controller_modules, ControllerModules},
 		  {model_modules, ModelModules}, {view_lib_tags_modules, ViewLibModules},
 		  {view_lib_helper_modules, ViewHelperModules}, {view_modules, ViewModules}],
+    lager:notice("Loading Modules ~p", [AllModules]),
     {ok, AllModules}.
 
 load_all_modules_and_emit_app_file(AppName, OutDir) ->
     application:start(elixir),
-    {ok, TranslatorSupPid} = boss_translator:start([{application, AppName}]),
-    {ok, ModulePropList} = load_all_modules(AppName, TranslatorSupPid, OutDir),
-    AllModules = lists:foldr(fun({_, Mods}, Acc) -> Mods ++ Acc end, [], ModulePropList),
-	DotAppSrc = boss_files:dot_app_src(AppName),
-    {ok, [{application, AppName, AppData}]} = file:consult(DotAppSrc),
-    AppData1 = lists:keyreplace(modules, 1, AppData, {modules, AllModules}),
-    Vsn = proplists:get_value(vsn, AppData1, []),
-    ComputedVsn = case vcs_vsn_cmd(Vsn) of
+    {ok, TranslatorSupPid}			= boss_translator:start([{application, AppName}]),
+    {ok, ModulePropList}			= load_all_modules(AppName, TranslatorSupPid, OutDir),
+    AllModules					= lists:foldr(fun({_, Mods}, Acc) -> Mods ++ Acc end, [], ModulePropList),
+    DotAppSrc					= boss_files:dot_app_src(AppName),
+    {ok, [{application, AppName, AppData}]}	= file:consult(DotAppSrc),
+    AppData1					= lists:keyreplace(modules, 1, AppData, {modules, AllModules}),
+    Vsn						= proplists:get_value(vsn, AppData1, []),
+    ComputedVsn					= case vcs_vsn_cmd(Vsn) of
         {unknown, Val} -> Val;
         Cmd ->
             VsnString = os:cmd(Cmd),
@@ -215,11 +219,12 @@ view_doc_root(ViewPath) ->
         [boss_files:web_view_path(), boss_files:mail_view_path()]).
 
 compile_view_dir_erlydtl(Application, LibPath, Module, OutDir, TranslatorPid) ->
-    TagHelpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_tag_helper_list(Application)),
-    FilterHelpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_filter_helper_list(Application)),
-    ExtraTagHelpers = boss_env:get_env(template_tag_modules, []),
-    ExtraFilterHelpers = boss_env:get_env(template_filter_modules, []),
-    Res = erlydtl_compiler:compile_dir(LibPath, Module,
+    TagHelpers		= lists:map(fun erlang:list_to_atom/1, boss_files:view_tag_helper_list(Application)),
+    FilterHelpers	= lists:map(fun erlang:list_to_atom/1, boss_files:view_filter_helper_list(Application)),
+    ExtraTagHelpers	= boss_env:get_env(template_tag_modules, []),
+    ExtraFilterHelpers	= boss_env:get_env(template_filter_modules, []),
+    io:format("~nCompile Modules ~p ~n~p~n~n", [LibPath,Module]),
+    Res			= erlydtl_compiler:compile_dir(LibPath, Module,
         [{doc_root, view_doc_root(LibPath)}, {compiler_options, []}, {out_dir, OutDir}, 
             {custom_tags_modules, TagHelpers ++ ExtraTagHelpers ++ [boss_erlydtl_tags]},
             {custom_filters_modules, FilterHelpers ++ ExtraFilterHelpers},
@@ -237,14 +242,14 @@ compile_view_dir_erlydtl(Application, LibPath, Module, OutDir, TranslatorPid) ->
 compile_view(Application, ViewPath, TemplateAdapter, OutDir, TranslatorPid) ->
     case file:read_file_info(ViewPath) of
         {ok, _} ->
-            Module = view_module(Application, ViewPath),
-            HelperDirModule = view_custom_tags_dir_module(Application),
-            Locales = boss_files:language_list(Application),
-            DocRoot = view_doc_root(ViewPath),
-            TagHelpers = lists:map(fun erlang:list_to_atom/1, 
-                boss_files:view_tag_helper_list(Application)),
-            FilterHelpers = lists:map(fun erlang:list_to_atom/1, 
-                boss_files:view_filter_helper_list(Application)),
+            Module		= view_module(Application, ViewPath),
+            HelperDirModule	= view_custom_tags_dir_module(Application),
+            Locales		= boss_files:language_list(Application),
+            DocRoot		= view_doc_root(ViewPath),
+            TagHelpers		= lists:map(fun erlang:list_to_atom/1, 
+					    boss_files:view_tag_helper_list(Application)),
+            FilterHelpers	= lists:map(fun erlang:list_to_atom/1, 
+					    boss_files:view_filter_helper_list(Application)),
             TemplateAdapter:compile_file(ViewPath, Module, [
                     {out_dir, OutDir}, 
                     {doc_root, DocRoot},
@@ -303,13 +308,25 @@ load_view_lib_if_old(Application, TranslatorPid) ->
     end.
 
 load_views(Application, OutDir, TranslatorPid) ->
-    ModuleList = lists:foldr(fun(Path, Acc) -> 
-                TemplateAdapter = boss_files:template_adapter_for_extension(
-                    filename:extension(Path)),
-                {ok, Module} = compile_view(Application, Path, TemplateAdapter, OutDir, TranslatorPid),
-                [Module|Acc]
-        end, [], boss_files:view_file_list()),
+    ModuleList = lists:foldr(load_views_inner(Application, OutDir,
+				              TranslatorPid),
+			     [], boss_files:view_file_list()),
     {ok, ModuleList}.
+
+load_views_inner(Application, OutDir, TranslatorPid) ->
+    fun(File, Acc) ->
+	    TemplateAdapter = boss_files:template_adapter_for_extension(
+				filename:extension(File)),
+	    ViewR =compile_view(Application, File, TemplateAdapter, OutDir, TranslatorPid),
+	    case ViewR of
+		{ok, Module} ->
+		    [Module|Acc];
+		{error, Reason} ->
+		    lager:error("Unable to compile ~p because of ~p",
+				[File, Reason]),
+		    Acc
+	    end
+    end.
 
 load_view_if_old(Application, ViewPath, Module, TemplateAdapter, TranslatorPid) ->
     case load_view_lib_if_old(Application, TranslatorPid) of
