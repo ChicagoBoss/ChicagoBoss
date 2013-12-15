@@ -4,6 +4,7 @@
 -define(DEFAULT_WEB_SERVER, cowboy).
 -define(PRINT(N,V),
 	lager:notice(" ~s ~p", [ N,V])).
+-include_lib("eunit/include/eunit.hrl").
 -record(state, {
         applications	= []	::[atom()],
         service_sup_pid		::pid(),
@@ -28,3 +29,7 @@
         controller_modules = []
     }).
 
+
+-ifdef(TEST).
+-compile(export_all).
+-endif.

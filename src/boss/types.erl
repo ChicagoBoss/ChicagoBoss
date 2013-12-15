@@ -1,7 +1,7 @@
 -module(types).
 
 -type execution_mode()		:: 'development' | 'production'.
--type application()  	        :: any().
+-type application()  	        :: atom().
 -type language()		:: any().
 -type webserver()               :: 'cowboy' | 'mochiweb_http'.
 -type cb_node()                 :: node().
