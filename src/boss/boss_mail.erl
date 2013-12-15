@@ -21,7 +21,11 @@ send_template(Application, Action, Args, Callback) ->
             send_message(Application, FromAddress, ToAddress, Action, HeaderFields, Variables, [], Callback);
         {ok, FromAddress, ToAddress, HeaderFields, Variables, Options} -> 
             send_message(Application, FromAddress, ToAddress, Action, HeaderFields, Variables, Options, Callback);
+        {nevermind, Reason} ->
+            lager:info("Mail Not sent because of ~p", [Reason]),
+            ok;
         nevermind ->
+            lager:info("Mail Not sent no reason"),
             ok
     end.
 
@@ -36,9 +40,9 @@ send(FromAddress, ToAddress, Subject, Body, BodyArgs, Callback) ->
 
 do_send(FromAddress, ToAddress, Subject, Body, Callback) ->
     MessageHeader = build_message_header([
-            {"Subject", Subject},
-            {"To", ToAddress},
-            {"From", FromAddress}], "text/plain"), 
+                                          {"Subject", Subject},
+                                          {"To", ToAddress},
+                                          {"From", FromAddress}], "text/plain"), 
     gen_server:call(boss_mail, {deliver, FromAddress, ToAddress, 
             fun() -> [MessageHeader, "\r\n", convert_unix_newlines_to_dos(Body)] end,
             Callback}).
@@ -48,10 +52,10 @@ send_message(App, FromAddress, ToAddress, Action, HeaderFields, Variables, Optio
     gen_server:call(boss_mail, {deliver, FromAddress, ToAddress, BodyFun, Callback}).
 
 build_message(App, Action, HeaderFields, Variables, Options) ->
-    ContentLanguage = proplists:get_value("Content-Language", HeaderFields),
-    EffectiveAction = proplists:get_value(template, Options, Action),
-    Attachments = proplists:get_value(attachments, Options, []),
-    {MimeType, MessageBody} = build_message_body_attachments(App, EffectiveAction, Variables, Attachments, ContentLanguage),
+    ContentLanguage             = proplists:get_value("Content-Language", HeaderFields),
+    EffectiveAction             = proplists:get_value(template, Options, Action),
+    Attachments                 = proplists:get_value(attachments, Options, []),
+    {MimeType, MessageBody}     = build_message_body_attachments(App, EffectiveAction, Variables, Attachments, ContentLanguage),
     MessageHeader = build_message_header(HeaderFields, MimeType),
     [MessageHeader, "\r\n", convert_unix_newlines_to_dos(MessageBody)].
 
