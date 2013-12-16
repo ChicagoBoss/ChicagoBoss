@@ -442,7 +442,9 @@ vcs_vsn_cmd(git) ->
 vcs_vsn_cmd(hg)  -> "hg identify -i";
 vcs_vsn_cmd(bzr) -> "bzr revno";
 vcs_vsn_cmd(svn) -> "svnversion";
-vcs_vsn_cmd("semver") -> vcs_vsn_cmd(semver);
+vcs_vsn_cmd("semver") ->
+    lager:errror("Use atom 'semver' not string \"semver\""),
+    vcs_vsn_cmd(semver);
 vcs_vsn_cmd(semver) ->
     case catch (rebar_vsn_plugin:make_vsn ()) of
         {'EXIT', _} -> {unknown, "semver"};
