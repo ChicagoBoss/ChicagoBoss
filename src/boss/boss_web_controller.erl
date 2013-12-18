@@ -363,13 +363,32 @@ call_controller_action(Adapter, AdapterInfo, RequestContext) ->
 			    R = Adapter:action(AdapterInfo, RequestContext),
 			    CHandlerPid !{msg,Ref, R}
 	       end),
+    receive_controller_response(Ref, 2).
+
+receive_controller_response(Ref, 1) ->
     receive
-	{msg, Ref, R} ->
-	    R;
-	{'EXIT',From, Reason} ->
-	    lager:error("Controller Process Exited ~p ~p", [From, Reason]),
-	    {output, "Process Error see console.log for details\n"}
+        {msg, Ref, R} ->
+            R;
+
+        {'EXIT',From, Reason} ->        
+            lager:error("Controller Process Exited ~p ~p", [From, Reason]),
+            {output, "Process Error see console.log for details\n"}
+    end;
+
+receive_controller_response(Ref, 2) ->
+    receive
+        {msg, Ref, R} ->
+            R;
+
+        {'EXIT',_From, normal} ->        
+            %%lager:error("2 Controller Process Exited normal ~p but response not yet receive", [From]),
+            receive_controller_response(Ref, 1);
+
+        {'EXIT',From, Reason} ->        
+            lager:error("Controller Process Exited ~p ~p", [From, Reason]),
+            {output, "Process Error see console.log for details\n"}
     end.
+
 
 make_action_session_id(Controller, AppInfo, Req, undefined, Adapter) ->
     case Adapter:wants_session(AppInfo#boss_app_info.application,
