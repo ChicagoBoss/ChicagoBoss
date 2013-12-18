@@ -363,26 +363,17 @@ call_controller_action(Adapter, AdapterInfo, RequestContext) ->
 			    R = Adapter:action(AdapterInfo, RequestContext),
 			    CHandlerPid !{msg,Ref, R}
 	       end),
-    receive_controller_response(Ref, 2).
+    receive_controller_response(Ref).
 
-receive_controller_response(Ref, 1) ->
-    receive
-        {msg, Ref, R} ->
-            R;
-
-        {'EXIT',From, Reason} ->        
-            lager:error("Controller Process Exited ~p ~p", [From, Reason]),
-            {output, "Process Error see console.log for details\n"}
-    end;
-
-receive_controller_response(Ref, 2) ->
+-spec(receive_controller_response(reference()) ->any()).
+receive_controller_response(Ref) ->
     receive
         {msg, Ref, R} ->
             R;
 
         {'EXIT',_From, normal} ->        
             %%lager:error("2 Controller Process Exited normal ~p but response not yet receive", [From]),
-            receive_controller_response(Ref, 1);
+            receive_controller_response(Ref);
 
         {'EXIT',From, Reason} ->        
             lager:error("Controller Process Exited ~p ~p", [From, Reason]),

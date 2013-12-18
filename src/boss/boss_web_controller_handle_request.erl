@@ -67,6 +67,7 @@ build_static_response(App, StaticPrefix, Url, Response) ->
 			Operation(Resp) 
 		end, Response, Ops).
 
+    
 
 -spec(dev_headers(any(), production|development)-> any()).
 dev_headers(Response, development) ->
