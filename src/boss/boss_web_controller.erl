@@ -31,7 +31,7 @@ terminate(_Reason, State) ->
     lists:map(fun(AppInfo) ->
                 stop_init_scripts(AppInfo#boss_app_info.application, AppInfo#boss_app_info.init_data)
         end, State#state.applications),
-    Services = [error_logger, boss_translator, boss_router, boss_model_manager, boss_cache, mochiweb_http],
+    Services = [ boss_translator, boss_router, boss_model_manager, boss_cache, mochiweb_http],
     [Service:stop() ||Service <- Services],
     application:stop(elixir).
 

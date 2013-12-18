@@ -3,8 +3,6 @@
 -include_lib("eunit/include/eunit.hrl").
 
 
-load_and_execute_development_test() ->
-    ?assert(true). 
 
 perms([]) -> [[]];
 perms(L)  -> [[H|T] || H <- L, T <- perms(L--[H])].

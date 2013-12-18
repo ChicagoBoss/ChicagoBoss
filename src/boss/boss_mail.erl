@@ -2,6 +2,28 @@
 -export([start/1, stop/0, send_template/3, send_template/4, 
         send/4, send/5, send/6]).
 
+-spec start(_) -> any().
+-spec stop() -> 'ok'.
+-spec send_template(types:application(),atom(),[any()]) -> any().
+-spec send_template(types:application(),atom(),[any()],_) -> any().
+-spec send(_,_,_,_) -> any().
+-spec send(_,_,_,atom() | binary() | string(),[any()]) -> any().
+-spec send(_,_,_,atom() | binary() | string(),[any()],_) -> any().
+-spec do_send(_,_,_,_,_) -> any().
+-spec send_message(_,_,_,atom(),_,_,_,_) -> any().
+-spec build_message(_,atom(),[{_,_}],_,[any()]) -> [[any()],...].
+-spec convert_unix_newlines_to_dos(binary() | [any()]) -> [any()].
+-spec convert_unix_newlines_to_dos([any()],[any()]) -> [any()].
+-spec build_message_header([{_,_}],[[[any()] | 61 | 95] | 1..255,...]) -> [[any(),...]].
+-spec add_fields([{_,_}],[any()],[[any(),...]]) -> [[any(),...]].
+-spec build_message_body_attachments(_,_,_,[{_,_} | {_,_,binary() | maybe_improper_list(any(),binary() | [])}],_) -> 'undefined' | {[[[any()] | 61 | 95] | 1..255,...],_}.
+-spec build_message_body(_,_,_,_) -> 'undefined' | {[[[any()] | 61 | 95] | 1..255,...],_}.
+-spec render_view(types:application(),{_,[104 | 108 | 109 | 116 | 120,...]},_,_) -> any().
+-spec render_multipart_view([{_,_} | {_,_,binary() | maybe_improper_list(any(),binary() | [])},...],[[[any()] | 61 | 95],...]) -> [[any(),...],...].
+-spec render_multipart_view1([{_,_} | {_,_,binary() | maybe_improper_list(any(),binary() | [])}],[[[any()] | 61 | 95],...]) -> [any(),...].
+-spec wrap_to_76(binary()) -> [binary(),...].
+-spec wrap_to_76(binary(),[<<_:16,_:_*592>>]) -> binary().
+
 start(Options) ->
     boss_mail_sup:start_link(Options).
 
@@ -21,7 +43,11 @@ send_template(Application, Action, Args, Callback) ->
             send_message(Application, FromAddress, ToAddress, Action, HeaderFields, Variables, [], Callback);
         {ok, FromAddress, ToAddress, HeaderFields, Variables, Options} -> 
             send_message(Application, FromAddress, ToAddress, Action, HeaderFields, Variables, Options, Callback);
+        {nevermind, Reason} ->
+            lager:info("Mail Not sent because of ~p", [Reason]),
+	    {ok, Reason};
         nevermind ->
+            lager:info("Mail Not sent no reason"),
             ok
     end.
 
@@ -36,9 +62,9 @@ send(FromAddress, ToAddress, Subject, Body, BodyArgs, Callback) ->
 
 do_send(FromAddress, ToAddress, Subject, Body, Callback) ->
     MessageHeader = build_message_header([
-            {"Subject", Subject},
-            {"To", ToAddress},
-            {"From", FromAddress}], "text/plain"), 
+                                          {"Subject", Subject},
+                                          {"To", ToAddress},
+                                          {"From", FromAddress}], "text/plain"), 
     gen_server:call(boss_mail, {deliver, FromAddress, ToAddress, 
             fun() -> [MessageHeader, "\r\n", convert_unix_newlines_to_dos(Body)] end,
             Callback}).
@@ -48,10 +74,10 @@ send_message(App, FromAddress, ToAddress, Action, HeaderFields, Variables, Optio
     gen_server:call(boss_mail, {deliver, FromAddress, ToAddress, BodyFun, Callback}).
 
 build_message(App, Action, HeaderFields, Variables, Options) ->
-    ContentLanguage = proplists:get_value("Content-Language", HeaderFields),
-    EffectiveAction = proplists:get_value(template, Options, Action),
-    Attachments = proplists:get_value(attachments, Options, []),
-    {MimeType, MessageBody} = build_message_body_attachments(App, EffectiveAction, Variables, Attachments, ContentLanguage),
+    ContentLanguage             = proplists:get_value("Content-Language", HeaderFields),
+    EffectiveAction             = proplists:get_value(template, Options, Action),
+    Attachments                 = proplists:get_value(attachments, Options, []),
+    {MimeType, MessageBody}     = build_message_body_attachments(App, EffectiveAction, Variables, Attachments, ContentLanguage),
     MessageHeader = build_message_header(HeaderFields, MimeType),
     [MessageHeader, "\r\n", convert_unix_newlines_to_dos(MessageBody)].
 
