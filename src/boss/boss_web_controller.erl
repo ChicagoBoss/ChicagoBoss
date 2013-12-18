@@ -31,7 +31,7 @@ terminate(_Reason, State) ->
     lists:map(fun(AppInfo) ->
                 stop_init_scripts(AppInfo#boss_app_info.application, AppInfo#boss_app_info.init_data)
         end, State#state.applications),
-    Services = [error_logger, boss_translator, boss_router, boss_model_manager, boss_cache, mochiweb_http],
+    Services = [ boss_translator, boss_router, boss_model_manager, boss_cache, mochiweb_http],
     [Service:stop() ||Service <- Services],
     application:stop(elixir).
 
@@ -363,13 +363,23 @@ call_controller_action(Adapter, AdapterInfo, RequestContext) ->
 			    R = Adapter:action(AdapterInfo, RequestContext),
 			    CHandlerPid !{msg,Ref, R}
 	       end),
+    receive_controller_response(Ref).
+
+-spec(receive_controller_response(reference()) ->any()).
+receive_controller_response(Ref) ->
     receive
-	{msg, Ref, R} ->
-	    R;
-	{'EXIT',From, Reason} ->
-	    lager:error("Controller Process Exited ~p ~p", [From, Reason]),
-	    {output, "Process Error see console.log for details\n"}
+        {msg, Ref, R} ->
+            R;
+
+        {'EXIT',_From, normal} ->        
+            %%lager:error("2 Controller Process Exited normal ~p but response not yet receive", [From]),
+            receive_controller_response(Ref);
+
+        {'EXIT',From, Reason} ->        
+            lager:error("Controller Process Exited ~p ~p", [From, Reason]),
+            {output, "Process Error see console.log for details\n"}
     end.
+
 
 make_action_session_id(Controller, AppInfo, Req, undefined, Adapter) ->
     case Adapter:wants_session(AppInfo#boss_app_info.application,

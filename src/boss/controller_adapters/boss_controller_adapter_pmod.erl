@@ -87,13 +87,13 @@ action({_, ExportStrings} = Info, RequestContext) ->
     RequestMethod	= proplists:get_value(method, RequestContext),
     Tokens		= proplists:get_value(tokens, RequestContext),
     AuthInfo		= proplists:get_value('_before', RequestContext, RequestContext),
-
+    ActionAtom          = list_to_atom(Action),
+    lager:info("Request Method ~p~n", [RequestMethod]),
+    lager:info("Tokens", [Tokens]),
     case proplists:get_value(Action, ExportStrings) of
         3 ->
-            ActionAtom = list_to_atom(Action),
             ControllerInstance:ActionAtom(RequestMethod, Tokens);
         4 ->
-            ActionAtom = list_to_atom(Action),
             ControllerInstance:ActionAtom(RequestMethod, Tokens, AuthInfo);
         _ ->
 	    {CMod, _} = ControllerInstance,

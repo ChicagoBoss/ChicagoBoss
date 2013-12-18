@@ -26,3 +26,19 @@ make_action_session_id_test() ->
 								       {}, 
 								       undefined, 
 								       ?MODULE)).
+
+receive_controller_response_no_exit_test() ->
+    Ref = make_ref(),
+    self() ! {msg, Ref, ok},
+    ?assertEqual(ok, boss_web_controller:receive_controller_response(Ref)).
+
+receive_controller_response_normal_exit_test() ->
+    Ref = make_ref(),
+    self() ! {'EXIT', {}, normal},
+    self() ! {msg, Ref, ok},
+    ?assertEqual(ok, boss_web_controller:receive_controller_response(Ref)).
+
+receive_controller_response_crash_exit_test() ->
+    Ref = make_ref(),
+    self() ! {'EXIT', Ref, ok},
+    ?assertMatch({output,_}, boss_web_controller:receive_controller_response(Ref)).

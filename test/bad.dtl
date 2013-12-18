@@ -1,0 +1,6 @@
+<h1>{{test}</h1>
+<div>
+  This is a broken DTL file, to ensure that the system does something
+  that makes sense when we hit one
+</div> 
+
