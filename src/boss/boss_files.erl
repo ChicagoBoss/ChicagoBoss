@@ -136,7 +136,7 @@ websocket_list(AppName) ->
 model_list(AppName) ->
     case boss_env:is_developing_app(AppName) of
         true ->
-            module_list(AppName, model_path());
+            model_list(AppName, model_path());
         false ->
             lists:map(fun atom_to_list/1, boss_env:get_env(AppName, model_modules, []))
     end.
@@ -278,4 +278,55 @@ module_list1([Dir|Rest], Application, ModuleAcc) ->
 
 dot_app_src(AppName) ->
 	filename:join(["src", lists:concat([AppName, ".app.src"])]).
+
+% add sub folder, ex: 100 models need sub folder
+% don't want to change the behavior for other module
+model_list(Application, Dirs) ->
+    model_list1(Dirs, Application, []).
+model_list1([], _Application, ModuleAcc) ->
+    lists:sort(ModuleAcc);
+model_list1([Dir|Rest], Application, ModuleAcc) ->
+    CompilerAdapters = compiler_adapters(),
+    ExtensionProplist = lists:foldl(fun
+            (Adapter, Acc) ->
+                lists:map(fun(Ext) -> {Ext, Adapter} end, Adapter:file_extensions()) ++ Acc
+        end, [], CompilerAdapters),
+    ModuleAcc1 = 
+        lists:foldl(
+          fun("."++_, Acc) -> Acc;
+             (File, Acc) ->
+                  case filename:extension(File) of 
+                      [$.|Extension] ->                                       
+                          case proplists:get_value(Extension, ExtensionProplist) of
+                              undefined -> 
+                                  Acc;
+                              Adapter -> 
+                                  [Adapter:module_name_for_file(Application, File)|Acc]
+                          end;
+                      _ -> []
+                  end                                       
+          end, 
+          ModuleAcc, find_file(Dir, ModuleAcc)),
+    module_list1(Rest, Application, ModuleAcc1).
+
+find_file(Dir, ModuleAcc) ->
+    case file:list_dir(Dir) of
+        {ok, Files} ->                              
+            find_file(Files, Dir, [], ModuleAcc);
+        _ -> 
+            ModuleAcc
+    end.
+
+find_file([], _, Acc, _ModuleAcc) -> Acc;
+find_file([H|T], Root, Acc, ModuleAcc) -> 
+    Path = filename:join(Root, H),
+    case filelib:is_dir(Path) of 
+        false ->
+            find_file(T, Root, [Path] ++ Acc, ModuleAcc);
+        true ->
+            find_file(T, Root, find_file(Path, ModuleAcc) ++ Acc, ModuleAcc)
+    end.
+    
+	
+	
 
