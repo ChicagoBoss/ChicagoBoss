@@ -3,6 +3,15 @@
 -export([boss_env/0, setup_boss_env/0, get_env/2, get_env/3]).
 -export([master_node/0, is_master_node/0, is_developing_app/1]).
 
+
+-spec boss_env()					-> any().
+-spec get_env(atom(),_)					-> any().
+-spec get_env(atom(),atom(),_)				-> any().
+-spec is_developing_app(types:application())	        -> boolean().
+-spec is_master_node()					-> boolean().
+-spec master_node()					-> any().
+-spec setup_boss_env()					-> types:execution_mode().
+
 boss_env() ->
     case get(boss_environment) of
         undefined -> setup_boss_env();
@@ -11,7 +20,7 @@ boss_env() ->
 
 setup_boss_env() ->	
     case boss_load:module_is_loaded(reloader) of
-        true -> put(boss_environment, development), development;
+        true  -> put(boss_environment, development), development;
         false -> put(boss_environment, production), production
     end.			
 
@@ -35,6 +44,6 @@ is_master_node() ->
     master_node() =:= erlang:node().
 
 is_developing_app(AppName) ->
-    BossEnv = boss_env:boss_env(),
-    DevelopingApp = boss_env:get_env(developing_app, undefined),
-    AppName =:= DevelopingApp andalso BossEnv =:= development.
+    BossEnv		= boss_env:boss_env(),
+    DevelopingApp	= boss_env:get_env(developing_app, undefined),
+    AppName		=:= DevelopingApp andalso BossEnv =:= development.

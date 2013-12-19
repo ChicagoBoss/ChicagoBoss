@@ -5,7 +5,7 @@
 -export([lookup_session_value/3, set_session_value/4, delete_session/2, delete_session_value/3]).
 
 -define(TABLE, boss_session).
--define(TIMEOUT, 20).
+-define(TIMEOUT, 1000).
 
 -record(boss_session, {sid,data,ttl}).
 
@@ -19,7 +19,8 @@ stop(_) ->
     ok.
 
 init(_) ->
-    error_logger:info_msg("Starting distributed session mnesia storage~n"),	
+    error_logger:info_msg("Starting distributed session mnesia storage~n"),
+    ok = ensure_schema(),  % Expects Mnesia to be stopped
     mnesia:start(),
     %%Checks for table, after some time tries to recreate it
     case mnesia:wait_for_tables([?TABLE], ?TIMEOUT) of
@@ -81,6 +82,14 @@ delete_session_value(_, Sid, Key) ->
 %%--------------------------------------------------------------------
 %%% Internal functions
 %%--------------------------------------------------------------------
+ensure_schema() ->
+    Nodes = mnesia_nodes(),
+    case mnesia:create_schema(Nodes) of
+        ok -> ok;
+        {error, {_, {already_exists, _}}} -> ok;
+        Error -> Error
+    end.
+
 create_session_storage()->
     Nodes = mnesia_nodes(),
     error_logger:info_msg("Creating mnesia table for nodes ~p~n",  [Nodes]),

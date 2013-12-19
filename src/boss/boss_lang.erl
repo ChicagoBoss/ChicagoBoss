@@ -9,6 +9,24 @@
         update_po/1,
         update_po/4]).
 
+-type application() :: types:application().
+-type lang() ::types:language().
+-type mode() :: all|filled.
+
+-spec create_lang(application(), lang())		-> 'ok' | {'error',atom()}.
+-spec delete_lang(application(), lang())		-> 'ok'.
+-spec escape_quotes([any()])				-> [any()].
+-spec extract_po_strings(application(),lang())		-> [{[any()],[any()]}].
+-spec extract_strings(application())			-> [any()].
+-spec extract_strings(application(),lang())		-> {[any()],[{_,_}]}.
+-spec lang_write_to_file(atom() | pid() | 
+			 {'file_descriptor',atom() | tuple(),_},
+			 [any()],[any()])	
+							-> 'ok' | {'error',atom()}.
+-spec update_po(application())				-> ['ok' | {'error',atom()}].
+-spec update_po(application(),lang(),mode(),[any()])	-> 'ok' | {'error',atom()}.
+
+
 create_lang(App, Lang) ->
     LangFile = boss_files:lang_path(App, Lang),
     {ok, IODevice} = file:open(LangFile, [write]),
@@ -84,7 +102,10 @@ lang_write_multiline_to_file(IODevice, [Token|Rest]) ->
 	lang_write_multiline_to_file(IODevice, Rest).
 
 extract_strings(App) ->
-    lists:usort(extract_model_strings(App) ++ extract_view_strings(App)).
+    ModuleStrings = extract_module_strings(App),
+    ViewStrings = extract_view_strings(App),
+    ModelStrings = extract_model_strings(App),
+    lists:usort(ModelStrings ++ ViewStrings ++ ModuleStrings).
 
 extract_strings(App, Lang) ->
     AllStrings = extract_strings(App),
@@ -142,6 +163,28 @@ extract_view_strings(App) ->
                         Module:translatable_strings() ++ Module:translated_blocks() ++ Acc
                 end, [], boss_env:get_env(App, view_modules, []) ++ boss_env:get_env(App, view_lib_tags_modules, []))
     end.
+
+extract_module_strings(App) when is_atom(App)->
+    ModulesFiles = boss_files:lib_module_list(App),
+    lists:foldl(fun(File, Acc) ->                                 
+                        Module = list_to_atom(File),
+                        case lists:keysearch(translatable_strings, 
+                                             1, 
+                                             Module:module_info(exports)) of
+                            {value, {translatable_strings, N}} ->
+                                case N of
+                                    1 -> %%Pmode
+                                        DummyModule = boss_model_manager:dummy_instance(Module),
+                                        DummyModule:translatable_strings();                         
+                                    0 -> 
+                                        Module:translatable_strings()
+                                end ++ Acc;
+                            false ->
+                                Acc
+                        end
+                end,
+                [], 
+                ModulesFiles).
 
 process_view_file_blocks(ViewFile) ->
     {ok, BlockStrings} = blocktrans_extractor:extract(ViewFile),

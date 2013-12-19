@@ -126,18 +126,18 @@ test_functional(RebarConf, BossConf, AppFile) ->
 %% @end
 %%--------------------------------------------------------------------
 start_cmd(_RebarConf, BossConf, AppFile) ->
-    rebar_log:log(info, "Generating dynamic start command~n", []),
+  rebar_log:log(info, "Generating dynamic start command~n", []),
 
-    EbinDirs = all_ebin_dirs(BossConf, AppFile),
-    MaxProcesses = max_processes(BossConf),
-    SNameArg = vm_sname_arg(BossConf, AppFile),
-    CookieOpt = cookie_option(BossConf),
-    
-    ErlCmd = erl_command(),
-    VmArgs = vm_args(BossConf),
-    io:format("~s +K true +P ~B -pa ~s -boot start_sasl -config boss -s boss ~s -detached ~s~s~n", 
-        [ErlCmd, MaxProcesses, string:join(EbinDirs, " -pa "), CookieOpt, SNameArg, VmArgs]),
-    ok.
+  EbinDirs = all_ebin_dirs(BossConf, AppFile),
+  MaxProcesses = max_processes(BossConf),
+  NameArg = vm_name_arg(BossConf, AppFile),
+  CookieOpt = cookie_option(BossConf),
+
+  ErlCmd = erl_command(),
+  VmArgs = vm_args(BossConf),
+  io:format("~s +K true +P ~B -pa ~s -boot start_sasl -config boss -s boss ~s -detached ~s~s~n",
+    [ErlCmd, MaxProcesses, string:join(EbinDirs, " -pa "), CookieOpt, NameArg, VmArgs]),
+  ok.
 
 %%--------------------------------------------------------------------
 %% @doc start_dev_cmd
@@ -147,17 +147,17 @@ start_cmd(_RebarConf, BossConf, AppFile) ->
 %% @end
 %%--------------------------------------------------------------------
 start_dev_cmd(_RebarConf, BossConf, AppFile) ->
-    rebar_log:log(info, "Generating dynamic start-dev command~n", []),
-    
-    AppName = app_name(AppFile),
-    SNameArg = vm_sname_arg(BossConf, AppFile),
-    ErlCmd = erl_command(), 
-    EbinDirs = all_ebin_dirs(BossConf, AppFile),
-    CookieOpt = cookie_option(BossConf),
-    VmArgs = vm_args(BossConf),
-    io:format("~s -pa ~s -boss developing_app ~s -boot start_sasl -config boss ~s -s reloader -s lager -s boss ~s~s~n", 
-              [ErlCmd, string:join(EbinDirs, " -pa "), AppName, CookieOpt, SNameArg, VmArgs]),
-    ok.
+  rebar_log:log(info, "Generating dynamic start-dev command~n", []),
+
+  AppName	= app_name(AppFile),
+  NameArg	= vm_name_arg(BossConf, AppFile),
+  ErlCmd	= erl_command(),
+  EbinDirs	= all_ebin_dirs(BossConf, AppFile),
+  CookieOpt	= cookie_option(BossConf),
+  VmArgs	= vm_args(BossConf),
+  io:format("~s -pa ~s -boss developing_app ~s -boot start_sasl -config boss ~s -s reloader -s lager -s boss ~s~s~n",
+    [ErlCmd, string:join(EbinDirs, " -pa "), AppName, CookieOpt, NameArg, VmArgs]),
+  ok.
 
 %%--------------------------------------------------------------------
 %% @doc stop_cmd
@@ -166,19 +166,17 @@ start_dev_cmd(_RebarConf, BossConf, AppFile) ->
 %% @end
 %%--------------------------------------------------------------------
 stop_cmd(_RebarConf, BossConf, AppFile) ->
-	rebar_log:log(info, "Generating dynamic stop command~n", []),
-	
-    case vm_sname(BossConf, AppFile) of
-        undefined ->
-            io:format("echo 'The stop command requires a vm_name in boss.config'", []);
-        SName ->
-            CookieOpt = cookie_option(BossConf),
-            StopCommand = io_lib:format("rpc:call('~s', init, stop, []).", [SName]),
+  rebar_log:log(info, "Generating dynamic stop command~n", []),
 
-            io:format("~s -noshell -pa ebin ~s -sname stopper_~s -eval \"~s\" -s init stop", 
-                [erl_command(), CookieOpt, SName, StopCommand])
-    end,
-	ok.
+  NameArg = vm_name_arg(BossConf, AppFile, "stopper_"),
+
+  NameQualif = wm_qualified_name(vm_name(BossConf, AppFile)),
+
+  CookieOpt = cookie_option(BossConf),
+  StopCommand = io_lib:format("rpc:call('~s', init, stop, []).", [NameQualif]),
+  io:format("~s -noshell -pa ebin ~s ~s -eval \"~s\" -s init stop",
+    [erl_command(), CookieOpt, NameArg, StopCommand]),
+  ok.
 
 %%--------------------------------------------------------------------
 %% @doc reload_cmd
@@ -187,19 +185,18 @@ stop_cmd(_RebarConf, BossConf, AppFile) ->
 %% @end
 %%--------------------------------------------------------------------
 reload_cmd(_RebarConf, BossConf, AppFile) ->
-	rebar_log:log(info, "Generating dynamic reload command~n", []),
-    case vm_sname(BossConf, AppFile) of
-        undefined ->
-            io:format("echo 'The reload command requires a vm_name in boss.config'", []);
-        SName ->
-            CookieOpt = cookie_option(BossConf),
-            ReloadCode = io_lib:format("rpc:call('~s', boss_load, reload_all, [])", [SName]),
-            ReloadRoutes = io_lib:format("rpc:call('~s', boss_web, reload_routes, [])", [SName]),
-            ReloadLangs = io_lib:format("rpc:call('~s', boss_web, reload_all_translations, [])", [SName]),
-            io:format("~s -noshell -pa ebin ~s -sname reloader_~s -eval \"~s, ~s, ~s.\" -s init stop", 
-                [erl_command(), CookieOpt, SName, ReloadCode, ReloadRoutes, ReloadLangs])
-    end,
-	ok.
+  rebar_log:log(info, "Generating dynamic reload command~n", []),
+  NameArg = vm_name_arg(BossConf, AppFile, "reloader_"),
+
+  NameQualif = wm_qualified_name(vm_name(BossConf, AppFile)),
+
+  CookieOpt = cookie_option(BossConf),
+  ReloadCode = io_lib:format("rpc:call('~s', boss_load, reload_all, [])", [NameQualif]),
+  ReloadRoutes = io_lib:format("rpc:call('~s', boss_web, reload_routes, [])", [NameQualif]),
+  ReloadLangs = io_lib:format("rpc:call('~s', boss_web, reload_all_translations, [])", [NameQualif]),
+  io:format("~s -noshell -pa ebin ~s ~s -eval \"~s, ~s, ~s.\" -s init stop",
+    [erl_command(), CookieOpt, NameArg, ReloadCode, ReloadRoutes, ReloadLangs]),
+  ok.
 %%--------------------------------------------------------------------
 %% @doc attach_cmd
 %% @spec attach_cmd(RebarConf, BossConf, AppFile) -> ok | {error, Reason}
@@ -207,17 +204,15 @@ reload_cmd(_RebarConf, BossConf, AppFile) ->
 %% @end
 %%--------------------------------------------------------------------
 attach_cmd(_RebarConf, BossConf, AppFile) ->
-    rebar_log:log(info, "Generating dynamic attach command~n", []),
-    case vm_sname(BossConf, AppFile) of
-        undefined ->
-            io:format("echo 'The attach command requires a vm_name in boss.config'", []);
-        SName ->
-            AppName = app_name(AppFile),
-            CookieOpt = cookie_option(BossConf),
-            io:format("~s ~s -remsh ~s -sname ~s-console-~s",
-                [erl_command(), CookieOpt, SName, AppName, os:getpid()])
-    end,
-    ok.
+  rebar_log:log(info, "Generating dynamic attach command~n", []),
+  Prefix = io_lib:format("console_~s_", [os:getpid()]),
+  NameArg = vm_name_arg(BossConf, AppFile, Prefix),
+  NameQualif = wm_qualified_name(vm_name(BossConf, AppFile)),
+
+  CookieOpt = cookie_option(BossConf),
+  io:format("~s ~s -remsh ~s ~s",
+    [erl_command(), CookieOpt, NameQualif, NameArg]),
+  ok.
 
 %%--------------------------------------------------------------------
 %% @doc help print known commands
@@ -473,9 +468,11 @@ app_name(AppFile) ->
 	[{application, AppName, _}] = app_config(AppFile),
 	AppName.
 
-host_name() ->
+host_name(sname) ->
 	{ok, Host} = inet:gethostname(),
-	Host.
+	Host;
+host_name(name) ->
+  net_adm:localhost().
 
 get_boss_path(BossConf)->
     case boss_config_value(BossConf, boss, path) of
@@ -485,18 +482,28 @@ get_boss_path(BossConf)->
             Path
     end.
 
-vm_sname(BossConf, AppFile) ->
-    boss_config_value(BossConf, boss, vm_sname, io_lib:format("~s@~s", [app_name(AppFile), host_name()])).
-
-vm_sname_arg(BossConf, AppFile) ->
-    case boss_config_value(BossConf, boss, vm_name, undefined) of
-        undefined -> 
-            case vm_sname(BossConf, AppFile) of
-                undefined -> "";
-                Name -> io_lib:format("-sname ~s", [Name])
-            end;
-        SName -> io_lib:format("-name ~s", [SName])
+vm_name(BossConf, AppFile) ->
+    case {boss_config_value(BossConf, boss, vm_sname, undefined),
+      boss_config_value(BossConf, boss, vm_name, undefined)} of
+      {undefined, undefined} -> {sname, app_name(AppFile)};
+      {undefined, Name} when is_list(Name) -> {name, Name};
+      {SName, _} when is_list(SName) -> {sname, SName}
     end.
+
+wm_qualified_name({Mode, Nodename}) ->
+  wm_qualified_name(Mode, Nodename).
+wm_qualified_name(Mode, Nodename) ->
+  io_lib:format("~s@~s", [Nodename, host_name(Mode)]).
+
+vm_name_arg(BossConf, AppFile) ->
+  vm_name_arg(BossConf, AppFile, "").
+
+vm_name_arg(BossConf, AppFile, Prefix) ->
+  case vm_name(BossConf, AppFile) of
+    {sname, SName} -> io_lib:format("-sname ~s~s", [Prefix, SName]);
+    {name, Name} -> io_lib:format("-name ~s~s", [Prefix, Name])
+  end.
+
 
 vm_args(BossConf) ->
     case boss_config_value(BossConf, boss, vm_args) of
@@ -510,9 +517,10 @@ cookie_option(BossConf) ->
     case boss_config_value(BossConf, boss, vm_cookie) of
         {error, _} ->
             "";
-        Cookie ->
-            "-setcookie "++Cookie
+      Cookie ->
+        "-setcookie "++Cookie
     end.
+
 
 max_processes(BossConf) ->
     boss_config_value(BossConf, boss, vm_max_processes, 32768).

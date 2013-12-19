@@ -1,0 +1,13 @@
+language: erlang
+otp_release:
+   - R16B02
+   - R16B01
+
+script:
+  - rebar get-deps
+  - rebar compile 
+  - rebar eunit -v skip_deps=true
+  - mkdir plt
+  - ./travis-dialyzer.sh
+notifications:
+  email: false 

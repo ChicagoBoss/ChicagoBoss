@@ -16,11 +16,19 @@
 -record(state, {
         application,
         controllers = [],
-        routes_table_id,
-        reverse_routes_table_id,
-        handlers_table_id
+        routes_table_id		::atom() | ets:tid(),
+        reverse_routes_table_id ::atom() | ets:tid(),
+        handlers_table_id	::atom() | ets:tid()
     }).
 
+-spec code_change(_,_,_) -> {'ok',_}.
+-spec handle_call('get_all' | 'reload' | {'handle',_} | {'route',_} | {'set_controllers',_} | {'unroute',_,_,[tuple()]},_,#state{}) -> {'reply',_,#state{}}.
+-spec handle_cast(_,_) -> {'noreply',_}.
+-spec handle_info(_,_) -> {'noreply',_}.
+-spec init([any()]) -> {'ok',#state{}}.
+-spec start_link() -> 'ignore' | {'error',_} | {'ok',pid()}.
+-spec start_link(_) -> 'ignore' | {'error',_} | {'ok',pid()}.
+-spec terminate(_,#state{}) -> 'true'.
 start_link() ->
     start_link([]).
 
