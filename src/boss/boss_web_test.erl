@@ -9,7 +9,7 @@
 start([Application]) ->
     start([Application, "mock"]);
 start([Application, Adapter]) ->
-    run_tests([Application, Adapter|boss_files:test_list(Application)]).
+    run_tests([Application, Adapter|boss_files_util:test_list(Application)]).
 
 bootstrap_test_env(Application, Adapter) ->
     DBOptions = lists:foldl(fun(OptName, Acc) ->
@@ -26,8 +26,8 @@ bootstrap_test_env(Application, Adapter) ->
     boss_session:start(),
     boss_mq:start(),
     lists:map(fun(File) ->
-                {ok, _} = boss_compiler:compile(File, [{include_dirs, [boss_files:include_dir() | boss_env:get_env(boss, include_dirs, [])]}])
-        end, boss_files:init_file_list(Application)),
+                {ok, _} = boss_compiler:compile(File, [{include_dirs, [boss_files_util:include_dir() | boss_env:get_env(boss, include_dirs, [])]}])
+              end, boss_files:init_file_list(Application)),
     boss_news:start(),
     boss_mail:start([{driver, boss_mail_driver_mock}]),
     {ok, TranslatorSupPid} = boss_translator:start([{application, Application}]),

@@ -30,7 +30,7 @@ handle_application(Req, ResponseMod, _Request, _FullUrl, undefined) ->
     Response1:build_response();
 handle_application(Req, ResponseMod, Request, FullUrl,  App) ->
     BaseURL		= boss_web:base_url(App),
-    DocRoot		= boss_files:static_path(App),
+    DocRoot                = boss_files_util:static_path(App),
     StaticPrefix	= boss_web:static_prefix(App),
     Url			= lists:nthtail(length(BaseURL), FullUrl),
     Response		= simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
@@ -384,7 +384,7 @@ load_and_execute(development, {"doc", ModelName, _}, AppInfo, RequestContext) ->
                 true ->
                     Model = list_to_atom(ModelName),
                     {Model, Edoc} = boss_model_manager:edoc_module(
-                        boss_files:model_path(ModelName++".erl"), [{private, true}]),
+                        boss_files_util:model_path(ModelName ++ ".erl"), [{private, true}]),
                     {ok, correct_edoc_html(Edoc, AppInfo), []};
                 false ->
                     % ok, it's not model, so it could be web controller
@@ -392,7 +392,7 @@ load_and_execute(development, {"doc", ModelName, _}, AppInfo, RequestContext) ->
                     case lists:member(ModelName, lists:map(fun atom_to_list/1, Controllers)) of
                             true ->
                                 Controller = list_to_atom(ModelName),  
-                                {Controller, Edoc} = edoc:get_doc(boss_files:web_controller_path(ModelName++".erl"), [{private, true}]),
+                                {Controller, Edoc} = edoc:get_doc(boss_files_util:web_controller_path(ModelName ++ ".erl"), [{private, true}]),
                                 {ok, correct_edoc_html(Edoc, AppInfo), []};
                             false ->
                                 % nope, so just render index page

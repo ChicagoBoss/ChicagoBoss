@@ -46,7 +46,7 @@ load_all_modules(Application, TranslatorSupPid) ->
 load_all_modules(Application, TranslatorSupPid, OutDir) ->
     lager:info("Loading application ~p", [Application]),
     [{_, TranslatorPid, _, _}]	= supervisor:which_children(TranslatorSupPid),
-    {ok, TestModules}		= load_dirs(boss_files:test_path(),
+    {ok, TestModules}                = load_dirs(boss_files_util:test_path(),
 					    Application, 
 					    OutDir, fun compile/2),
     {ok, LibModules}		= load_libraries(Application, OutDir),
@@ -95,12 +95,12 @@ reload_all() ->
 load_libraries(Application) ->
     load_libraries(Application, undefined).
 load_libraries(Application, OutDir) ->
-    load_dirs(boss_files:lib_path(), Application, OutDir, fun compile/2).
+    load_dirs(boss_files_util:lib_path(), Application, OutDir, fun compile/2).
 
 load_services_websockets(Application) ->
-    load_services_websockets(Application, boss_files:ebin_dir()).
+    load_services_websockets(Application, boss_files_util:ebin_dir()).
 load_services_websockets(Application, OutDir) ->
-    load_dirs(boss_files:websocket_path(), Application, OutDir, fun compile/2).
+    load_dirs(boss_files_util:websocket_path(), Application, OutDir, fun compile/2).
 
 load_mail_controllers(Application) ->
     load_mail_controllers(Application, undefined).
@@ -110,17 +110,17 @@ load_mail_controllers(Application, OutDir) ->
 load_web_controllers(Application) ->
     load_web_controllers(Application, undefined).
 load_web_controllers(Application, OutDir) ->
-    load_dirs(boss_files:web_controller_path(), Application, OutDir, fun compile_controller/2).
+    load_dirs(boss_files_util:web_controller_path(), Application, OutDir, fun compile_controller/2).
 
 load_view_lib_modules(Application) ->
     load_view_lib_modules(Application, undefined).
 load_view_lib_modules(Application, OutDir) ->
-    load_dirs(boss_files:view_helpers_path(), Application, OutDir, fun compile/2).
+    load_dirs(boss_files_util:view_helpers_path(), Application, OutDir, fun compile/2).
 
 load_models(Application) ->
     load_models(Application, undefined).
 load_models(Application, OutDir) ->
-    load_dirs(boss_files:model_path(), Application, OutDir, fun compile_model/2).
+    load_dirs(boss_files_util:model_path(), Application, OutDir, fun compile_model/2).
 
 load_dirs(Dirs, Application, OutDir, Compiler) ->
     load_dirs1(Dirs, Application, OutDir, Compiler, [], []).
@@ -216,11 +216,11 @@ view_doc_root(ViewPath) ->
             (_, Best) ->
                 Best
         end, "", 
-        [boss_files:web_view_path(), boss_files:mail_view_path()]).
+        [boss_files_util:web_view_path(), boss_files_util:mail_view_path()]).
 
 compile_view_dir_erlydtl(Application, LibPath, Module, OutDir, TranslatorPid) ->
-    TagHelpers		= lists:map(fun erlang:list_to_atom/1, boss_files:view_tag_helper_list(Application)),
-    FilterHelpers	= lists:map(fun erlang:list_to_atom/1, boss_files:view_filter_helper_list(Application)),
+    TagHelpers                = lists:map(fun erlang:list_to_atom/1, boss_files_util:view_tag_helper_list(Application)),
+    FilterHelpers        = lists:map(fun erlang:list_to_atom/1, boss_files_util:view_filter_helper_list(Application)),
     ExtraTagHelpers	= boss_env:get_env(template_tag_modules, []),
     ExtraFilterHelpers	= boss_env:get_env(template_filter_modules, []),
     io:format("~nCompile Modules ~p ~n~p~n~n", [LibPath,Module]),
@@ -247,9 +247,9 @@ compile_view(Application, ViewPath, TemplateAdapter, OutDir, TranslatorPid) ->
             Locales		= boss_files:language_list(Application),
             DocRoot		= view_doc_root(ViewPath),
             TagHelpers		= lists:map(fun erlang:list_to_atom/1, 
-					    boss_files:view_tag_helper_list(Application)),
+					    boss_files_util:view_tag_helper_list(Application)),
             FilterHelpers	= lists:map(fun erlang:list_to_atom/1, 
-					    boss_files:view_filter_helper_list(Application)),
+					    boss_files_util:view_filter_helper_list(Application)),
             TemplateAdapter:compile_file(ViewPath, Module, [
                     {out_dir, OutDir}, 
                     {doc_root, DocRoot},
@@ -263,18 +263,18 @@ compile_view(Application, ViewPath, TemplateAdapter, OutDir, TranslatorPid) ->
     end.
 
 compile_model(ModulePath, OutDir) ->
-    IncludeDirs = [boss_files:include_dir() | boss_env:get_env(boss, include_dirs, [])],
+    IncludeDirs = [boss_files_util:include_dir() | boss_env:get_env(boss, include_dirs, [])],
     boss_model_manager:compile(ModulePath, [{out_dir, OutDir}, {include_dirs, IncludeDirs},
 			 {compiler_options, compiler_options()}]).
 
 compile_controller(ModulePath, OutDir) ->
-    IncludeDirs = [boss_files:include_dir() | boss_env:get_env(boss, include_dirs, [])],
+    IncludeDirs = [boss_files_util:include_dir() | boss_env:get_env(boss, include_dirs, [])],
     Options = [{out_dir, OutDir}, {include_dirs, IncludeDirs}, {compiler_options, compiler_options()}],
     CompilerAdapter = boss_files:compiler_adapter_for_extension(filename:extension(ModulePath)),
     CompilerAdapter:compile_controller(ModulePath, Options).
 
 compile(ModulePath, OutDir) ->
-    IncludeDirs = [boss_files:include_dir() | boss_env:get_env(boss, include_dirs, [])],
+    IncludeDirs = [boss_files_util:include_dir() | boss_env:get_env(boss, include_dirs, [])],
     Options = [{out_dir, OutDir}, {include_dirs, IncludeDirs}, {compiler_options, compiler_options()}],
     CompilerAdapter = boss_files:compiler_adapter_for_extension(filename:extension(ModulePath)),
     CompilerAdapter:compile(ModulePath, Options).
@@ -285,7 +285,7 @@ compiler_options() ->
 
 load_view_lib(Application, OutDir, TranslatorPid) ->
     {ok, HelperDirModule} = compile_view_dir_erlydtl(Application,
-        boss_files:view_html_tags_path(), view_custom_tags_dir_module(Application), 
+        boss_files_util:view_html_tags_path(), view_custom_tags_dir_module(Application),
         OutDir, TranslatorPid),
     {ok, [HelperDirModule]}.
 
@@ -337,8 +337,8 @@ load_view_if_old(Application, ViewPath, Module, TemplateAdapter, TranslatorPid) 
                             ({File, _CheckSum}) -> File;
                             (File) -> File
                         end, [TemplateAdapter:source(Module) | TemplateAdapter:dependencies(Module)]),
-                    TagHelpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_tag_helper_list(Application)),
-                    FilterHelpers = lists:map(fun erlang:list_to_atom/1, boss_files:view_filter_helper_list(Application)),
+                    TagHelpers = lists:map(fun erlang:list_to_atom/1, boss_files_util:view_tag_helper_list(Application)),
+                    FilterHelpers = lists:map(fun erlang:list_to_atom/1, boss_files_util:view_filter_helper_list(Application)),
                     ExtraTagHelpers = boss_env:get_env(template_tag_modules, []),
                     ExtraFilterHelpers = boss_env:get_env(template_filter_modules, []),
                     module_older_than(Module, 
