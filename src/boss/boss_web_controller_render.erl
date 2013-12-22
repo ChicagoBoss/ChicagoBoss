@@ -210,7 +210,7 @@ render_view({Controller, Template, _}, AppInfo, RequestContext, Variables, Heade
                                  Variables, Headers, Req, BossFlash,
                                  SessionData, Module, TemplateAdapter);
         {error, not_found} ->
-            AnyViewPath = boss_files:web_view_path(Controller, Template, "{" ++ string:join(TryExtensions, ",") ++ "}"),
+            AnyViewPath = boss_files_util:web_view_path(Controller, Template, "{" ++ string:join(TryExtensions, ",") ++ "}"),
             {not_found, io_lib:format("The requested template (~p) was not found.~n If you controller did not run, check that it was exported~n~n", [AnyViewPath]) };
         {error, {File, [{0, _Module, "Failed to read file"}]}} ->
             {not_found, io_lib:format("The requested template (~p) was not found.~n", [File]) };
@@ -245,7 +245,7 @@ render_with_template(Controller, Template, AppInfo, RequestContext,
 load_result(Controller, Template, AppInfo, TryExtensions) ->
     lists:foldl(fun
 		    (Ext, {error, not_found}) ->
-			ViewPath = boss_files:web_view_path(Controller, Template, Ext),
+			ViewPath = boss_files_util:web_view_path(Controller, Template, Ext),
 			boss_load:load_view_if_dev(AppInfo#boss_app_info.application,
 						   ViewPath, AppInfo#boss_app_info.view_modules,
 				                   AppInfo#boss_app_info.translator_pid);

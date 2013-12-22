@@ -149,7 +149,7 @@ build_message_body(App, Action, Variables, ContentLanguage) ->
     end.
 
 render_view(App, {Action, Extension}, Variables, ContentLanguage) ->
-    ViewPath = boss_files:mail_view_path(Action, Extension),
+    ViewPath = boss_files_util:mail_view_path(Action, Extension),
     ViewModules = boss_files:view_module_list(App),
     TranslatorPid = boss_web:translator_pid(App),
     RouterPid = boss_web:router_pid(App),

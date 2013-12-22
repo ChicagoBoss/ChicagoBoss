@@ -1,10 +1,17 @@
 -module(boss_elixir_compiler).
 -export([compile/2]).
 
--spec load_code(atom(),binary()) -> 'ok' | {'error',string()}.
--spec compile(maybe_improper_list(binary() | maybe_improper_list(any(),binary() | []) | byte(),binary() | []),[any()]) -> {'error',[any()]} | {'ok',atom()}.
--spec compile_to_outdir(atom(),binary(),atom() | binary() | [atom() | [any()] | char()]) -> {'error',[any()]} | {'ok',atom()}.
--spec handle_write_result(atom(),binary() | string(), 'ok' | {'error',atom()}) -> {'error',[any()]} | {'ok',atom()}.
+-type compile_return() :: {ok, module()}|{error, [any()]}.
+
+-spec load_code(module(),binary()) -> 'ok' | {'error',string()}.
+-spec compile(string(),[any()]) -> 
+		     compile_return().
+-spec compile_to_outdir(module(),
+			binary(),
+			undefined|string()) ->
+			       compile_return().
+-spec handle_write_result(module(),binary() | string(), 'ok' | {'error',atom()}) -> 
+				 compile_return().
 
 load_code(Module, Bin) ->
     code:purge(Module),
@@ -14,9 +21,9 @@ load_code(Module, Bin) ->
     end.
 
 compile(FilePath, Options) ->
-    [{Module, Binary}] = elixir_compiler:file(list_to_binary(FilePath)),
+    [{Module, Binary}]	= elixir_compiler:file(list_to_binary(FilePath)),
     load_code(Module, Binary),
-    OutDir = proplists:get_value(out_dir, Options),
+    OutDir		= proplists:get_value(out_dir, Options),
     compile_to_outdir(Module, Binary, OutDir).
 
 

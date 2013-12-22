@@ -28,12 +28,12 @@
 
 
 create_lang(App, Lang) ->
-    LangFile = boss_files:lang_path(App, Lang),
+    LangFile = boss_files_util:lang_path(App, Lang),
     {ok, IODevice} = file:open(LangFile, [write]),
     file:close(IODevice).
 
 delete_lang(App, Lang) ->
-    ok = file:delete(boss_files:lang_path(App, Lang)).
+    ok = file:delete(boss_files_util:lang_path(App, Lang)).
 
 %% @doc Update the po file with all unstranslated messages for all languages (filled with blanks)
 update_po(App) ->
@@ -53,7 +53,7 @@ update_po(App, Lang, all, []) ->
 %% @doc Update the po file for a given Language
 %% @spec update_po( Lang::string(), Mode::atom(all|filled), Translation::TupleList([{"orig", "x"}, {"trans", "y"}]) ) -> ok | {error, Reason}
 update_po(App, Lang, Mode, Translations) ->
-    LangFile = boss_files:lang_path(App, Lang),
+    LangFile = boss_files_util:lang_path(App, Lang),
     {ok, IODevice} = file:open(LangFile, [write, append]),	
     lists:map(fun(Message) ->
                 Original = proplists:get_value("orig", Message),
@@ -119,7 +119,7 @@ extract_strings(App, Lang) ->
     {UntranslatedStrings, PoStrings}.
 
 extract_po_strings(App, Lang) ->
-    LangFile = boss_files:lang_path(App, Lang),
+    LangFile = boss_files_util:lang_path(App, Lang),
     Tokens = po_scanner:scan(LangFile),
     process_po_tokens(Tokens, []).
 

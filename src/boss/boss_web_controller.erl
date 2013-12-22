@@ -236,7 +236,7 @@ code_change(_OldVsn, State, _Extra) ->
 
 stop_init_scripts(Application, InitData) ->
     lists:foldr(fun(File, _) ->
-                case boss_compiler:compile(File, [{include_dirs, [boss_files:include_dir() | boss_env:get_env(boss, include_dirs, [])]}]) of
+                case boss_compiler:compile(File, [{include_dirs, [boss_files_util:include_dir() | boss_env:get_env(boss, include_dirs, [])]}]) of
                     {ok, Module} ->
                         case proplists:get_value(Module, InitData, init_failed) of
                            init_failed ->
@@ -251,7 +251,7 @@ stop_init_scripts(Application, InitData) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 run_init_scripts(AppName) ->
     lists:foldl(fun(File, Acc) ->
-			CompileResult = boss_compiler:compile(File, [{include_dirs, [boss_files:include_dir() | boss_env:get_env(boss, include_dirs, [])]}]),
+			CompileResult = boss_compiler:compile(File, [{include_dirs, [boss_files_util:include_dir() | boss_env:get_env(boss, include_dirs, [])]}]),
 			process_compile_result(File, Acc, CompileResult)
 		end, [], boss_files:init_file_list(AppName)).
 
