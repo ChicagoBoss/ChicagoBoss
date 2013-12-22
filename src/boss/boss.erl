@@ -18,6 +18,7 @@ ensure_started(App) ->
 %% @spec start() -> ok
 %% @doc Start the boss server.
 start() ->
+    is_compatable(erlang:system_info(otp_release)),
     ensure_started(crypto),
     ensure_started(mimetypes),
     application:start(boss).
@@ -29,3 +30,9 @@ stop() ->
     application:stop(mimetypes),    
     application:stop(crypto),
     Res.
+
+is_compatable("R16B03") ->
+    lager:emergency("Chicago Boss is not comptable with 16R03"),
+    erlang:halt(1, "Chicago Boss is not comptable with 16R03");
+is_compatable(_) ->
+    ok.
