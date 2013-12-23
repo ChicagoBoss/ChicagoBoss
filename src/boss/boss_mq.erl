@@ -34,9 +34,9 @@
 -spec now(channel()) ->    non_neg_integer().
 
 start() ->
-    MQOptions = make_queue_options(),
-    MQAdapter = get_mq_adapater(),
-    MQOptions1 = [{adapter, list_to_atom("boss_mq_adapter_"++atom_to_list(MQAdapter))}|MQOptions],
+    MQOptions	= make_queue_options(),
+    MQAdapter	= get_mq_adapater(),
+    MQOptions1	= [{adapter, list_to_atom("boss_mq_adapter_"++atom_to_list(MQAdapter))}|MQOptions],
     start(MQOptions1).
 
 start(Options) ->
@@ -57,7 +57,9 @@ make_queue_options() ->
 			    {ok, Val} -> [{OptName, Val}|Acc];
 			    _ -> Acc
 			end
-                end, [], [mq_port, mq_host, mq_max_age]).
+                end,
+		[], 
+		[mq_port, mq_host, mq_max_age]).
 
 
 
