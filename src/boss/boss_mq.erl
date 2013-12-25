@@ -4,6 +4,10 @@
 
 -export([start/0, start/1, stop/0]).
 
+-ifdef(TEST).
+-compile(export_all).
+-endif.
+
 -export([
         pull/1,
         pull/2,
@@ -12,19 +16,27 @@
         poll/2,
         push/2,
         now/1]).
+-type channel()   ::string().
+-type mq_return() :: {ok, integer(), [_]}|{error,string()}.
+
+-spec start() -> any().
+-spec start(_) -> any().
+-spec get_mq_adapater() -> atom().
+-spec stop() -> 'ok'.
+-spec pull(channel()) -> mq_return().
+-spec pull(channel(),undefined|non_neg_integer()) -> mq_return().
+-spec pull(channel(),undefined|integer()|{integer(), integer(), integer()},infinity|non_neg_integer()) -> mq_return().
+-spec pull_recieve('infinity' | non_neg_integer(),{ok, _}|any()) -> mq_return().
+-spec convert_to_ms('infinity' | non_neg_integer()) -> 'infinity' | non_neg_integer().
+-spec poll(channel()) -> mq_return().
+-spec poll(channel(),last|integer()) -> mq_return().
+-spec push(channel(),_) -> {ok, non_neg_integer()}.
+-spec now(channel()) ->    non_neg_integer().
 
 start() ->
-    MQOptions = lists:foldl(fun(OptName, Acc) ->
-                case application:get_env(OptName) of
-                    {ok, Val} -> [{OptName, Val}|Acc];
-                    _ -> Acc
-                end
-        end, [], [mq_port, mq_host, mq_max_age]),
-    MQAdapter = case application:get_env(mq_adapter) of
-        {ok, Val} -> Val;
-        _ -> tinymq
-    end,
-    MQOptions1 = [{adapter, list_to_atom("boss_mq_adapter_"++atom_to_list(MQAdapter))}|MQOptions],
+    MQOptions	= make_queue_options(),
+    MQAdapter	= get_mq_adapater(),
+    MQOptions1	= [{adapter, list_to_atom("boss_mq_adapter_"++atom_to_list(MQAdapter))}|MQOptions],
     start(MQOptions1).
 
 start(Options) ->
@@ -32,6 +44,24 @@ start(Options) ->
 
 stop() ->
     ok.
+
+get_mq_adapater() ->
+    case application:get_env(mq_adapter) of
+	{ok, Val} -> Val;
+	_ -> tinymq
+    end.
+
+make_queue_options() ->
+    lists:foldl(fun(OptName, Acc) ->
+			case application:get_env(OptName) of
+			    {ok, Val} -> [{OptName, Val}|Acc];
+			    _ -> Acc
+			end
+                end,
+		[], 
+		[mq_port, mq_host, mq_max_age]).
+
+
 
 %% @spec pull( Channel::string() ) -> {ok, Timestamp, [Message]} | {error, Reason}
 %% @doc Pull messages from the specified `Channel'. If none are in the queue, blocks
@@ -51,47 +81,45 @@ pull(Channel, Timestamp) ->
 pull(Channel, {MegaSecs, Secs, MicroSecs}, Timeout) ->
     pull(Channel, 1000 * 1000 * (1000 * 1000 * MegaSecs + Secs) + MicroSecs, Timeout);
 pull(Channel, Timestamp, Timeout) when is_list(Channel) ->
-    TimeoutMs = case Timeout of
-        infinity -> infinity;
-        _ -> Timeout * 1000
-    end,
-    case gen_server:call({global, ?MODULE}, {pull, Channel, Timestamp, self()}) of
-        {ok, PullTime} ->
-            receive
-                {_From, NewTimestamp, Messages} ->
-                    {ok, NewTimestamp, Messages}
-            after
-                TimeoutMs ->
-                    {ok, PullTime, []}
-            end;
-        Error ->
-            Error
+    TimeoutMs  = convert_to_ms(Timeout),
+    CallStatus = gen_server:call({global, ?MODULE}, {pull, Channel, Timestamp, self()}),
+    pull_recieve(TimeoutMs, CallStatus).
+
+
+pull_recieve(TimeoutMs, {ok, PullTime}) ->
+    receive
+	{_From, NewTimestamp, Messages} ->
+	    {ok, NewTimestamp, Messages}
+    after
+	TimeoutMs ->
+	    {ok, PullTime, []}
     end;
-pull(_, _, _) ->
-    {error, invalid_channel}.
+pull_recieve(_, Error) -> Error.
+
+
+convert_to_ms(infinity) -> infinity;
+convert_to_ms(Timeout) ->
+    Timeout * 1000.
+
 
 %% @spec poll( Channel::string() ) -> {ok, Timestamp, [Message]} | {error, Reason}
 %% @doc Like `pull/1', but returns immediately if no messages are in the queue.
 poll(Channel) ->
-    poll(Channel, undefined).
+    poll(Channel, last).
 
 %% @spec poll( Channel::string(), Since::integer() | last ) -> {ok, Timestamp, [Message]} | {error, Reason}
 %% @doc Like `pull/2', but returns immediately if no matching messages are in the queue.
 poll(Channel, Timestamp) when is_list(Channel) ->
-    gen_server:call({global, ?MODULE}, {poll, Channel, Timestamp});
-poll(_, _) ->
-    {error, invalid_channel}.
+    gen_server:call({global, ?MODULE}, {poll, Channel, Timestamp}).
+    
 
 %% @spec push( Channel::string(), Message ) -> {ok, Timestamp}
 %% @doc Pushes a message to the specified `Channel'.
 push(Channel, Message) when is_list(Channel) ->
-    gen_server:call({global, ?MODULE}, {push, Channel, Message});
-push(_, _) ->
-    {error, invalid_channel}.
+    gen_server:call({global, ?MODULE}, {push, Channel, Message}).
 
 %% @spec now( Channel::string() ) -> Timestamp
 %% @doc Retrieves the current time for the server managing `Channel'.
 now(Channel) when is_list(Channel) ->
-    gen_server:call({global, ?MODULE}, {now, Channel});
-now(_) ->
-    {error, invalid_channel}.
+    gen_server:call({global, ?MODULE}, {now, Channel}).
+    

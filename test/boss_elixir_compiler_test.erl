@@ -1,0 +1,3 @@
+-module(boss_elixir_compiler_test).
+-include_lib("eunit/include/eunit.hrl").
+-include("../src/boss/boss_web.hrl").
