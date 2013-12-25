@@ -46,9 +46,8 @@ load_all_modules(Application, TranslatorSupPid) ->
 load_all_modules(Application, TranslatorSupPid, OutDir) ->
     lager:info("Loading application ~p", [Application]),
     [{_, TranslatorPid, _, _}]	= supervisor:which_children(TranslatorSupPid),
-    {ok, TestModules}                = load_dirs(boss_files_util:test_path(),
-					    Application, 
-					    OutDir, fun compile/2),
+
+    {ok, TestModules}           = load_test_modules(Application, OutDir),
     {ok, LibModules}		= load_libraries(Application, OutDir),
     {ok, WebSocketModules}	= load_services_websockets(Application, OutDir),
     {ok, MailModules}		= load_mail_controllers(Application, OutDir),
@@ -57,13 +56,23 @@ load_all_modules(Application, TranslatorSupPid, OutDir) ->
     {ok, ViewHelperModules}	= load_view_lib_modules(Application, OutDir),
     {ok, ViewLibModules}	= load_view_lib(Application, OutDir, TranslatorPid),
     {ok, ViewModules}		= load_views(Application, OutDir, TranslatorPid),
+
     AllModules			= [{test_modules, TestModules}, 
-		  {lib_modules, LibModules}, {websocket_modules, WebSocketModules},
-		  {mail_modules, MailModules}, {controller_modules, ControllerModules},
-		  {model_modules, ModelModules}, {view_lib_tags_modules, ViewLibModules},
-		  {view_lib_helper_modules, ViewHelperModules}, {view_modules, ViewModules}],
+				   {lib_modules, LibModules}, 
+				   {websocket_modules, WebSocketModules},
+				   {mail_modules, MailModules},
+				   {controller_modules, ControllerModules},
+				   {model_modules, ModelModules}, 
+				   {view_lib_tags_modules, ViewLibModules},
+				   {view_lib_helper_modules, ViewHelperModules}, 
+				   {view_modules, ViewModules}],
     lager:notice("Loading Modules ~p", [AllModules]),
     {ok, AllModules}.
+
+load_test_modules(Application, OutDir) ->
+    load_dirs(boss_files_util:test_path(),
+	      Application,
+              OutDir, fun compile/2).
 
 load_all_modules_and_emit_app_file(AppName, OutDir) ->
     application:start(elixir),
@@ -144,6 +153,7 @@ load_dir(Dir, Application, OutDir, Compiler) when is_function(Compiler) ->
     FullFiles = lists:map(fun(F) -> filename:join([Dir, F]) end, Files),
     {ModuleList, ErrorList} = compile_and_accumulate_errors(
         FullFiles, Application, OutDir, Compiler, {[], []}),
+    lager:error("error list ~p", [ ErrorList]), 
     case length(ErrorList) of
         0 ->
             {ok, ModuleList};
@@ -152,6 +162,7 @@ load_dir(Dir, Application, OutDir, Compiler) when is_function(Compiler) ->
     end.
 
 %% Only serve files that end in ".erl"
+       
 list_files(Dir) ->
     case file:list_dir(Dir) of
 	{ok, FileList} ->
@@ -179,7 +190,9 @@ compile_and_accumulate_errors([Filename|Rest], Application, OutDir, Compiler, {M
                     end;
                 false ->
 		    lager:info("Compile App: ~p File: ~p " , [Application, Filename]),
-                    case maybe_compile(Filename, Application, OutDir, Compiler) of
+                    CompileResult = maybe_compile(Filename, Application, OutDir, Compiler),
+                    lager:info("Compile Result ~p", [CompileResult]),
+		    case CompileResult of
                         ok ->
                             {Modules, Errors};
                         {ok, Module} ->
@@ -195,22 +208,30 @@ compile_and_accumulate_errors([Filename|Rest], Application, OutDir, Compiler, {M
 
 maybe_compile(File, Application, OutDir, Compiler) ->
     CompilerAdapter = boss_files:compiler_adapter_for_extension(filename:extension(File)),
-    case CompilerAdapter of
-        undefined -> ok;
-        _ ->
-            Module = list_to_atom(CompilerAdapter:module_name_for_file(Application, File)),
-            AbsPath = filename:absname(File),
-            case OutDir of
-                undefined ->
-                    case module_older_than(Module, [AbsPath]) of
-                        true ->
-                            Compiler(AbsPath, OutDir);
-                        _ ->
-                            {ok, Module}
-                    end;
-                _ ->
-                    Compiler(AbsPath, OutDir)
-            end
+    lager:info("maybe_compile File ~p, CompilerAdapter ~p",[File, CompilerAdapter]),
+    maybe_compile(File, Application, OutDir, Compiler, CompilerAdapter).
+
+maybe_compile(_File, _Application, _OutDir, _Compiler, undefined) -> ok;
+maybe_compile(File, Application, OutDir, Compiler, CompilerAdapter) ->
+    Module  = list_to_atom(CompilerAdapter:module_name_for_file(Application, File)),
+    AbsPath = filename:absname(File),
+    case OutDir of
+	undefined ->
+	    case module_older_than(Module, [AbsPath]) of
+		true ->
+		    lager:info("Compile ~p", [AbsPath]),
+		    CR =  Compiler(AbsPath, OutDir),
+		    lager:info("Compile Result ~p", [CR]),
+		    CR;
+		_ ->
+		    {ok, Module}
+	    end;
+	_ ->
+	    lager:info("Compile ~p", [AbsPath]),
+	    CR =  Compiler(AbsPath, OutDir),
+	    lager:info("Compile Result ~p", [CR]),
+	    CR
+
     end.
 
 view_doc_root(ViewPath) ->
