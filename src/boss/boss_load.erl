@@ -95,6 +95,7 @@ reload_all() ->
 load_libraries(Application) ->
     load_libraries(Application, undefined).
 load_libraries(Application, OutDir) ->
+    
     load_dirs(boss_files_util:lib_path(), Application, OutDir, fun compile/2).
 
 load_services_websockets(Application) ->
@@ -123,6 +124,7 @@ load_models(Application, OutDir) ->
     load_dirs(boss_files_util:model_path(), Application, OutDir, fun compile_model/2).
 
 load_dirs(Dirs, Application, OutDir, Compiler) ->
+    lager:info("Load Dirs ~p~n", [Dirs]),
     load_dirs1(Dirs, Application, OutDir, Compiler, [], []).
 
 load_dirs1([], _, _, _, ModuleAcc, []) ->
@@ -138,12 +140,7 @@ load_dirs1([Dir|Rest], Application, OutDir, Compiler, ModuleAcc, ErrorAcc) ->
     end.
 
 load_dir(Dir, Application, OutDir, Compiler) when is_function(Compiler) ->
-    Files = case file:list_dir(Dir) of
-        {ok, FileList} ->
-            FileList;
-        _ ->
-            []
-    end,
+    Files     = list_files(Dir),
     FullFiles = lists:map(fun(F) -> filename:join([Dir, F]) end, Files),
     {ModuleList, ErrorList} = compile_and_accumulate_errors(
         FullFiles, Application, OutDir, Compiler, {[], []}),
@@ -152,6 +149,17 @@ load_dir(Dir, Application, OutDir, Compiler) when is_function(Compiler) ->
             {ok, ModuleList};
         _ ->
             {error, ErrorList}
+    end.
+
+%% Only serve files that end in ".erl"
+list_files(Dir) ->
+    case file:list_dir(Dir) of
+	{ok, FileList} ->
+	   lists:filter(fun(String) ->
+				string:right(String, 4) == ".erl"
+			end, FileList);
+	_ ->
+	    []
     end.
 
 compile_and_accumulate_errors([], _Application, _OutDir, _Compiler, Acc) -> 
@@ -170,6 +178,7 @@ compile_and_accumulate_errors([Filename|Rest], Application, OutDir, Compiler, {M
                             {Modules, NewErrs ++ Errors}
                     end;
                 false ->
+		    lager:info("Compile App: ~p File: ~p " , [Application, Filename]),
                     case maybe_compile(Filename, Application, OutDir, Compiler) of
                         ok ->
                             {Modules, Errors};
