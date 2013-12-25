@@ -359,7 +359,15 @@ call_controller_action(Adapter, AdapterInfo, RequestContext) ->
     process_flag(trap_exit, true),
     Ref		= make_ref(),
     CHandlerPid = self(),
+    Body = erlang:get(mochiweb_request_body),
     _N = spawn_link(fun() ->
+                case Body of
+                    undefined -> ok;
+                    _ ->
+                        erlang:put(mochiweb_request_body, Body),
+                        erlang:put(mochiweb_request_body_length, length(Body)),
+                        erlang:put(mochiweb_request_post, mochiweb_util:parse_qs(Body))
+                end,
 			    R = Adapter:action(AdapterInfo, RequestContext),
 			    CHandlerPid !{msg,Ref, R}
 	       end),
