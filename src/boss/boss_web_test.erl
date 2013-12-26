@@ -313,6 +313,15 @@ find_selected_value([{<<"option">>, Attrs, [Label]}|Rest]) when is_binary(Label)
                 undefined -> Label;
                 Value -> Value
             end
+    end;
+find_selected_value([{<<"option">>, Attrs, []}|Rest]) ->
+    case proplists:get_value(<<"selected">>, Attrs) of
+        undefined -> find_selected_value(Rest);
+        _ ->
+            case proplists:get_value(<<"value">>, Attrs) of
+                undefined -> "";
+                Value -> Value
+            end
     end.
 
 app_info_loop(AppInfo) ->
