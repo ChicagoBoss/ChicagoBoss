@@ -101,12 +101,13 @@ follow_link(LinkName, {_, _, ParseTree} = _Response, Assertions, Continuations) 
 %% @spec follow_redirect(Response, Assertions, Continuations) -> [{NumPassed, ErrorMessages}]
 %% @doc This test follows an HTTP redirect; that is, it issues a GET request to
 %% the URL specified by the "Location" header in `Response'
-follow_redirect({302, _, Headers, _} = _Response, Assertions, Continuations) ->
+follow_redirect({302, _, Headers, _} = Response, Assertions, Continuations) ->
+  NewHeaders = get_cookie(Response),
   case proplists:get_value("Location", Headers) of
     undefined ->
       {0, ["No Location: header to follow!"]};
     Url ->
-      get_request(Url, [], Assertions, Continuations)
+      get_request(Url, NewHeaders, Assertions, Continuations)
   end.
 
 %% @spec submit_form(FormName, FormValues::proplist(), Response, Assertions, Continuations) -> [{NumPassed, ErrorMessages}]
@@ -114,7 +115,8 @@ follow_redirect({302, _, Headers, _} = _Response, Assertions, Continuations) ->
 %% and submits it using `FormValues', a proplist with keys equal to the labels of form fields. 
 %% (So all visible form fields should be labeled with a &amp;lt;label&amp;gt; HTML tag!)
 %% If a particular value is not specified, the form's default value is used.
-submit_form(FormName, FormValues, {_, Uri, _, ParseTree} = _Response, Assertions, Continuations) ->
+submit_form(FormName, FormValues, {_, Uri, _, ParseTree} = Response, Assertions, Continuations) ->
+    Headers = get_cookie(Response),
     case find_form_named(FormName, ParseTree) of
         undefined -> 
             {0, ["No form to submit!"]};
@@ -123,10 +125,10 @@ submit_form(FormName, FormValues, {_, Uri, _, ParseTree} = _Response, Assertions
             EncodedForm = fill_out_form(InputFields, InputLabels, FormValues),
             case Method of
                 <<"post">> ->
-                    post_request(FormAction, [], EncodedForm, Assertions, Continuations);
+                    post_request(FormAction, Headers, EncodedForm, Assertions, Continuations);
                 _ ->
                     Url = lists:concat([FormAction, "?", EncodedForm]),
-                    get_request(Url, [], Assertions, Continuations)
+                    get_request(Url, Headers, Assertions, Continuations)
             end
     end.
 
@@ -408,4 +410,12 @@ parse([Head|Tail], Body) ->
     case Head of
         {"Content-Type", "application/json"} -> mochijson2:decode(Body);
         _ -> parse(Tail, Body)
+    end.
+
+get_cookie({_Code,_URI,Headers,_Content}) ->
+    case proplists:get_value("Set-Cookie", Headers) of
+    undefined ->
+        [];
+    Value ->
+        [{"Cookie", string:left(Value, 54)}]
     end.
