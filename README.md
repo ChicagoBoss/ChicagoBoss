@@ -245,4 +245,4 @@ There's also the mailing list:
 
 If you want to contribute to CB
 
-<CODING_STANDARDS>
+[CODING_STANDARDS]
