@@ -243,6 +243,6 @@ There's also the mailing list:
 
 <http://groups.google.com/group/chicagoboss>
 
-If you want to contribute to CB
+If you want to contribute to CB 
 
-[CODING_STANDARDS]
+<https://github.com/zkessin/CODING_STANDARDS>
