@@ -87,17 +87,21 @@ load_all_modules_and_emit_app_file(AppName, OutDir) ->
             VsnString = os:cmd(Cmd),
             string:strip(VsnString, right, $\n)
     end,
-    AppData2 = lists:keyreplace(vsn, 1, AppData1, {vsn, ComputedVsn}),
-    DefaultEnv = proplists:get_value(env, AppData2, []),
-    AppData3 = lists:keyreplace(env, 1, AppData2, {env, ModulePropList ++ DefaultEnv}),
+    AppData2	= lists:keyreplace(vsn, 1, AppData1, {vsn, ComputedVsn}),
+    DefaultEnv	= proplists:get_value(env, AppData2, []),
+    AppData3	= lists:keyreplace(env, 1, AppData2, {env, ModulePropList ++ DefaultEnv}),
 
-    IOList = io_lib:format("~p.~n", [{application, AppName, AppData3}]),
-    AppFile = filename:join([OutDir, lists:concat([AppName, ".app"])]),
+    IOList	= io_lib:format("~p.~n", [{application, AppName, AppData3}]),
+    AppFile	= filename:join([OutDir, lists:concat([AppName, ".app"])]),
     file:write_file(AppFile, IOList).
 
 reload_all() ->
+    lager:notice("Reload All"),
     Modules = [M || {M, F} <- code:all_loaded(), is_list(F), not code:is_sticky(M)],
-    [begin code:purge(M), code:load_file(M) end || M <- Modules].
+    [begin 
+	 code:purge(M), 
+	 code:load_file(M) 
+     end || M <- Modules].
 
 load_libraries(Application) ->
     load_libraries(Application, undefined).
@@ -146,8 +150,10 @@ load_dirs1([Dir|Rest], Application, OutDir, Compiler, ModuleAcc, ErrorAcc) ->
     end.
 
 load_dir(Dir, Application, OutDir, Compiler) when is_function(Compiler) ->
+    lager:notice("Load_dir(~p)", [Dir]),
     Files     = list_files(Dir),
     FullFiles = lists:map(fun(F) -> filename:join([Dir, F]) end, Files),
+    
     {ModuleList, ErrorList} = compile_and_accumulate_errors(
         FullFiles, Application, OutDir, Compiler, {[], []}),
     
@@ -193,8 +199,10 @@ compile_and_accumulate_errors([Filename|Rest], Application, OutDir, Compiler, {M
                         {ok, Module} ->
                             {[Module|Modules], Errors};
                         {error, Error} ->
+			    lager:error("Compile Error, ~p -> ~p", [Filename, Error]),
                             {Modules, [Error | Errors]};
                         {error, NewErrors, _NewWarnings} when is_list(NewErrors) ->
+			    lager:error("Compile Error, ~p -> ~p", [Filename, NewErrors]),
                             {Modules, NewErrors ++ Errors}
                     end
             end
