@@ -150,7 +150,6 @@ load_dirs1([Dir|Rest], Application, OutDir, Compiler, ModuleAcc, ErrorAcc) ->
     end.
 
 load_dir(Dir, Application, OutDir, Compiler) when is_function(Compiler) ->
-    lager:notice("Load_dir(~p)", [Dir]),
     Files     = list_files(Dir),
     FullFiles = lists:map(fun(F) -> filename:join([Dir, F]) end, Files),
     
