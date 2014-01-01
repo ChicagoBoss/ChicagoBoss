@@ -121,7 +121,7 @@ start_boss_applications( Applications, ServicesSupPid) ->
 
 init_app_load_on_dev(AppName, TranslatorSupPid) ->
     case boss_env:is_developing_app(AppName) of
-	true -> boss_load:load_all_modules(AppName, TranslatorSupPid);
+	true  -> boss_load:load_all_modules(AppName, TranslatorSupPid);
 	false -> ok
     end.
 
@@ -287,9 +287,10 @@ execute_action({Controller, Action, Tokens}, AppInfo, RequestContext, LocationTr
     execute_action({Controller, atom_to_list(Action), Tokens}, AppInfo, RequestContext, LocationTrail);
 
 execute_action({Controller, Action, Tokens} = Location, AppInfo, RequestContext, LocationTrail) ->
-    Req		= proplists:get_value(request, RequestContext),
-    SessionID	= proplists:get_value(session_id, RequestContext),
+    Req	  	   = proplists:get_value(request, RequestContext),
+    SessionID	   = proplists:get_value(session_id, RequestContext),
     IsMemberOfList = lists:member(Location, LocationTrail),
+    lager:info("execute_action ~p", [Location]),
     execute_action_check_for_circular_redirect(Controller, Action, Tokens,
                                                Location, AppInfo,
                                                RequestContext, LocationTrail,
@@ -314,20 +315,24 @@ execute_action_inner(Controller, Action, Tokens, Location, AppInfo,
     % pair exists. this prevents a memory leak due to atom creation.
     Adapters                            = [boss_controller_adapter_pmod,
                                            boss_controller_adapter_elixir],
+   
     Adapter                             = make_action_adapter(Controller, AppInfo, Adapters),
     SessionID1                          = make_action_session_id(Controller, AppInfo, Req,
 						                 SessionID, Adapter),
     RequestMethod                       = Req:request_method(),
+    lager:debug("Request Method ~p", [RequestMethod]),
     RequestContext1                     = [{request, Req},
                                            {session_id, SessionID1},
 					   {method, RequestMethod},
                                            {action, Action},
                                            {tokens, Tokens}],
-    AdapterInfo                         = Adapter:init(AppInfo#boss_app_info.application, Controller,
-                                                       AppInfo#boss_app_info.controller_modules, RequestContext1),
-	    
+    AdapterInfo                         = Adapter:init(AppInfo#boss_app_info.application, 
+						       Controller,
+                                                       AppInfo#boss_app_info.controller_modules, 
+						       RequestContext1),
+    
     RequestContext2                     = [{controller_module, element(1, AdapterInfo)}|RequestContext1],
-
+    lager:debug("Apply Action ~p", [Req]),
     {ActionResult, RequestContext3}     = apply_action(Req, Adapter,
 						       AdapterInfo,
 						       RequestContext2),
@@ -356,6 +361,7 @@ apply_action(Req, Adapter, AdapterInfo, RequestContext2) ->
     end.
 
 call_controller_action(Adapter, AdapterInfo, RequestContext) ->
+    lager:debug("Calling Controller Adapter ~s", [Adapter]),
     process_flag(trap_exit, true),
     Ref		= make_ref(),
     CHandlerPid = self(),
@@ -369,6 +375,7 @@ call_controller_action(Adapter, AdapterInfo, RequestContext) ->
 receive_controller_response(Ref) ->
     receive
         {msg, Ref, R} ->
+	    lager:debug("Response ~p", [R]),
             R;
 
         {'EXIT',_From, normal} ->        
