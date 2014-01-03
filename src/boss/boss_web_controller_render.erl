@@ -118,6 +118,8 @@ expand_action_result({jsonp, Callback, Data}) ->
     {jsonp, Callback, Data, []};
 expand_action_result({output, Payload}) ->
     {output, Payload, []};
+expand_action_result({output, Payload, Headers}) ->
+    {output, Payload, Headers};
 expand_action_result({Directive, _}) when is_list(Directive) ->
     lager:error("Action returned an invalid return ~p should be an atom not a string", [Directive]),
     {output, "bad return value from controller action\n",[]};
