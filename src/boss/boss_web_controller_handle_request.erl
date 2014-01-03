@@ -60,7 +60,10 @@ build_static_response(App, StaticPrefix, Url, Response) ->
     Ops  = [
 	    fun(Resp) -> dev_headers(Resp, IsDevelopment)	end,
 	    fun(Resp) ->  Resp:file([$/ |File])			end,
-	    fun(Resp) ->  Resp:header("Etag",Sha1)		end,
+	    fun(Resp) ->  case Sha1 of 
+	                  	{error, _} -> Resp;
+	                  	_ -> Resp:header("Etag",Sha1)
+	                  end                                   end,
 	    fun(Resp) ->  Resp:build_response()			end
 	   ],
     lists:foldl(fun(Operation, Resp) ->
@@ -78,8 +81,15 @@ dev_headers(Response, _) ->
 
 make_etag(App, StaticPrefix, File) ->
     FilePath      = code:priv_dir(App) ++ "/" ++ StaticPrefix ++ "/" ++ File,
-    {ok, Content} = file:read_file(FilePath),
-    binary_to_list(base64:encode(crypto:hash(sha, Content))).
+    case file:read_file(FilePath) of
+    	{ok, Content} -> 
+    		binary_to_list(base64:encode(crypto:hash(sha, Content)));
+    	{error, enoent} ->
+    		 error_logger:warning_msg("application ~s file ~s not found", [App, FilePath]),
+    		 {error, enoent};
+    	Err ->
+    		Err
+    end.
     
 
 %% TODO: Refactor
