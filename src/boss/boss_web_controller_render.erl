@@ -110,6 +110,8 @@ expand_action_result({render_other, OtherLocation, Data}) ->
     {render_other, OtherLocation, Data, []};
 expand_action_result({redirect, Where}) ->
     {redirect, Where, []};
+expand_action_result({redirect, Where, Headers}) ->
+    {redirect, Where, Headers};
 expand_action_result({js, Data}) ->
     {js, Data, []};
 expand_action_result({json, Data}) ->
