@@ -91,14 +91,15 @@ init_webserver(ThisNode, MasterNode, ServerMod, SSLEnable, SSLOptions,
 	    application:start(ranch),
             application:start(cowboy),
             HttpPort = boss_env:get_env(port, 8001),
+            HttpIp = boss_env:get_env(ip, {0, 0, 0, 0}),
             AcceptorCount = boss_env:get_env(acceptor_processes, 100),
             case SSLEnable of
                 false ->
-                    error_logger:info_msg("Starting http listener... on ~p ~n", [HttpPort]),
-                    cowboy:start_http(boss_http_listener, AcceptorCount, [{port, HttpPort}], [{env, []}]);
+                    error_logger:info_msg("Starting http listener... on ~s:~p ~n", [inet_parse:ntoa(HttpIp), HttpPort]),
+                    cowboy:start_http(boss_http_listener, AcceptorCount, [{port, HttpPort}, {ip, HttpIp}], [{env, []}]);
                 true ->
-                    error_logger:info_msg("Starting https listener... on ~p ~n", [HttpPort]),
-		    SSLConfig = [{port, HttpPort}] ++ SSLOptions,
+                    error_logger:info_msg("Starting https listener... on ~s:~p ~n", [inet_parse:ntoa(HttpIp), HttpPort]),
+		    SSLConfig = [{port, HttpPort}, {ip, HttpIp}] ++ SSLOptions,
 		    cowboy:start_https(boss_https_listener, AcceptorCount, SSLConfig, [{env, []}])
             end,
             if
