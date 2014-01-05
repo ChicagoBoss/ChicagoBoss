@@ -85,7 +85,7 @@ make_etag(App, StaticPrefix, File) ->
     	{ok, Content} -> 
     		binary_to_list(base64:encode(crypto:hash(sha, Content)));
     	{error, enoent} ->
-    		 error_logger:warning_msg("application ~s file ~s not found", [App, FilePath]),
+    		 lager:warning("application ~s file ~s not found", [App, FilePath]),
     		 {error, enoent};
     	Err ->
     		Err
