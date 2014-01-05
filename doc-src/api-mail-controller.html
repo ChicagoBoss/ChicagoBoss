@@ -47,6 +47,7 @@
     <ul>
         <li><p><code>attachments</code> - a list of tuples representing email attachments. Each attachment should consist of: <code>{FileName, MimeType, Contents}</code>. In this case <code>FileName</code> simply refers to how the file will be named in the email (and is not necessarily a file on the local file system). The file's <code>Contents</code> should be an io_list.</p></li>
         <li><p><code>template</code> - a string with the name of another template to use for rendering (assuming you don't want the default template, which is just the same as the function name).</p></li>
+        <li><p><code>charset</code> - specify which character set to use for the outgoing email (see <a href="#charset">Specifying character set</a>).</li>
     </ul>
 </ul>
 <p><strong>Formatting.</strong> If templates ending only in ".txt" are present, the message will be sent in plain-text; if templates ending only in ".html" are present, the message will be sent as HTML; but if both ".txt" and ".html" templates are present, the message will be sent as a a MIME multi-part message with alternative plain-text and HTML representations.</p>
@@ -67,4 +68,25 @@
     <li>The IP address of the sender</li>
 </ul>
 <p>The <code>authorize_/3</code> function should return <code>true</code> if the user should be permitted to send email to the controller, or <code>false</code> otherwise.</p>
+
+<a name="charset"></a><h2>Specifying character set</h2>
+
+<p>To specify the character set of the outgoing email, provide the option <code>{charset, &lt;CHARSET&gt;}</code> in the options part of the return value from the controller function, example:</p>
+
+<div class="code">
+<pre>
+my_function(FromAddress, ToAddress) ->
+    {
+      ok,
+      FromAddress,
+      ToAddress,
+      [
+       {"Subject", "My amazing UTF-8 email!"}
+      ],
+      [{template_parameter, template_parameter_value()}],
+      [{charset, "utf-8"}]
+    }.
+</pre>
+</div>
+
 {% endblock %}
