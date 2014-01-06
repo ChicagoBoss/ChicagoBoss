@@ -8,6 +8,7 @@ Chicago Boss apart from other non-Erlang frameworks is that it can handle large
 amounts of traffic without any drop in performance. What sets Chicago Boss apart
 from other Erlang frameworks is that it is easy to set up and use.
 
+WARNING: Chicago Boss hoes not work with Erlang R16B03 due to an error in erl_syntax
 
 60-second Quickstart
 --------------------
@@ -241,3 +242,7 @@ Be sure to also check the wiki
 There's also the mailing list:
 
 <http://groups.google.com/group/chicagoboss>
+
+If you want to contribute to CB 
+
+<https://github.com/zkessin/CODING_STANDARDS>

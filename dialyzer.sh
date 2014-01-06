@@ -9,7 +9,6 @@ dialyzer	ebin/		\
     -Wno_undefined_callbacks	\
     -Wrace_conditions		\
     --fullpath			\
-    -n \
     --plt $PLT #  -Wunmatched_returns -n
 #  
 

@@ -110,6 +110,8 @@ expand_action_result({render_other, OtherLocation, Data}) ->
     {render_other, OtherLocation, Data, []};
 expand_action_result({redirect, Where}) ->
     {redirect, Where, []};
+expand_action_result({redirect, Where, Headers}) ->
+    {redirect, Where, Headers};
 expand_action_result({js, Data}) ->
     {js, Data, []};
 expand_action_result({json, Data}) ->
@@ -118,6 +120,8 @@ expand_action_result({jsonp, Callback, Data}) ->
     {jsonp, Callback, Data, []};
 expand_action_result({output, Payload}) ->
     {output, Payload, []};
+expand_action_result({output, Payload, Headers}) ->
+    {output, Payload, Headers};
 expand_action_result({Directive, _}) when is_list(Directive) ->
     lager:error("Action returned an invalid return ~p should be an atom not a string", [Directive]),
     {output, "bad return value from controller action\n",[]};
@@ -181,12 +185,13 @@ process_action_result(_, Else, _, _) ->
 %% (seems to be called on parse error)
 render_errors(ErrorList, AppInfo, RequestContext) ->
     case boss_html_errors_template:render(RequestContext ++ [
-                {errors, ErrorList}, 
+                {error, ErrorList}, 
                 {'_base_url', AppInfo#boss_app_info.base_url},
-                {'_static', AppInfo#boss_app_info.static_prefix}]) of
+                {'_static',   AppInfo#boss_app_info.static_prefix}]) of
         {ok, Payload} ->
             {ok, Payload, []};
         Err ->
+	    lager:error("Unable to render boss_html_errors_template ~p",[Err]),
             Err
     end.
 
@@ -210,27 +215,31 @@ render_view({Controller, Template, _}, AppInfo, RequestContext, Variables, Heade
                                  Variables, Headers, Req, BossFlash,
                                  SessionData, Module, TemplateAdapter);
         {error, not_found} ->
-            AnyViewPath = boss_files:web_view_path(Controller, Template, "{" ++ string:join(TryExtensions, ",") ++ "}"),
+            AnyViewPath = boss_files_util:web_view_path(Controller, Template, "{" ++ string:join(TryExtensions, ",") ++ "}"),
             {not_found, io_lib:format("The requested template (~p) was not found.~n If you controller did not run, check that it was exported~n~n", [AnyViewPath]) };
         {error, {File, [{0, _Module, "Failed to read file"}]}} ->
             {not_found, io_lib:format("The requested template (~p) was not found.~n", [File]) };
+        {error, Error = {ErrorType, EProblem, ELine}}->
+            lager:error("Template \"~s\" has Error ~p: \"~p\" on line ~p", [Template,ErrorType, EProblem, ELine + 1 ]),
+            render_errors([Error], AppInfo, RequestContext);
         {error, Error}->
+            lager:error("Template Error template : ~p  error: ~p ", [Template,Error]),
             render_errors([Error], AppInfo, RequestContext)
     end.
 
 render_with_template(Controller, Template, AppInfo, RequestContext,
                      Variables, Headers, Req, BossFlash, SessionData, Module,
                      TemplateAdapter) ->
-    TranslatableStrings = TemplateAdapter:translatable_strings(Module),
+    TranslatableStrings    = TemplateAdapter:translatable_strings(Module),
     {Lang, TranslationFun} = choose_translation_fun(AppInfo#boss_app_info.translator_pid,
         TranslatableStrings, Req:header(accept_language),
         proplists:get_value(language, RequestContext)),
     BeforeVars = case proplists:get_value('_before', RequestContext) of
-        undefined -> [];
-        AuthInfo -> [{"_before", AuthInfo}]
+                     undefined -> [];
+                     AuthInfo -> [{"_before", AuthInfo}]
                  end,
     RenderVars = BossFlash ++ BeforeVars ++ [{"_lang", Lang}, {"_session", SessionData},
-                    {"_req", Req}, {"_base_url", AppInfo#boss_app_info.base_url}|Variables],
+                                             {"_req", Req}, {"_base_url", AppInfo#boss_app_info.base_url} | Variables],
     case TemplateAdapter:render(Module, [{"_vars", RenderVars}|RenderVars],
             [{translation_fun, TranslationFun}, {locale, Lang},
                 {host, Req:header(host)}, {application, atom_to_list(AppInfo#boss_app_info.application)},
@@ -245,7 +254,7 @@ render_with_template(Controller, Template, AppInfo, RequestContext,
 load_result(Controller, Template, AppInfo, TryExtensions) ->
     lists:foldl(fun
 		    (Ext, {error, not_found}) ->
-			ViewPath = boss_files:web_view_path(Controller, Template, Ext),
+			ViewPath = boss_files_util:web_view_path(Controller, Template, Ext),
 			boss_load:load_view_if_dev(AppInfo#boss_app_info.application,
 						   ViewPath, AppInfo#boss_app_info.view_modules,
 				                   AppInfo#boss_app_info.translator_pid);

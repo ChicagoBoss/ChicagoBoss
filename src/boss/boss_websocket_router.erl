@@ -30,6 +30,25 @@
 	 terminate/2, code_change/3]).
 
 -define(SERVER, ?MODULE). 
+-record(state, {consumers  ::dict(), 
+		services   ::dict(), 
+		nb_consumer}).
+
+-spec start_link() -> 'ignore' | {'error',_} | {'ok',pid()}.
+-spec register(_,_) -> any().
+-spec unregister(_,_) -> any().
+-spec service(_) -> any().
+-spec services() -> any().
+-spec consumers() -> any().
+-spec join(_,_,_,_) -> 'ok'.
+-spec close(_,_,_,_,_) -> 'ok'.
+-spec incoming(_,_,_,_,_) -> 'ok'.
+-spec init([]) -> {'ok',#state{consumers::dict(),services::dict(),nb_consumer::0}}.
+-spec handle_call(_,_,#state{}) -> {'reply','ok' | [any()] | {'error','service_notfound'} | {'ok',_},#state{}}.
+-spec handle_cast(_,#state{}) -> {'noreply',#state{}}.
+-spec handle_info(_,#state{}) -> {'noreply',#state{}}.
+-spec terminate(_,_) -> 'ok'.
+-spec code_change(_,_,_) -> {'ok',_}.
 
 
 %% -record(boss_consumers, 
@@ -47,8 +66,9 @@
 %%           created_on      % date of creation
 %%         }).
 
--record(state, {consumers, services, nb_consumer}).
+
           
+
 %%%===================================================================
 %%% API
 %%%===================================================================
@@ -119,7 +139,7 @@ init([]) ->
 %% @spec handle_call(Request, From, State) ->
 %%                                   {reply, Reply, State} |
 %%                                   {reply, Reply, State, Timeout} |
-%%                                   {noreply, State} |
+ %%                                   {noreply, State} |
 %%                                   {noreply, State, Timeout} |
 %%                                   {stop, Reason, Reply, State} |
 %%                                   {stop, Reason, State}

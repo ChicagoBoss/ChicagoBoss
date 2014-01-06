@@ -30,7 +30,7 @@ handle_application(Req, ResponseMod, _Request, _FullUrl, undefined) ->
     Response1:build_response();
 handle_application(Req, ResponseMod, Request, FullUrl,  App) ->
     BaseURL		= boss_web:base_url(App),
-    DocRoot		= boss_files:static_path(App),
+    DocRoot                = boss_files_util:static_path(App),
     StaticPrefix	= boss_web:static_prefix(App),
     Url			= lists:nthtail(length(BaseURL), FullUrl),
     Response		= simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
@@ -60,7 +60,10 @@ build_static_response(App, StaticPrefix, Url, Response) ->
     Ops  = [
 	    fun(Resp) -> dev_headers(Resp, IsDevelopment)	end,
 	    fun(Resp) ->  Resp:file([$/ |File])			end,
-	    fun(Resp) ->  Resp:header("Etag",Sha1)		end,
+	    fun(Resp) ->  case Sha1 of 
+	                  	{error, _} -> Resp;
+	                  	_ -> Resp:header("Etag",Sha1)
+	                  end                                   end,
 	    fun(Resp) ->  Resp:build_response()			end
 	   ],
     lists:foldl(fun(Operation, Resp) ->
@@ -78,8 +81,15 @@ dev_headers(Response, _) ->
 
 make_etag(App, StaticPrefix, File) ->
     FilePath      = code:priv_dir(App) ++ "/" ++ StaticPrefix ++ "/" ++ File,
-    {ok, Content} = file:read_file(FilePath),
-    binary_to_list(base64:encode(crypto:hash(sha, Content))).
+    case file:read_file(FilePath) of
+    	{ok, Content} -> 
+    		binary_to_list(base64:encode(crypto:hash(sha, Content)));
+    	{error, enoent} ->
+    		 lager:warning("application ~s file ~s not found", [App, FilePath]),
+    		 {error, enoent};
+    	Err ->
+    		Err
+    end.
     
 
 %% TODO: Refactor
@@ -384,7 +394,7 @@ load_and_execute(development, {"doc", ModelName, _}, AppInfo, RequestContext) ->
                 true ->
                     Model = list_to_atom(ModelName),
                     {Model, Edoc} = boss_model_manager:edoc_module(
-                        boss_files:model_path(ModelName++".erl"), [{private, true}]),
+                        boss_files_util:model_path(ModelName ++ ".erl"), [{private, true}]),
                     {ok, correct_edoc_html(Edoc, AppInfo), []};
                 false ->
                     % ok, it's not model, so it could be web controller
@@ -392,7 +402,7 @@ load_and_execute(development, {"doc", ModelName, _}, AppInfo, RequestContext) ->
                     case lists:member(ModelName, lists:map(fun atom_to_list/1, Controllers)) of
                             true ->
                                 Controller = list_to_atom(ModelName),  
-                                {Controller, Edoc} = edoc:get_doc(boss_files:web_controller_path(ModelName++".erl"), [{private, true}]),
+                                {Controller, Edoc} = edoc:get_doc(boss_files_util:web_controller_path(ModelName ++ ".erl"), [{private, true}]),
                                 {ok, correct_edoc_html(Edoc, AppInfo), []};
                             false ->
                                 % nope, so just render index page
