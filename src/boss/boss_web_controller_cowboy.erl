@@ -22,15 +22,23 @@ get_listener(false) -> boss_http_listener.
 create_cowboy_dispatches(Applications) ->
     lists:map(fun create_dispatch/1, Applications).
 
--spec(create_dispatch(atom()) -> {string(), cowboy_static, [_]}).
+-spec(create_dispatch(atom()) -> {[any(),...], cowboy_static, {'priv_dir',atom(),[97 | 99 | 105 | 115 | 116,...],[{_,_,_},...]}}).
 create_dispatch(AppName) ->
     BaseURL             = boss_env:get_env(AppName, base_url, "/"),
     StaticPrefix        = boss_env:get_env(AppName, static_prefix, "/static"),
-    Path                = BaseURL ++ StaticPrefix,
+    Path                = case BaseURL of
+                              "/" -> StaticPrefix;
+                              _ -> BaseURL ++ StaticPrefix
+                          end,
     Handler             = cowboy_static,
-    Opts                = [
-			   {directory, {priv_dir, AppName, [<<"static">>]}},
-			   {mimetypes, {fun mimetypes:path_to_mimes/2, default}}
-			  ],
-    {Path ++ "[...]", Handler, Opts}.
+    Etag                = [], %%[{etag, false}], %% [{etag, EtagModule, EtagFunction}]
+    MimeTypes           = [{mimetypes, cow_mimetypes, all}], %% [{mimetypes, mimetypes, path_to_mimes}]                          
+    Extra               = Etag ++ MimeTypes,
+    Opts                = {priv_dir, 
+                           AppName, 
+                           "static",
+                           Extra
+                           },			           
+    {Path ++ "/[...]", Handler, Opts}.
+
       

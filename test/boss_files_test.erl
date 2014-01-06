@@ -16,10 +16,10 @@ lookup_module_by_adapater_test() ->
 
 
 make_modules_test() ->
-    Dir			= ".",
-    Application		= 'test',
-    ModuleAcc		= [],
-    ExtentionPropList	= boss_files:make_extentions(),
+    _Dir	       = ".",
+    _Application       = 'test',
+    _ModuleAcc	       = [],
+    _ExtentionPropList = boss_files:make_extentions(),
     ok.
 
 

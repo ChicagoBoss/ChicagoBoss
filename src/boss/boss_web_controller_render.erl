@@ -184,13 +184,15 @@ process_action_result(_, Else, _, _) ->
 %% @desc generates HTML output for errors. called from load_and_execute/5
 %% (seems to be called on parse error)
 render_errors(ErrorList, AppInfo, RequestContext) ->
+    lager:error("Template Error: ~p", [ ErrorList]),
     case boss_html_errors_template:render(RequestContext ++ [
                 {errors, ErrorList}, 
                 {'_base_url', AppInfo#boss_app_info.base_url},
-                {'_static', AppInfo#boss_app_info.static_prefix}]) of
+                {'_static',   AppInfo#boss_app_info.static_prefix}]) of
         {ok, Payload} ->
             {ok, Payload, []};
         Err ->
+	    lager:error("Unable to render boss_html_errors_template ~p",[Err]),
             Err
     end.
 
