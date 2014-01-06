@@ -26,11 +26,26 @@ create_cowboy_dispatches(Applications) ->
 create_dispatch(AppName) ->
     BaseURL             = boss_env:get_env(AppName, base_url, "/"),
     StaticPrefix        = boss_env:get_env(AppName, static_prefix, "/static"),
-    Path                = BaseURL ++ StaticPrefix,
+    %%Path                = BaseURL ++ StaticPrefix,
+    %%Handler             = cowboy_static,
+    %%Opts                = [
+%%			   {directory, {priv_dir, AppName, [<<"static">>]}},
+%%			   {mimetypes, {fun mimetypes:path_to_mimes/2, default}}
+%%			  ],
+%%    {Path ++ "[...]", Handler, Opts}.
+    Path                = case BaseURL of
+                              "/" -> StaticPrefix;
+                              _ -> BaseURL ++ StaticPrefix
+                          end,
     Handler             = cowboy_static,
-    Opts                = [
-			   {directory, {priv_dir, AppName, [<<"static">>]}},
-			   {mimetypes, {fun mimetypes:path_to_mimes/2, default}}
-			  ],
-    {Path ++ "[...]", Handler, Opts}.
+    Etag                = [], %%[{etag, false}], %% [{etag, EtagModule, EtagFunction}]
+    MimeTypes           = [{mimetypes, cow_mimetypes, all}], %% [{mimetypes, mimetypes, path_to_mimes}]                          
+    Extra               = Etag ++ MimeTypes,
+    Opts                = {priv_dir, 
+                           AppName, 
+                           "static",
+                           Extra
+                           },			           
+    {Path ++ "/[...]", Handler, Opts}.
+
       
