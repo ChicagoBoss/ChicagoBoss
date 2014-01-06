@@ -27,6 +27,10 @@
         <li><a href="{{ _base_url }}{{ _doc }}/{{ controller }}">{{ controller }}</a></li>
         {% endfor %}
         </ul>
+	<h2>Templates</h2>
+	<ul>
+	  {{unknown_filter}}
+	</ul>
         <br />
         <br />
         <p><em>{% now "D, j F Y g:i a" %}</em></p>
