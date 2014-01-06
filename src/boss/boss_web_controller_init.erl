@@ -88,6 +88,7 @@ init_webserver(ThisNode, MasterNode, ServerMod, SSLEnable, SSLOptions,
   cowboy ->
 	    %Dispatch = [{'_', [{'_', boss_mochicow_handler, [{loop, {boss_mochicow_handler, loop}}]}]}],
 	    error_logger:info_msg("Starting cowboy... on ~p~n", [MasterNode]),
+	    application:start(cowlib),
 	    application:start(ranch),
             application:start(cowboy),
             HttpPort = boss_env:get_env(port, 8001),
