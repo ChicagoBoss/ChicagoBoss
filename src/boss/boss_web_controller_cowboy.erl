@@ -26,7 +26,7 @@ create_cowboy_dispatches(Applications) ->
 create_dispatch(AppName) ->
     BaseURL             = boss_env:get_env(AppName, base_url, "/"),
     StaticPrefix        = boss_env:get_env(AppName, static_prefix, "/static"),
-    Path                = case BaseURL 
+    Path                = case BaseURL of
                               "/" -> StaticPrefix;
                               _ -> BaseURL ++ StaticPrefix
                           end,
