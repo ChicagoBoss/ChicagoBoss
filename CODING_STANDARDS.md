@@ -31,4 +31,7 @@ good, property based tests are better.
 If your code has more than 1 level of nested case, fun or foldl, It
 needs to be re factored. Really keep the functions short.
 
- 
+## Documentation is required
+Please use EDoc (http://www.erlang.org/doc/apps/edoc/chapter.html) 
+compatible comments for your functions and modules. In-code comments 
+are welcome too. 

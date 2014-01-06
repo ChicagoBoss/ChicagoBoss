@@ -110,6 +110,8 @@ expand_action_result({render_other, OtherLocation, Data}) ->
     {render_other, OtherLocation, Data, []};
 expand_action_result({redirect, Where}) ->
     {redirect, Where, []};
+expand_action_result({redirect, Where, Headers}) ->
+    {redirect, Where, Headers};
 expand_action_result({js, Data}) ->
     {js, Data, []};
 expand_action_result({json, Data}) ->
@@ -118,6 +120,8 @@ expand_action_result({jsonp, Callback, Data}) ->
     {jsonp, Callback, Data, []};
 expand_action_result({output, Payload}) ->
     {output, Payload, []};
+expand_action_result({output, Payload, Headers}) ->
+    {output, Payload, Headers};
 expand_action_result({Directive, _}) when is_list(Directive) ->
     lager:error("Action returned an invalid return ~p should be an atom not a string", [Directive]),
     {output, "bad return value from controller action\n",[]};
