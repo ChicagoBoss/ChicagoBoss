@@ -184,9 +184,8 @@ process_action_result(_, Else, _, _) ->
 %% @desc generates HTML output for errors. called from load_and_execute/5
 %% (seems to be called on parse error)
 render_errors(ErrorList, AppInfo, RequestContext) ->
-    lager:error("Template Error: ~p", [ ErrorList]),
     case boss_html_errors_template:render(RequestContext ++ [
-                {errors, ErrorList}, 
+                {error, ErrorList}, 
                 {'_base_url', AppInfo#boss_app_info.base_url},
                 {'_static',   AppInfo#boss_app_info.static_prefix}]) of
         {ok, Payload} ->
@@ -220,23 +219,27 @@ render_view({Controller, Template, _}, AppInfo, RequestContext, Variables, Heade
             {not_found, io_lib:format("The requested template (~p) was not found.~n If you controller did not run, check that it was exported~n~n", [AnyViewPath]) };
         {error, {File, [{0, _Module, "Failed to read file"}]}} ->
             {not_found, io_lib:format("The requested template (~p) was not found.~n", [File]) };
+        {error, Error = {ErrorType, EProblem, ELine}}->
+            lager:error("Template \"~s\" has Error ~p: \"~p\" on line ~p", [Template,ErrorType, EProblem, ELine + 1 ]),
+            render_errors([Error], AppInfo, RequestContext);
         {error, Error}->
+            lager:error("Template Error template : ~p  error: ~p ", [Template,Error]),
             render_errors([Error], AppInfo, RequestContext)
     end.
 
 render_with_template(Controller, Template, AppInfo, RequestContext,
                      Variables, Headers, Req, BossFlash, SessionData, Module,
                      TemplateAdapter) ->
-    TranslatableStrings = TemplateAdapter:translatable_strings(Module),
+    TranslatableStrings    = TemplateAdapter:translatable_strings(Module),
     {Lang, TranslationFun} = choose_translation_fun(AppInfo#boss_app_info.translator_pid,
         TranslatableStrings, Req:header(accept_language),
         proplists:get_value(language, RequestContext)),
     BeforeVars = case proplists:get_value('_before', RequestContext) of
-        undefined -> [];
-        AuthInfo -> [{"_before", AuthInfo}]
+                     undefined -> [];
+                     AuthInfo -> [{"_before", AuthInfo}]
                  end,
     RenderVars = BossFlash ++ BeforeVars ++ [{"_lang", Lang}, {"_session", SessionData},
-                    {"_req", Req}, {"_base_url", AppInfo#boss_app_info.base_url}|Variables],
+                                             {"_req", Req}, {"_base_url", AppInfo#boss_app_info.base_url} | Variables],
     case TemplateAdapter:render(Module, [{"_vars", RenderVars}|RenderVars],
             [{translation_fun, TranslationFun}, {locale, Lang},
                 {host, Req:header(host)}, {application, atom_to_list(AppInfo#boss_app_info.application)},
