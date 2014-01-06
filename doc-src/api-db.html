@@ -18,6 +18,16 @@
     {% endif %}
 {% endfor %}
 
+<h2>Creating a Model from a JSON record</h2>
+<p>
+If your project is anything like mine then you will probably have a
+case where you get a JSON in from the user or an api and you want to
+convert it to a model. we have a new
+function <b>boss_record:new_from_json/2</b> which lets you do that
+automaticly. To run this call new_from_json/2 with your model (atom)
+and your json record. Note that if you have a field called 'id' you
+will have to rename or remove it
+</p>
 
 <h2>Conditions and Comparison Operators</h2>
 
