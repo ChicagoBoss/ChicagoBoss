@@ -14,7 +14,8 @@
         template_extensions/0,
         is_controller_present/3,
         web_controller/3,
-        web_controller_list/1
+        web_controller_list/1,
+        find_file/1
     ]).
 
 -export([make_extentions/1]).
@@ -243,6 +244,8 @@ lookup_module_by_adapater(_Application, _File, Acc, undefined) ->
 lookup_module_by_adapater(Application, File, Acc, Adapater) ->
     [Adapater:module_name_for_file(Application, File)|Acc].
 
+find_file(Dir) ->
+    find_file(Dir, []).
 
 find_file(Dir, ModuleAcc) ->
     case file:list_dir(Dir) of
