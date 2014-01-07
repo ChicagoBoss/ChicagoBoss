@@ -11,13 +11,14 @@
 # -------------------------------------------------------------------
 
 do_start () {
-    if test $(echo "$1" | grep ERROR > /dev/null;echo $?) -eq 0
+    if test $(echo "$1"|grep "^exec erl"> /dev/null;echo $?) -eq 0
     then
-        echo "$1"
+        eval "$1"
     else
-        eval $1
+        echo "$1"
     fi
 }
+
 
 cd `dirname $0`
 
