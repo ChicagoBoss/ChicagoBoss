@@ -47,6 +47,7 @@
 -spec dot_app_src(atom() | string() | number()) -> input_string().
 -spec model_list(_,[input_string(),...]) -> [any()].
 
+-spec find_file(input_string()) -> [string()].
 -spec find_file(input_string(),[]) -> [string()].
 -spec find_file([string()],input_string(),[string()],[]) -> [string()].
 
