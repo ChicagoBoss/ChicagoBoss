@@ -132,7 +132,43 @@ load_view_lib_modules(Application, OutDir) ->
 load_models(Application) ->
     load_models(Application, undefined).
 load_models(Application, OutDir) ->
-    load_dirs(boss_files_util:model_path(), Application, OutDir, fun compile_model/2).
+    load_model_dirs(boss_files_util:model_path(), Application, OutDir, fun compile_model/2).
+
+load_model_dirs(Dirs, Application, OutDir, Compiler) ->
+    load_model_dirs1(Dirs, Application, OutDir, Compiler, [], []).
+
+%% i duplicate code here but cuz i don't want to change behaviour for other folder ...
+load_model_dirs1([], _, _, _, ModuleAcc, []) ->
+    {ok, ModuleAcc};
+load_model_dirs1([], _, _, _, _, ErrorAcc) ->
+    {error, ErrorAcc};
+load_model_dirs1([Dir|Rest], Application, OutDir, Compiler, ModuleAcc, ErrorAcc) ->
+    case load_model_dir(Dir, Application, OutDir, Compiler) of
+        {ok, ModuleList} ->
+            load_model_dirs1(Rest, Application, OutDir, Compiler, ModuleList ++ ModuleAcc, ErrorAcc);
+        {error, ErrorList} ->
+            load_model_dirs1(Rest, Application, OutDir, Compiler, ModuleAcc, ErrorList ++ ErrorAcc)
+    end.
+
+load_model_dir(Dir, Application, OutDir, Compiler) when is_function(Compiler) ->
+    FullFiles     = list_subfolder_files(Dir),
+    {ModuleList, ErrorList} = compile_and_accumulate_errors(
+        FullFiles, Application, OutDir, Compiler, {[], []}),
+    
+    case length(ErrorList) of
+        0 ->
+            {ok, ModuleList};
+        _ ->
+            {error, ErrorList}
+    end.
+
+%% Only serve files that end in ".erl", with sub folder
+%% todo: maybe remove  .#*.erl file (emacs specific)
+list_subfolder_files(Dir) ->
+    lists:filter(fun(String) ->
+                         string:right(String, 4) == ".erl"
+                 end, boss_files:find_file(Dir)).
+
 
 load_dirs(Dirs, Application, OutDir, Compiler) ->
     load_dirs1(Dirs, Application, OutDir, Compiler, [], []).
