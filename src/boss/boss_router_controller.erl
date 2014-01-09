@@ -88,7 +88,7 @@ handle_call({route, Url}, _From, State) ->
             end;
         #boss_route{ application = App, controller = C, action = A, params = P } -> 
             ControllerModule = list_to_atom(boss_files:web_controller(App, C, State#state.controllers)),
-            {Tokens, []} = boss_controller_lib:convert_params_to_tokens(P, ControllerModule, list_to_atom(A)),
+            {Tokens, []}     = boss_controller_lib:convert_params_to_tokens(P, ControllerModule, list_to_atom(A)),
             {ok, {App, C, A, Tokens}}
     end,
     {reply, Route, State};

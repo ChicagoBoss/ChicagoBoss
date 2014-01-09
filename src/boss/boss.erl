@@ -1,4 +1,4 @@
-%% @author Evan Miller <emmiller@gmail.com>
+g%% @author Evan Miller <emmiller@gmail.com>
 %% @copyright 2009 author.
 
 %% @doc TEMPLATE.

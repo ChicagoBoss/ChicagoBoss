@@ -290,7 +290,7 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, RequestContext,
     Req	  	   = proplists:get_value(request, RequestContext),
     SessionID	   = proplists:get_value(session_id, RequestContext),
     IsMemberOfList = lists:member(Location, LocationTrail),
-    lager:info("execute_action ~p", [Location]),
+    lager:notice("execute_action ~p", [Location]),
     execute_action_check_for_circular_redirect(Controller, Action, Tokens,
                                                Location, AppInfo,
                                                RequestContext, LocationTrail,
@@ -320,7 +320,7 @@ execute_action_inner(Controller, Action, Tokens, Location, AppInfo,
     SessionID1                          = make_action_session_id(Controller, AppInfo, Req,
 						                 SessionID, Adapter),
     RequestMethod                       = Req:request_method(),
-    lager:debug("Request Method ~p", [RequestMethod]),
+    lager:notice("Request Method ~p", [RequestMethod]),
     RequestContext1                     = [{request, Req},
                                            {session_id, SessionID1},
 					   {method, RequestMethod},
@@ -332,7 +332,7 @@ execute_action_inner(Controller, Action, Tokens, Location, AppInfo,
 						       RequestContext1),
     
     RequestContext2                     = [{controller_module, element(1, AdapterInfo)}|RequestContext1],
-    lager:debug("Apply Action ~p", [Req]),
+    lager:notice("Apply Action ~p", [Req]),
     {ActionResult, RequestContext3}     = apply_action(Req, Adapter,
 						       AdapterInfo,
 						       RequestContext2),
@@ -361,7 +361,7 @@ apply_action(Req, Adapter, AdapterInfo, RequestContext2) ->
     end.
 
 call_controller_action(Adapter, AdapterInfo, RequestContext) ->
-    lager:debug("Calling Controller Adapter ~s", [Adapter]),
+    lager:notice("Calling Controller Adapter ~s", [Adapter]),
     process_flag(trap_exit, true),
     Ref		= make_ref(),
     CHandlerPid = self(),
@@ -375,7 +375,7 @@ call_controller_action(Adapter, AdapterInfo, RequestContext) ->
 receive_controller_response(Ref) ->
     receive
         {msg, Ref, R} ->
-	    lager:debug("Response ~p", [R]),
+	    lager:notice("Response ~p", [R]),
             R;
 
         {'EXIT',_From, normal} ->        

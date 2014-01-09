@@ -23,6 +23,7 @@ loop(Req) ->
 terminate(_Req, _State) ->
     ok.
 
+%% TODO check this function
 websocket_init(_Any, Req, _Opts) ->
     SessionKey = boss_env:get_env(session_key, "_boss_session"),
     {ServiceUrl, _Req1} = cowboy_req:path(Req),
