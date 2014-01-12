@@ -352,17 +352,17 @@ process_result(AppInfo, Req, {redirect, "http://"++Where, Headers}) ->
 process_result(AppInfo, Req, {redirect, "https://"++Where, Headers}) ->
     process_result(AppInfo, Req, {redirect_external, "https://"++Where, Headers});
 process_result(AppInfo, Req, {redirect, {Application, Controller, Action, Params}, Headers}) ->
-    RouterPid = if
+    {RouterPid, AppInfo1, Application1} = if
         AppInfo#boss_app_info.application =:= Application ->
-            AppInfo#boss_app_info.router_pid;
+            {AppInfo#boss_app_info.router_pid, AppInfo, Application};
         true ->
-            boss_web:router_pid(Application)
+            {boss_web:router_pid(Application), boss_web:application_info( Application ), Application}
     end,
-    ExtraParams = [{application, Application}, {controller, Controller}, {action, Action}],
+    ExtraParams = [{application, Application1}, {controller, Controller}, {action, Action}],
     URL = boss_erlydtl_tags:url(ExtraParams ++ Params, [
             {host, Req:header(host)},
-            {base_url, AppInfo#boss_app_info.base_url},
-            {application, AppInfo#boss_app_info.application},
+            {base_url, AppInfo1#boss_app_info.base_url},
+            {application, AppInfo1#boss_app_info.application},
             {router_pid, RouterPid}]),
     {302, [{"Location", URL}, {"Cache-Control", "no-cache"}|Headers], ""};
 process_result(AppInfo, _, {redirect, Where, Headers}) ->
