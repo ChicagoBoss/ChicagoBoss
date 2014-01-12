@@ -5,28 +5,29 @@
 -define(PRINT(N,V),
 	lager:notice(" ~s ~p", [ N,V])).
 -include_lib("eunit/include/eunit.hrl").
--record(state, {
-        applications	= []	::[atom()],
-        service_sup_pid		::pid(),
-        http_pid		::pid(),
-        smtp_pid		::pid(),
-        is_master_node	= false ::boolean()
-    }).
 
 -record(boss_app_info, {
         application		::atom(),
-        base_url,
-        static_prefix,
-        doc_prefix,
-        domains,
-        init_data,
+        base_url                ::string(),
+        static_prefix           ::string(),
+        doc_prefix              ::string(),
+        domains                 ::all|[string()],
+        init_data               ::[{atom(), any()}] ,
         router_sup_pid		::pid(),
         router_pid		::pid(),
         translator_sup_pid	::pid(),
         translator_pid		::pid(),
-        model_modules = [],
-        view_modules = [],
-        controller_modules = []
+        model_modules = []      ::[atom()],
+        view_modules = []       ::[atom()],
+        controller_modules = [] ::[atom()]
+    }).
+
+-record(state, {
+        applications	= []	::[ #boss_app_info{}],
+        service_sup_pid		::pid(),
+        http_pid		::pid(),
+        smtp_pid		::pid(),
+        is_master_node	= false ::boolean()
     }).
 
 

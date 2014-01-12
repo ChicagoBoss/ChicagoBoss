@@ -20,7 +20,7 @@ handle_request(Req, RequestMod, ResponseMod) ->
     ApplicationForPath	= boss_web_controller_util:find_application_for_path(Request:header(host),
 									     FullUrl, 
 									     LoadedApplications),
-    io:format("~s:~p (~p) ApplicationForPath ~p~n", [?FILE, ?LINE, self(), ApplicationForPath]),
+    lager:notice("ApplicationForPath ~p~n", [ApplicationForPath]),
     handle_application(Req, ResponseMod, Request, FullUrl,
 	               ApplicationForPath).
 

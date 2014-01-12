@@ -20,7 +20,7 @@ compile(File) ->
 
 compile(File, Options) ->
     boss_compiler:compile(File,
-        [{pre_revert_transform, fun ?MODULE:add_routes_to_forms/1}|Options]).
+                          [{pre_revert_transform, fun ?MODULE:add_routes_to_forms/1}|Options]).
 
 add_routes_to_forms(Forms) ->
     [{eof, _Line}|OtherForms]	= lists:reverse(Forms),

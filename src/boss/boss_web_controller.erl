@@ -76,7 +76,9 @@ init(Config) ->
 							             ResponseMod),
     Pid						= boss_web_controller_init:init_webserver(ThisNode, MasterNode, ServerMod, SSLEnable,
 											  SSLOptions, ServicesSupPid, ServerConfig),
-    {ok, #state{ service_sup_pid = ServicesSupPid, http_pid = Pid, is_master_node = (ThisNode =:= MasterNode) }, 0}.
+    {ok, #state{ service_sup_pid = ServicesSupPid, 
+                 http_pid        = Pid, 
+                 is_master_node  = (ThisNode =:= MasterNode) }, 0}.
 
 init_server_config(Config, RequestMod, ResponseMod) ->
     [{loop, fun(Req) ->
@@ -101,27 +103,30 @@ handle_info(timeout, State = #state{service_sup_pid = ServicesSupPid}) ->
 
 start_boss_applications( Applications, ServicesSupPid) ->
     lists:map(fun
-	   (AppName) ->
-	       application:start(AppName),
-	       {TranslatorSupPid, BaseURL, IsMasterNode, StaticPrefix,
-		DocPrefix, DomainList, ModelList, ViewList, ControllerList,
-                RouterSupPid}  = boss_web_controller_util:unpack_application_env(AppName),
-					    
-	       init_app_load_on_dev(AppName,
-				    TranslatorSupPid),
-					    
-	       enable_master_apps(ServicesSupPid, AppName, BaseURL,
-				  IsMasterNode),
-					    
-	       boss_web_controller_util:make_boss_app_info(AppName, BaseURL, StaticPrefix, DocPrefix,
-				                           DomainList, ModelList, ViewList,
-				                           ControllerList, RouterSupPid,
-				                           TranslatorSupPid)
+                  (AppName) ->
+                      application:start(AppName),
+                      {TranslatorSupPid, BaseURL, IsMasterNode, StaticPrefix,
+                       DocPrefix, DomainList, ModelList, ViewList, ControllerList,
+                       RouterSupPid}  = boss_web_controller_util:unpack_application_env(AppName),
+                      
+                      init_app_load_on_dev(AppName,
+                                           TranslatorSupPid),
+                      
+                      enable_master_apps(ServicesSupPid, AppName, BaseURL,
+                                         IsMasterNode),
+                      
+                      boss_web_controller_util:make_boss_app_info(AppName, BaseURL, StaticPrefix, DocPrefix,
+                                                                  DomainList, ModelList, ViewList,
+                                                                  ControllerList, RouterSupPid,
+                                                                  TranslatorSupPid)
 	      end, Applications).
 
 init_app_load_on_dev(AppName, TranslatorSupPid) ->
     case boss_env:is_developing_app(AppName) of
-	true  -> boss_load:load_all_modules(AppName, TranslatorSupPid);
+	true  -> 
+            Result = boss_load:load_all_modules(AppName, TranslatorSupPid),
+            boss_web ! timeout,
+            Result;
 	false -> ok
     end.
 
@@ -180,7 +185,8 @@ handle_call(get_all_models, _From, State) ->
         end, [], State#state.applications),
     {reply, Models, State};
 handle_call(get_all_applications, _From, State) ->
-    Applications = lists:map(fun(AppInfo) -> AppInfo#boss_app_info.application end, State#state.applications),
+    Applications = lists:map(fun(AppInfo) -> AppInfo#boss_app_info.application end,
+                             State#state.applications),
     {reply, Applications, State};
 handle_call({translator_pid, App}, _From, State) ->
     Pid = lists:foldl(fun
@@ -204,28 +210,16 @@ handle_call({application_info, App}, _From, State) ->
     AppInfo = lists:keyfind(App, 2, State#state.applications),
     {reply, AppInfo, State};
 handle_call({base_url, App}, _From, State) ->
-    BaseURL = lists:foldl(fun
-            (#boss_app_info{ application = App1, base_url = URL }, _) when App1 =:= App ->
-                URL;
-            (_, Res) ->
-                Res
-        end, "", State#state.applications),
+    {_,AppInfo,_ } = handle_call({application_info, App},_From, State),
+    BaseURL        = AppInfo#boss_app_info.base_url,
     {reply, BaseURL, State};
 handle_call({static_prefix, App}, _From, State) ->
-    StaticPrefix = lists:foldl(fun
-            (#boss_app_info{ application = App1, static_prefix = Prefix }, _) when App1 =:= App ->
-                Prefix;
-            (_, Res) ->
-                Res
-        end, "/static", State#state.applications),
+    {_,AppInfo,_ } = handle_call({application_info, App},_From, State),
+    StaticPrefix        = AppInfo#boss_app_info.static_prefix,
     {reply, StaticPrefix, State};
 handle_call({domains, App}, _From, State) ->
-    DomainList = lists:foldl(fun
-            (#boss_app_info{ application = App1, domains = Domains}, _) when App1 =:= App ->
-                Domains;
-            (_, Res) ->
-                Res
-        end, all, State#state.applications),
+    {_,AppInfo,_ } = handle_call({application_info, App},_From, State),
+    DomainList        = AppInfo#boss_app_info.domains,
     {reply, DomainList, State}.
 
 handle_cast(_Request, State) ->
@@ -290,7 +284,7 @@ execute_action({Controller, Action, Tokens} = Location, AppInfo, RequestContext,
     Req	  	   = proplists:get_value(request, RequestContext),
     SessionID	   = proplists:get_value(session_id, RequestContext),
     IsMemberOfList = lists:member(Location, LocationTrail),
-    lager:info("execute_action ~p", [Location]),
+    lager:notice("execute_action ~p", [Location]),
     execute_action_check_for_circular_redirect(Controller, Action, Tokens,
                                                Location, AppInfo,
                                                RequestContext, LocationTrail,
@@ -320,7 +314,7 @@ execute_action_inner(Controller, Action, Tokens, Location, AppInfo,
     SessionID1                          = make_action_session_id(Controller, AppInfo, Req,
 						                 SessionID, Adapter),
     RequestMethod                       = Req:request_method(),
-    lager:debug("Request Method ~p", [RequestMethod]),
+    lager:notice("Request Method ~p", [RequestMethod]),
     RequestContext1                     = [{request, Req},
                                            {session_id, SessionID1},
 					   {method, RequestMethod},
@@ -332,7 +326,7 @@ execute_action_inner(Controller, Action, Tokens, Location, AppInfo,
 						       RequestContext1),
     
     RequestContext2                     = [{controller_module, element(1, AdapterInfo)}|RequestContext1],
-    lager:debug("Apply Action ~p", [Req]),
+    lager:notice("Apply Action ~p", [Req]),
     {ActionResult, RequestContext3}     = apply_action(Req, Adapter,
 						       AdapterInfo,
 						       RequestContext2),
@@ -361,7 +355,7 @@ apply_action(Req, Adapter, AdapterInfo, RequestContext2) ->
     end.
 
 call_controller_action(Adapter, AdapterInfo, RequestContext) ->
-    lager:debug("Calling Controller Adapter ~s", [Adapter]),
+    lager:notice("Calling Controller Adapter ~s", [Adapter]),
     process_flag(trap_exit, true),
     Ref		= make_ref(),
     CHandlerPid = self(),
@@ -375,7 +369,7 @@ call_controller_action(Adapter, AdapterInfo, RequestContext) ->
 receive_controller_response(Ref) ->
     receive
         {msg, Ref, R} ->
-	    lager:debug("Response ~p", [R]),
+	    lager:notice("Response ~p", [R]),
             R;
 
         {'EXIT',_From, normal} ->        

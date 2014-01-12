@@ -1,6 +1,9 @@
 -module(boss_json).
 -export([encode/2]).
 
+-spec encode(_,_) -> any().
+-spec json_data1([{_,_}],_,[{_,_}]) -> {'struct',[{_,_}]}.
+
 encode([First|_] = Data, ModelList) ->
     case boss_model_manager:is_model_instance (First, ModelList) of
         true ->
