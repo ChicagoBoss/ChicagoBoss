@@ -15,7 +15,17 @@
         reload_all/0
     ]).
 -include("boss_web.hrl").
--type module_types() :: [{'controller_modules' | 'lib_modules' | 'mail_modules' | 'model_modules' | 'test_modules' | 'view_lib_helper_modules' | 'view_lib_tags_modules' | 'view_modules' | 'websocket_modules',maybe_improper_list()},...].
+
+-ifdef(TEST).
+-compile(export_all).
+-endif.
+
+-type module_types() :: [{'controller_modules' | 'lib_modules' |
+                          'mail_modules' | 'model_modules' | 'test_modules' |
+                          'view_lib_helper_modules' | 'view_lib_tags_modules' | 'view_modules'
+                          | 'websocket_modules',maybe_improper_list()},...].
+
+
 -type reload_error_status_values() :: 'badfile' | 'native_code' | 'nofile' | 'not_purged' | 'on_load' | 'sticky_directory'.
 -type application() :: types:application().
 
@@ -47,53 +57,69 @@ load_all_modules(Application, TranslatorSupPid, OutDir) ->
     lager:info("Loading application ~p", [Application]),
     [{_, TranslatorPid, _, _}]	= supervisor:which_children(TranslatorSupPid),
     
-    Ops = [{test_modules,		fun load_test_modules/2 		},
-	   {lib_modules,		fun load_libraries/2			},
-	   {websocket_modules,		fun load_services_websockets/2		},
-	   {mail_modules,		fun load_mail_controllers/2		},
-	   {controller_modules,		fun load_web_controllers/2		},
-	   {model_modules,		fun load_models/2			},
-	   {view_lib_helper_modules,	fun load_view_lib_modules/2		},
-	   {view_lib_tags_modules,      load_view_lib(_, _, TranslatorPid)	},
-	   {view_modules,               load_views(_, _,    TranslatorPid)	}],
-    AllModules = lists:map(fun({Key, Lambda}) ->
-				   case Lambda(Application, OutDir) of
-				       {ok, Modules} ->
-					   {Key, Modules};
-				       {error, Message}->
-					   lager:error("Load Module Error ~p : ~p", [Key, Message]),
-					   {Key, []}
-				   end
-			     end, Ops),
+    Ops = make_ops_list(TranslatorPid),
+
+    AllModules = make_all_modules(Application, OutDir, Ops),
     {ok, AllModules}.
+-type error(X)   :: {ok, X} | {error, string()}.
+-type op_key()   :: test_modules|lib_modules|websocket_modules|mail_modules|controller_modules|
+                    model_modules| view_lib_tags_modules|view_lib_helper_modules|view_modules.
+-type op()       :: {op_key(), fun((atom(), string()) -> error(_))}.
+-spec(make_ops_list(pid()) -> [op()]).
+make_ops_list(TranslatorPid) ->
+    [{test_modules,	       fun load_test_modules/2 		},
+     {lib_modules,	       fun load_libraries/2			},
+     {websocket_modules,       fun load_services_websockets/2		},
+     {mail_modules,	       fun load_mail_controllers/2		},
+     {controller_modules,      fun load_web_controllers/2		},
+     {model_modules,	       fun load_models/2			},
+     {view_lib_helper_modules, fun load_view_lib_modules/2		},
+     {view_lib_tags_modules,      load_view_lib(_, _, TranslatorPid)	},
+     {view_modules,               load_views(_, _,    TranslatorPid)	}].
+    
+-spec make_all_modules(atom(), string(), [op()]) -> [{atom(),_}].
+
+make_all_modules(Application, OutDir, Ops) ->
+    lists:map(fun({Key, Lambda}) ->
+		      case Lambda(Application, OutDir) of
+			  {ok, Modules} ->
+			      {Key, Modules};
+			  {error, Message} ->
+			      lager:error("Load Module Error ~p : ~p", [Key, Message]),
+			      {Key, []}
+		      end
+              end, Ops).
 
 load_test_modules(Application, OutDir) ->
-    load_dirs(boss_files_util:test_path(),
+    Result = load_dirs(boss_files_util:test_path(),
 	      Application,
-              OutDir, fun compile/2).
+              OutDir,
+              fun compile/2),
+    Result.
 
 load_all_modules_and_emit_app_file(AppName, OutDir) ->
     application:start(elixir),
-    {ok, TranslatorSupPid}			= boss_translator:start([{application, AppName}]),
-    {ok, ModulePropList}			= load_all_modules(AppName, TranslatorSupPid, OutDir),
-    AllModules					= lists:foldr(fun({_, Mods}, Acc) -> Mods ++ Acc end, [], ModulePropList),
-    DotAppSrc					= boss_files:dot_app_src(AppName),
-    {ok, [{application, AppName, AppData}]}	= file:consult(DotAppSrc),
-    AppData1					= lists:keyreplace(modules, 1, AppData, {modules, AllModules}),
-    Vsn						= proplists:get_value(vsn, AppData1, []),
-    ComputedVsn					= case vcs_vsn_cmd(Vsn) of
-        {unknown, Val} -> Val;
-        Cmd ->
-            VsnString = os:cmd(Cmd),
-            string:strip(VsnString, right, $\n)
-    end,
-    AppData2	= lists:keyreplace(vsn, 1, AppData1, {vsn, ComputedVsn}),
-    DefaultEnv	= proplists:get_value(env, AppData2, []),
-    AppData3	= lists:keyreplace(env, 1, AppData2, {env, ModulePropList ++ DefaultEnv}),
-
-    IOList	= io_lib:format("~p.~n", [{application, AppName, AppData3}]),
-    AppFile	= filename:join([OutDir, lists:concat([AppName, ".app"])]),
+    {ok, TranslatorSupPid}		    = boss_translator:start([{application, AppName}]),
+    {ok, ModulePropList}		    = load_all_modules(AppName, TranslatorSupPid, OutDir),
+    AllModules				    = lists:foldr(fun({_, Mods}, Acc) -> Mods ++ Acc end, [], ModulePropList),
+    DotAppSrc				    = boss_files:dot_app_src(AppName),
+    {ok, [{application, AppName, AppData}]} = file:consult(DotAppSrc),
+    AppData1				    = lists:keyreplace(modules, 1, AppData, {modules, AllModules}),
+    Vsn					    = proplists:get_value(vsn, AppData1, []),
+    ComputedVsn                             = make_computed_vsn(Vsn),
+    AppData2                                = lists:keyreplace(vsn, 1, AppData1, {vsn, ComputedVsn}),
+    DefaultEnv                              = proplists:get_value(env, AppData2, []),
+    AppData3                                = lists:keyreplace(env, 1, AppData2, {env, ModulePropList ++ DefaultEnv}),
+    IOList                                  = io_lib:format("~p.~n", [{application, AppName, AppData3}]),
+    AppFile                                 = filename:join([OutDir, lists:concat([AppName, ".app"])]),
     file:write_file(AppFile, IOList).
+
+
+make_computed_vsn({unknown, Val} ) ->Val;
+make_computed_vsn(Cmd ) ->
+    VsnString = os:cmd(Cmd),
+    string:strip(VsnString, right, $\n).
+        
 
 reload_all() ->
     lager:notice("Reload All"),
@@ -106,7 +132,6 @@ reload_all() ->
 load_libraries(Application) ->
     load_libraries(Application, undefined).
 load_libraries(Application, OutDir) ->
-    
     load_dirs(boss_files_util:lib_path(), Application, OutDir, fun compile/2).
 
 load_services_websockets(Application) ->
@@ -282,7 +307,7 @@ compile_view_dir_erlydtl(Application, LibPath, Module, OutDir, TranslatorPid) ->
     FilterHelpers        = lists:map(fun erlang:list_to_atom/1, boss_files_util:view_filter_helper_list(Application)),
     ExtraTagHelpers	= boss_env:get_env(template_tag_modules, []),
     ExtraFilterHelpers	= boss_env:get_env(template_filter_modules, []),
-    io:format("~nCompile Modules ~p ~n~p~n~n", [LibPath,Module]),
+    lager:info("Compile Modules ~p  ~p", [LibPath,Module]),
     Res			= erlydtl_compiler:compile_dir(LibPath, Module,
         [{doc_root, view_doc_root(LibPath)}, {compiler_options, []}, {out_dir, OutDir}, 
             {custom_tags_modules, TagHelpers ++ ExtraTagHelpers ++ [boss_erlydtl_tags]},
@@ -415,7 +440,7 @@ load_view_if_old(Application, ViewPath, Module, TemplateAdapter, TranslatorPid) 
     end.
 
 load_view_if_dev(Application, ViewPath, ViewModules, TranslatorPid) ->
-    Module = view_module(Application, ViewPath),
+    Module          = view_module(Application, ViewPath),
     TemplateAdapter = boss_files:template_adapter_for_extension(filename:extension(ViewPath)),
     case boss_env:is_developing_app(Application) of
         true -> 
@@ -441,7 +466,9 @@ module_is_loaded(Module) ->
         _ ->
             false
     end.
-
+-type maybe_list(X) :: X|list(X).
+-spec(module_older_than(maybe_list(module()), maybe_list(string())) ->
+              boolean()).
 module_older_than(Module, Files) when is_atom(Module) ->
     case code:is_loaded(Module) of
         {file, Loaded} ->
@@ -477,8 +504,8 @@ module_older_than(CompileDate, [CompareDate|Rest]) ->
     (ModificationSeconds >= CompileSeconds) orelse module_older_than(CompileDate, Rest).
 
 view_module(Application, RelativePath) ->
-    Components = tl(filename:split(RelativePath)),
-    Lc = string:to_lower(lists:concat([Application, "_", string:join(Components, "_")])),
+    Components   = tl(filename:split(RelativePath)),
+    Lc           = string:to_lower(lists:concat([Application, "_", string:join(Components, "_")])),
     ModuleIOList = re:replace(Lc, "\\.", "_", [global]),
     list_to_atom(binary_to_list(iolist_to_binary(ModuleIOList))).
 

@@ -24,6 +24,41 @@
         email_received/1,
         email_not_received/1]).
 
+
+-type http_information_code()  :: 100|101|102.
+-type http_success_code()      :: 200|201|202|204|206|207.
+-type http_redirect_code()     :: 300|301|302|303|304|305|306|307|308.
+-type http_client_error_code() :: 400|401|402|403|404|405|406|407|408|409|410|411|412|413|414|415|416|417|418|419.
+
+-type http_non_offical_code()  :: 420|422|423|424|425|450|451.
+-type http_server_error_code() :: 500..511.
+-type http_status_code()       :: http_information_code()|http_success_code()|http_redirect_code()|http_client_error_code()| http_server_error_code()|http_non_offical_code().
+-type http_status_result()     :: {boolean(), string()}.
+-type maybe(X) :: X|undefined.
+
+-spec http_ok({http_status_code(),_,_,_})              -> http_status_result().
+-spec http_partial_content({http_status_code(),_,_,_}) -> http_status_result().
+-spec http_redirect({http_status_code(),_,_,_})        -> http_status_result().
+-spec http_not_modified({http_status_code(),_,_,_})    -> http_status_result().
+-spec http_bad_request({http_status_code(),_,_,_})     -> http_status_result().
+-spec http_not_found({http_status_code(),_,_,_})       -> http_status_result().
+-spec link_with_text([any()],{_,_,_} | {_,_,_,_}) -> {'false',[any(),...]} | {'true',[any(),...]}.
+-spec tag_with_text([any()],[any()],{_,_,maybe_improper_list() | tuple()} | {_,_,_,maybe_improper_list() | tuple()}) -> {'false',[any(),...]} | {'true',[any(),...]}.
+-spec header([any()],[any()],{[any()],_,_} | {_,_,[any()],_}) -> {'false',[any(),...]} | {'true',[any(),...]}.
+-spec location_header([any()],{[any()],_,_} | {_,_,[any()],_}) -> {'false',[any(),...]} | {'true',[any(),...]}.
+-spec content_language_header([any()],{[any()],_,_} | {_,_,[any()],_}) -> {'false',[any(),...]} | {'true',[any(),...]}.
+-spec content_type_header([any()],{[any()],_,_} | {_,_,[any()],_}) -> {'false',[any(),...]} | {'true',[any(),...]}.
+-spec from_header([any()],{[any()],_,_} | {_,_,[any()],_}) -> {'false',[any(),...]} | {'true',[any(),...]}.
+-spec email_has_text({_,string(),_}) -> http_status_result().
+-spec email_has_html({_,string(),_}) -> http_status_result().
+-spec email_is_text_only({_,string(), string()}) -> http_status_result().
+-spec email_is_html_only({_,string(), string()}) -> http_status_result().
+-spec email_is_multipart({_,string(), string()}) -> http_status_result().
+-spec email_received(maybe(string()))           -> http_status_result().
+-spec email_not_received(maybe(string()))       -> http_status_result().
+-spec tag_with_text1([any()],[any()],maybe_improper_list() | tuple()) -> {'false',[any(),...]} | {'true',[any(),...]}.
+-spec link_with_text1([any()],_) -> {'false',[any(),...]} | {'true',[any(),...]}.
+-spec has_tag_with_text(_,_,maybe_improper_list() | tuple()) -> boolean().
 %% @spec http_ok(Response) -> {Passed, ErrorMessage}
 %% @doc Compares the HTTP status code in `Response' to 200 (HTTP OK).
 http_ok({Status, _, _, _} = _Response) ->

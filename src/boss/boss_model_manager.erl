@@ -1,5 +1,4 @@
 %%
-%% $Id: $
 %%
 %% Module:  boss_model -- description
 %% Created: 01-MAY-2012 16:32
@@ -20,7 +19,7 @@
 
 get_adapter() ->
   list_to_atom (lists:concat (["boss_model_manager_",
-    boss_env:get_env (model_manager, boss_db)])).
+                               boss_env:get_env (model_manager, boss_db)])).
 
 start() ->
   (get_adapter ()):start().

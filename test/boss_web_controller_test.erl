@@ -1,5 +1,5 @@
 -module(boss_web_controller_test).
-
+-include_lib("proper/include/proper.hrl").
 -include_lib("eunit/include/eunit.hrl").
 -include("../src/boss/boss_web.hrl").
 -export([action/2, wants_session/3]).
@@ -42,3 +42,20 @@ receive_controller_response_crash_exit_test() ->
     Ref = make_ref(),
     self() ! {'EXIT', Ref, ok},
     ?assertMatch({output,_}, boss_web_controller:receive_controller_response(Ref)).
+
+handle_call_application_info_test() ->
+    ?assert(proper:quickcheck(prop_handle_call_application_info(),
+                               [{to_file,user}])),
+    ok.
+
+
+prop_handle_call_application_info() ->
+    ?FORALL({State0, Application, AppInfo},
+            {#state{}, atom(), #boss_app_info{}},
+            begin
+                State = State0#state{applications = [AppInfo#boss_app_info{application = Application}]},
+
+                {reply, AppInfo1, State} =
+                    boss_web_controller:handle_call({application_info, Application}, self(), State),
+                is_record(AppInfo1, boss_app_info)
+            end).
