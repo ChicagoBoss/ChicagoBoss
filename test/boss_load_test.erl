@@ -88,7 +88,7 @@ prop_make_all_modules_error()->
                                IApp    = Application,
                                IOutDir = OutDir,
                                {error, "test"}
-                            end}|| {Op, Modules} <- OpKeys],
+                            end}|| {Op, _Modules} <- OpKeys],
            
            Result = boss_load:make_all_modules(Application, OutDir, Ops),
            [] =:= lists:concat([Value|| {_, Value} <-Result])

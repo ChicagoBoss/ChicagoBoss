@@ -77,7 +77,7 @@ make_ops_list(TranslatorPid) ->
      {view_lib_tags_modules,      load_view_lib(_, _, TranslatorPid)	},
      {view_modules,               load_views(_, _,    TranslatorPid)	}].
     
--spec make_all_modules(atom(), string(), [op()]) -> [atom()].
+-spec make_all_modules(atom(), string(), [op()]) -> [{atom(),_}].
 
 make_all_modules(Application, OutDir, Ops) ->
     lists:map(fun({Key, Lambda}) ->
@@ -91,10 +91,11 @@ make_all_modules(Application, OutDir, Ops) ->
               end, Ops).
 
 load_test_modules(Application, OutDir) ->
-    load_dirs(boss_files_util:test_path(),
+    Result = load_dirs(boss_files_util:test_path(),
 	      Application,
               OutDir,
-              fun compile/2).
+              fun compile/2),
+    Result.
 
 load_all_modules_and_emit_app_file(AppName, OutDir) ->
     application:start(elixir),
