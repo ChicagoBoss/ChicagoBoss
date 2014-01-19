@@ -1,5 +1,25 @@
 -module(boss_controller_compiler).
 -export([compile/1, compile/2, add_routes_to_forms/1]).
+-include_lib("eunit/include/eunit.hrl").
+-ifdef(TEST).
+-compile(export_all).
+-endif.
+-compile(export_all).
+
+-type error(T)           :: {ok, T} | {error, string()}.
+-type syntaxTree()       :: erl_syntax:syntaxTree().
+-type name()             :: atom()|[byte(),...].
+-type fctn_n()           :: {atom(), non_neg_integer()}.
+-type fctn()             :: {function, atom(), atom(), non_neg_integer(), _}.
+-type pair()             :: {atom(),atom()}.
+
+-type token_ast_var()    :: {var, name(), string()}.
+-type token_ast_match()  :: {match, _, _, token_ast_var()}.
+-type token_ast_string() :: {string,_, [char(),...]}.
+-type token_ast_cons()   :: nil|{cons,_, 
+                                 token_ast_var() | token_ast_match() | token_ast_string(),
+                                 token_ast_cons()}.
+
 
 -spec compile(binary() | [atom() | [any()] | char()]) -> any().
 -spec compile(binary() | [atom() | [any()] | char()],[any()]) -> any().
@@ -7,20 +27,24 @@
 -spec add_routes_to_forms([any()],[any()],[{_,[any()]}]) -> [any(),...].
 -spec add_export_to_forms([any(),...]) -> [any(),...].
 -spec add_export_to_forms([any(),...],[any()]) -> [any(),...].
--spec extract_routes_from_clauses(_,[any()]) -> [{_,[any()]}].
--spec extract_routes_from_clauses(_,[any()],[{_,[any()]}]) -> [{_,[any()]}].
--spec route_from_token_ast(_) -> [any()].
--spec route_from_token_ast(_,[any()]) -> [any()].
--spec function_for_routes([{_,[any()]}]) -> [{'tree',atom(),{'attr',0,[],'none'},_},...].
--spec map_syntax_tuples([{_,[any()]}]) -> [{'tree',atom(),{_,_,_,_},_}].
--spec map_tokens([any()]) -> [{'tree',atom(),{_,_,_,_},_}].
+-type name_clause() :: {clause, _, [list(string()),...], _,_}.
+
+-spec extract_routes_from_clauses(string(),[token_ast_cons(),...]) -> [string()].
+-spec extract_routes_from_clauses(string(),[any()],[{_,[any()]}])  -> [string()].
+
+-spec route_from_token_ast(token_ast_cons())                       -> [string()].
+-spec route_from_token_ast(_,[any()])                              -> [any()].
+-spec function_for_routes([{name(),[name()]}])                     -> [syntaxTree()].
+-spec map_syntax_tuples([{name(),[name()]}])                       -> syntaxTree().
+-spec map_tokens([name()])                                         -> syntaxTree().
 
 compile(File) ->
     compile(File, []).
 
 compile(File, Options) ->
+    lager:info("Compile controller ~s with options ~p", [File,Options]), 
     boss_compiler:compile(File,
-                          [{pre_revert_transform, fun ?MODULE:add_routes_to_forms/1}|Options]).
+                          [debug_info,{pre_revert_transform, fun ?MODULE:add_routes_to_forms/1}|Options]).
 
 add_routes_to_forms(Forms) ->
     [{eof, _Line}|OtherForms]	= lists:reverse(Forms),
@@ -59,6 +83,7 @@ extract_routes_from_clauses(Name, [_H|T], Acc) ->
 
 route_from_token_ast(Tokens) ->
     route_from_token_ast(Tokens, []).
+
 
 route_from_token_ast({cons, _, {var, _, VariableName}, T}, Acc) ->
     route_from_token_ast(T, [VariableName|Acc]);
