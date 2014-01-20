@@ -10,17 +10,20 @@
 -define(POOLNAME, boss_session_pool).
 
 start() ->
-    SessionOptions = lists:foldl(fun(OptName, Acc) ->
-                case application:get_env(OptName) of
-                    {ok, Val} -> [{OptName, Val}|Acc];
-                    _ -> Acc
-                end
-        end, [], [session_key, session_exp_time]),
-    SessionDriver = boss_env:get_env(session_adapter, mock),
-    Adapter = list_to_atom(lists:concat(["boss_session_adapter_", SessionDriver])),
+    SessionOptions  = make_session_options(),
+    SessionDriver   = boss_env:get_env(session_adapter, mock),
+    Adapter         = list_to_atom(lists:concat(["boss_session_adapter_", SessionDriver])),
     Adapter:init([]),
     SessionOptions1 = [{adapter, Adapter}|SessionOptions],
     start(SessionOptions1).
+
+make_session_options() ->
+    lists:foldl(fun(OptName, Acc) ->
+                       case application:get_env(OptName) of
+                           {ok, Val} -> [{OptName, Val}|Acc];
+                           _ -> Acc
+                       end
+                end, [], [session_key, session_exp_time]).
 
 start(Options) ->
     boss_session_sup:start_link(Options).

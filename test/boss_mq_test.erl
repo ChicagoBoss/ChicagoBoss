@@ -34,7 +34,7 @@ prop_pull_recieve_timeout() ->
     ?FORALL({ Pulltime},
              {datetime()},
              begin
-                 {ok, Pulltime, []}  =:= boss_mq:pull_recieve(1, {ok, PullTime})
+                 {ok, Pulltime, []}  =:= boss_mq:pull_recieve(1, {ok, Pulltime})
              end).
 
 prop_pull_recieve_error() ->
