@@ -38,7 +38,8 @@ compile_file(ViewPath, Module, Options) ->
 				  CompilerOptions, Locales, DocRoot, TagHelpers, FilterHelpers,
 				  ExtraTagHelpers, ExtraFilterHelpers),
     case Res of
-        ok -> {ok, Module};
+        ok ->
+            {ok, Module};
         Err -> Err
     end.
 
@@ -59,6 +60,6 @@ compile(ViewPath, Module, HelperDirModule, TranslatorPid, OutDir,
 			      end
 		      end},
 		     {blocktrans_locales, Locales}],
-    erlydtl_compiler:compile(ViewPath,
-			     Module,
-                             CompileParams).
+    erlydtl:compile(ViewPath,
+                    Module,
+                    CompileParams).
