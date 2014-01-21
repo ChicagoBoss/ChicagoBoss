@@ -98,6 +98,8 @@ process_redirect(_, Where, _) ->
     Where.
 
 
+expand_action_result({cached_page, CachedResult}) ->
+    expand_action_result(CachedResult);
 expand_action_result(Keyword) when Keyword =:= ok; Keyword =:= render ->
     {render, [], []};
 expand_action_result({Keyword, Data}) when Keyword =:= ok; Keyword =:= render ->
