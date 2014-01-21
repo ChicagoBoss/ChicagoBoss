@@ -1,19 +1,32 @@
-Introducing Common Tests to ChicagoBoss
+Testing with EUnit and Proper
 
-For the longest time, ChicagoBoss had basically no testing of the entire framework.
-We, Samuel Rose and Kai Janson, started to test this great framework and you can
-contribute as well.
+I have been adding tests to ChicagoBoss and BossDB via Eunit and
+Proper. There are generally 2 types of tests unit tests with EUnit and
+property based tests with Proper.
 
-Fork the project, write Common Test tests that are not written yet, or fix tests
-that are weak or bad, and then send us a pull request.
+Propety based tests randomly generate a large number of random test
+cases and apply the code then validate the responses against rules. In
+some cases these tests can be derived directly from the function's
+-spec declaration, in others you may need to write an explicit
+property to test the issue.
 
+If you are writting properties you can run them by including the file
+"std.hrl" in your test file then creating a funciton like this, Where
+each element in the list is a function or a tuple showing the name and
+airty of a funciton.
 
-How to run tests:
+----
+spec_test_() ->
+    gen([
+         fun prop_pull_recieve/0,
+         fun prop_pull_recieve_timeout/0,
+         fun prop_pull_recieve_error/0,
+         {stop, 0},
+         {convert_to_ms, 1},
+         {make_queue_options, 0}
+        ], boss_mq).
 
-At the command prompt, run
+----
 
-	$ ct_run -dir src/tests/ct -logdir src/tests/ct/results -suite <yourtestname>_SUITE 
-
-
-
-
+By default it will run the tests in parrallel and run 100 instances of
+each test. You can adjust those if you need to. 

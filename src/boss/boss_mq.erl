@@ -32,6 +32,7 @@
 -spec poll(channel(),last|integer()) -> mq_return().
 -spec push(channel(),_) -> {ok, non_neg_integer()}.
 -spec now(channel()) ->    non_neg_integer().
+-spec make_queue_options() -> [atom()].
 
 start() ->
     MQOptions	= make_queue_options(),

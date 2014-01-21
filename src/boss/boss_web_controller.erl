@@ -125,7 +125,6 @@ init_app_load_on_dev(AppName, TranslatorSupPid) ->
     case boss_env:is_developing_app(AppName) of
 	true  -> 
             Result = boss_load:load_all_modules(AppName, TranslatorSupPid),
-            boss_web ! timeout,
             Result;
 	false -> ok
     end.
