@@ -31,8 +31,14 @@ terminate(_Reason, State) ->
     lists:map(fun(AppInfo) ->
                 stop_init_scripts(AppInfo#boss_app_info.application, AppInfo#boss_app_info.init_data)
         end, State#state.applications),
-    Services = [ boss_translator, boss_router, boss_model_manager, boss_cache, mochiweb_http],
+    Services = [ boss_translator, boss_router, boss_model_manager, boss_cache],
     [Service:stop() ||Service <- Services],
+    case boss_env:get_env(server, ?DEFAULT_WEB_SERVER) of
+        mochiweb ->
+            mochiweb_http:stop();
+        cowboy   ->
+            cowboy:stop()
+    end,
     application:stop(elixir).
 
 
@@ -51,10 +57,11 @@ stop_smtp() ->
     end.
 
 init_web_server_options() ->
-    {ServerMod, RequestMod, ResponseMod} = case boss_env:get_env(server, ?DEFAULT_WEB_SERVER) of
-        mochiweb -> {mochiweb_http, mochiweb_request_bridge, mochiweb_response_bridge};
-					       cowboy   -> {cowboy, mochiweb_request_bridge, mochiweb_response_bridge}
-                                           end,
+    {ServerMod, RequestMod, ResponseMod} =
+        case boss_env:get_env(server, ?DEFAULT_WEB_SERVER) of
+            mochiweb -> {mochiweb_http, mochiweb_request_bridge, mochiweb_response_bridge};
+            cowboy   -> {cowboy, mochiweb_request_bridge, mochiweb_response_bridge}
+        end,
     {RequestMod, ResponseMod, ServerMod}.
 
 
