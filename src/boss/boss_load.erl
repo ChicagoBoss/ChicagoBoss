@@ -299,7 +299,7 @@ view_doc_root(ViewPath) ->
                 end;
             (_, Best) ->
                 Best
-        end, "", 
+        end, "",
         [boss_files_util:web_view_path(), boss_files_util:mail_view_path()]).
 
 compile_view_dir_erlydtl(Application, LibPath, Module, OutDir, TranslatorPid) ->
@@ -308,18 +308,21 @@ compile_view_dir_erlydtl(Application, LibPath, Module, OutDir, TranslatorPid) ->
     ExtraTagHelpers	= boss_env:get_env(template_tag_modules, []),
     ExtraFilterHelpers	= boss_env:get_env(template_filter_modules, []),
     lager:info("Compile Modules ~p  ~p", [LibPath,Module]),
-    Res			= erlydtl_compiler:compile_dir(LibPath, Module,
-        [{doc_root, view_doc_root(LibPath)}, {compiler_options, []}, {out_dir, OutDir}, 
-            {custom_tags_modules, TagHelpers ++ ExtraTagHelpers ++ [boss_erlydtl_tags]},
-            {custom_filters_modules, FilterHelpers ++ ExtraFilterHelpers},
-            {blocktrans_fun, fun(BlockString, Locale) ->
-                    case boss_translator:lookup(TranslatorPid, BlockString, Locale) of
-                        undefined -> default;
-                        Body -> list_to_binary(Body)
-                    end
-            end}]),
+    Res =
+        erlydtl:compile_dir(LibPath, Module,
+                            [{doc_root, view_doc_root(LibPath)}, {compiler_options, []}, {out_dir, OutDir},
+                             {custom_tags_modules, TagHelpers ++ ExtraTagHelpers ++ [boss_erlydtl_tags]},
+                             {custom_filters_modules, FilterHelpers ++ ExtraFilterHelpers},
+                             {blocktrans_fun,
+                              fun(BlockString, Locale) ->
+                                      case boss_translator:lookup(TranslatorPid, BlockString, Locale) of
+                                          undefined -> default;
+                                          Body -> list_to_binary(Body)
+                                      end
+                              end}]),
     case Res of
-        ok -> {ok, Module};
+        ok ->
+            {ok, Module};
         Err -> Err
     end.
 
