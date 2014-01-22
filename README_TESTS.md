@@ -11,9 +11,9 @@ some cases these tests can be derived directly from the function's
 property to test the issue.
 
 If you are writting properties you can run them by including the file
-"std.hrl" in your test file then creating a funciton like this, Where
+"std.hrl" in your test file then creating a function like this, Where
 each element in the list is a function or a tuple showing the name and
-airty of a funciton.
+arity of a function.
 
 ----
 spec_test_() ->
@@ -28,5 +28,5 @@ spec_test_() ->
 
 ----
 
-By default it will run the tests in parrallel and run 100 instances of
+By default it will run the tests in parallel and run 100 instances of
 each test. You can adjust those if you need to. 
