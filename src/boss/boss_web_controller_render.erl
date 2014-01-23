@@ -43,7 +43,7 @@ render_error(Error, ExtraMessage, AppInfo, RequestContext) ->
             Err
     end.
 
-render_result(Location, AppInfo, RequestContext, LocationTrail, Adapter,
+render_result(Location, AppInfo, _RequestContext, LocationTrail, Adapter,
               AdapterInfo, ActionResult, RequestContext3) ->
     case ActionResult of
 	undefined ->
@@ -51,7 +51,7 @@ render_result(Location, AppInfo, RequestContext, LocationTrail, Adapter,
 	_ ->
 	    ExpandedResult	= expand_action_result(ActionResult),
 	    TransformedResult	= apply_middle_filters(Adapter, AdapterInfo,
-						     RequestContext, ExpandedResult),
+						     RequestContext3, ExpandedResult),
 	    process_action_result({Location, RequestContext3, [Location|LocationTrail]},
 				  TransformedResult, [], AppInfo)
     end.
@@ -98,6 +98,8 @@ process_redirect(_, Where, _) ->
     Where.
 
 
+expand_action_result({cached_page, CachedResult}) ->
+    expand_action_result(CachedResult);
 expand_action_result(Keyword) when Keyword =:= ok; Keyword =:= render ->
     {render, [], []};
 expand_action_result({Keyword, Data}) when Keyword =:= ok; Keyword =:= render ->
