@@ -97,9 +97,6 @@ process_redirect(Controller, [{_, _}|_] = Where, AppInfo) ->
 process_redirect(_, Where, _) ->
     Where.
 
-
-expand_action_result({cached_page, CachedResult}) ->
-    expand_action_result(CachedResult);
 expand_action_result(Keyword) when Keyword =:= ok; Keyword =:= render ->
     {render, [], []};
 expand_action_result({Keyword, Data}) when Keyword =:= ok; Keyword =:= render ->
@@ -131,8 +128,7 @@ expand_action_result({Directive,_, _}) when is_list(Directive) ->
     lager:error("Action returned an invalid return ~p should be an atom not a string", [Directive]),
     {output, "bad return value from controller action\n",[]};
 expand_action_result(Other) ->
-    lager:error("Action returned an invalid return ~p ", [Other]),
-    {output, Other, []}.
+    Other.
 
 
 
