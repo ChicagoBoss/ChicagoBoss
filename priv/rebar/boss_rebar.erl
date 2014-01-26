@@ -364,7 +364,8 @@ all_ebin_dirs(BossConf, AppFile) ->
                             false -> EbinDirs;
                             {path, Path} ->
                                 case lists:reverse(filename:split(Path)) of
-                                    ["boss","deps"|Tail] ->
+                                    ["boss","deps"|Tail0] ->
+                                        Tail = tail_or_cwd(Tail0),
                                         Path1 = filename:join(lists:reverse(Tail)),
                                         MainEbin1 = filename:join([Path1, "deps/boss/ebin"]),
                                         filelib:ensure_dir(MainEbin1++"/"),
@@ -538,3 +539,10 @@ report_bad_client_version_and_exit(BossConf) ->
 report_old_erlang_version_and_exit(Vsn) ->
     io:format("ERROR: Your Erlang version is too old. Required at least ~s, found ~s\n ", [?ERLANG_MIN_VERSION, Vsn]),
     halt(1).
+
+tail_or_cwd([]) ->
+    {ok, Path} = file:get_cwd(),
+    lists:reverse(filename:split(Path));
+tail_or_cwd(Tail) ->
+    Tail.
+
