@@ -21,7 +21,7 @@ make app PROJECT=mynewproject
 cd ../mynewproject
 ./init-dev.sh
 ```
-    
+
 For Windows, type
 
 ```console
@@ -59,7 +59,7 @@ Admin Interface
 
 You probably want to install the CB admin interface. Download it from
 
-    <https://github.com/evanmiller/cb_admin>
+    <https://github.com/ChicagoBoss/cb_admin>
 
 
 Upgrades
@@ -237,12 +237,12 @@ If you need help getting started, check the new pdf tutorial:
 
 Be sure to also check the wiki
 
-<https://github.com/evanmiller/ChicagoBoss/wiki>
+<https://github.com/ChicagoBoss/ChicagoBoss/wiki>
 
 There's also the mailing list:
 
 <http://groups.google.com/group/chicagoboss>
 
-If you want to contribute to CB 
+If you want to contribute to CB
 
-<https://github.com/zkessin/CODING_STANDARDS>
+[CODING_STANDARDS.md](https://github.com/ChicagoBoss/ChicagoBoss/blob/master/CODING_STANDARDS.md)
