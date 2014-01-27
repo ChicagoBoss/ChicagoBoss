@@ -361,32 +361,13 @@ apply_action(Req, Adapter, AdapterInfo, RequestContext2) ->
     end.
 
 call_controller_action(Adapter, AdapterInfo, RequestContext) ->
-    lager:notice("Calling Controller Adapter ~s", [Adapter]),
-    process_flag(trap_exit, true),
-    Ref		= make_ref(),
-    CHandlerPid = self(),
-    _N = spawn_link(fun() ->
-			    R = Adapter:action(AdapterInfo, RequestContext),
-			    CHandlerPid !{msg,Ref, R}
-	       end),
-    receive_controller_response(Ref).
-
--spec(receive_controller_response(reference()) ->any()).
-receive_controller_response(Ref) ->
-    receive
-        {msg, Ref, R} ->
-	    lager:notice("Response ~p", [R]),
-            R;
-
-        {'EXIT',_From, normal} ->        
-            %%lager:error("2 Controller Process Exited normal ~p but response not yet receive", [From]),
-            receive_controller_response(Ref);
-
-        {'EXIT',From, Reason} ->        
-            lager:error("Controller Process Exited ~p ~p", [From, Reason]),
-            {output, "Process Error see console.log for details\n"}
+    try
+        Adapter:action(AdapterInfo, RequestContext)
+    catch
+        Class:Error ->
+            lager:error("Error in controller ~p ~p ~p", [Class, Error, erlang:get_stacktrace()]),
+            {output, "Error in controller, see console.log for details\n"}
     end.
-
 
 make_action_session_id(Controller, AppInfo, Req, undefined, Adapter) ->
     case Adapter:wants_session(AppInfo#boss_app_info.application,
