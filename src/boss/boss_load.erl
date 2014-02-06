@@ -81,13 +81,8 @@ make_ops_list(TranslatorPid) ->
 
 make_all_modules(Application, OutDir, Ops) ->
     lists:map(fun({Key, Lambda}) ->
-		      case Lambda(Application, OutDir) of
-			  {ok, Modules} ->
-			      {Key, Modules};
-			  {error, Message} ->
-			      lager:error("Load Module Error ~p : ~p", [Key, Message]),
-			      {Key, []}
-		      end
+                      {ok, Modules} = Lambda(Application, OutDir),
+                      {Key, Modules}
               end, Ops).
 
 load_test_modules(Application, OutDir) ->
