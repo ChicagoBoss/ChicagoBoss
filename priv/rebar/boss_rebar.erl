@@ -53,8 +53,10 @@ run(_,_,BossConf,_) ->
 run(Version, Command, RebarConf, BossConf, AppFile) when is_list(Command)->
 	run(Version, list_to_atom(Command), RebarConf, BossConf, AppFile);
 run(Version, Command, RebarConf, BossConf, AppFile) ->
-	rebar_log:log(debug, "Checking rebar plugin client version and Erlang runtime version'~s'~n", [Command]),
-	ErlVsn = erlang:system_info(otp_release),
+    rebar_log:log(debug, "Checking rebar plugin client version and Erlang runtime version'~s'~n", [Command]),
+    ErlVsn = erlang:system_info(otp_release),
+    %% Everything in Chicago Boss needs lager, so we need to make sure it starts.
+    ok = lager:start(),
     case Version =:= ?BOSS_PLUGIN_VERSION of
         false ->
             report_bad_client_version_and_exit(BossConf);
