@@ -85,10 +85,26 @@ compile(RebarConf, BossConf, AppFile) ->
 %%       Chicago Boss compilation, handling all cb special needs 
 %% @end
 %%--------------------------------------------------------------------
-compile(_RebarConf, BossConf, AppFile, Dest) ->
+compile(RebarConf, BossConf, AppFile, Dest) ->
     boss_load(BossConf, AppFile),
     %% Everything in Chicago Boss needs lager, so we need to make sure it starts.
     ok = lager:start(),
+
+    %% We also set the log level for lager according to what we have in Rebar.
+    Level = rebar_config:get_global(RebarConf, verbose, rebar_log:default_level()),
+    NewLevel = case Level of
+                   0 ->
+                       error;
+                   1 ->
+                       warn;
+                   2 ->
+                       info;
+                   3 ->
+                       debug
+               end,
+
+    lager:set_loglevel(lager_console_backend, NewLevel),
+
     AppName = app_name(AppFile),
     Res = boss_load:load_all_modules_and_emit_app_file(AppName, Dest),
     rebar_log:log(info, "Chicago Boss compilation of app ~s on ~s (~s)~n", 
