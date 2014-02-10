@@ -37,7 +37,7 @@ terminate(_Reason, State) ->
         mochiweb ->
             mochiweb_http:stop();
         cowboy   ->
-            cowboy:stop()
+            application:stop(cowboy)
     end,
     application:stop(elixir).
 
