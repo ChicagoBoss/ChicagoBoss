@@ -93,14 +93,10 @@ compile(RebarConf, BossConf, AppFile, Dest) ->
     %% We also set the log level for lager according to what we have in Rebar.
     Level = rebar_config:get_global(RebarConf, verbose, rebar_log:default_level()),
     NewLevel = case Level of
-                   0 ->
-                       error;
-                   1 ->
-                       warn;
-                   2 ->
-                       info;
-                   3 ->
-                       debug
+                   0 -> error;
+                   1 -> warning;
+                   2 -> info;
+                   3 -> debug
                end,
 
     lager:set_loglevel(lager_console_backend, NewLevel),
