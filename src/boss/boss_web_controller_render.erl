@@ -238,15 +238,20 @@ render_with_template(Controller, Template, AppInfo, RequestContext,
                  end,
     RenderVars = BossFlash ++ BeforeVars ++ [{"_lang", Lang}, {"_session", SessionData},
                                              {"_req", Req}, {"_base_url", AppInfo#boss_app_info.base_url} | Variables],
-    case TemplateAdapter:render(Module, [{"_vars", RenderVars}|RenderVars],
-            [{translation_fun, TranslationFun}, {locale, Lang},
-                {host, Req:header(host)}, {application, atom_to_list(AppInfo#boss_app_info.application)},
-                {controller, Controller}, {action, Template},
-                {router_pid, AppInfo#boss_app_info.router_pid}]) of
-        {ok, Payload} ->
-            {ok, Payload, boss_web_controller:merge_headers([{"Content-Language", Lang}], Headers)};
-        Err ->
-            Err
+    try 
+        case TemplateAdapter:render(Module, [{"_vars", RenderVars}|RenderVars],
+                [{translation_fun, TranslationFun}, {locale, Lang},
+                    {host, Req:header(host)}, {application, atom_to_list(AppInfo#boss_app_info.application)},
+                    {controller, Controller}, {action, Template},
+                    {router_pid, AppInfo#boss_app_info.router_pid}]) of
+            {ok, Payload} ->
+                {ok, Payload, boss_web_controller:merge_headers([{"Content-Language", Lang}], Headers)};
+            Err ->
+                Err
+        end
+    catch
+        Class:Error ->
+            lager:error("Error in view ~p ~p ~p ~p", [Module, Class, Error, erlang:get_stacktrace()])
     end.
 
 load_result(Controller, Template, AppInfo, TryExtensions) ->
