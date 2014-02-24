@@ -53,8 +53,8 @@ run(_,_,BossConf,_) ->
 run(Version, Command, RebarConf, BossConf, AppFile) when is_list(Command)->
 	run(Version, list_to_atom(Command), RebarConf, BossConf, AppFile);
 run(Version, Command, RebarConf, BossConf, AppFile) ->
-	rebar_log:log(debug, "Checking rebar plugin client version and Erlang runtime version'~s'~n", [Command]),
-	ErlVsn = erlang:system_info(otp_release),
+    rebar_log:log(debug, "Checking rebar plugin client version and Erlang runtime version'~s'~n", [Command]),
+    ErlVsn = erlang:system_info(otp_release),
     case Version =:= ?BOSS_PLUGIN_VERSION of
         false ->
             report_bad_client_version_and_exit(BossConf);
@@ -85,8 +85,22 @@ compile(RebarConf, BossConf, AppFile) ->
 %%       Chicago Boss compilation, handling all cb special needs 
 %% @end
 %%--------------------------------------------------------------------
-compile(_RebarConf, BossConf, AppFile, Dest) ->
+compile(RebarConf, BossConf, AppFile, Dest) ->
     boss_load(BossConf, AppFile),
+    %% Everything in Chicago Boss needs lager, so we need to make sure it starts.
+    ok = lager:start(),
+
+    %% We also set the log level for lager according to what we have in Rebar.
+    Level = rebar_config:get_global(RebarConf, verbose, rebar_log:default_level()),
+    NewLevel = case Level of
+                   0 -> error;
+                   1 -> warning;
+                   2 -> info;
+                   3 -> debug
+               end,
+
+    lager:set_loglevel(lager_console_backend, NewLevel),
+
     AppName = app_name(AppFile),
     Res = boss_load:load_all_modules_and_emit_app_file(AppName, Dest),
     rebar_log:log(info, "Chicago Boss compilation of app ~s on ~s (~s)~n", 
@@ -317,6 +331,7 @@ boss_load(BossConf, AppFile) ->
     %% mimetyps.app not found, adding deps/*/ebin don't work
     BossPath = get_boss_path(BossConf),
     code:add_path(BossPath++"/deps/mimetypes/ebin"),
+    code:add_path(BossPath++"/deps/goldrush/ebin"),
     code:add_path(BossPath++"/deps/lager/ebin").
 
 %%--------------------------------------------------------------------

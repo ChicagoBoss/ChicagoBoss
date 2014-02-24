@@ -37,7 +37,8 @@ terminate(_Reason, State) ->
         mochiweb ->
             mochiweb_http:stop();
         cowboy   ->
-            cowboy:stop()
+            cowboy:stop_listener(boss_http_listener),
+            cowboy:stop_listener(boss_https_listener)
     end,
     application:stop(elixir).
 
