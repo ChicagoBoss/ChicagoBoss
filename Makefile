@@ -10,6 +10,17 @@ SESSION_CONFIG_DIR=priv/test_session_config
 all:
 	@$(REBAR) get-deps
 	@$(REBAR) compile
+	@echo ""
+	@echo "*********************************************************************************"
+	@echo ""
+	@echo "CONGRATULATIONS! You've successfully built ChicagoBoss. Pat yourself on the back."
+	@echo ""
+	@echo "If you're unsure what to do next, try making a new app with:"
+	@echo ""
+	@echo "    make app PROJECT=my_project_name"
+	@echo ""
+	@echo "*********************************************************************************"
+	@echo ""
 
 boss:
 	@$(REBAR) compile skip_deps=true
@@ -27,6 +38,16 @@ app:
 	@mkdir -p $(DEST)/deps
 	@cp -Rn $(PWD) $(DEST)/deps/boss
 	@mv -n $(DEST)/deps/boss/deps/* $(DEST)/deps/
+	@echo ""
+	@echo "***********************************************************************"
+	@echo ""
+	@echo "Your new app is created. You should head over there now:"
+	@echo ""
+	@echo "    cd ../$(PROJECT)"
+	@echo ""
+	@echo "***********************************************************************"
+	@echo ""
+	
 
 get-deps:
 	@$(REBAR) get-deps
