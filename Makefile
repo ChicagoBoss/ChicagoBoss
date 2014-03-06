@@ -27,7 +27,7 @@ boss:
 
 clean:
 	@$(REBAR) clean
-	@rm src/boss/*.dtl.erl
+	@rm -f src/boss/*.dtl.erl
 
 edoc:
 	$(ERL) -pa ebin -pa deps/*/ebin -run boss_doc run -noshell -s init stop
