@@ -32,7 +32,7 @@ stop() ->
     Res.
 
 is_compatable("R16B03") ->
-    lager:emergency("Chicago Boss is not comptable with 16R03"),
-    erlang:halt(1, "Chicago Boss is not comptable with 16R03");
+    lager:emergency("Chicago Boss is not comptable with R16B03"),
+    erlang:halt(1, "Chicago Boss is not comptable with R16B03");
 is_compatable(_) ->
     ok.
