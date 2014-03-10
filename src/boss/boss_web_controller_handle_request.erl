@@ -21,8 +21,12 @@ handle_request(Req, RequestMod, ResponseMod) ->
 									     FullUrl, 
 									     LoadedApplications),
     lager:notice("ApplicationForPath ~p~n", [ApplicationForPath]),
-    handle_application(Req, ResponseMod, Request, FullUrl,
-	               ApplicationForPath).
+    
+    try
+        handle_application(Req, ResponseMod, Request, FullUrl, ApplicationForPath)
+    catch Class:Error ->
+        lager:error("Unhandled Error: ~p:~p. Stacktrace: ~p", [Class, Error, erlang:get_stacktrace()])
+    end.
 
 handle_application(Req, ResponseMod, _Request, _FullUrl, undefined) ->
     Response		= simple_bridge:make_response(ResponseMod, {Req, undefined}),
@@ -117,6 +121,7 @@ build_dynamic_response(App, Request, Response, Url) ->
 				      Response1, 
 				      Headers),
     handle_response(Request, Payload, RequestMethod, Response2).
+    
 
 set_timer(Request, Url, Mode, AppInfo, TranslatorPid, RouterPid,
           ControllerList) ->
