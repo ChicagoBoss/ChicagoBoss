@@ -309,7 +309,7 @@ compile_view_dir_erlydtl(Application, LibPath, Module, OutDir, TranslatorPid) ->
     ExtraFilterHelpers	= boss_env:get_env(template_filter_modules, []),
 
     lager:info("Compile Modules ~p  ~p", [LibPath, Module]),
-    Res = try erlydtl:compile_dir(LibPath, Module,
+    Res = erlydtl:compile_dir(LibPath, Module,
                             [{doc_root, view_doc_root(LibPath)}, {compiler_options, []}, {out_dir, OutDir},
                              {custom_tags_modules, TagHelpers ++ ExtraTagHelpers ++ [boss_erlydtl_tags]},
                              {custom_filters_modules, FilterHelpers ++ ExtraFilterHelpers},
@@ -319,9 +319,7 @@ compile_view_dir_erlydtl(Application, LibPath, Module, OutDir, TranslatorPid) ->
                                           undefined -> default;
                                           Body -> list_to_binary(Body)
                                       end
-                              end}])
-    catch _:_ -> ok
-    end,
+                              end}]),
     case Res of
         ok ->
             {ok, Module};
