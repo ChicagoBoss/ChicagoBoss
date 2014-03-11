@@ -25,8 +25,16 @@ handle_request(Req, RequestMod, ResponseMod) ->
     try
         handle_application(Req, ResponseMod, Request, FullUrl, ApplicationForPath)
     catch Class:Error ->
-        lager:error("Unhandled Error: ~p:~p. Stacktrace: ~p", [Class, Error, erlang:get_stacktrace()])
+		%% Nuclear option: Something very serious happened and we don't want to
+		%% fail silently, but instead it should generate an error message.
+        lager:error("Unhandled Error: ~p:~p. Stacktrace: ~p", [Class, Error, erlang:get_stacktrace()]),
+		handle_fatal_error(Req, ResponseMod)
     end.
+
+handle_fatal_error(Req, ResponseMod) ->
+	Response = simple_bridge:make_response(ResponseMod, {Req, undefined}),
+	Response1 = (Response:status_code(500)):data(["An unhandled and unrecoverable error occurred. Please check error logs."]),
+	Response1:build_response().
 
 handle_application(Req, ResponseMod, _Request, _FullUrl, undefined) ->
     Response		= simple_bridge:make_response(ResponseMod, {Req, undefined}),
