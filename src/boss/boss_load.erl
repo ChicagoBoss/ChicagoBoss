@@ -307,9 +307,9 @@ compile_view_dir_erlydtl(Application, LibPath, Module, OutDir, TranslatorPid) ->
     FilterHelpers        = lists:map(fun erlang:list_to_atom/1, boss_files_util:view_filter_helper_list(Application)),
     ExtraTagHelpers	= boss_env:get_env(template_tag_modules, []),
     ExtraFilterHelpers	= boss_env:get_env(template_filter_modules, []),
-    lager:info("Compile Modules ~p  ~p", [LibPath,Module]),
-    Res =
-        erlydtl:compile_dir(LibPath, Module,
+
+    lager:info("Compile Modules ~p  ~p", [LibPath, Module]),
+    Res = erlydtl:compile_dir(LibPath, Module,
                             [{doc_root, view_doc_root(LibPath)}, {compiler_options, []}, {out_dir, OutDir},
                              {custom_tags_modules, TagHelpers ++ ExtraTagHelpers ++ [boss_erlydtl_tags]},
                              {custom_filters_modules, FilterHelpers ++ ExtraFilterHelpers},
@@ -488,12 +488,7 @@ module_older_than(Module, Files) when is_atom(Module) ->
             end
     end;
 module_older_than(Module, Files) when is_list(Module) ->
-    case filelib:last_modified(Module) of
-        0 ->
-            true;
-        CompileDate ->
-            module_older_than(CompileDate, Files)
-    end;
+    module_older_than(filelib:last_modified(Module), Files);
 module_older_than(_Date, []) ->
     false;
 module_older_than(CompileDate, [File|Rest]) when is_list(File) ->
@@ -502,9 +497,7 @@ module_older_than(CompileDate, [Module|Rest]) when is_atom(Module) ->
     {file, Loaded} = code:is_loaded(Module),
     module_older_than(CompileDate, [Loaded|Rest]);
 module_older_than(CompileDate, [CompareDate|Rest]) ->
-    CompileSeconds = calendar:datetime_to_gregorian_seconds(CompileDate),
-    ModificationSeconds = calendar:datetime_to_gregorian_seconds(CompareDate),
-    (ModificationSeconds >= CompileSeconds) orelse module_older_than(CompileDate, Rest).
+    (CompareDate >= CompileDate) orelse module_older_than(CompileDate, Rest).
 
 view_module(Application, RelativePath) ->
     Components   = tl(filename:split(RelativePath)),

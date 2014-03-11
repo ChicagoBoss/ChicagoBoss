@@ -21,8 +21,20 @@ handle_request(Req, RequestMod, ResponseMod) ->
 									     FullUrl, 
 									     LoadedApplications),
     lager:notice("ApplicationForPath ~p~n", [ApplicationForPath]),
-    handle_application(Req, ResponseMod, Request, FullUrl,
-	               ApplicationForPath).
+    
+    try
+        handle_application(Req, ResponseMod, Request, FullUrl, ApplicationForPath)
+    catch Class:Error ->
+		%% Nuclear option: Something very serious happened and we don't want to
+		%% fail silently, but instead it should generate an error message.
+        lager:error("Unhandled Error: ~p:~p. Stacktrace: ~p", [Class, Error, erlang:get_stacktrace()]),
+		handle_fatal_error(Req, ResponseMod)
+    end.
+
+handle_fatal_error(Req, ResponseMod) ->
+	Response = simple_bridge:make_response(ResponseMod, {Req, undefined}),
+	Response1 = (Response:status_code(500)):data(["An unhandled and unrecoverable error occurred. Please check error logs."]),
+	Response1:build_response().
 
 handle_application(Req, ResponseMod, _Request, _FullUrl, undefined) ->
     Response		= simple_bridge:make_response(ResponseMod, {Req, undefined}),
@@ -117,6 +129,7 @@ build_dynamic_response(App, Request, Response, Url) ->
 				      Response1, 
 				      Headers),
     handle_response(Request, Payload, RequestMethod, Response2).
+    
 
 set_timer(Request, Url, Mode, AppInfo, TranslatorPid, RouterPid,
           ControllerList) ->
