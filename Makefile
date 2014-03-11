@@ -5,7 +5,7 @@ ERL=erl
 REBAR=./rebar
 SESSION_CONFIG_DIR=priv/test_session_config
 
-.PHONY: deps get-deps
+.PHONY: deps get-deps test
 
 all:
 	@$(REBAR) get-deps
