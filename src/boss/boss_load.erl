@@ -404,7 +404,7 @@ load_views_inner(Application, OutDir, TranslatorPid) ->
     fun(File, Acc) ->
 	    TemplateAdapter = boss_files:template_adapter_for_extension(
 				filename:extension(File)),
-	    ViewR =compile_view(Application, File, TemplateAdapter, OutDir, TranslatorPid),
+	    ViewR = compile_view(Application, File, TemplateAdapter, OutDir, TranslatorPid),
 	    case ViewR of
 		{ok, Module} ->
 		    [Module|Acc];
