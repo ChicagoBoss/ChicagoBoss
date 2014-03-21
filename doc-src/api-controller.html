@@ -88,19 +88,19 @@ profile('GET', [UserId]) -&gt;
 <p>Routing URLs may contain regular expresssions. For example, the following route will match all URLs that start with a digit:</p>
 
 <div class="code">
-    {"/[0-9].*, [...]}.
+    {"/[0-9].*", [...]}.
 </div>
 
 <p>Sub-expressions can be captured using parentheses and substituted with the atoms <code>'$1'</code>, <code>'$2'</code>, etc. For example, the following route will capture a string of digits and pass them in as the <code>coupon_id</code> parameter:</p>
 
 <div class="code">
-    {"/([0-9]+)", [{controller, "coupon"}, {action, "redeem}, {coupon_id, '$1'}]}.
+    {"/([0-9]+)", [{controller, "coupon"}, {action, "redeem"}, {coupon_id, '$1'}]}.
 </div>
 
 <p>Alternatively, named groups may be used to identify captured sub-expressions. For example, the following route is equivalent to the one above:</p>
 
 <div class="code">
-    {"/(?&lt;id&gt;[0-9]+)", [{controller, "coupon"}, {action, "redeem}, {coupon_id, '$id'}]}.
+    {"/(?&lt;id&gt;[0-9]+)", [{controller, "coupon"}, {action, "redeem"}, {coupon_id, '$id'}]}.
 </div>
 
 <p>The route expressions must match the entire URL. That is, the expressions are implicitly bookended with ^ and $.</p>
