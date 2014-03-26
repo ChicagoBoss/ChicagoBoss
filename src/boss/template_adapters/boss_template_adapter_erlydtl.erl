@@ -52,6 +52,7 @@ compile(ViewPath, Module, HelperDirModule, TranslatorPid, OutDir,
 		     {custom_filters_modules, FilterHelpers ++ ExtraFilterHelpers},
 		     {compiler_options, CompilerOptions},
 		     {out_dir, OutDir},
+		     return,
 		     {blocktrans_fun,
 		      fun(BlockString, Locale) ->
 			      case boss_translator:lookup(TranslatorPid, BlockString, Locale) of
@@ -60,6 +61,11 @@ compile(ViewPath, Module, HelperDirModule, TranslatorPid, OutDir,
 			      end
 		      end},
 		     {blocktrans_locales, Locales}],
-    erlydtl:compile(ViewPath,
+    Res = erlydtl:compile(ViewPath,
                     Module,
-                    CompileParams).
+                    CompileParams),
+    case Res of
+	{ok, Module} -> {ok, Module};
+	{ok, Module, _Warnings} -> {ok, Module};
+	{error, Errors, _Warnings} -> {error, Errors}
+    end.
