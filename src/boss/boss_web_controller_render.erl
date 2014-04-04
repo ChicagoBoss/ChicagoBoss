@@ -228,30 +228,53 @@ render_view({Controller, Template, _}, AppInfo, RequestContext, Variables, Heade
 render_with_template(Controller, Template, AppInfo, RequestContext,
                      Variables, Headers, Req, BossFlash, SessionData, Module,
                      TemplateAdapter) ->
-    TranslatableStrings    = TemplateAdapter:translatable_strings(Module),
-    {Lang, TranslationFun} = choose_translation_fun(AppInfo#boss_app_info.translator_pid,
-        TranslatableStrings, Req:header(accept_language),
-        proplists:get_value(language, RequestContext)),
+
+    TranslatableStrings = TemplateAdapter:translatable_strings(Module),
+    TranslatorPid = AppInfo#boss_app_info.translator_pid,
+    AcceptLanguage = Req:header(accept_language),
+    ContentLanguage = extract_content_language(RequestContext, Headers),
+    
+    {Lang, TranslationFun} = choose_translation_fun(TranslatorPid, TranslatableStrings,
+						    AcceptLanguage, ContentLanguage),
+
     BeforeVars = case proplists:get_value('_before', RequestContext) of
                      undefined -> [];
                      AuthInfo -> [{"_before", AuthInfo}]
                  end,
-    RenderVars = BossFlash ++ BeforeVars ++ [{"_lang", Lang}, {"_session", SessionData},
+    RenderVars0 = BossFlash ++ BeforeVars ++ [{"_lang", Lang}, {"_session", SessionData},
                                              {"_req", Req}, {"_base_url", AppInfo#boss_app_info.base_url} | Variables],
-    try 
-        case TemplateAdapter:render(Module, [{"_vars", RenderVars}|RenderVars],
-                [{translation_fun, TranslationFun}, {locale, Lang},
-                    {host, Req:header(host)}, {application, atom_to_list(AppInfo#boss_app_info.application)},
-                    {controller, Controller}, {action, Template},
-                    {router_pid, AppInfo#boss_app_info.router_pid}]) of
-            {ok, Payload} ->
-                {ok, Payload, boss_web_controller:merge_headers([{"Content-Language", Lang}], Headers)};
-            Err ->
-                Err
-        end
+    RenderVars = [{"_vars", RenderVars0} | RenderVars0],
+    RenderOptions = [
+			{translation_fun, TranslationFun},
+			{locale, Lang},
+			{host, Req:header(host)},
+			{application, atom_to_list(AppInfo#boss_app_info.application)},
+			{controller, Controller},
+			{action, Template},
+			{router_pid, AppInfo#boss_app_info.router_pid}
+		    ],
+
+    try TemplateAdapter:render(Module, RenderVars, RenderOptions) of
+	{ok, Payload} ->
+	    MergedHeaders = boss_web_controller:merge_headers([{"Content-Language", Lang}], Headers),
+	    {ok, Payload, MergedHeaders};
+	Err ->
+	    Err
     catch
         Class:Error ->
             lager:error("Error in view ~p ~p ~p ~p", [Module, Class, Error, erlang:get_stacktrace()])
+    end.
+
+extract_content_language(RequestContext, Headers) ->
+    case proplists:get_value(language, RequestContext) of
+       undefined -> extract_content_language_from_headers(Headers);
+       Lang -> Lang
+    end.
+
+extract_content_language_from_headers(Headers) ->
+    case [V || {K,V} <- Headers, (is_list(K) andalso string:to_lower(K)=:="content-language")] of
+	[Lang|_] -> Lang;
+	[] -> undefined
     end.
 
 load_result(Controller, Template, AppInfo, TryExtensions) ->

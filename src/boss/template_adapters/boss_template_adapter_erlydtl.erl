@@ -53,19 +53,21 @@ compile(ViewPath, Module, HelperDirModule, TranslatorPid, OutDir,
 		     {compiler_options, CompilerOptions},
 		     {out_dir, OutDir},
 		     return,
-		     {blocktrans_fun,
-		      fun(BlockString, Locale) ->
-			      case boss_translator:lookup(TranslatorPid, BlockString, Locale) of
-			          undefined -> default;
-				  Body -> list_to_binary(Body)
-			      end
-		      end},
+		     {blocktrans_fun, make_blocktrans_fun(TranslatorPid)},
 		     {blocktrans_locales, Locales}],
-    Res = erlydtl:compile(ViewPath,
+    Res = erlydtl:compile_file(ViewPath,
                     Module,
                     CompileParams),
     case Res of
 	{ok, Module} -> {ok, Module};
 	{ok, Module, _Warnings} -> {ok, Module};
 	{error, Errors, _Warnings} -> {error, Errors}
+    end.
+
+make_blocktrans_fun(TranslatorPid) ->
+    fun(BlockString, Locale) ->
+	case boss_translator:lookup(TranslatorPid, BlockString, Locale) of
+	    undefined -> default;
+	    Body -> list_to_binary(Body)
+	end
     end.

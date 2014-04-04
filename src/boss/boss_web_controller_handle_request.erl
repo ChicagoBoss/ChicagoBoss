@@ -42,7 +42,7 @@ handle_application(Req, ResponseMod, _Request, _FullUrl, undefined) ->
     Response1:build_response();
 handle_application(Req, ResponseMod, Request, FullUrl,  App) ->
     BaseURL		= boss_web:base_url(App),
-    DocRoot                = boss_files_util:static_path(App),
+    DocRoot             = boss_files_util:static_path(App),
     StaticPrefix	= boss_web:static_prefix(App),
     Url			= lists:nthtail(length(BaseURL), FullUrl),
     Response		= simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
@@ -129,7 +129,6 @@ build_dynamic_response(App, Request, Response, Url) ->
 				      Response1, 
 				      Headers),
     handle_response(Request, Payload, RequestMethod, Response2).
-    
 
 set_timer(Request, Url, Mode, AppInfo, TranslatorPid, RouterPid,
           ControllerList) ->
@@ -231,8 +230,9 @@ process_dynamic_request(#boss_app_info{ router_pid = RouterPid } = AppInfo, Req,
     {Result, SessionID1} = case boss_router:route(RouterPid, Url) of
 			       {ok, {Application, Controller, Action, Tokens}} when Application =:= AppInfo#boss_app_info.application ->
 				   Location = {Controller, Action, Tokens},
-				   
-				   ExecuteResults = load_and_execute(Mode, Location, AppInfo, [{request, Req}]),
+				  
+				   RequestContext = [{request, Req}], 
+				   ExecuteResults = load_and_execute(Mode, Location, AppInfo, RequestContext),
 
 				   case  ExecuteResults of
 				       {'EXIT', Reason} ->
@@ -390,7 +390,7 @@ process_result(_, _, {error, Payload, Headers}) ->
     {500, boss_web_controller:merge_headers(Headers, [{"Content-Type", "text/html"}]), Payload};
 process_result(_, _, {StatusCode, Payload, Headers}) when is_integer(StatusCode) ->
     {StatusCode, boss_web_controller:merge_headers(Headers, [{"Content-Type", "text/html"}]), Payload}.
-
+	
 load_and_execute(Mode, {Controller, _, _} = Location, AppInfo, RequestContext) when Mode =:= production; Mode =:= testing->
     case boss_files:is_controller_present(AppInfo#boss_app_info.application, Controller,
             AppInfo#boss_app_info.controller_modules) of
