@@ -506,10 +506,10 @@ vm_name(BossConf, AppFile) ->
       {SName, _} when is_list(SName) -> {sname, SName}
     end.
 
-wm_qualified_name({Mode, Nodename}) ->
-  wm_qualified_name(Mode, Nodename).
-wm_qualified_name(Mode, Nodename) ->
-  io_lib:format("~s@~s", [Nodename, host_name(Mode)]).
+wm_qualified_name({sname, Nodename}) ->
+    io_lib:format("~s@~s", [Nodename, host_name(sname)]);
+wm_qualified_name({name, Nodename}) ->
+    io_lib:format("~s", [Nodename]).
 
 vm_name_arg(BossConf, AppFile) ->
   vm_name_arg(BossConf, AppFile, "").
