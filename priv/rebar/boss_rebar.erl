@@ -380,7 +380,7 @@ boss_start_wait([App|Rest]) ->
 %%--------------------------------------------------------------------
 all_ebin_dirs(BossConf, AppFile) ->
     BossAppEbinDir = all_boss_app_ebin_dirs(BossConf, AppFile) ++ all_deps_ebin_dirs(AppFile),
-    BossAppEbinDir ++ lists:foldl(fun({App, Config}, EbinDirs) ->
+    MoreEbins = lists:foldl(fun({App, Config}, EbinDirs) ->
                         case lists:keyfind(path, 1, Config) of
                             false -> EbinDirs;
                             {path, Path} ->
@@ -395,10 +395,11 @@ all_ebin_dirs(BossConf, AppFile) ->
                                         all_ebin_dirs1(Path, EbinDirs)
                                 end
                         end
-                end, [], lists:reverse(BossConf)).
+                            end, [], lists:reverse(BossConf)),
+    lists:sort(sets:to_list(sets:from_list(BossAppEbinDir ++ MoreEbins))).
 
 all_deps_ebin_dirs(AppFile)->
-    filelib:wildcard(filename:dirname(AppFile) ++ "/../deps/*/ebin").
+    filelib:wildcard("./deps/*/ebin").
 
 all_boss_app_ebin_dirs(BossConf, AppFile) ->
     Boss = proplists:get_value(boss, BossConf),
