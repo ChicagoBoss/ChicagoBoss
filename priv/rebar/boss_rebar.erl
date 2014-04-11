@@ -40,7 +40,7 @@
 		]).
 
 -define(BOSS_PLUGIN_VERSION, 1).
--define(ERLANG_MIN_VERSION, "R15").
+-define(ERLANG_MIN_VERSION, "15").
 
 %%--------------------------------------------------------------------
 %% @doc run
@@ -54,7 +54,7 @@ run(Version, Command, RebarConf, BossConf, AppFile) when is_list(Command)->
 	run(Version, list_to_atom(Command), RebarConf, BossConf, AppFile);
 run(Version, Command, RebarConf, BossConf, AppFile) ->
     rebar_log:log(debug, "Checking rebar plugin client version and Erlang runtime version'~s'~n", [Command]),
-    ErlVsn = erlang:system_info(otp_release),
+    ErlVsn = otp_version(),
     case Version =:= ?BOSS_PLUGIN_VERSION of
         false ->
             report_bad_client_version_and_exit(BossConf);
@@ -68,6 +68,12 @@ run(Version, Command, RebarConf, BossConf, AppFile) ->
         		_ -> 
         			apply(boss_rebar, Command, [RebarConf, BossConf, AppFile])
         	end
+    end.
+
+otp_version() ->
+    case erlang:system_info(otp_release) of
+        "R" ++ Version -> Version;
+        Version -> Version
     end.
 
 %%--------------------------------------------------------------------
