@@ -360,10 +360,18 @@ process_result(AppInfo, _, {moved, Where, Headers}) ->
     {301, [{"Location", AppInfo#boss_app_info.base_url ++ Where}, {"Cache-Control", "no-cache"}|Headers], ""};
 process_result(_, _, {moved_external, Where, Headers}) ->
     {301, [{"Location", Where}, {"Cache-Control", "no-cache"}|Headers], ""};
+% allow external redirect with absolute url
 process_result(AppInfo, Req, {redirect, "http://"++Where, Headers}) ->
     process_result(AppInfo, Req, {redirect_external, "http://"++Where, Headers});
 process_result(AppInfo, Req, {redirect, "https://"++Where, Headers}) ->
     process_result(AppInfo, Req, {redirect_external, "https://"++Where, Headers});
+% allow internal redirect with relative urls
+process_result(AppInfo, Req, {redirect, "/"++Where, Headers}) ->
+    process_result(AppInfo, Req, {redirect_external, "/"++Where, Headers});
+process_result(AppInfo, Req, {redirect, "./"++Where, Headers}) ->
+    process_result(AppInfo, Req, {redirect_external, "./"++Where, Headers});
+process_result(AppInfo, Req, {redirect, "../"++Where, Headers}) ->
+    process_result(AppInfo, Req, {redirect_external, "../"++Where, Headers});
 process_result(AppInfo, Req, {redirect, {Application, Controller, Action, Params}, Headers}) ->
     {RouterPid, AppInfo1, Application1} = if
         AppInfo#boss_app_info.application =:= Application ->
