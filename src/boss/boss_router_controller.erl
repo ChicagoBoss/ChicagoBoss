@@ -87,7 +87,7 @@ handle_call({route, Url}, _From, State) ->
                     not_found
             end;
         _Route = #boss_route{ application = App, controller = C, action = A, params = P } -> 
-            lager:info("Boss Route ~p ~p ~p", [App, C, State]),
+            lager:info("Boss Route ~p ~p ~p ~p", [App, C, A, P]),
             ControllerModule = list_to_atom(boss_files:web_controller(App, C, State#state.controllers)),
             {Tokens, []}     = boss_controller_lib:convert_params_to_tokens(P, ControllerModule, list_to_atom(A)),
             {ok, {App, C, A, Tokens}}
@@ -134,9 +134,7 @@ load(State) ->
                         TheApplication = proplists:get_value(application, Proplist, State#state.application),
                         TheController = proplists:get_value(controller, Proplist),
                         TheAction = proplists:get_value(action, Proplist),
-                        CleanParams = lists:foldl(fun(Key, Vars) ->
-                                    proplists:delete(Key, Vars)
-                            end, Proplist, [application, controller, action]),
+						CleanParams = clean_params(Proplist),
                         case UrlOrStatusCode of
                             Url when is_list(Url) ->
                                 {ok, MP} = re:compile("^"++Url++"$"),
@@ -174,6 +172,11 @@ load(State) ->
             error_logger:error_msg("Missing or invalid boss.routes file in ~p~n~p~n", [RoutesFile, Error])
     end.
 
+clean_params(Params) ->
+    lists:foldl(fun(Key, Vars) ->
+        proplists:delete(Key, Vars)
+    end, Params, [application, controller, action]).
+
 is_controller(State, Controller) -> 
     boss_files:is_controller_present(State#state.application, Controller, State#state.controllers).
 
@@ -204,26 +207,42 @@ substitute_params([{Key, Value}|Rest], Matches, FinalParams) ->
 
 get_match(_, []) ->
     undefined;
-get_match(Url, [Route = #boss_route{pattern = MP}|T]) ->
-    Params = Route#boss_route.params,
-    {IndexedParams, Vars} = lists:mapfoldr(fun
-            ({Key, Value}, Acc) when is_atom(Value) ->
-                case atom_to_list(Value) of
-                    [$$, C | Rest] when C >= $0, C =< $9 ->
-                        {{Key, length(Acc)+1}, [list_to_integer([C|Rest])|Acc]};
-                    "$"++VarName ->
-                        {{Key, length(Acc)+1}, [VarName|Acc]};
-                    _ ->
-                        {{Key, Value}, Acc}
-                end;
-            ({Key, Value}, Acc) ->
-                {{Key, Value}, Acc}
-        end, [], Params),
-    case re:run(Url, MP, [{capture, lists:reverse(Vars), list}]) of
+get_match(Url, [Route|T]) ->
+    Params = [
+        {controller, Route#boss_route.controller},
+        {action, Route#boss_route.action} | Route#boss_route.params
+    ],
+	MP = Route#boss_route.pattern,
+    {IndexedParams, Vars} = index_and_extract_params(Params),
+    case re:run(Url, MP, [{capture, Vars, list}]) of
         {match, Matches} ->
-            Route#boss_route{ params = substitute_params(IndexedParams, Matches) };
+            UpdatedParams = substitute_params(IndexedParams, Matches),
+            NewAction = proplists:get_value(action, UpdatedParams),
+            NewController = proplists:get_value(controller, UpdatedParams),
+            Route#boss_route{
+                action=NewAction,
+                controller=NewController,
+                params = clean_params(UpdatedParams)
+            };
         match ->
             Route;
         _ ->
             get_match(Url, T)
     end.
+
+index_and_extract_params(Params) ->
+    {IndexedParams, Vars} = lists:mapfoldl(fun
+        ({Key, Value}, Acc) when is_atom(Value) ->
+            case atom_to_list(Value) of
+                [$$, C | Rest] when C >= $0, C =< $9 ->
+                    {{Key, length(Acc)+1}, [list_to_integer([C|Rest])|Acc]};
+                "$"++VarName ->
+                    {{Key, length(Acc)+1}, [VarName|Acc]};
+                _ ->
+                    {{Key, Value}, Acc}
+            end;
+        ({Key, Value}, Acc) ->
+            {{Key, Value}, Acc}
+    end, [], Params),
+    {IndexedParams, lists:reverse(Vars)}.
+
