@@ -56,7 +56,7 @@ compile(File) ->
     compile(File, []).
 
 compile(File, Options) ->
-    lager:info("Compile controller ~s with options ~p", [File,Options]), 
+    lager:info("Compile controller ~s", [File]), 
     boss_compiler:compile(File,
                           [debug_info,{pre_revert_transform, fun ?MODULE:add_routes_to_forms/1}|Options]).
 

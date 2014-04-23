@@ -474,14 +474,14 @@ module_is_loaded(Module) ->
               boolean()).
 module_older_than(Module, Files) when is_atom(Module) ->
     case code:is_loaded(Module) of
-        {file, Loaded} ->
-            module_older_than(Loaded, Files);
+        {file, _} ->
+            module_older_than(module_compiled_date(Module), Files);
         _ ->
             case code:load_file(Module) of
                 {module, _} ->
                     case code:is_loaded(Module) of
-                        {file, Loaded} ->
-                            module_older_than(Loaded, Files)
+                        {file, _} ->
+                            module_older_than(module_compiled_date(Module), Files)
                     end;
                 {error, _} ->
                     true
@@ -497,7 +497,18 @@ module_older_than(CompileDate, [Module|Rest]) when is_atom(Module) ->
     {file, Loaded} = code:is_loaded(Module),
     module_older_than(CompileDate, [Loaded|Rest]);
 module_older_than(CompileDate, [CompareDate|Rest]) ->
-    (CompareDate >= CompileDate) orelse module_older_than(CompileDate, Rest).
+    (CompareDate > CompileDate) orelse module_older_than(CompileDate, Rest).
+
+module_compiled_date(Module) when is_atom(Module) ->
+    try proplists:get_value(time, Module:module_info(compile)) of
+        {Y,M,D,H,I,S} ->
+            %% module compile times are in universal time, while
+            %% file modification times are in localtime
+            calendar:universal_time_to_local_time({{Y,M,D}, {H,I,S}});
+        _ -> 0 %% 0 always less than any tuple
+    catch
+        _ -> 0
+    end.
 
 view_module(Application, RelativePath) ->
     Components   = tl(filename:split(RelativePath)),
