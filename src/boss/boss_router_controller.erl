@@ -56,56 +56,20 @@ handle_call(reload, _From, State) ->
     load(State),
     {reply, ok, State};
 handle_call({handle, StatusCode}, _From, State) ->
-    Result = case ets:lookup(State#state.handlers_table_id, StatusCode) of
-        [] ->
-            not_found;
-        [#boss_handler{ application = App, controller = C, action = A, params = P }] ->
-            ControllerModule = list_to_atom(boss_files:web_controller(App, C, State#state.controllers)),
-            {Tokens, []} = boss_controller_lib:convert_params_to_tokens(P, ControllerModule, list_to_atom(A)),
-            {ok, {App, C, A, Tokens}}
-    end,
+    Result = handle(StatusCode, State),
     {reply, Result, State};
 handle_call({route, ""}, From, State) ->
     handle_call({route, "/"}, From, State);
 handle_call({route, Url}, _From, State) ->
-    Route = case get_match(Url, ets:tab2list(State#state.routes_table_id)) of
-        undefined -> 
-            case string:tokens(Url, "/") of
-                [Controller] -> 
-                    case is_controller(State, Controller) of
-                        true -> {ok, {State#state.application, Controller, default_action(State, Controller), []}};
-                        false -> not_found
-                    end;
-                [Controller, Action|Tokens] ->
-                    case is_controller(State, Controller) of
-                        true -> 
-                            UnquotedTokens = lists:map(fun mochiweb_util:unquote/1, Tokens),
-                            {ok, {State#state.application, Controller, Action, UnquotedTokens}};
-                        false -> not_found
-                    end;
-                _ ->
-                    not_found
-            end;
-        _Route = #boss_route{ application = App, controller = C, action = A, params = P } -> 
-            lager:info("Boss Route ~p ~p ~p", [App, C, State]),
-            ControllerModule = list_to_atom(boss_files:web_controller(App, C, State#state.controllers)),
-            {Tokens, []}     = boss_controller_lib:convert_params_to_tokens(P, ControllerModule, list_to_atom(A)),
-            {ok, {App, C, A, Tokens}}
-    end,
+    Route = route(Url, State),
     {reply, Route, State};
 handle_call({unroute, Controller, undefined, Params}, From, State) ->
     handle_call({unroute, Controller, default_action(State, Controller), Params}, From, State);
 handle_call({unroute, Controller, Action, Params}, _From, State) ->
-    RoutedURL = case ets:lookup(State#state.reverse_routes_table_id,
-            {State#state.application, Controller, Action, lists:keysort(1, Params)}) of
-        [#boss_reverse_route{ url = Url }] -> Url;
-        [] -> undefined
-    end,
+    RoutedURL = unroute(Controller, Action, Params, State),
     {reply, RoutedURL, State};
 handle_call(get_all, _From, State) ->
-    Res = lists:map(fun(#boss_route{ url = U, application = App, controller = C, action = A, params = P }) -> 
-                [{url, U}, {application, App}, {controller, C}, {action, A}, {params, P}]
-        end, lists:flatten(ets:match(State#state.routes_table_id, '$1'))),
+    Res = get_all(State),
     {reply, Res, State};
 handle_call({set_controllers, ControllerList}, _From, State) ->
     {reply, ok, State#state{ controllers = ControllerList }}.
@@ -124,6 +88,8 @@ code_change(_OldVsn, State, _Extra) ->
 handle_info(_Info, State) ->
     {noreply, State}.
 
+%% v Private Stuff Below v %%
+
 load(State) ->
     RoutesFile = boss_files:routes_file(State#state.application),
     error_logger:info_msg("Loading routes from ~p ....", [RoutesFile]),
@@ -134,9 +100,7 @@ load(State) ->
                         TheApplication = proplists:get_value(application, Proplist, State#state.application),
                         TheController = proplists:get_value(controller, Proplist),
                         TheAction = proplists:get_value(action, Proplist),
-                        CleanParams = lists:foldl(fun(Key, Vars) ->
-                                    proplists:delete(Key, Vars)
-                            end, Proplist, [application, controller, action]),
+						CleanParams = clean_params(Proplist),
                         case UrlOrStatusCode of
                             Url when is_list(Url) ->
                                 {ok, MP} = re:compile("^"++Url++"$"),
@@ -174,6 +138,59 @@ load(State) ->
             error_logger:error_msg("Missing or invalid boss.routes file in ~p~n~p~n", [RoutesFile, Error])
     end.
 
+handle(StatusCode, State) ->
+    _Result = case ets:lookup(State#state.handlers_table_id, StatusCode) of
+        [] ->
+            not_found;
+        [#boss_handler{ application = App, controller = C, action = A, params = P }] ->
+            ControllerModule = list_to_atom(boss_files:web_controller(App, C, State#state.controllers)),
+            {Tokens, []} = boss_controller_lib:convert_params_to_tokens(P, ControllerModule, list_to_atom(A)),
+            {ok, {App, C, A, Tokens}}
+    end.
+
+route(Url, State) ->
+    _Route = case get_match(Url, ets:tab2list(State#state.routes_table_id)) of
+        undefined -> 
+            case string:tokens(Url, "/") of
+                [Controller] -> 
+                    case is_controller(State, Controller) of
+                        true -> {ok, {State#state.application, Controller, default_action(State, Controller), []}};
+                        false -> not_found
+                    end;
+                [Controller, Action|Tokens] ->
+                    case is_controller(State, Controller) of
+                        true -> 
+                            UnquotedTokens = lists:map(fun mochiweb_util:unquote/1, Tokens),
+                            {ok, {State#state.application, Controller, Action, UnquotedTokens}};
+                        false -> not_found
+                    end;
+                _ ->
+                    not_found
+            end;
+        _Rte = #boss_route{ application = App, controller = C, action = A, params = P } -> 
+            lager:info("Boss Route ~p ~p ~p ~p", [App, C, A, P]),
+            ControllerModule = list_to_atom(boss_files:web_controller(App, C, State#state.controllers)),
+            {Tokens, []}     = boss_controller_lib:convert_params_to_tokens(P, ControllerModule, list_to_atom(A)),
+            {ok, {App, C, A, Tokens}}
+    end.
+
+unroute(Controller, Action, Params, State) ->
+    _RoutedURL = case ets:lookup(State#state.reverse_routes_table_id,
+            {State#state.application, Controller, Action, lists:keysort(1, Params)}) of
+        [#boss_reverse_route{ url = Url }] -> Url;
+        [] -> undefined
+    end.
+
+get_all(State) ->
+    _Res = lists:map(fun(#boss_route{ url = U, application = App, controller = C, action = A, params = P }) -> 
+                [{url, U}, {application, App}, {controller, C}, {action, A}, {params, P}]
+        end, lists:flatten(ets:match(State#state.routes_table_id, '$1'))).
+
+clean_params(Params) ->
+    lists:foldl(fun(Key, Vars) ->
+        proplists:delete(Key, Vars)
+    end, Params, [application, controller, action]).
+
 is_controller(State, Controller) -> 
     boss_files:is_controller_present(State#state.application, Controller, State#state.controllers).
 
@@ -204,26 +221,42 @@ substitute_params([{Key, Value}|Rest], Matches, FinalParams) ->
 
 get_match(_, []) ->
     undefined;
-get_match(Url, [Route = #boss_route{pattern = MP}|T]) ->
-    Params = Route#boss_route.params,
-    {IndexedParams, Vars} = lists:mapfoldr(fun
-            ({Key, Value}, Acc) when is_atom(Value) ->
-                case atom_to_list(Value) of
-                    [$$, C | Rest] when C >= $0, C =< $9 ->
-                        {{Key, length(Acc)+1}, [list_to_integer([C|Rest])|Acc]};
-                    "$"++VarName ->
-                        {{Key, length(Acc)+1}, [VarName|Acc]};
-                    _ ->
-                        {{Key, Value}, Acc}
-                end;
-            ({Key, Value}, Acc) ->
-                {{Key, Value}, Acc}
-        end, [], Params),
-    case re:run(Url, MP, [{capture, lists:reverse(Vars), list}]) of
+get_match(Url, [Route|T]) ->
+    Params = [
+        {controller, Route#boss_route.controller},
+        {action, Route#boss_route.action} | Route#boss_route.params
+    ],
+	MP = Route#boss_route.pattern,
+    {IndexedParams, Vars} = index_and_extract_params(Params),
+    case re:run(Url, MP, [{capture, Vars, list}]) of
         {match, Matches} ->
-            Route#boss_route{ params = substitute_params(IndexedParams, Matches) };
+            UpdatedParams = substitute_params(IndexedParams, Matches),
+            NewAction = proplists:get_value(action, UpdatedParams),
+            NewController = proplists:get_value(controller, UpdatedParams),
+            Route#boss_route{
+                action=NewAction,
+                controller=NewController,
+                params = clean_params(UpdatedParams)
+            };
         match ->
             Route;
         _ ->
             get_match(Url, T)
     end.
+
+index_and_extract_params(Params) ->
+    {IndexedParams, Vars} = lists:mapfoldl(fun
+        ({Key, Value}, Acc) when is_atom(Value) ->
+            case atom_to_list(Value) of
+                [$$, C | Rest] when C >= $0, C =< $9 ->
+                    {{Key, length(Acc)+1}, [list_to_integer([C|Rest])|Acc]};
+                "$"++VarName ->
+                    {{Key, length(Acc)+1}, [VarName|Acc]};
+                _ ->
+                    {{Key, Value}, Acc}
+            end;
+        ({Key, Value}, Acc) ->
+            {{Key, Value}, Acc}
+    end, [], Params),
+    {IndexedParams, lists:reverse(Vars)}.
+

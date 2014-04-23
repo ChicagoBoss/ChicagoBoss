@@ -1,3 +1,11 @@
+Upgrade: From 0.8.x to 0.8.12 (where x < 12)
+
+You need a new version of rebar otherwise you are very likely to see weird
+errors compiling templates. The easiest way is probably with:
+
+    wget https://github.com/ChicagoBoss/ChicagoBoss/raw/master/skel/rebar
+    chmod a+x rebar
+
 Upgrade: From 0.7 to 0.8
 ------------------------
 
@@ -18,18 +26,22 @@ Custom tags should be moved from view/lib/ to view/lib/tag_html.
 Upgrade: From 0.6 to 0.7
 ------------------------
 
-In Chicago Boss 0.7, projects are now rebarified, boss.config is the central place for all configuration and eunit testing has been made easy,
+In Chicago Boss 0.7, projects are now rebarified, boss.config is the central
+place for all configuration and eunit testing has been made easy,
 
 bc. ./rebar boss # (list of available commands)
 ./init.sh # (list of available boot commands)
 
 h3. Migrate current cb apps
 
-In order to ease the task, a new make task has been created in the framework Makefile, just update your Chicago Boss and run:
+In order to ease the task, a new make task has been created in the framework
+Makefile, just update your Chicago Boss and run:
 
 bc. make rebarize APPDIR=/path/to/app
 
-This will copy all new files in your app directory, move the app.src file to src, move the boss_web_tests (functionals) to src/test/functional and point you with instructions on what you need add to your boss.config.
+This will copy all new files in your app directory, move the app.src file to
+src, move the boss_web_tests (functionals) to src/test/functional and point you
+with instructions on what you need add to your boss.config.
 
 bc. make rebarize APPDIR=../my_app
 ../my_app rebar-boss-ified
@@ -47,32 +59,42 @@ cd ../my_app
 
 h3. Compilation
 
-Boss has non-standard-compatible-rebar-way of compiling code, the rebar plugin switches off standard compilation and calls the boss_load module.
+Boss has non-standard-compatible-rebar-way of compiling code, the rebar plugin
+switches off standard compilation and calls the boss_load module.
 
 ./rebar compile (works for compatibility mode)
 ./rebar boss c=compile
 
 h3. Configuration
 
-Now the only file on a cb project you need to take care is boss.config, the new init.sh calls ./rebar boss commands that returns automatically generated erl -pa... commands and executes it.
+Now the only file on a cb project you need to take care is boss.config, the new
+init.sh calls ./rebar boss commands that returns automatically generated erl
+-pa... commands and executes it.
 
-You now defines the path in boss.config for each app and (compilation, test launch, start, stop, reload, ...) works automatically.
+You now defines the path in boss.config for each app and (compilation, test
+launch, start, stop, reload, ...) works automatically.
 
-A new setting in boss.config called vm_cookie (optional) has been added, used in start/stop/reload commands (defaults to "abc123"):
+A new setting in boss.config called vm_cookie (optional) has been added, used
+in start/stop/reload commands (defaults to "abc123"):
 
 bc. [{boss, [ {path, "../ChicagoBoss"}, {vm_cookie, "abc123"}, ...
 
 h3. Tests
 
-Eunit testing compilation/setup works automatically, start writing unit tests, just place them in "src/test/eunit" and run ./rebar eunit or ./rebar boss c=test_eunit
+Eunit testing compilation/setup works automatically, start writing unit tests,
+just place them in "src/test/eunit" and run ./rebar eunit or ./rebar boss
+c=test_eunit
 
-Functional tests lives now in src/test/functional (before was placed in src/test), just call ./rebar boss c=test_functional
+Functional tests lives now in src/test/functional (before was placed in
+src/test), just call ./rebar boss c=test_functional
 
 h3. Init
 
-The init.sh handles start, start-dev as before, but also stop, reload (hot for the node) and restart is implemented.
+The init.sh handles start, start-dev as before, but also stop, reload (hot for
+the node) and restart is implemented.
 
-Now we can tweak, change, make vm.args configurable (in boss.config) without force developers to handle this manually in their apps.
+Now we can tweak, change, make vm.args configurable (in boss.config) without
+force developers to handle this manually in their apps.
 
 Upgrade: From 0.5 to 0.6
 ------------------------
@@ -88,8 +110,8 @@ To upgrade, you will need to do the following in your project:
     mv lang/ static/ priv/
     PROJECT=my_application mv boss.routes priv/$PROJECT.routes
 
-In addition, you will need to prefix your controller modules with the application
-name. E.g.
+In addition, you will need to prefix your controller modules with the
+application name. E.g.
 
     mv blog_controller.erl my_application_blog_controller.erl
 
@@ -101,9 +123,9 @@ Upgrade: From 0.5.x to 0.5.y
 ----------------------------
 
 Starting with Chicago Boss 0.5, the framework source is kept separate from your
-project source. After downloading and building a new copy of CB, you need to update
-your server scripts to point to the new source. Open "start-dev.sh" and "start.sh"
-and make sure there is an argument like this:
+project source. After downloading and building a new copy of CB, you need to
+update your server scripts to point to the new source. Open "start-dev.sh" and
+"start.sh" and make sure there is an argument like this:
 
     -pa /path/to/new/ChicagoBoss/ebin
 
@@ -114,8 +136,8 @@ directory from the new CB over to your project directory.
 Upgrade: From 0.4 to 0.5
 ------------------------
 
-The easiest way to upgrade from 0.4 is to create a new CB app and copy your source
-into it. In the CB source directory, type:
+The easiest way to upgrade from 0.4 is to create a new CB app and copy your
+source into it. In the CB source directory, type:
 
     make
     make app PROJECT=mynewproject
@@ -144,8 +166,8 @@ belong to Boss. Files which start with a lower-case letter belong to you.
 Upgrade: From 0.3 to 0.4
 ------------------------
 
-The directory structure has changed somewhat. The MVC files have moved around, and
-files for the /admin interface are in a separate directory (ADMIN). 
+The directory structure has changed somewhat. The MVC files have moved around,
+and files for the /admin interface are in a separate directory (ADMIN). 
 
 The following steps should get you most of the way to an upgrade:
 
