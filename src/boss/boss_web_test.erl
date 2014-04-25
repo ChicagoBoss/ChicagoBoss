@@ -1,7 +1,7 @@
 % web-centric functional tests
 -module(boss_web_test).
 -export([start/1, run_tests/1, get_request/4, post_request/5, read_email/4]).
--export([follow_link/4, follow_redirect/3, submit_form/5]).
+-export([follow_link/4, follow_redirect/3, follow_redirect/4, submit_form/5]).
 -export([find_link_with_text/2]).
 
 -include("boss_web.hrl").
@@ -101,12 +101,19 @@ follow_link(LinkName, {_, _, ParseTree} = _Response, Assertions, Continuations) 
 %% @spec follow_redirect(Response, Assertions, Continuations) -> [{NumPassed, ErrorMessages}]
 %% @doc This test follows an HTTP redirect; that is, it issues a GET request to
 %% the URL specified by the "Location" header in `Response'
-follow_redirect({302, _, Headers, _} = _Response, Assertions, Continuations) ->
+follow_redirect(Response, Assertions, Continuations) ->
+	follow_redirect(Response, [], Assertions, Continuations).
+
+%% @spec follow_redirect(Response, Hdrs, Assertions, Continuations) -> [{NumPassed, ErrorMessages}]
+%% @doc This test follows an HTTP redirect; that is, it issues a GET request to
+%% the URL specified by the "Location" header in `Response', while passing `Hdrs' out as
+%% outbound headers.
+follow_redirect({302, _, Headers, _} = _Response, Hdrs, Assertions, Continuations) ->
   case proplists:get_value("Location", Headers) of
     undefined ->
       {0, ["No Location: header to follow!"]};
     Url ->
-      get_request(Url, [], Assertions, Continuations)
+      get_request(Url, Hdrs, Assertions, Continuations)
   end.
 
 %% @spec submit_form(FormName, FormValues::proplist(), Response, Assertions, Continuations) -> [{NumPassed, ErrorMessages}]
