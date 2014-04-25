@@ -108,7 +108,7 @@ follow_redirect(Response, Assertions, Continuations) ->
 %% @doc This test follows an HTTP redirect; that is, it issues a GET request to
 %% the URL specified by the "Location" header in `Response', while passing `Hdrs' out as
 %% outbound headers.
-follow_redirect({302, _, Headers, _} = _Response, Assertions, Continuations) ->
+follow_redirect({302, _, Headers, _} = _Response, Hdrs, Assertions, Continuations) ->
   case proplists:get_value("Location", Headers) of
     undefined ->
       {0, ["No Location: header to follow!"]};
