@@ -92,7 +92,14 @@ dev_headers(Response, _) ->
     
 
 make_etag(App, StaticPrefix, File) ->
-    FilePath      = code:priv_dir(App) ++ "/" ++ StaticPrefix ++ "/" ++ File,
+	Priv = case code:priv_dir(App) of
+		{error, bad_name} ->
+			%% enuit isn't loading the application, so this will default for us
+			"../priv";
+		P ->
+			P
+	end,
+    FilePath      = Priv ++ "/" ++ StaticPrefix ++ "/" ++ File,
     case file:read_file(FilePath) of
     	{ok, Content} -> 
     		binary_to_list(base64:encode(crypto:hash(sha, Content)));
