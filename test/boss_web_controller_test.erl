@@ -15,7 +15,7 @@ wants_session(_Application, R, _Modules) ->
 
 call_controller_action_test() ->
     R = boss_web_controller:call_controller_action(?MODULE, exit,[]),
-    ?assertEqual( {output, "Process Error see console.log for details\n"}, R),
+    ?assertEqual( {output, "Error in controller, see console.log for details\n"}, R),
     ?assertEqual( ok, boss_web_controller:call_controller_action(?MODULE, return,[])).
 
 make_action_session_id_test() ->
