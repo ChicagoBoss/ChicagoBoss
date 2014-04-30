@@ -25,6 +25,7 @@
   gregorian time.
 * boss_db handle 'undefined' as a value with select queries. (@davidw)
 * Consolodate ebin finding and remove duplicates (@davidw)
+* Clean up inconsistent dependency versions so that `rebar update-deps` works.
 
 *(All updates by @choptastic unless specified)*
 
