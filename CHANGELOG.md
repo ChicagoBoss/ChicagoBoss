@@ -23,5 +23,6 @@
   the original location rather than from the 'deps/boss' directory as expected.
 * Modify module compile-time comparison to remove unnecessary conversions to
   gregorian time.
+* boss_db handle 'undefined' as a value with select queries. (@davidw)
 
 *(All updates by @choptastic unless specified)*
