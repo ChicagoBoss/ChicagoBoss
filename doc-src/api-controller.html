@@ -412,6 +412,12 @@ before_(_, _, _) -&gt;
     <p>Get the request protocol (HTTP or HTTPS).</p>
 </div>
 
+<div class="example row2">
+    <div class="code spec">
+		peer_ip() -&gt; tuple()
+    </div>
+	<p>Get the IP Address of the connected client as a 4-tuple for IPv4 or an 8-tuple for IPv6 (e.g. <code>{127, 0, 0, 1}</code>)</p>
+</div>
 <div class="example row1">
     <div class="code spec">
             query_param(&nbsp;Key<span class="typevar">::string()</span>&nbsp;)&nbsp;-&gt; string()&nbsp;|&nbsp;undefined<br />
