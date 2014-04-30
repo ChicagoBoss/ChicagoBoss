@@ -24,6 +24,7 @@
 * Modify module compile-time comparison to remove unnecessary conversions to
   gregorian time.
 * boss_db handle 'undefined' as a value with select queries. (@davidw)
+* Consolodate ebin finding and remove duplicates (@davidw)
 
 *(All updates by @choptastic unless specified)*
 
