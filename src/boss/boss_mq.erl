@@ -41,6 +41,7 @@ get_mq_adapater() ->
 	_ -> tinymq
     end.
 
+-spec make_queue_options() -> [{atom(), term()}].
 make_queue_options() ->
     lists:foldl(fun(OptName, Acc) ->
 			case application:get_env(OptName) of
