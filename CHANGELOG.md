@@ -2,6 +2,12 @@
 
 (Note: Prior to Version 0.8.8, changelog is contained in commit history)
 
+### Version 0.8.13 (In Development)
+
+* Fix link in rebar.config to Elixir for Erlang 17.
+* Give a more useful error message when `{render_other, Location}` controller
+  return is not properly formatted.
+
 ### Version 0.8.12 - Stability improvements
 
 * Add option to make local relative redirects (@danikp)
