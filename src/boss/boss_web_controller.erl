@@ -100,9 +100,8 @@ init_server_config(Config, RequestMod, ResponseMod) ->
 
 handle_info(timeout, State = #state{service_sup_pid = ServicesSupPid}) ->
     Applications	= boss_env:get_env(applications, []),
-    AppInfoList         = start_boss_applications(Applications,
-						  ServicesSupPid),
-
+    AppInfoList         = boss_web_controller_util:start_boss_applications(Applications,
+                                                                           ServicesSupPid),
     case boss_env:get_env(server, ?DEFAULT_WEB_SERVER) of
         cowboy ->
             boss_web_controller_cowboy:dispatch_cowboy(Applications);
@@ -111,50 +110,6 @@ handle_info(timeout, State = #state{service_sup_pid = ServicesSupPid}) ->
     end,
     {noreply, State#state{ applications = AppInfoList }}.
 
-start_boss_applications( Applications, ServicesSupPid) ->
-    lists:map(fun
-                  (AppName) ->
-                      application:start(AppName),
-                      {TranslatorSupPid, BaseURL, IsMasterNode, StaticPrefix,
-                       DocPrefix, DomainList, ModelList, ViewList, ControllerList,
-                       RouterSupPid}  = boss_web_controller_util:unpack_application_env(AppName),
-                      
-                      init_app_load_on_dev(AppName,
-                                           TranslatorSupPid),
-                      
-                      enable_master_apps(ServicesSupPid, AppName, BaseURL,
-                                         IsMasterNode),
-                      
-                      boss_web_controller_util:make_boss_app_info(AppName, BaseURL, StaticPrefix, DocPrefix,
-                                                                  DomainList, ModelList, ViewList,
-                                                                  ControllerList, RouterSupPid,
-                                                                  TranslatorSupPid)
-	      end, Applications).
-
-init_app_load_on_dev(AppName, TranslatorSupPid) ->
-    case boss_env:is_developing_app(AppName) of
-	true  -> 
-            Result = boss_load:load_all_modules(AppName, TranslatorSupPid),
-            Result;
-	false -> ok
-    end.
-
-enable_master_apps(ServicesSupPid, AppName, BaseURL, IsMasterNode) ->
-    if
-        IsMasterNode ->
-            case boss_env:get_env(server, ?DEFAULT_WEB_SERVER) of
-                cowboy ->
-                    WebSocketModules = boss_files:websocket_list(AppName),
-                    MappingServices  = boss_files:websocket_mapping(BaseURL,
-                        atom_to_list(AppName),
-                        WebSocketModules),
-                    boss_service_sup:start_services(ServicesSupPid, MappingServices);
-                _Any ->
-                    _Any
-            end;
-        true ->
-            ok
-    end.
 
 
 handle_call({reload_translation, Locale}, _From, State) ->
