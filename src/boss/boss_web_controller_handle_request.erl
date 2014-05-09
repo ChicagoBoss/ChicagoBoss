@@ -17,7 +17,7 @@ handle_request(Req, RequestMod, ResponseMod, RouterAdapter) ->
     Request		= simple_bridge:make_request(RequestMod, Req),
     FullUrl		= Request:path(),
 
-    ApplicationForPath	= RouterAdapter:find_application_for_path(Request:header(host),
+    ApplicationForPath	= RouterAdapter:find_application_for_path(Request,
                                                                   FullUrl, 
                                                                   LoadedApplications),
     lager:notice("ApplicationForPath ~p~n", [ApplicationForPath]),

@@ -75,10 +75,8 @@ get_all(Pid) ->
 set_controllers(Pid, Controllers) ->
     gen_server:call(Pid, {set_controllers, Controllers}).
 
-
--spec find_application_for_path('undefined' | binary() | maybe_improper_list(binary() | maybe_improper_list(any(),binary() | []) | char(),binary() | []),_,[any()]) -> any().
-
-find_application_for_path(Host, Path, Applications) ->
+find_application_for_path(Req, Path, Applications) ->
+    Host    = Req:header(host),
     UseHost = case Host of
         undefined -> undefined;
         _ -> hd(re:split(Host, ":", [{return, list}]))
