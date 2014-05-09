@@ -4,14 +4,13 @@
 
 -export([unpack_application_env/1]).
 
--export([find_application_for_path/3]).
+%-export([find_application_for_path/3]).
 
 -export([execution_mode/1]).
 
 -include("boss_web.hrl").
 
 -spec execution_mode(types:application()) -> types:execution_mode().
--spec find_application_for_path('undefined' | binary() | maybe_improper_list(binary() | maybe_improper_list(any(),binary() | []) | char(),binary() | []),_,[any()]) -> any().
 -spec make_boss_app_info(types:application(),_,_,_,_,_,_,_,_,_) -> #boss_app_info{}.
 -spec unpack_application_env(types:application()) -> {_,_,_,_,_,_,_,_,_,_}.
 
@@ -47,37 +46,6 @@ unpack_application_env( AppName) ->
     {ok, TranslatorSupPid}	= boss_translator:start([{application, AppName}]),
     {TranslatorSupPid, BaseURL, IsMasterNode, StaticPrefix, DocPrefix,
      DomainList, ModelList, ViewList, ControllerList, RouterSupPid}.
-
-find_application_for_path(Host, Path, Applications) ->
-    UseHost = case Host of
-        undefined -> undefined;
-        _ -> hd(re:split(Host, ":", [{return, list}]))
-    end,
-    find_application_for_path(UseHost, Path, undefined, Applications, -1).
-
-find_application_for_path(_Host, _Path, Default, [], _MatchScore) ->
-    Default;
-find_application_for_path(Host, Path, Default, [App|Rest], MatchScore) ->
-    DomainScore = case Host of
-        undefined -> 0;
-        _ ->
-            case boss_web:domains(App) of
-                all -> 0;
-                Domains ->
-                    case lists:member(Host, Domains) of
-                        true -> 1;
-                        false -> -1
-                    end
-            end
-    end,
-    BaseURL = boss_web:base_url(App),
-    PathScore = length(BaseURL),
-    {UseApp, UseScore} = case (DomainScore >= 0) andalso (1000 * DomainScore + PathScore > MatchScore) andalso lists:prefix(BaseURL, Path) of
-        true -> {App, DomainScore * 1000 + PathScore};
-        false -> {Default, MatchScore}
-    end,
-    find_application_for_path(Host, Path, UseApp, Rest, UseScore).
-
 
 
 execution_mode(App) ->

@@ -7,7 +7,9 @@
 %% Exported Functions
 %%
 -export([start/0, start/1, stop/0]).
+-export([find_application_for_path/3]).
 -export([reload/1, route/2, unroute/6, handle/2, get_all/1, set_controllers/2]).
+
 
 %%
 %% API Functions
@@ -72,3 +74,39 @@ get_all(Pid) ->
 
 set_controllers(Pid, Controllers) ->
     gen_server:call(Pid, {set_controllers, Controllers}).
+
+
+-spec find_application_for_path('undefined' | binary() | maybe_improper_list(binary() | maybe_improper_list(any(),binary() | []) | char(),binary() | []),_,[any()]) -> any().
+
+find_application_for_path(Host, Path, Applications) ->
+    UseHost = case Host of
+        undefined -> undefined;
+        _ -> hd(re:split(Host, ":", [{return, list}]))
+    end,
+    find_application_for_path(UseHost, Path, undefined, Applications, -1).
+
+find_application_for_path(_Host, _Path, Default, [], _MatchScore) ->
+    Default;
+find_application_for_path(Host, Path, Default, [App|Rest], MatchScore) ->
+    DomainScore = case Host of
+        undefined -> 0;
+        _ ->
+            case boss_web:domains(App) of
+                all -> 0;
+                Domains ->
+                    case lists:member(Host, Domains) of
+                        true -> 1;
+                        false -> -1
+                    end
+            end
+    end,
+    BaseURL = boss_web:base_url(App),
+    PathScore = length(BaseURL),
+    {UseApp, UseScore} = case (DomainScore >= 0) andalso (1000 * DomainScore + PathScore > MatchScore) andalso lists:prefix(BaseURL, Path) of
+        true -> {App, DomainScore * 1000 + PathScore};
+        false -> {Default, MatchScore}
+    end,
+    find_application_for_path(Host, Path, UseApp, Rest, UseScore).
+
+
+
