@@ -2,6 +2,7 @@
 %% Created: 01/04/2011
 %% Description: Minimalist Router system for Chicago Boss
 -module(boss_router).
+-behaviour(boss_router_adapter).
 
 %%
 %% Exported Functions
@@ -9,7 +10,6 @@
 -export([start/0, start/1, stop/0]).
 -export([find_application_for_path/3]).
 -export([reload/1, route/2, unroute/6, handle/2, get_all/1, set_controllers/2]).
-
 
 %%
 %% API Functions

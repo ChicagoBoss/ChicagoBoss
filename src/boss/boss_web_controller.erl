@@ -70,6 +70,7 @@ init_web_server_options() ->
 init(Config) ->
     ThisNode					= erlang:node(),
     Env						= boss_web_controller_init:init_services(),
+    RouterAdapter                               = boss_env:get_env(router_adapter, boss_router),
    
     {ok,MasterNode}				= boss_web_controller_init:init_master_node(Env, ThisNode),
     boss_web_controller_init:init_mail_service(),
@@ -84,7 +85,8 @@ init(Config) ->
 							             ResponseMod),
     Pid						= boss_web_controller_init:init_webserver(ThisNode, MasterNode, ServerMod, SSLEnable,
 											  SSLOptions, ServicesSupPid, ServerConfig),
-    {ok, #state{ service_sup_pid = ServicesSupPid, 
+    {ok, #state{ router_adapter  = RouterAdapter,
+                 service_sup_pid = ServicesSupPid, 
                  http_pid        = Pid, 
                  is_master_node  = (ThisNode =:= MasterNode) }, 0}.
 
