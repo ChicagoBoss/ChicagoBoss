@@ -1,7 +1,7 @@
 -module(boss_mochicow_handler).
 -behaviour(cowboy_websocket_handler).
 
--export([init/3, loop/1, terminate/2]).
+-export([init/3, loop/2, terminate/2]).
 -export([websocket_init/3, websocket_handle/3,
 	 websocket_info/3, websocket_terminate/3]).
 
@@ -15,10 +15,12 @@ init({_Any, http}, Req, _Opts) ->
 
 -record(state, {websocket_id, session_id, service_url}).
 
-loop(Req) ->
-    boss_web_controller_handle_request:handle_request(Req, 
+loop(Req, RouterAdapter) ->
+     boss_web_controller_handle_request:handle_request(Req, 
 						      mochiweb_request_bridge, 
-						      mochiweb_response_bridge).
+						      mochiweb_response_bridge,
+                              RouterAdapter
+                              ).
 
 terminate(_Req, _State) ->
     ok.
