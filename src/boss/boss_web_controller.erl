@@ -75,8 +75,6 @@ init(Config) ->
     boss_web_controller_init:init_mail_service(),
     RouterAdapter                        = boss_env:get_env(router_adapter, boss_router), 
 
-    lager:info("~n~n>>>>>> init ~p~n~n", [RouterAdapter]),   
-        
     {RequestMod, ResponseMod, ServerMod} = init_web_server_options(),
     {SSLEnable, SSLOptions}			     = boss_web_controller_init:init_ssl(),
     ServicesSupPid				         = boss_web_controller_init:init_master_services(ThisNode, MasterNode),
