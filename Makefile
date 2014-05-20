@@ -44,7 +44,7 @@ app:
 	@echo ""
 	@echo "Your new app is created. You should head over there now:"
 	@echo ""
-	@echo "    cd ../$(PROJECT)"
+	@echo "    cd $(DEST)"
 	@echo ""
 	@echo "***********************************************************************"
 	@echo ""
