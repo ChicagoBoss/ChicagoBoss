@@ -104,9 +104,12 @@ expand_action_result({Keyword, Data}) when Keyword =:= ok; Keyword =:= render ->
 expand_action_result({ok, Data, Headers}) ->
     {render, Data, Headers};
 expand_action_result({render_other, OtherLocation}) ->
-    {render_other, OtherLocation, [], []};
-expand_action_result({render_other, OtherLocation, Data}) ->
+	expand_action_result({render_other, OtherLocation, []});
+expand_action_result({render_other, [{_,_}|_]=OtherLocation, Data}) ->
     {render_other, OtherLocation, Data, []};
+expand_action_result({render_other, OtherLocation, _Data}) ->
+	lager:error("Action returned an invalid Location with render_other. Expected a proplist, but returned ~p", [OtherLocation]),
+	{output, "bad return value from controller action\n", []};
 expand_action_result({redirect, Where}) ->
     {redirect, Where, []};
 expand_action_result({redirect, Where, Headers}) ->

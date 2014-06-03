@@ -42,7 +42,7 @@ letter and contain only letters, digits, and underscores (for easy compatibility
 Dependencies
 ------------
 
-* Erlang R15B or later -
+* Erlang R16B or later -
 
     <http://www.erlang.org/download.html>
 
@@ -246,3 +246,7 @@ There's also the mailing list:
 If you want to contribute to CB
 
 [CODING_STANDARDS.md](https://github.com/ChicagoBoss/ChicagoBoss/blob/master/CODING_STANDARDS.md)
+
+View the CHANGELOG.md
+
+[CHANGELOG.md](https://github.com/ChicagoBoss/ChicagoBoss/blob/master/CHANGELOG.md)

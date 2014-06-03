@@ -15,7 +15,7 @@ wants_session(_Application, R, _Modules) ->
 
 call_controller_action_test() ->
     R = boss_web_controller:call_controller_action(?MODULE, exit,[]),
-    ?assertEqual( {output, "Process Error see console.log for details\n"}, R),
+    ?assertEqual( {output, "Error in controller, see console.log for details\n"}, R),
     ?assertEqual( ok, boss_web_controller:call_controller_action(?MODULE, return,[])).
 
 make_action_session_id_test() ->
@@ -26,22 +26,6 @@ make_action_session_id_test() ->
 								       {}, 
 								       undefined, 
 								       ?MODULE)).
-
-receive_controller_response_no_exit_test() ->
-    Ref = make_ref(),
-    self() ! {msg, Ref, ok},
-    ?assertEqual(ok, boss_web_controller:receive_controller_response(Ref)).
-
-receive_controller_response_normal_exit_test() ->
-    Ref = make_ref(),
-    self() ! {'EXIT', {}, normal},
-    self() ! {msg, Ref, ok},
-    ?assertEqual(ok, boss_web_controller:receive_controller_response(Ref)).
-
-receive_controller_response_crash_exit_test() ->
-    Ref = make_ref(),
-    self() ! {'EXIT', Ref, ok},
-    ?assertMatch({output,_}, boss_web_controller:receive_controller_response(Ref)).
 
 handle_call_application_info_test() ->
     ?assert(proper:quickcheck(prop_handle_call_application_info(),
