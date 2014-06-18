@@ -2,8 +2,18 @@
 
 (Note: Prior to Version 0.8.8, changelog is contained in commit history)
 
-### Version 0.8.13 (In Development)
+### Version 0.8.13 - Mostly SQL Stuff... Mostly.
 
+* Update BossDB to support `boss_db:find_by_sql/[2,3]`, allowing direct SQL
+  searches to be performed if desired. Attempting this call with non-SQL based
+  databases will crash. (@davidw for PostgreSQL, @jessegumm for MySQL).
+* Split boss_test into its own application and added as a dependency for
+  boss_db.
+* MySQL Test suite for BossDB now passing all tests.
+* BossDB Test configuration slightly updated.
+* Added `boss_db:mock_transaction/1`, which, like an actual transaction will
+  lock all requests to a certain worker, without being an actual transaction.
+  (used in boss_db tests).
 * Fix link in rebar.config to Elixir for Erlang 17.
 * Give a more useful error message when `{render_other, Location}` controller
   return is not properly formatted.
