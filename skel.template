@@ -21,6 +21,7 @@
 {dir, "{{dest}}/src/mail/view"}.
 {dir, "{{dest}}/src/test/eunit"}.
 {dir, "{{dest}}/src/test/functional"}.
+{template, "skel/Makefile", "{{dest}}/Makefile"}.
 {template, "skel/rebar.config", "{{dest}}/rebar.config"}.
 {template, "skel/start-server.bat", "{{dest}}/start-server.bat"}.
 {template, "skel/src/project.app.src", "{{dest}}/src/{{appid}}.app.src"}.
