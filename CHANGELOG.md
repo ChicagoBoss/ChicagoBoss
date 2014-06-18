@@ -6,7 +6,7 @@
 
 * Update BossDB to support `boss_db:find_by_sql/[2,3]`, allowing direct SQL
   searches to be performed if desired. Attempting this call with non-SQL based
-  databases will crash. (@davidw for PostgreSQL, @jessegumm for MySQL).
+  databases will crash. (@davidw for PostgreSQL, @choptastic for MySQL).
 * Split boss_test into its own application and added as a dependency for
   boss_db.
 * MySQL Test suite for BossDB now passing all tests.
@@ -17,6 +17,13 @@
 * Fix link in rebar.config to Elixir for Erlang 17.
 * Give a more useful error message when `{render_other, Location}` controller
   return is not properly formatted.
+* Added sample configurations for MongoDB as well as a minimistic version of
+  the boss.config. These can be found in `sample_configs/` in the main
+  ChicagoBoss directory (@kotedo)
+* Update Makefile to use the proper destination directory instead of just
+  `../project_name` (@ingwinlu)
+
+*(All updates by @choptastic unless specified)*
 
 ### Version 0.8.12 - Stability improvements
 
