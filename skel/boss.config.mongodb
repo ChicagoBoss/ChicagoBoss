@@ -1,0 +1,123 @@
+%%%
+%%% CHICAGO BOSS PROJECT SKELETON
+%%%
+%%% This file can be modified by you to avoid you needing to reenter
+%%% defaults when creating new projects.  For full configuration
+%%% details, please visit
+%%% https://github.com/ChicagoBoss/ChicagoBoss/wiki/Configuration
+
+%%% When running tests, you may want to create a separate configuration file
+%%% "boss.test.config" which, if present, will be read instead of boss.config.
+
+[{boss, [
+         {path, "./deps/boss"},
+         {applications, [{{appid}}]},
+         {assume_locale, "en"},
+
+         %% {compiler_options, [return_errors]},
+
+%% db_port - The port of the database. Defaults to 1978.
+%% db_adapter - The database adapter to use. Valid values are: 
+%%     mock - In-memory (non-persistent) database, useful for testing
+%%     mnesia - Mnesia
+%%     mongodb- MongoDB
+%%     mysql - MySQL
+%%     pgsql - PostgreSQL
+%%     riak - Riak
+%%     tyrant - Tokyo Tyrant
+%% db_username - The username used for connecting to the database (if
+%%   needed).
+%% db_password - The password used for connecting to the database (if
+%%   needed).
+%% db_database - The name of the database to connect to (if needed).
+%% db_cache_enable - Whether to enable the cache in boss_db. Defaults 
+%%   to false. Requires cache_enable to be set to true.
+
+         {db_host, "localhost"},
+         {db_port, 27017},
+         {db_adapter, mongodb},
+         %% MongoDB's username and password are unset by default
+         %% Remember to set username and password for production
+         %% {db_username, "boss"},
+         %% {db_password, "boss"},
+         {db_database, "boss"},
+
+         %%  MongoDB only
+         %%
+         %% Read https://github.com/TonyGen/mongodb-erlang#readme for details
+         %% db_write_mode - defaults to safe
+         %% db_read_mode - defaults to master (master or slave_ok for readonly mode))
+         %% A well designed ReplSet configuration will have an uneven amount of nodes
+         %% so that a new master can be elected in case a master goes away.
+         %% You can create an arbiter for just that.  It has "voting" rights,
+         %% but it will never hold any data.
+         %% Good setups are:
+         %% 3 Nodes: 2 data nodes and 1 arbiter or 3 data nodes
+         %% 5 Nodes: 4 data nodes and 1 arbiter or 5 data nodes
+         %% Nodes can be geographically spread over the world, but consider that
+         %% latency will become and issue.
+         %% See http://docs.mongodb.org/manual/core/replica-set-architectures
+         %% for greater details on ReplSets
+         %% {db_replication_set,  {<<"replSetName">>, [{'<IP address>', <PORTNUMBER>},
+         %%                                           {'<IP address>', <PORTNUMBER>},
+         %%                                           {'<IP address>', <PORTNUMBER> },
+         %%                                           {'<IP address>', <PORTNUMBER>},
+         %%                                           {'<IP address>', <PORTNUMBER>}
+         %%                                          ]}},
+         {db_write_mode, safe},
+         {db_read_mode, master},
+
+         {port, 8001},
+         {server, cowboy},
+
+         
+         %% {websocket_timeout, 5000},
+
+         {session_adapter, mock},
+         {session_key, "_boss_session"},
+         {session_exp_time, 525600},
+         {session_cookie_http_only, false},
+         {session_cookie_secure, false},
+         %% {session_enable, true},
+         %% {session_mnesia_nodes, [node()]}, % <- replace "node()" with a node name
+         %% {session_domain, ".domain.com"},
+
+         {template_tag_modules, []},
+         {template_filter_modules, []}
+        ]},
+
+ %% MESSAGE QUEUE
+
+ { tinymq, [
+            %% {max_age, 60}
+           ]},
+ 
+ %% LOGGING
+ 
+
+ %% Lager default config. 
+ %% More info: https://github.com/basho/lager 
+
+ {lager, [
+          {handlers, [
+                      {lager_console_backend, info},
+                      {lager_file_backend, [
+                                            {"log/error.log", error, 10485760, "$D0", 5},
+                                            {"log/console.log", info, 10485760, "$D0", 5}
+                                           ]}
+                     ]}
+         ]},
+
+ %% APPLICATION CONFIGURATIONS
+
+ %% domains - A list of domains to serve the application on
+ %% static_prefix - The URL prefix of static assets
+ %% doc_prefix - The URL prefix for developer documentation
+ { {{appid}}, [
+               {path, "../{{appid}}"},
+               {base_url, "/"},
+               %% {domains, all},
+               %% {static_prefix, "/static"},
+               %% {doc_prefix, "/doc"}
+              ]}
+].

@@ -37,6 +37,7 @@ app:
 	@(if ! echo "$(PROJECT)" | grep -qE '^[a-z]+[a-zA-Z0-9_@]*$$'; then echo "Project name should be a valid Erlang atom."; exit 1; fi)
 	@$(REBAR) create template=skel dest=$(DEST) appid=$(PROJECT) skip_deps=true
 	@mkdir -p $(DEST)/deps
+	@cp skel/boss.config.* $(DEST)/
 	@cp -Rn $(PWD) $(DEST)/deps/boss
 	@mv -n $(DEST)/deps/boss/deps/* $(DEST)/deps/
 	@echo ""
@@ -76,6 +77,7 @@ rebarize:
 	@chmod +x $(APPDIR)/init.sh
 	@cp skel/init-dev.sh $(APPDIR)
 	@chmod +x $(APPDIR)/init-dev.sh
+	@cp skel/boss.config.* $(APPDIR)
 	@cp skel/rebar $(APPDIR)
 	@chmod +x $(APPDIR)/rebar
 	@cp skel/rebar.config $(APPDIR)
