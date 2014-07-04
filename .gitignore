@@ -10,3 +10,5 @@ erl_crash.dump
 .eunit
 src/boss/*.dtl.erl
 *.sw?
+.rebar
+plt/
