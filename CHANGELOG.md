@@ -2,6 +2,9 @@
 
 (Note: Prior to Version 0.8.8, changelog is contained in commit history)
 
+### Version 0.9.0 (in development)
+* Fixed bug with version in the .app file generation (@davidw)
+
 ### Version 0.8.13 - Mostly SQL Stuff... Mostly.
 
 * Update BossDB to support `boss_db:find_by_sql/[2,3]`, allowing direct SQL
