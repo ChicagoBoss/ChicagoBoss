@@ -149,7 +149,8 @@ process_action_result({{Controller, _, _}, RequestContext, _},
         TheAppInfo1, RequestContext, Data, boss_web_controller:merge_headers(Headers, ExtraHeaders));
 
 process_action_result({{Controller, _, _}, RequestContext, LocationTrail}, {action_other, OtherLocation}, _, AppInfo) ->
-    boss_web_controller:execute_action(process_location(Controller, OtherLocation, AppInfo), AppInfo, RequestContext, LocationTrail);
+    {Result, _} = boss_web_controller:execute_action(process_location(Controller, OtherLocation, AppInfo), AppInfo, RequestContext, LocationTrail),
+    Result;
 
 process_action_result({_, RequestContext, LocationTrail}, not_found, _, AppInfo) ->
     case boss_router:handle(AppInfo#boss_app_info.router_pid, 404) of
