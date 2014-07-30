@@ -207,7 +207,7 @@ process_stream_generator(Req, identity, Method, Generator, Acc) ->
     end.
 
 
-process_request(#boss_app_info{ doc_prefix = DocPrefix } = AppInfo, Req, development, DocPrefix, RouterAdapter) ->
+process_request(#boss_app_info{ doc_prefix = DocPrefix } = AppInfo, Req, development, DocPrefix, _RouterAdapter) ->
     {Result, SessionID1} = case catch load_and_execute(development, {"doc", [], []}, AppInfo, [{request, Req}]) of
         {'EXIT', Reason} ->
             {{error, Reason}, boss_web_controller:generate_session_id(Req)};
