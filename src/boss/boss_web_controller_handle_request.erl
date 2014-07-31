@@ -1,8 +1,8 @@
 -module(boss_web_controller_handle_request).
 
--export([handle_request/3]).
+-export([handle_request/4]).
 
--export([process_request/4]).
+-export([process_request/5]).
 
 -ifdef(TEST).
 -compile(export_all).
@@ -11,76 +11,83 @@
 -include("boss_web.hrl").
 
 %% TODO REFACTOR AND TEST
-handle_request(Req, RequestMod, ResponseMod) ->
+handle_request(Req, RequestMod, ResponseMod, RouterAdapter) ->
   
     LoadedApplications	= boss_web:get_all_applications(),
     Request		= simple_bridge:make_request(RequestMod, Req),
     FullUrl		= Request:path(),
 
-    ApplicationForPath	= boss_web_controller_util:find_application_for_path(Request:header(host),
-									     FullUrl, 
-									     LoadedApplications),
+    ApplicationForPath	= RouterAdapter:find_application_for_path(Request,
+                                                                  FullUrl, 
+                                                                  LoadedApplications),
     lager:notice("ApplicationForPath ~p~n", [ApplicationForPath]),
     
     try
-	handle_application(Req, ResponseMod, Request, FullUrl, ApplicationForPath)
+	   handle_application(Req, ResponseMod, Request, FullUrl, ApplicationForPath, RouterAdapter)
     catch Class:Error ->
-	%% Nuclear option: Something very serious happened and we don't want to
-	%% fail silently, but instead it should generate an error message.
-	lager:error("Unhandled Error: ~p:~p. Stacktrace: ~p", [Class, Error, erlang:get_stacktrace()]),
-	handle_fatal_error(Req, ResponseMod)
+    	%% Nuclear option: Something very serious happened and we don't want to
+    	%% fail silently, but instead it should generate an error message.
+    	lager:error("Unhandled Error: ~p:~p. Stacktrace: ~p", [Class, Error, erlang:get_stacktrace()]),
+    	handle_fatal_error(Req, ResponseMod)
     end.
 
 handle_fatal_error(Req, ResponseMod) ->
-	Response = simple_bridge:make_response(ResponseMod, {Req, undefined}),
+	Response  = simple_bridge:make_response(ResponseMod, {Req, undefined}),
 	Response1 = (Response:status_code(500)):data(["An unhandled and unrecoverable error occurred. Please check error logs."]),
 	Response1:build_response().
 
-handle_application(Req, ResponseMod, _Request, _FullUrl, undefined) ->
-    Response		= simple_bridge:make_response(ResponseMod, {Req, undefined}),
-    Response1		= (Response:status_code(404)):data(["No application configured at this URL"]),
+handle_application(Req, ResponseMod, _Request, _FullUrl, undefined, _RouterAdapter) ->
+    Response	 = simple_bridge:make_response(ResponseMod, {Req, undefined}),
+    Response1	 = (Response:status_code(404)):data(["No application configured at this URL"]),
     Response1:build_response();
-handle_application(Req, ResponseMod, Request, FullUrl,  App) ->
-    BaseURL		= boss_web:base_url(App),
-    DocRoot             = boss_files_util:static_path(App),
-    StaticPrefix	= boss_web:static_prefix(App),
-    Url			= lists:nthtail(length(BaseURL), FullUrl),
-    Response		= simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
-    SpecialFiles        = boss_env:get_env(App,
-					   static_files,
-					   ["/favicon.ico", "/apple-touch-icon.png", "/robots.txt"]),
-    IsSpecialFile       = lists:member(Url,SpecialFiles),
+handle_application(Req, ResponseMod, Request, FullUrl,  App, RouterAdapter) ->
+    BaseURL		 = boss_web:base_url(App),
+    DocRoot      = boss_files_util:static_path(App),
+    StaticPrefix = boss_web:static_prefix(App),
+    Url			 = lists:nthtail(length(BaseURL), FullUrl),
+    Response	 = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
+    SpecialFiles = boss_env:get_env(App,
+            					   static_files,
+            					   [
+                                    "/favicon.ico", 
+                                    "/apple-touch-icon.png", 
+                                    "/robots.txt"
+                                   ]),
+    IsSpecialFile= lists:member(Url,SpecialFiles),
    
-    handle_result(Request, App, StaticPrefix, Url, Response, IsSpecialFile).
+    handle_result(Request, App, StaticPrefix, Url, Response, IsSpecialFile, RouterAdapter).
 
 
-handle_result(_Request, _App, _StaticPrefix, Url, Response, _IsSpecialFile = true) ->
+handle_result(_Request, _App, _StaticPrefix, Url, Response, _IsSpecialFile = true, _) ->
     (Response:file(Url)):build_response();
-handle_result(Request, App, StaticPrefix, Url, Response, _IsSpecialFile =  false) ->
+handle_result(Request, App, StaticPrefix, Url, Response, _IsSpecialFile = false, RouterAdapter) ->
     TestStaticPrefix = string:substr(Url, 1, length(StaticPrefix)),
     case TestStaticPrefix of
 	StaticPrefix ->
 	    build_static_response(App, StaticPrefix, Url, Response);
 	_ ->
-	    build_dynamic_response(App, Request, Response, Url)
+	    build_dynamic_response(App, Request, Response, Url, RouterAdapter)
     end.
 
 build_static_response(App, StaticPrefix, Url, Response) ->
-    [$/ |File]		= lists:nthtail(length(StaticPrefix), Url),
-    IsDevelopment	= boss_env:boss_env(),
-    Sha1		= make_etag(App, StaticPrefix, File),
-    Ops  = [
-	    fun(Resp) -> dev_headers(Resp, IsDevelopment)	end,
-	    fun(Resp) ->  Resp:file([$/ |File])			end,
-	    fun(Resp) ->  case Sha1 of 
-	                  	{error, _} -> Resp;
-	                  	_ -> Resp:header("Etag",Sha1)
-	                  end                                   end,
-	    fun(Resp) ->  Resp:build_response()			end
-	   ],
+    [$/ |File]	 = lists:nthtail(length(StaticPrefix), Url),
+    IsDevelopment= boss_env:boss_env(),
+    Sha1		 = make_etag(App, StaticPrefix, File),
+    Ops          = [
+            	    fun(Resp) -> dev_headers(Resp, IsDevelopment) end,
+            	    fun(Resp) ->  Resp:file([$/ |File])	end,
+            	    fun(Resp) ->  case Sha1 of 
+            	                  	{error, _} -> Resp;
+            	                  	_          -> Resp:header("Etag",Sha1)
+            	                  end end,
+            	    fun(Resp) ->  Resp:build_response()	end
+           	       ],
+
     lists:foldl(fun(Operation, Resp) ->
-			Operation(Resp) 
-		end, Response, Ops).
+			         Operation(Resp) 
+		        end, 
+                Response, 
+                Ops).
 
     
 
@@ -112,17 +119,22 @@ make_etag(App, StaticPrefix, File) ->
     
 
 %% TODO: Refactor
-build_dynamic_response(App, Request, Response, Url) ->
-    Mode                = boss_web_controller_util:execution_mode(App),
-    AppInfo		= boss_web:application_info(App),
+build_dynamic_response(App, Request, Response, Url, RouterAdapter) ->
+    Mode            = boss_web_controller_util:execution_mode(App),
+    AppInfo		    = boss_web:application_info(App),
 
     TranslatorPid	= boss_web:translator_pid(App),
     RouterPid		= boss_web:router_pid(App),
     ControllerList	= boss_files:web_controller_list(App),
-    TR                  = set_timer(Request, Url, Mode,
-				    AppInfo, TranslatorPid,
-				    RouterPid,
-				    ControllerList),
+    TR              = set_timer(Request, 
+                                Url, 
+                                Mode,
+				                AppInfo, 
+                                TranslatorPid,
+				                RouterPid,
+				                ControllerList,
+                                RouterAdapter
+                                ),
     {Time, {StatusCode, Headers, Payload}} = TR,
     ErrorFormat		= "~s ~s [~p] ~p ~pms",
     RequestMethod	= Request:request_method(),
@@ -138,14 +150,14 @@ build_dynamic_response(App, Request, Response, Url) ->
     handle_response(Request, Payload, RequestMethod, Response2).
 
 set_timer(Request, Url, Mode, AppInfo, TranslatorPid, RouterPid,
-          ControllerList) ->
+          ControllerList, RouterAdapter) ->
     NewAppInfo = AppInfo#boss_app_info{
 		   translator_pid            = TranslatorPid,
 		   router_pid                = RouterPid,
 		   controller_modules        = ControllerList
 		  },
     %R = timer:tc(process_request,[NewAppInfo, Request, Mode, Url]),
-    R  = erlang:apply(?MODULE,process_request,[NewAppInfo, Request, Mode, Url]),
+    R  = erlang:apply(?MODULE,process_request,[NewAppInfo, Request, Mode, Url, RouterAdapter]),
     {1,R}.
 
 
@@ -195,7 +207,7 @@ process_stream_generator(Req, identity, Method, Generator, Acc) ->
     end.
 
 
-process_request(#boss_app_info{ doc_prefix = DocPrefix } = AppInfo, Req, development, DocPrefix) ->
+process_request(#boss_app_info{ doc_prefix = DocPrefix } = AppInfo, Req, development, DocPrefix, _RouterAdapter) ->
     {Result, SessionID1} = case catch load_and_execute(development, {"doc", [], []}, AppInfo, [{request, Req}]) of
         {'EXIT', Reason} ->
             {{error, Reason}, boss_web_controller:generate_session_id(Req)};
@@ -203,7 +215,7 @@ process_request(#boss_app_info{ doc_prefix = DocPrefix } = AppInfo, Req, develop
             {R, S}
     end,
     process_result_and_add_session(AppInfo, [{request, Req}, {session_id, SessionID1}], Result);
-process_request(AppInfo, Req, development, Url) ->
+process_request(AppInfo, Req, development, Url, RouterAdapter) ->
   
     DocPrefixPlusSlash = AppInfo#boss_app_info.doc_prefix ++ "/",
     {Result, SessionID1} = case string:substr(Url, 1, length(DocPrefixPlusSlash)) of
@@ -223,50 +235,50 @@ process_request(AppInfo, Req, development, Url) ->
         _ ->
             ControllerList = boss_files:web_controller_list(AppInfo#boss_app_info.application),
             RouterPid = AppInfo#boss_app_info.router_pid,
-            boss_router:set_controllers(RouterPid, ControllerList),
-            boss_router:reload(RouterPid),
-            process_dynamic_request(AppInfo, Req, development, Url)
+            RouterAdapter:set_controllers(RouterPid, ControllerList),
+            RouterAdapter:reload(RouterPid),
+            process_dynamic_request(AppInfo, Req, development, Url, RouterAdapter)
     end,
     process_result_and_add_session(AppInfo, [{request, Req}, {session_id, SessionID1}], Result);
-process_request(AppInfo, Req, Mode, Url) ->
-    {Result, SessionID1} = process_dynamic_request(AppInfo, Req, Mode, Url),
+process_request(AppInfo, Req, Mode, Url, RouterAdapter) ->
+    {Result, SessionID1} = process_dynamic_request(AppInfo, Req, Mode, Url, RouterAdapter),
     process_result_and_add_session(AppInfo, [{request, Req}, {session_id, SessionID1}], Result).
 
-process_dynamic_request(#boss_app_info{ router_pid = RouterPid } = AppInfo, Req, Mode, Url) ->
+process_dynamic_request(#boss_app_info{ router_pid = RouterPid } = AppInfo, Req, Mode, Url, RouterAdapter) ->
     
-    {Result, SessionID1} = case boss_router:route(RouterPid, Url) of
-			       {ok, {Application, Controller, Action, Tokens}} when Application =:= AppInfo#boss_app_info.application ->
-				   Location = {Controller, Action, Tokens},
-				  
-				   RequestContext = [{request, Req}], 
-				   ExecuteResults = load_and_execute(Mode, Location, AppInfo, RequestContext),
+    {Result, SessionID1} = case RouterAdapter:route(RouterPid, Url) of
+            			       {ok, {Application, Controller, Action, Tokens}} when Application =:= AppInfo#boss_app_info.application ->
+            				   Location = {Controller, Action, Tokens},
+            				  
+            				   RequestContext = [{request, Req}], 
+            				   ExecuteResults = load_and_execute(Mode, Location, AppInfo, RequestContext),
 
-				   case  ExecuteResults of
-				       {'EXIT', Reason} ->
-					   {{error, Reason}, undefined};
-				       {{not_found, Message}, S1} ->
-					   {process_not_found(Message, AppInfo, [{request, Req}, {session_id, S1}], Mode), S1};
-				       {not_found, S1} ->
-					   {process_not_found("File not found.", AppInfo, [{request, Req}, {session_id, S1}], Mode), S1};
-				       Ok ->
-					   Ok
-				   end;
-			       {ok, {OtherApplication, Controller, Action, Tokens}} ->
-				   {{redirect, {OtherApplication, Controller, Action, Tokens}}, undefined};
-			       not_found ->
-				   {process_not_found("No routes matched the requested URL.", AppInfo, [{request, Req}], Mode),
-				    undefined}
-			   end,
+            				   case  ExecuteResults of
+            				       {'EXIT', Reason} ->
+            					   {{error, Reason}, undefined};
+            				       {{not_found, Message}, S1} ->
+            					   {process_not_found(Message, AppInfo, [{request, Req}, {session_id, S1}], Mode, RouterAdapter), S1};
+            				       {not_found, S1} ->
+            					   {process_not_found("File not found.", AppInfo, [{request, Req}, {session_id, S1}], Mode, RouterAdapter), S1};
+            				       Ok ->
+            					   Ok
+            				   end;
+            			       {ok, {OtherApplication, Controller, Action, Tokens}} ->
+            				   {{redirect, {OtherApplication, Controller, Action, Tokens}}, undefined};
+            			       not_found ->
+            				   {process_not_found("No routes matched the requested URL.", AppInfo, [{request, Req}], Mode, RouterAdapter),
+            				    undefined}
+            			   end,
     FinalResult = case Result of
 		      {error, Payload} ->
-            process_error(Payload, AppInfo, [{request, Req}, {session_id, SessionID1}], Mode);
+            process_error(Payload, AppInfo, [{request, Req}, {session_id, SessionID1}], Mode, RouterAdapter);
         _ ->
             Result
     end,
     {FinalResult, SessionID1}.
 
-process_not_found(Message, #boss_app_info{ router_pid = RouterPid } = AppInfo, RequestContext, Mode) ->
-    case boss_router:handle(RouterPid, 404) of
+process_not_found(Message, #boss_app_info{ router_pid = RouterPid } = AppInfo, RequestContext, Mode, RouterAdapter) ->
+    case RouterAdapter:handle(RouterPid, 404) of
         {ok, {Application, Controller, Action, Tokens}} when Application =:= AppInfo#boss_app_info.application ->
             Location = {Controller, Action, Tokens},
             case catch load_and_execute(Mode, Location, AppInfo, RequestContext) of
@@ -283,9 +295,9 @@ process_not_found(Message, #boss_app_info{ router_pid = RouterPid } = AppInfo, R
                     "You probably want to modify ", boss_files:routes_file(AppInfo#boss_app_info.application), " to prevent errors like this one."]}
     end.
 
-process_error(Payload, AppInfo, RequestContext, development) ->
+process_error(Payload, AppInfo, RequestContext, development, RouterAdapter) ->
     error_logger:error_report(Payload),
-    ExtraMessage = case boss_router:handle(AppInfo#boss_app_info.router_pid, 500) of
+    ExtraMessage = case RouterAdapter:handle(AppInfo#boss_app_info.router_pid, 500) of
         not_found ->
             ["This message will appear in production; you may want to define a 500 handler in ", boss_files:routes_file(AppInfo#boss_app_info.application)];
         _Route ->
@@ -293,9 +305,9 @@ process_error(Payload, AppInfo, RequestContext, development) ->
     end,
     boss_web_controller_render:render_error(io_lib:print(Payload), ExtraMessage, AppInfo, RequestContext);
     
-process_error(Payload, #boss_app_info{ router_pid = RouterPid } = AppInfo, RequestContext, Mode) ->
+process_error(Payload, #boss_app_info{ router_pid = RouterPid } = AppInfo, RequestContext, Mode, RouterAdapter) ->
     error_logger:error_report(Payload),
-    case boss_router:handle(RouterPid, 500) of
+    case RouterAdapter:handle(RouterPid, 500) of
         {ok, {Application, Controller, Action, Tokens}} when Application =:= AppInfo#boss_app_info.application ->
             ErrorLocation = {Controller, Action, Tokens},
             case catch load_and_execute(Mode, ErrorLocation, AppInfo, RequestContext) of
@@ -314,8 +326,8 @@ process_result_and_add_session(AppInfo, RequestContext, Result) ->
     Req = proplists:get_value(request, RequestContext),
     {StatusCode, Headers, Payload} = process_result(AppInfo, Req, Result),
     Headers1 = case proplists:get_value(session_id, RequestContext) of
-		   undefined -> Headers;
-		   SessionID -> add_session_to_headers(Headers, SessionID)
+        		   undefined -> Headers;
+        		   SessionID -> add_session_to_headers(Headers, SessionID)
                end,
     {StatusCode, Headers1, Payload}.
 
@@ -329,9 +341,9 @@ add_session_to_headers(Headers, SessionID) ->
 				  lists:merge(CookieOptions, [{domain, CookieDomain}])
 			  end,
     HttpOnly		= boss_env:get_env(session_cookie_http_only, false),
-    Secure		= boss_env:get_env(session_cookie_secure, false),
+    Secure		    = boss_env:get_env(session_cookie_secure, false),
     CookieOptions3	= lists:merge(CookieOptions2, [{http_only, HttpOnly},
-							{secure, Secure}]),
+							                       {secure, Secure}]),
     SessionKey		= boss_session:get_session_key(),
     lists:merge(Headers, [mochiweb_cookies:cookie(SessionKey, SessionID, CookieOptions3)]).
 
@@ -460,10 +472,10 @@ load_and_execute(development,
     SessionID = proplists:get_value(session_id, RequestContext),
     
     Ops   = [fun boss_load:load_mail_controllers/1, 
-	     fun boss_load:load_libraries/1, 
-	     fun boss_load:load_view_lib_modules/1,
-	     fun boss_load:load_services_websockets/1, 
-	     fun boss_load:load_web_controllers/1],
+    	     fun boss_load:load_libraries/1, 
+    	     fun boss_load:load_view_lib_modules/1,
+    	     fun boss_load:load_services_websockets/1, 
+    	     fun boss_load:load_web_controllers/1],
     Res  = fold_operations(Application, Ops),
     run_controller(Controller, Location, AppInfo, Application,
                           RequestContext, SessionID, Res).

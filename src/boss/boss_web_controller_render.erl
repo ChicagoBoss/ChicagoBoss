@@ -81,10 +81,13 @@ process_location(Controller,  [{_, _}|_] = Where, AppInfo) ->
 					 AppInfo#boss_app_info.application, 
 					 Controller, 
 					 AppInfo#boss_app_info.controller_modules)),
-    ActionAtom		= list_to_atom(TheAction),
+    ActionAtom		= to_atom(TheAction),
     {Tokens, []}	= boss_controller_lib:convert_params_to_tokens(CleanParams, ControllerModule, ActionAtom),
     {TheController, TheAction, Tokens}.
 
+to_atom(A) when is_atom(A) -> A;
+to_atom(L) when is_list(L) -> list_to_atom(L);
+to_atom(B) when is_binary(B) -> list_to_atom(binary_to_list(B)).
 
 process_redirect(Controller, [{_, _}|_] = Where, AppInfo) ->
     TheApplication	= proplists:get_value(application, Where, AppInfo#boss_app_info.application),
@@ -149,7 +152,8 @@ process_action_result({{Controller, _, _}, RequestContext, _},
         TheAppInfo1, RequestContext, Data, boss_web_controller:merge_headers(Headers, ExtraHeaders));
 
 process_action_result({{Controller, _, _}, RequestContext, LocationTrail}, {action_other, OtherLocation}, _, AppInfo) ->
-    boss_web_controller:execute_action(process_location(Controller, OtherLocation, AppInfo), AppInfo, RequestContext, LocationTrail);
+    {Result, _} = boss_web_controller:execute_action(process_location(Controller, OtherLocation, AppInfo), AppInfo, RequestContext, LocationTrail),
+    Result;
 
 process_action_result({_, RequestContext, LocationTrail}, not_found, _, AppInfo) ->
     case boss_router:handle(AppInfo#boss_app_info.router_pid, 404) of

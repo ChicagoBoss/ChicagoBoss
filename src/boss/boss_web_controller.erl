@@ -27,11 +27,11 @@ terminate(Reason, #state{ is_master_node = true } = State) ->
     stop_smtp(),
     terminate(Reason, State#state{ is_master_node = false });
 
-terminate(_Reason, State) ->
+terminate(_Reason, #state{router_adapter=RouterAdapter}=State) ->
     lists:map(fun(AppInfo) ->
                 stop_init_scripts(AppInfo#boss_app_info.application, AppInfo#boss_app_info.init_data)
         end, State#state.applications),
-    Services = [ boss_translator, boss_router, boss_model_manager, boss_cache],
+    Services = [ boss_translator, RouterAdapter, boss_model_manager, boss_cache],
     [Service:stop() ||Service <- Services],
     case boss_env:get_env(server, ?DEFAULT_WEB_SERVER) of
         mochiweb ->
@@ -68,39 +68,36 @@ init_web_server_options() ->
 
 
 init(Config) ->
-    ThisNode					= erlang:node(),
-    Env						= boss_web_controller_init:init_services(),
-   
-    {ok,MasterNode}				= boss_web_controller_init:init_master_node(Env, ThisNode),
+    ThisNode					         = erlang:node(),
+    Env						             = boss_web_controller_init:init_services(),
+    {ok,MasterNode}				         = boss_web_controller_init:init_master_node(Env, ThisNode),
+    
     boss_web_controller_init:init_mail_service(),
+    RouterAdapter                        = boss_env:get_env(router_adapter, boss_router), 
 
-    {RequestMod, ResponseMod, ServerMod}	= init_web_server_options(),
-    {SSLEnable, SSLOptions}			= boss_web_controller_init:init_ssl(),
+    {RequestMod, ResponseMod, ServerMod} = init_web_server_options(),
+    {SSLEnable, SSLOptions}			     = boss_web_controller_init:init_ssl(),
+    ServicesSupPid				         = boss_web_controller_init:init_master_services(ThisNode, MasterNode),
+    ServerConfig                         = init_server_config(Config, RequestMod, ResponseMod, RouterAdapter),
+    Pid						             = boss_web_controller_init:init_webserver(
+                                                ThisNode, MasterNode, ServerMod, SSLEnable,
+											    SSLOptions, ServicesSupPid, ServerConfig),
+    {ok, #state{ 
+                router_adapter  = RouterAdapter,
+                service_sup_pid = ServicesSupPid, 
+                http_pid        = Pid, 
+                is_master_node  = (ThisNode =:= MasterNode) }, 0}.
 
-    ServicesSupPid				= boss_web_controller_init:init_master_services(ThisNode, MasterNode),
-
-    ServerConfig                                = init_server_config(Config,
-								     RequestMod,
-							             ResponseMod),
-    Pid						= boss_web_controller_init:init_webserver(ThisNode, MasterNode, ServerMod, SSLEnable,
-											  SSLOptions, ServicesSupPid, ServerConfig),
-    {ok, #state{ service_sup_pid = ServicesSupPid, 
-                 http_pid        = Pid, 
-                 is_master_node  = (ThisNode =:= MasterNode) }, 0}.
-
-init_server_config(Config, RequestMod, ResponseMod) ->
+init_server_config(Config, RequestMod, ResponseMod, RouterAdapter) ->
     [{loop, fun(Req) ->
-		    boss_web_controller_handle_request:handle_request(Req, RequestMod, ResponseMod)
+		    boss_web_controller_handle_request:handle_request(Req, RequestMod, ResponseMod, RouterAdapter)
             end} | Config].
 
-
-
-
-handle_info(timeout, State = #state{service_sup_pid = ServicesSupPid}) ->
+handle_info(timeout, #state{service_sup_pid = ServicesSupPid} = State) ->
     Applications	= boss_env:get_env(applications, []),
-    AppInfoList         = start_boss_applications(Applications,
-						  ServicesSupPid),
-
+    AppInfoList     = boss_web_controller_util:start_boss_applications(Applications, 
+                                                                       ServicesSupPid, 
+                                                                       State),
     case boss_env:get_env(server, ?DEFAULT_WEB_SERVER) of
         cowboy ->
             boss_web_controller_cowboy:dispatch_cowboy(Applications);
@@ -109,50 +106,6 @@ handle_info(timeout, State = #state{service_sup_pid = ServicesSupPid}) ->
     end,
     {noreply, State#state{ applications = AppInfoList }}.
 
-start_boss_applications( Applications, ServicesSupPid) ->
-    lists:map(fun
-                  (AppName) ->
-                      application:start(AppName),
-                      {TranslatorSupPid, BaseURL, IsMasterNode, StaticPrefix,
-                       DocPrefix, DomainList, ModelList, ViewList, ControllerList,
-                       RouterSupPid}  = boss_web_controller_util:unpack_application_env(AppName),
-                      
-                      init_app_load_on_dev(AppName,
-                                           TranslatorSupPid),
-                      
-                      enable_master_apps(ServicesSupPid, AppName, BaseURL,
-                                         IsMasterNode),
-                      
-                      boss_web_controller_util:make_boss_app_info(AppName, BaseURL, StaticPrefix, DocPrefix,
-                                                                  DomainList, ModelList, ViewList,
-                                                                  ControllerList, RouterSupPid,
-                                                                  TranslatorSupPid)
-	      end, Applications).
-
-init_app_load_on_dev(AppName, TranslatorSupPid) ->
-    case boss_env:is_developing_app(AppName) of
-	true  -> 
-            Result = boss_load:load_all_modules(AppName, TranslatorSupPid),
-            Result;
-	false -> ok
-    end.
-
-enable_master_apps(ServicesSupPid, AppName, BaseURL, IsMasterNode) ->
-    if
-        IsMasterNode ->
-            case boss_env:get_env(server, ?DEFAULT_WEB_SERVER) of
-                cowboy ->
-                    WebSocketModules = boss_files:websocket_list(AppName),
-                    MappingServices  = boss_files:websocket_mapping(BaseURL,
-                        atom_to_list(AppName),
-                        WebSocketModules),
-                    boss_service_sup:start_services(ServicesSupPid, MappingServices);
-                _Any ->
-                    _Any
-            end;
-        true ->
-            ok
-    end.
 
 
 handle_call({reload_translation, Locale}, _From, State) ->
@@ -167,10 +120,10 @@ handle_call(reload_all_translations, _From, State) ->
                 boss_translator:reload_all(TranslatorPid)
         end, State#state.applications),
     {reply, ok, State};
-handle_call(reload_routes, _From, State) ->
+handle_call(reload_routes, _From, #state{router_adapter=RouterAdapter}=State) ->
     lists:map(fun(AppInfo) ->
                 [{_, RouterPid, _, _}] = supervisor:which_children(AppInfo#boss_app_info.router_sup_pid),
-                boss_router:reload(RouterPid)
+                RouterAdapter:reload(RouterPid)
         end, State#state.applications),
     {reply, ok, State};
 handle_call(reload_init_scripts, _From, State) ->
@@ -180,10 +133,10 @@ handle_call(reload_init_scripts, _From, State) ->
                 AppInfo#boss_app_info{ init_data = NewInitData }
         end, State#state.applications),
     {reply, ok, State#state{ applications = NewApplications }};
-handle_call(get_all_routes, _From, State) ->
+handle_call(get_all_routes, _From, #state{router_adapter=RouterAdapter}=State) ->
     Routes = lists:map(fun(AppInfo) ->
                 [{_, RouterPid, _, _}] = supervisor:which_children(AppInfo#boss_app_info.router_sup_pid),
-                {AppInfo#boss_app_info.application, boss_router:get_all(RouterPid)}
+                {AppInfo#boss_app_info.application, RouterAdapter:get_all(RouterPid)}
         end, State#state.applications),
     {reply, Routes, State};
 handle_call(get_all_models, _From, State) ->
