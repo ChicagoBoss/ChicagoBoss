@@ -73,7 +73,7 @@ init(Config) ->
     {ok,MasterNode}				         = boss_web_controller_init:init_master_node(Env, ThisNode),
     
     boss_web_controller_init:init_mail_service(),
-    RouterAdapter                        = boss_env:get_env(router_adapter, boss_router), 
+    RouterAdapter                        = boss_env:router_adapter(), 
 
     {RequestMod, ResponseMod, ServerMod} = init_web_server_options(),
     {SSLEnable, SSLOptions}			     = boss_web_controller_init:init_ssl(),
@@ -172,6 +172,7 @@ handle_call({application_info, App}, _From, State) ->
 handle_call({base_url, App}, _From, State) ->
     {_,AppInfo,_ } = handle_call({application_info, App},_From, State),
     BaseURL        = AppInfo#boss_app_info.base_url,
+	error_logger:info_msg("BaseURL: ~p~n",[BaseURL]),
     {reply, BaseURL, State};
 handle_call({static_prefix, App}, _From, State) ->
     {_,AppInfo,_ } = handle_call({application_info, App},_From, State),

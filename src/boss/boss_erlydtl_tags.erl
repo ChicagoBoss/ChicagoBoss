@@ -51,7 +51,7 @@ url(Variables, Options) ->
     end,
 
     RouterPid = proplists:get_value(router_pid, Options),
-    RouterAdapter = boss_env:get_env(router_adapter, boss_router),
+    RouterAdapter = boss_env:router_adapter(),
     URL = RouterAdapter:unroute(RouterPid, LinkedAppAtom, ControllerList, LinkedController, Action, NoUndefinedVars),
     BaseURL = case proplists:get_value(base_url, Options) of
         undefined -> boss_web:base_url(LinkedAppAtom);

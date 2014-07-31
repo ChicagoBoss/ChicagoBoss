@@ -36,10 +36,7 @@ stop() ->
 
 -spec get_mq_adapater() -> atom().
 get_mq_adapater() ->
-    case application:get_env(mq_adapter) of
-	{ok, Val} -> Val;
-	_ -> tinymq
-    end.
+	boss_env:mq_adapter().
 
 -spec make_queue_options() -> [{atom(), term()}].
 make_queue_options() ->

@@ -38,9 +38,8 @@ compile_file(ViewPath, Module, Options) ->
 				  CompilerOptions, Locales, DocRoot, TagHelpers, FilterHelpers,
 				  ExtraTagHelpers, ExtraFilterHelpers),
     case Res of
-        ok ->
-            {ok, Module};
-        Err -> Err
+        {ok, Module} -> {ok, Module};
+        {error, Errors} -> {ok, Errors}
     end.
 
 
@@ -59,9 +58,9 @@ compile(ViewPath, Module, HelperDirModule, TranslatorPid, OutDir,
                     Module,
                     CompileParams),
     case Res of
-	{ok, Module} -> {ok, Module};
-	{ok, Module, _Warnings} -> {ok, Module};
-	{error, Errors, _Warnings} -> {error, Errors}
+        {ok, Module} -> {ok, Module};
+        {ok, Module, _Warnings} -> {ok, Module};
+        {error, Errors, _Warnings} -> {error, Errors}
     end.
 
 make_blocktrans_fun(TranslatorPid) ->
