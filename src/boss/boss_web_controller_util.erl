@@ -48,7 +48,7 @@ start_boss_applications( Applications, ServicesSupPid, #state{router_adapter=Rou
                 init_data           = InitData,
                 router_sup_pid      = RouterSupPid,
                 translator_sup_pid  = TranslatorSupPid,
-                base_url            = if BaseURL =:= "" -> "/"; true -> BaseURL end,
+                base_url            = if BaseURL =:= "/" -> ""; true -> BaseURL end,
                 static_prefix       = StaticPrefix,
                 doc_prefix          = DocPrefix,
                 domains             = DomainList,
