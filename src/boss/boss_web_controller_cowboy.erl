@@ -5,7 +5,7 @@
 %% cowboy dispatch rule for static content
 dispatch_cowboy(Applications) ->
     AppStaticDispatches = create_cowboy_dispatches(Applications),
-    RouterAdapter       = boss_env:get_env(router_adapter, boss_router),
+    RouterAdapter       = boss_env:router_adapter(),
     BossDispatch	= [{'_', boss_mochicow_handler, [{loop, {boss_mochicow_handler, loop, [RouterAdapter]}}]}],
     % [{"/", boss_mochicow_handler, []}],
     %Dispatch		= [{'_',

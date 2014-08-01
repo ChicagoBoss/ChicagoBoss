@@ -34,7 +34,7 @@ init_cache() ->
     case boss_env:get_env(cache_enable, false) of
         false -> ok;
         true  ->
-            CacheAdapter = boss_env:get_env(cache_adapter, memcached_bin),
+            CacheAdapter = boss_env:cache_adapter(),
             CacheOptions =
                 case CacheAdapter of
                     ets ->

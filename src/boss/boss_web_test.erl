@@ -20,7 +20,7 @@ bootstrap_test_env(Application, Adapter) ->
         end, [], [db_port, db_host, db_username, db_password, db_database]),
     ok = application:start(Application),
     ControllerList     = boss_files:web_controller_list(Application),
-     RouterAdapter     = boss_env:get_env(router_adapter, boss_router),
+    RouterAdapter     = boss_env:router_adapter(),
     {ok, RouterSupPid} = RouterAdapter:start([{application, Application}, 
             {controllers, ControllerList}]),
     boss_db:start([{adapter, Adapter}|DBOptions]),
@@ -336,9 +336,10 @@ get_request_loop(AppInfo) ->
             FullUrl = Req:path(),
             [{_, RouterPid, _, _}] = supervisor:which_children(AppInfo#boss_app_info.router_sup_pid),
             [{_, TranslatorPid, _, _}] = supervisor:which_children(AppInfo#boss_app_info.translator_sup_pid),
+			RouterAdapter = boss_env:router_adapter(),
             Result = boss_web_controller_handle_request:process_request(AppInfo#boss_app_info {
                     router_pid = RouterPid, translator_pid = TranslatorPid }, 
-                Req, testing, FullUrl),
+                Req, testing, FullUrl, RouterAdapter),
             From ! {self(), FullUrl, Result};
         Other ->
             error_logger:error_msg("Unexpected message in get_request_loop: ~p~n", [Other])
@@ -353,6 +354,7 @@ post_request_loop(AppInfo) ->
             erlang:put(mochiweb_request_post, mochiweb_util:parse_qs(Body)),
             [{_, RouterPid, _, _}]	= supervisor:which_children(AppInfo#boss_app_info.router_sup_pid),
             [{_, TranslatorPid, _, _}]	= supervisor:which_children(AppInfo#boss_app_info.translator_sup_pid),
+			RouterAdapter = boss_env:router_adapter(),
             Req = make_request('POST', Uri, 
 			       [{"Content-Encoding", "application/x-www-form-urlencoded"} | Headers]),
             FullUrl = Req:path(),
@@ -361,7 +363,8 @@ post_request_loop(AppInfo) ->
 							   translator_pid = TranslatorPid }, 
 							 Req, 
 							 testing, 
-							 FullUrl),
+							 FullUrl,
+							 RouterAdapter),
 
             From ! {self(), FullUrl, Result};
         Other ->
