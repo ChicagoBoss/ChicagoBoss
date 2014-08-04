@@ -47,8 +47,9 @@ json_data1([{VariableName, [[{_, _}|_]|_] = Variable}|Rest], ModelList, Acc) ->
                             json_data1(Item, ModelList, [])
                     end, Variable)}|Acc]);
 
+%% It's an erlang:now() value.
 json_data1([{VariableName, {A, B, C} = Val}|Rest], ModelList, Acc) when is_integer(A), is_integer(B), is_integer(C) ->
-    json_data1(Rest, ModelList, [{VariableName, list_to_binary(erlydtl_filters:date(calendar:now_to_datetime(Val), "F d, Y H:i:s"))}|Acc]);
+    json_data1(Rest, ModelList, [{VariableName, iso8601:format(Val)}|Acc]);
 json_data1([{VariableName, Variable}|Rest], ModelList, Acc) ->
     case boss_model_manager:is_model_instance (Variable, ModelList) of
         true -> 
