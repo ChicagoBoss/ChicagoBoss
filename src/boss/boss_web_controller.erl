@@ -172,7 +172,6 @@ handle_call({application_info, App}, _From, State) ->
 handle_call({base_url, App}, _From, State) ->
     {_,AppInfo,_ } = handle_call({application_info, App},_From, State),
     BaseURL        = AppInfo#boss_app_info.base_url,
-	error_logger:info_msg("BaseURL: ~p~n",[BaseURL]),
     {reply, BaseURL, State};
 handle_call({static_prefix, App}, _From, State) ->
     {_,AppInfo,_ } = handle_call({application_info, App},_From, State),
