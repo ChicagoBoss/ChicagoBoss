@@ -28,7 +28,7 @@ init(_) ->
             error_logger:info_msg("mnesia session table ok~n"),	
             noop;
         {timeout,[?TABLE]} ->
-            create_session_storage()		
+            create_session_storage()
     end,
 
     {ok, undefined}.
@@ -43,7 +43,7 @@ create_session(_, SessionID, Data) ->
     ok.
 
 lookup_session(_, SessionID) ->
-    recover_data(SessionID).	
+    recover_data(SessionID).
 
 lookup_session_value(_, SessionID, Key) ->
     Data = recover_data(SessionID),
@@ -78,7 +78,7 @@ delete_session_value(_, Sid, Key) ->
         false ->
             ok
     end.
-	
+
 %%--------------------------------------------------------------------
 %%% Internal functions
 %%--------------------------------------------------------------------

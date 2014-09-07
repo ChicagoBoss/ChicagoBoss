@@ -26,22 +26,22 @@
 %% @end
 %%--------------------------------------------------------------------
 boss(RebarConf, AppFile) ->
-  case is_base_dir(RebarConf) of
-    true -> 
-      Command = rebar_config:get_global(RebarConf, c, "help"),
-      {ok, BossConf} = init(RebarConf, AppFile, Command),
-      case boss_rebar:run(?BOSS_PLUGIN_CLIENT_VERSION, Command, RebarConf, BossConf, AppFile) of
-        {error, command_not_found} ->
-          io:format("ERROR: boss command not found.~n"), 
-          boss_rebar:help(),
-          halt(1);
-        {error, Reason} -> 
-          io:format("ERROR: executing ~s task: ~s~n", [Command, Reason]), 
-          halt(1);
-        ok -> ok
-      end;
-    false -> ok
-  end.
+    case is_base_dir(RebarConf) of
+        true -> 
+            Command = rebar_config:get_global(RebarConf, c, "help"),
+            {ok, BossConf} = init(RebarConf, AppFile, Command),
+            case boss_rebar:run(?BOSS_PLUGIN_CLIENT_VERSION, Command, RebarConf, BossConf, AppFile) of
+                {error, command_not_found} ->
+                      io:format("ERROR: boss command not found.~n"), 
+                      boss_rebar:help(),
+                      halt(1);
+                {error, Reason} -> 
+                      io:format("ERROR: executing ~s task: ~s~n", [Command, Reason]), 
+                      halt(1);
+                ok -> ok
+            end;
+        false -> ok
+    end.
 
 %%--------------------------------------------------------------------
 %% @doc initializes the rebar boss connector plugin
@@ -51,19 +51,22 @@ boss(RebarConf, AppFile) ->
 %%--------------------------------------------------------------------
 init(RebarConf, AppFile, Command) ->
     %% Compile and load the boss_rebar code, this can't be compiled
-  %% as a normal boss lib without the rebar source dep
-  %% The load of ./rebar boss:
-  %% - Rebar itself searchs in rebar.config for {plugin_dir, ["priv/rebar"]}.
-  %% - Rebar itself compile this plugin and adds it to the execution chain
-  %% - This plugin compiles and loads the boss_rebar code in ["cb/priv/rebar"],
-  %%   so we can extend/bugfix/tweak the framework without the need of manually
-  %%   recopy code to user apps
+    %% as a normal boss lib without the rebar source dep
+    %% The load of ./rebar boss:
+    %% - Rebar itself searchs in rebar.config for {plugin_dir, ["priv/rebar"]}.
+    %% - Rebar itself compile this plugin and adds it to the execution chain
+    %% - This plugin compiles and loads the boss_rebar code in ["cb/priv/rebar"],
+    %%   so we can extend/bugfix/tweak the framework without the need of manually
+    %%   recopy code to user apps
     {BossConf, BossConfFile} = boss_config(Command),
-  BossPath = case boss_config_value(boss, path, BossConf) of
-           {error, _} ->
-             filename:join([rebar_config:get_xconf(RebarConf, base_dir, undefined), "deps", "boss"]);
-           Val -> Val
-         end,
+    BossPath =  case boss_config_value(boss, path, BossConf) of
+                    {error, _} ->
+                        filename:join([
+                            rebar_config:get_xconf(RebarConf, base_dir, undefined),
+                            "deps", 
+                            "boss"]);
+                    Val -> Val
+                end,
   RebarErls = rebar_utils:find_files(filename:join([BossPath, "priv", "rebar"]), ".*\\.erl\$"),
   
   rebar_log:log(debug, "Auto-loading boss rebar modules ~p~n", [RebarErls]),
@@ -81,7 +84,6 @@ init(RebarConf, AppFile, Command) ->
 
   %% add all cb_apps defined in config file to code path
   %% including the deps ebin dirs
-  
   case is_base_dir(RebarConf) of
   true ->
     code:add_paths(["ebin" | filelib:wildcard(rebar_config:get_xconf(RebarConf, base_dir, undefined) ++ "/deps/*/ebin")]);
@@ -144,24 +146,24 @@ is_base_dir(RebarConf) ->
 
 %% Gets the boss.config central configuration file
 boss_config(Command) ->
-    IsTest		= lists:prefix("test_", Command),
-    BossConfFile	= get_config_file(IsTest),
-    ConfigData		= file:consult(BossConfFile),
+    IsTest      = lists:prefix("test_", Command),
+    BossConfFile    = get_config_file(IsTest),
+    ConfigData      = file:consult(BossConfFile),
     validate_config_data(BossConfFile, ConfigData).
 
 get_config_file(false) ->
-	    ?BOSS_CONFIG_FILE;
+        ?BOSS_CONFIG_FILE;
 get_config_file(true) ->
     case file:read_file_info(?BOSS_TEST_CONFIG_FILE) of
-	{ok, _} -> ?BOSS_TEST_CONFIG_FILE;
-	_ -> ?BOSS_CONFIG_FILE
+    {ok, _} -> ?BOSS_TEST_CONFIG_FILE;
+    _ -> ?BOSS_CONFIG_FILE
     end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 validate_config_data(BossConfFile, {error, {Line, _Mod, [Term|_]}}) ->
     io:format("FATAL: Config file ~p has a syntax error on line ~p, ~n ~p ~n~n", 
-	      [BossConfFile, Line,  Term]),
+          [BossConfFile, Line,  Term]),
     halt(1);
 validate_config_data(BossConfFile, {error, enoent}) ->
     io:format("FATAL: Config file ~p not found.~n", [BossConfFile]),

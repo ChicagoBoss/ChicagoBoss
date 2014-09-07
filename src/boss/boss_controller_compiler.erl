@@ -8,14 +8,14 @@
 -endif.
 -compile(export_all).
 
-%-type error(T)           :: {ok, T} | {error, string()}.
+%-type error(T)          :: {ok, T} | {error, string()}.
 -type syntaxTree()       :: erl_syntax:syntaxTree().
 -type name()             :: atom()|[byte(),...].
-%-type fctn_n()           :: {atom(), non_neg_integer()}.
-%-type fctn()             :: {function, atom(), atom(), non_neg_integer(), _}.
-%-type pair()             :: {atom(),atom()}.
+%-type fctn_n()          :: {atom(), non_neg_integer()}.
+%-type fctn()            :: {function, atom(), atom(), non_neg_integer(), _}.
+%-type pair()            :: {atom(),atom()}.
 
-%-type name_clause()      :: {clause, _, [list(string()),...], _,_}.
+%-type name_clause()     :: {clause, _, [list(string()),...], _,_}.
 -type token_ast_var()    :: {var, name(), string()}.
 -type token_ast_match()  :: {match, _, _, token_ast_var()}.
 -type token_ast_string() :: {string,_, [char(),...]}.
@@ -23,7 +23,7 @@
                                  token_ast_var() | token_ast_match() | token_ast_string(),
                                  token_ast_cons()}.
 
--type route_form()       :: {function, _ , 
+-type route_form()       :: {function, _ ,
                              atom, 2|3, 
                              [syntaxTree(),...]}.
 -type export_attr1()     :: {attribute, _, module, _}.
@@ -34,12 +34,12 @@
 -export_type([export_attr1/0, export_attr2/0, export_attr/0, route_form/0, syntaxTree/0]).
 -endif.
 
--spec compile(binary() | [atom() | [any()] | char()]) -> any().
--spec compile(binary() | [atom() | [any()] | char()],[any()]) -> any().
+-spec compile(binary() | [atom() | [any()] | char()])              -> any().
+-spec compile(binary() | [atom() | [any()] | char()],[any()])      -> any().
 
 
 -spec add_routes_to_forms([export_attr1(),...]) -> [syntaxTree()].
--spec add_routes_to_forms([any()],[any()],[token_ast_cons(),...]) -> [any(),...].
+-spec add_routes_to_forms([any()],[any()],[token_ast_cons(),...])  -> [any(),...].
 
 -spec add_export_to_forms([export_attr1(),...])                    -> [export_attr()].
 -spec add_export_to_forms([any(),...],[any()])                     -> [any(),...].

@@ -15,24 +15,25 @@
 %% API
 -export([start_link/0]).
 
--export([register/2, 
-	 unregister/2,
-	 join/4,
-	 close/5,
-	 incoming/5,
-	 service/1,
-	 services/0,
-	 consumers/0
-	]).
+-export([
+        register/2, 
+        unregister/2,
+        join/4,
+        close/5,
+        incoming/5,
+        service/1,
+        services/0,
+        consumers/0
+    ]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
-	 terminate/2, code_change/3]).
+     terminate/2, code_change/3]).
 
 -define(SERVER, ?MODULE). 
 -record(state, {consumers  ::dict(), 
-		services   ::dict(), 
-		nb_consumer}).
+        services   ::dict(), 
+        nb_consumer}).
 
 -spec start_link() -> 'ignore' | {'error',_} | {'ok',pid()}.
 -spec register(_,_) -> any().
@@ -52,16 +53,16 @@
 
 
 %% -record(boss_consumers, 
-%% 	{
-%% 	  websocket_id,   % gateway to send message to consummer
+%%  {
+%%    websocket_id,   % gateway to send message to consummer
 %%           session_id,     % the session id to link and user
-%% 	  service_name,   % service name
+%%    service_name,   % service name
 %%           created_on      % date of creation
 %%         }).
 
 %% -record(boss_services, 
-%% 	{
-%% 	  service_name,   % service name
+%%  {
+%%    service_name,   % service name
 %%           service_id,     % the session id 
 %%           created_on      % date of creation
 %%         }).
@@ -98,9 +99,9 @@ services() ->
 
 consumers() ->
     gen_server:call({global, ?SERVER}, {get_consumers}).
-    
 
-    
+
+
 
 %async
 join(ServiceUrl, WebSocketId, Req, SessionId) ->

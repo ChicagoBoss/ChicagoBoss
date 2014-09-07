@@ -6,11 +6,11 @@
 dispatch_cowboy(Applications) ->
     AppStaticDispatches = create_cowboy_dispatches(Applications),
     RouterAdapter       = boss_env:router_adapter(),
-    BossDispatch	= [{'_', boss_mochicow_handler, [{loop, {boss_mochicow_handler, loop, [RouterAdapter]}}]}],
+    BossDispatch        = [{'_', boss_mochicow_handler, [{loop, {boss_mochicow_handler, loop, [RouterAdapter]}}]}],
     % [{"/", boss_mochicow_handler, []}],
-    %Dispatch		= [{'_',
+    %Dispatch       = [{'_',
 
-    Dispatch		= [{'_', AppStaticDispatches ++ BossDispatch}],
+    Dispatch        = [{'_', AppStaticDispatches ++ BossDispatch}],
     SSLEnabled = boss_env:get_env(ssl_enable, false),
     CowboyListener        = get_listener(SSLEnabled),
     cowboy:set_env(CowboyListener, dispatch, cowboy_router:compile(Dispatch)).
@@ -28,7 +28,7 @@ create_dispatch(AppName) ->
     StaticPrefix        = boss_env:get_env(AppName, static_prefix, "/static"),
     Path                = case BaseURL of
                               "/" -> StaticPrefix;
-                              _ -> BaseURL ++ StaticPrefix
+                              _   -> BaseURL ++ StaticPrefix
                           end,
     Handler             = cowboy_static,
     Etag                = [], %%[{etag, false}], %% [{etag, EtagModule, EtagFunction}]

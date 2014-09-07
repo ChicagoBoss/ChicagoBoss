@@ -12,7 +12,7 @@ if [ ! -f $PLT ]; then
        --output_plt $PLT
    rm deps/riak_core/ebin/*.beam
    echo "********************************************************************************"
-   dialyzer --add_to_plt deps/*/ebin						--plt $PLT
+   dialyzer --add_to_plt deps/*/ebin                        --plt $PLT
    echo "********************************************************************************"
    echo ""
 fi

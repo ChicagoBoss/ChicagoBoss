@@ -6,8 +6,8 @@
 file_extensions() -> ["ex"].
 
 controller_module(AppName, Controller) -> 
-    lists:concat(["Elixir", ?SEPARATOR, inflector:camelize(atom_to_list(AppName)), ?SEPARATOR, 
-            inflector:camelize(Controller), "Controller"]).
+    lists:concat(["Elixir", ?SEPARATOR, inflector:camelize(atom_to_list(AppName)),
+            ?SEPARATOR, inflector:camelize(Controller), "Controller"]).
 
 module_name_for_file(AppName, File) -> 
     "Elixir" ++ ?SEPARATOR ++ inflector:camelize(atom_to_list(AppName)) ++

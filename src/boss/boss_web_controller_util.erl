@@ -86,6 +86,6 @@ enable_master_apps(ServicesSupPid, AppName, BaseURL, IsMasterNode) ->
 
 execution_mode(App) ->
     case boss_env:is_developing_app(App) of
-	true  -> development;
-	false -> production
+    true  -> development;
+    false -> production
     end.

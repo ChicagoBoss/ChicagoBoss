@@ -100,7 +100,7 @@ load(State) ->
                         TheApplication = proplists:get_value(application, Proplist, State#state.application),
                         TheController = proplists:get_value(controller, Proplist),
                         TheAction = proplists:get_value(action, Proplist),
-						CleanParams = clean_params(Proplist),
+                        CleanParams = clean_params(Proplist),
                         case UrlOrStatusCode of
                             Url when is_list(Url) ->
                                 {ok, MP} = re:compile("^"++Url++"$"),
@@ -226,7 +226,7 @@ get_match(Url, [Route|T]) ->
         {controller, Route#boss_route.controller},
         {action, Route#boss_route.action} | Route#boss_route.params
     ],
-	MP = Route#boss_route.pattern,
+    MP = Route#boss_route.pattern,
     {IndexedParams, Vars} = index_and_extract_params(Params),
     case re:run(Url, MP, [{capture, Vars, list}]) of
         {match, Matches} ->

@@ -20,6 +20,6 @@ init(StartArgs) ->
             {max_overflow, 40}
             | StartArgs],
     PoolSpec  = {session_controller, 
-                 {poolboy, start_link, [Args]},
+                {poolboy, start_link, [Args]},
                  permanent, 2000, worker, [poolboy]},
     {ok, {{one_for_one, 10, 10}, [PoolSpec]}}.

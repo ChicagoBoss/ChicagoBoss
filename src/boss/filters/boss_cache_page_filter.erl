@@ -19,9 +19,7 @@ before_filter({page, _}, RequestContext) ->
             ControllerModule = proplists:get_value(controller_module, RequestContext),
             Action = proplists:get_value(action, RequestContext),
             Tokens = proplists:get_value(tokens, RequestContext, []),
-
             CacheKey = {ControllerModule, Action, Tokens, Language},
-
             case boss_cache:get(?PAGE_CACHE_PREFIX, CacheKey) of
                 undefined ->
                     {ok, RequestContext ++ [{cache_page, true}, {cache_key, CacheKey}]};

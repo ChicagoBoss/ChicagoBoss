@@ -13,18 +13,18 @@
 -type lang() ::types:language().
 -type mode() :: all|filled.
 
--spec create_lang(application(), lang())		-> 'ok' | {'error',atom()}.
--spec delete_lang(application(), lang())		-> 'ok'.
--spec escape_quotes([any()])				-> [any()].
--spec extract_po_strings(application(),lang())		-> [{[any()],[any()]}].
--spec extract_strings(application())			-> [any()].
--spec extract_strings(application(),lang())		-> {[any()],[{_,_}]}.
+-spec create_lang(application(), lang())                -> 'ok' | {'error',atom()}.
+-spec delete_lang(application(), lang())                -> 'ok'.
+-spec escape_quotes([any()])                            -> [any()].
+-spec extract_po_strings(application(),lang())          -> [{[any()],[any()]}].
+-spec extract_strings(application())                    -> [any()].
+-spec extract_strings(application(),lang())             -> {[any()],[{_,_}]}.
 -spec lang_write_to_file(atom() | pid() | 
-			 {'file_descriptor',atom() | tuple(),_},
-			 [any()],[any()])	
-							-> 'ok' | {'error',atom()}.
--spec update_po(application())				-> ['ok' | {'error',atom()}].
--spec update_po(application(),lang(),mode(),[any()])	-> 'ok' | {'error',atom()}.
+             {'file_descriptor',atom() | tuple(),_},
+             [any()],[any()])   
+                                                        -> 'ok' | {'error',atom()}.
+-spec update_po(application())                          -> ['ok' | {'error',atom()}].
+-spec update_po(application(),lang(),mode(),[any()])    -> 'ok' | {'error',atom()}.
 
 
 create_lang(App, Lang) ->
@@ -42,64 +42,64 @@ update_po(App) ->
 %% @doc Update the po file with all untranslated messages for the given language (filled with blanks)
 %% @spec update_po( Lang::string(), all::atom(), [] ) -> ok | {error, Reason}
 update_po(App, Lang, all, []) ->
-	{Untranslated, _Translated} = boss_lang:extract_strings(App, Lang),
-	case Untranslated of
-		[] -> ok;
-		_ ->
-			Translations = lists:map(fun(X) -> [{"orig", X}, {"trans", ""}] end, Untranslated),
-			update_po(App, Lang, all, Translations)
-	end;
+    {Untranslated, _Translated} = boss_lang:extract_strings(App, Lang),
+    case Untranslated of
+        [] -> ok;
+        _ ->
+            Translations = lists:map(fun(X) -> [{"orig", X}, {"trans", ""}] end, Untranslated),
+            update_po(App, Lang, all, Translations)
+    end;
 
 %% @doc Update the po file for a given Language
 %% @spec update_po( Lang::string(), Mode::atom(all|filled), Translation::TupleList([{"orig", "x"}, {"trans", "y"}]) ) -> ok | {error, Reason}
 update_po(App, Lang, Mode, Translations) ->
     LangFile = boss_files_util:lang_path(App, Lang),
-    {ok, IODevice} = file:open(LangFile, [write, append]),	
+    {ok, IODevice} = file:open(LangFile, [write, append]),  
     lists:map(fun(Message) ->
                 Original = proplists:get_value("orig", Message),
                 Translation = proplists:get_value("trans", Message),
                 case Translation of
                     "" -> 
-						case Mode of
-							filled -> ok;
-							all -> lang_write_to_file(IODevice, Original, Translation)
-						end;
+                        case Mode of
+                            filled -> ok;
+                            all -> lang_write_to_file(IODevice, Original, Translation)
+                        end;
                     _ -> lang_write_to_file(IODevice, Original, Translation)
                 end
         end, Translations),
-	file:close(IODevice).
+    file:close(IODevice).
 
 lang_write_to_file(IODevice, Original, Translation) ->
-	OriginalEncoded = boss_lang:escape_quotes(Original),
-	TranslationEncoded = boss_lang:escape_quotes(Translation),
+    OriginalEncoded = boss_lang:escape_quotes(Original),
+    TranslationEncoded = boss_lang:escape_quotes(Translation),
     OriginalLines = re:split(OriginalEncoded,"\r\n", [{return, list}]),
     TranslationLines = re:split(TranslationEncoded,"\r\n", [{return, list}]),
-	case length(OriginalLines) > 0 of
+    case length(OriginalLines) > 0 of
         true ->
-			file:write(IODevice, io_lib:format("\nmsgid \"~s\"\n", [""])),
-			lang_write_multiline_to_file(IODevice, OriginalLines);
+            file:write(IODevice, io_lib:format("\nmsgid \"~s\"\n", [""])),
+            lang_write_multiline_to_file(IODevice, OriginalLines);
         false ->
-			file:write(IODevice, io_lib:format("\nmsgid \"~ts\"\n",[OriginalEncoded]))
+            file:write(IODevice, io_lib:format("\nmsgid \"~ts\"\n",[OriginalEncoded]))
     end,
     case length(TranslationLines) > 0 of
         true ->
-			file:write(IODevice, io_lib:format("msgstr \"~s\"\n", [""])),
-			lang_write_multiline_to_file(IODevice, TranslationLines);
+            file:write(IODevice, io_lib:format("msgstr \"~s\"\n", [""])),
+            lang_write_multiline_to_file(IODevice, TranslationLines);
         false ->
-			file:write(IODevice, io_lib:format("msgstr \"~ts\"\n",[TranslationEncoded]))
-	end.
+            file:write(IODevice, io_lib:format("msgstr \"~ts\"\n",[TranslationEncoded]))
+    end.
 
 lang_write_multiline_to_file(_IODevice, []) -> ok;
 lang_write_multiline_to_file(IODevice, [Token|Rest]) ->
-	ParsedToken = case Token of
-		[] -> "";
-		_ -> Token
-	end,
-	case Rest of
-		[] -> file:write(IODevice, io_lib:format("\"~ts\"\n", [ParsedToken]));
-		_ -> file:write(IODevice, io_lib:format("\"~ts~c~c\"\n", [ParsedToken, 92, 110]))
-	end,
-	lang_write_multiline_to_file(IODevice, Rest).
+    ParsedToken = case Token of
+        [] -> "";
+        _ -> Token
+    end,
+    case Rest of
+        [] -> file:write(IODevice, io_lib:format("\"~ts\"\n", [ParsedToken]));
+        _ -> file:write(IODevice, io_lib:format("\"~ts~c~c\"\n", [ParsedToken, 92, 110]))
+    end,
+    lang_write_multiline_to_file(IODevice, Rest).
 
 extract_strings(App) ->
     ModuleStrings = extract_module_strings(App),
@@ -126,7 +126,7 @@ extract_po_strings(App, Lang) ->
 process_po_tokens([], Acc) ->
     lists:reverse(Acc);
 process_po_tokens([{comment, _MsgComment}|Rest], Acc) ->
-	process_po_tokens(Rest, Acc);
+    process_po_tokens(Rest, Acc);
 process_po_tokens([{id, MsgId}, {str, MsgStr}|Rest], Acc) ->
     process_po_tokens(Rest, [{MsgId, MsgStr}|Acc]);
 process_po_tokens([_|Rest], Acc) ->
