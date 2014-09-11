@@ -59,8 +59,8 @@ to_json(Object) ->
   Data = lists:map (fun
     ({Attr, Val}) when is_list (Val) ->
        {Attr, list_to_binary (Val)};
-    ({Attr, {_,_,_} = Val}) ->
-       {Attr, iso8601:format(Val)};
+    ({Attr, {Yr, Mo, Da} = Val}) ->
+       {Attr, erlang:list_to_binary(io_lib:format("~b-~b-~b", [Yr, Mo, Da]))};
     ({Attr, {{_, _, _}, {_, _, _}} = Val}) ->
        {Attr, iso8601:format(Val)};
     (Other) ->

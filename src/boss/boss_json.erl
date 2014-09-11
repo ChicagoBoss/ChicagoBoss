@@ -49,7 +49,7 @@ json_data1([{VariableName, [[{_, _}|_]|_] = Variable}|Rest], ModelList, Acc) ->
 
 %% It's an erlang:now() value.
 json_data1([{VariableName, {A, B, C} = Val}|Rest], ModelList, Acc) when is_integer(A), is_integer(B), is_integer(C) ->
-    json_data1(Rest, ModelList, [{VariableName, iso8601:format(Val)}|Acc]);
+    json_data1(Rest, ModelList, [{VariableName, erlang:list_to_binary(io_lib:format("~b-~b-~b", [A, B, C]))}|Acc]);
 json_data1([{VariableName, Variable}|Rest], ModelList, Acc) ->
     case boss_model_manager:is_model_instance (Variable, ModelList) of
         true -> 
