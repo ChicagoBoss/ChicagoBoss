@@ -32,26 +32,12 @@ before_filter(Config, RequestContext) ->
             end
     end.
 
-middle_filter({render, ReturnValue, SomethingElse}, _, Context) ->
-    %% Adds csrf_token variable to  template _before variable, even if it's not there
-    TemplateTokenField = case proplists:get_value(?CSRFTOKEN_NAME, ReturnValue) of
-                             undefined ->
-                                 template_field(proplists:get_value(?CSRFTOKEN_NAME, Context, new_token()));
-                             Value ->
-                                 template_field(Value)
-                         end,
-
-    NewReturnValue = case proplists:get_value(?CSRFTOKEN_NAME, ReturnValue) of
-                         undefined ->
-                             ReturnValue;
-                         _ ->
-                             proplists:delete(?CSRFTOKEN_NAME, ReturnValue)
-                     end,
-
-    {render, [{atom_to_list(?CSRFTOKEN_NAME), TemplateTokenField} | NewReturnValue], SomethingElse};
+middle_filter({render, ActionVariables, Headers}, _, Context) ->
+    {render, middle_filter_variables( ActionVariables, Context ), Headers};
+middle_filter({render_other, Location, ActionVariables, Headers}, _, Context) ->
+    {render_other, Location, middle_filter_variables( ActionVariables, Context ), Headers};
 middle_filter(Other, _, _) ->
     Other.
-
 
 
 after_filter({Whatever, Content, Headers}, _, RequestContext) ->
@@ -162,4 +148,20 @@ same_host(Referer, Protocol, Host) ->
 
 template_field(Token) ->
     io_lib:format("<input type=\"hidden\" value=\"~s\" name=\"~s\" />", [Token, ?CSRFTOKEN_PARAM_NAME]).
+
+middle_filter_variables( Variables, Context ) ->
+    %% Adds csrf_token variable to  template _before variable, even if it's not there
+    TemplateTokenField = case proplists:get_value(?CSRFTOKEN_NAME, Variables) of
+        undefined ->
+            template_field(proplists:get_value(?CSRFTOKEN_NAME, Context, new_token()));
+        Value ->
+            template_field(Value)
+    end,
+    Variables1 = case proplists:get_value(?CSRFTOKEN_NAME, Variables) of
+        undefined ->
+            Variables;
+        _ ->
+            proplists:delete(?CSRFTOKEN_NAME, Variables)
+    end,
+    [{atom_to_list(?CSRFTOKEN_NAME), TemplateTokenField} | Variables1].
 
