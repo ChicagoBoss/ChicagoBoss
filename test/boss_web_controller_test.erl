@@ -22,10 +22,10 @@ make_action_session_id_test() ->
     R = make_ref(),
     ?assertEqual(R,  boss_web_controller:make_action_session_id({},{}, {}, R, {})),
     ?assertEqual(undefined, boss_web_controller:make_action_session_id(false,
-								       #boss_app_info{}, 
-								       {}, 
-								       undefined, 
-								       ?MODULE)).
+                                       #boss_app_info{}, 
+                                       {}, 
+                                       undefined, 
+                                       ?MODULE)).
 
 handle_call_application_info_test() ->
     ?assert(proper:quickcheck(prop_handle_call_application_info(),

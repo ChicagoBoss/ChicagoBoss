@@ -3,22 +3,22 @@
 
 -export([init/3, loop/2, terminate/2]).
 -export([websocket_init/3, websocket_handle/3,
-	 websocket_info/3, websocket_terminate/3]).
+     websocket_info/3, websocket_terminate/3]).
 
 init({_Any, http}, Req, _Opts) ->
     case cowboy_req:header(<<"upgrade">>, Req) of
-	{undefined, _Req2} -> {upgrade, protocol, mochicow_upgrade};
-	{<<"websocket">>, _Req2} -> {upgrade, protocol, cowboy_websocket};
-	{<<"Websocket">>, _Req2} -> {upgrade, protocol, cowboy_websocket};
-	{<<"WebSocket">>, _Req2} -> {upgrade, protocol, cowboy_websocket}
+    {undefined, _Req2} -> {upgrade, protocol, mochicow_upgrade};
+    {<<"websocket">>, _Req2} -> {upgrade, protocol, cowboy_websocket};
+    {<<"Websocket">>, _Req2} -> {upgrade, protocol, cowboy_websocket};
+    {<<"WebSocket">>, _Req2} -> {upgrade, protocol, cowboy_websocket}
     end.
 
 -record(state, {websocket_id, session_id, service_url}).
 
 loop(Req, RouterAdapter) ->
      boss_web_controller_handle_request:handle_request(Req, 
-						      mochiweb_request_bridge, 
-						      mochiweb_response_bridge,
+                              mochiweb_request_bridge, 
+                              mochiweb_response_bridge,
                               RouterAdapter
                               ).
 
@@ -32,8 +32,8 @@ websocket_init(_Any, Req, _Opts) ->
     {SessionId, _Req2}  = cowboy_req:cookie(list_to_binary(SessionKey), Req),
     WebsocketId = self(),    
     State= #state{websocket_id=WebsocketId, 
-		  session_id=SessionId,
-		  service_url=ServiceUrl},
+              session_id=SessionId,
+              service_url=ServiceUrl},
     boss_websocket_router:join(ServiceUrl, WebsocketId, Req, SessionId),
     case boss_env:get_env(websocket_timeout, undefined) of
         undefined ->
@@ -44,8 +44,8 @@ websocket_init(_Any, Req, _Opts) ->
 
 websocket_handle({text, Msg}, Req, State) ->
     #state{websocket_id=WebsocketId, 
-	   session_id=SessionId, 
-	   service_url=ServiceUrl } = State,
+       session_id=SessionId, 
+       service_url=ServiceUrl } = State,
     boss_websocket_router:incoming(ServiceUrl, WebsocketId, Req, SessionId, Msg),
     {ok, Req, State, hibernate};
 
@@ -60,7 +60,7 @@ websocket_info(_Info, Req, State) ->
 
 websocket_terminate(Reason, Req, State) ->
     #state{websocket_id=WebsocketId, 
-	   session_id=SessionId, 
-	   service_url=ServiceUrl } = State,
+       session_id=SessionId, 
+       service_url=ServiceUrl } = State,
     boss_websocket_router:close(Reason, ServiceUrl, WebsocketId, Req, SessionId),
     ok.

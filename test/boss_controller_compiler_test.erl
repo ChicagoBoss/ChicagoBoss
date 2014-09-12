@@ -6,27 +6,24 @@
 -compile(export_all).
 
 spec_test_() ->
-     begin
-         Tests = [
-                  fun prop_add_routes_to_forms/0,
-
-                  {add_export_to_forms,         1},
-                  {extract_routes_from_clauses, 2},
-                  {function_for_routes,         1},
-                  {route_from_token_ast,        1},
-                  {map_syntax_tuples,           1},
-                  {map_tokens,                  1}
-                 ],
-         [case Test of
-             {Funct, Arity} ->
-
-                  ?_assert(proper:check_spec({?TMODULE, Funct, Arity},
+    begin
+        Tests = [
+            fun prop_add_routes_to_forms/0,
+                {add_export_to_forms,         1},
+                {extract_routes_from_clauses, 2},
+                {function_for_routes,         1},
+                {route_from_token_ast,        1},
+                {map_syntax_tuples,           1},
+                {map_tokens,                  1}
+            ],
+        [case Test of
+            {Funct, Arity} ->
+                ?_assert(proper:check_spec({?TMODULE, Funct, Arity},
                                             [{to_file, user}, 25]));
-                  
-              F when is_function(F,0) ->
-                  ?_assert(proper:quickcheck(F(), 
-                                             [{to_file, user}]))
-          end||Test <-Tests]
+            F when is_function(F,0) ->
+                ?_assert(proper:quickcheck(F(), 
+                                            [{to_file, user}]))
+        end||Test <-Tests]
      end.
 
 
@@ -35,11 +32,11 @@ prop_add_routes_to_forms() ->
     ?FORALL(ExportAttrs ,
             list(boss_controller_compiler:export_attr1()),
             ?IMPLIES(len_in_range(ExportAttrs,1,20),
-                     begin
-                         Result = boss_controller_compiler:add_routes_to_forms(ExportAttrs
-                                                                               ++ [{eof, 1}]),
-                         is_list(Result)
-                     end)).
+                    begin
+                        Result = boss_controller_compiler:add_routes_to_forms(ExportAttrs
+                                                                              ++ [{eof, 1}]),
+                        is_list(Result)
+                    end)).
 
 
 prop_add_routes_to_forms_function() ->

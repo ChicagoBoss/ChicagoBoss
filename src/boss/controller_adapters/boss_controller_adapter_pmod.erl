@@ -16,8 +16,8 @@
 -spec filter_config1({atom() | tuple(),[any()]},_,_,[any()]) -> any().
 
 get_instance({ControllerModule, ExportStrings}, RequestContext) ->
-    Req		= proplists:get_value(request, RequestContext),
-    SessionID	= proplists:get_value(session_id, RequestContext),
+    Req         = proplists:get_value(request, RequestContext),
+    SessionID   = proplists:get_value(session_id, RequestContext),
     case proplists:get_value("new", ExportStrings) of
         1 -> ControllerModule:new(Req);
         2 -> ControllerModule:new(Req, SessionID)
@@ -49,10 +49,10 @@ filters(Type, {_, ExportStrings} = Info, RequestContext, GlobalFilters) ->
     end.
 
 before_filter({_, ExportStrings} = Info, RequestContext) ->
-    ControllerInstance	= get_instance(Info, RequestContext),
-    Action		= proplists:get_value(action, RequestContext),
-    RequestMethod	= proplists:get_value(method, RequestContext),
-    Tokens		= proplists:get_value(tokens, RequestContext),
+    ControllerInstance  = get_instance(Info, RequestContext),
+    Action          = proplists:get_value(action, RequestContext),
+    RequestMethod   = proplists:get_value(method, RequestContext),
+    Tokens          = proplists:get_value(tokens, RequestContext),
 
     AuthResult = case proplists:get_value("before_", ExportStrings) of
         2 -> ControllerInstance:before_(Action);
@@ -82,11 +82,11 @@ after_filter({_, ExportStrings} = Info, RequestContext, Result) ->
     end.
 
 action({_, ExportStrings} = Info, RequestContext) ->
-    ControllerInstance	= get_instance(Info, RequestContext),
-    Action		= proplists:get_value(action, RequestContext),
-    RequestMethod	= proplists:get_value(method, RequestContext),
-    Tokens		= proplists:get_value(tokens, RequestContext),
-    AuthInfo		= proplists:get_value('_before', RequestContext, RequestContext),
+    ControllerInstance  = get_instance(Info, RequestContext),
+    Action              = proplists:get_value(action, RequestContext),
+    RequestMethod       = proplists:get_value(method, RequestContext),
+    Tokens              = proplists:get_value(tokens, RequestContext),
+    AuthInfo            = proplists:get_value('_before', RequestContext, RequestContext),
     ActionAtom          = list_to_atom(Action),
     lager:notice("Request Method ~p~n", [RequestMethod]),
     lager:notice("Tokens ~p", [Tokens]),
@@ -96,11 +96,11 @@ action({_, ExportStrings} = Info, RequestContext) ->
         4 ->
             ControllerInstance:ActionAtom(RequestMethod, Tokens, AuthInfo);
         _ ->
-	    {CMod, _} = ControllerInstance,
-	    lager:notice("[ChicagoBoss] The function ~p:~s/2 is not exported, "++
-			 "if in doubt add -export([~s/2])) to the module",
-			 [CMod, Action, Action]),
-	    undefined
+        {CMod, _} = ControllerInstance,
+        lager:notice("[ChicagoBoss] The function ~p:~s/2 is not exported, "++
+             "if in doubt add -export([~s/2])) to the module",
+             [CMod, Action, Action]),
+        undefined
     end.
 
 filter_config({_, ExportStrings} = Info, 'cache', Default, RequestContext) ->

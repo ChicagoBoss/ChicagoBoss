@@ -2,63 +2,29 @@
 
 -export([root_dir/0]).
 -export([root_src_dir/0]).
-
--export([web_view_path/0]).
-
--export([web_view_path/2]).
-
--export([web_view_path/1]).
-
--export([web_view_path/3]).
-
--export([mail_view_path/0]).
-
--export([mail_view_path/2]).
-
--export([model_path/0]).
-
--export([model_path/1]).
-
+-export([web_view_path/0, web_view_path/2, web_view_path/1, web_view_path/3]).
+-export([mail_view_path/0, mail_view_path/2]).
+-export([model_path/0, model_path/1]).
 -export([lang_path/1]).
-
 -export([static_path/1]).
-
 -export([lang_path/2]).
-
 -export([view_lib_path/0]).
-
 -export([view_tag_helper_path/0]).
-
 -export([view_filter_helper_path/0]).
-
 -export([view_html_tags_path/0]).
-
 -export([view_helpers_path/0]).
-
 -export([module_list/2]).
-
 -export([web_controller_path/0]).
-
 -export([view_tag_helper_list/1]).
-
 -export([test_list/1]).
-
 -export([include_dir/0]).
-
 -export([ebin_dir/0]).
-
 -export([view_filter_helper_list/1]).
-
 -export([web_controller_path/1]).
-
 -export([lib_path/0]).
-
 -export([test_path/0]).
-
 -export([websocket_path/0]).
-
 -export([compiler_adapters/0]).
-
 -export([template_adapters/0]).
 
 -type input_string() :: string().
@@ -87,7 +53,7 @@ web_view_path(Controller) ->
 -spec web_view_path(atom() | binary() | [atom() | [any()] | char()],atom() | string() | number(),atom() | string() | number()) -> input_string().
 web_view_path(Controller, Template, Extension) -> 
     filename:join([web_view_path(Controller),
-		   lists:concat([Template, ".", Extension])]).
+           lists:concat([Template, ".", Extension])]).
 -spec mail_view_path() -> input_string().
 
 mail_view_path() ->
@@ -112,7 +78,7 @@ static_path(App) -> filename:join([boss_files:root_priv_dir(App), "static"]).
 -spec lang_path(_,atom() | string() | number()) -> input_string().
 lang_path(App, Lang) ->
     filename:join([lang_path(App),
-		   lists:concat(["strings.", Lang, ".po"])]).
+           lists:concat(["strings.", Lang, ".po"])]).
 -spec view_lib_path() -> input_string().
 
 view_lib_path() -> filename:join([root_src_dir(), "view", "lib"]).

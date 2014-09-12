@@ -45,7 +45,7 @@ send_template(Application, Action, Args, Callback) ->
             send_message(Application, FromAddress, ToAddress, Action, HeaderFields, Variables, Options, Callback);
         {nevermind, Reason} ->
             lager:info("Mail Not sent because of ~p", [Reason]),
-	    {ok, Reason};
+        {ok, Reason};
         nevermind ->
             lager:info("Mail Not sent no reason"),
             ok
