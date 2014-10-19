@@ -178,4 +178,9 @@ analyze_argtypes_content([#xmlElement{ name = 'atom', attributes = Attrs }]) ->
 analyze_argtypes_content([#xmlElement{ name = 'abstype', content = 
             [#xmlElement{ name = erlangName, attributes = 
                     [#xmlAttribute{ name = 'name', value = Type }]}]}]) ->
-    "<span class=\"typevar\">::" ++ Type ++ "()</span>".
+    "<span class=\"typevar\">::" ++ Type ++ "()</span>";
+analyze_argtypes_content([#xmlElement{ name = 'abstype', content =
+            [#xmlElement{ name = erlangName, attributes =
+                    [#xmlAttribute{ name = 'module', value = ModuleName },
+                     #xmlAttribute{ name = 'name', value = Type }]}]}]) ->
+    "<span class=\"typevar\">::" ++ ModuleName ++ ":" ++ Type ++ "()</span>".
