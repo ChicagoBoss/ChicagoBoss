@@ -17,6 +17,10 @@
 <p>Another option for factoring out repeated logic is to use ErlyDTL's "include" tag. The difference between using an "include" tag and custom tags is that "include" will have access to all variables currently in the caller's scope, whereas custom tags only have access to the variables explicitly passed in. (In addition, custom tags are compiled only once for the entire project, but included files are compiled for each template that includes it.)</p>
 <h2>Helper modules for custom tags and filters</h2>
 <p>For more complicated processing, you can create helper modules. Tag helper modules reside in src/view/lib/tag_modules, and export functions which take in a proplist of variables and return rendered HTML. Filter helper modules reside in src/view/lib/filter_modules, and export functions which take in a binary string and return a filter iolist. See those directories in your project for examples.</p>
+
+<h2>Configuring ErlyDTL</h2>
+<p>By default, ErlyDTL escapes HTML in values that are passed in template variables. This behaviour is configurable in CB, by setting the value of <code>template_auto_escape</code> to either <code>true</code> or <code>false</code> in <code>boss.config</code>.</p>
+
 <h2>Implicit variables</h2>
 <p>The following variables are automatically passed to your views without you doing any work:</p>
 <ul>
