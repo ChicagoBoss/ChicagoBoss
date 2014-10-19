@@ -7,7 +7,7 @@
 -spec dependencies(atom() | tuple()) -> any().
 -spec render(atom() | tuple(),_,_) -> {ok, iolist()}|{error, _}.
 -spec compile_file(atom() | binary() | [atom() | [any()] | char()],_,[any()]) -> any().
--spec compile(atom() | binary() | [atom() | [any()] | char()],_,_,_,_,_,_,_,[any()],[any()],[any()],_) -> any().
+-spec compile(atom() | binary() | [atom() | [any()] | char()],_,_,_,_,_,_,_,[any()],[any()],[any()],_,_) -> any().
 file_extensions() -> ["dtl", "html", "txt", "js"].
 
 translatable_strings(Module) ->
@@ -34,9 +34,10 @@ compile_file(ViewPath, Module, Options) ->
     FilterHelpers	= proplists:get_value(filter_helpers,	 Options, []),
     ExtraTagHelpers	= boss_env:get_env(template_tag_modules,          []),
     ExtraFilterHelpers	= boss_env:get_env(template_filter_modules,       []),
+    AutoEscape		= boss_env:get_env(template_auto_escape,          true),
     Res                 = compile(ViewPath, Module, HelperDirModule, TranslatorPid, OutDir,
 				  CompilerOptions, Locales, DocRoot, TagHelpers, FilterHelpers,
-				  ExtraTagHelpers, ExtraFilterHelpers),
+				  ExtraTagHelpers, ExtraFilterHelpers, AutoEscape),
     case Res of
         {ok, Module} -> {ok, Module};
         {error, Errors} -> {ok, Errors}
@@ -45,7 +46,7 @@ compile_file(ViewPath, Module, Options) ->
 
 compile(ViewPath, Module, HelperDirModule, TranslatorPid, OutDir,
 	CompilerOptions, Locales, DocRoot, TagHelpers, FilterHelpers,
-        ExtraTagHelpers, ExtraFilterHelpers) ->
+        ExtraTagHelpers, ExtraFilterHelpers, AutoEscape) ->
     CompileParams = [{doc_root, DocRoot},
 	             {custom_tags_modules, TagHelpers ++ ExtraTagHelpers ++ [boss_erlydtl_tags, HelperDirModule]},
 		     {custom_filters_modules, FilterHelpers ++ ExtraFilterHelpers},
@@ -53,7 +54,8 @@ compile(ViewPath, Module, HelperDirModule, TranslatorPid, OutDir,
 		     {out_dir, OutDir},
 		     return,
 		     {blocktrans_fun, make_blocktrans_fun(TranslatorPid)},
-		     {blocktrans_locales, Locales}],
+		     {blocktrans_locales, Locales},
+		     {auto_escape, AutoEscape}],
     Res = erlydtl:compile_file(ViewPath,
                     Module,
                     CompileParams),
