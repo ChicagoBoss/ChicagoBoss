@@ -317,7 +317,7 @@ call_controller_action(Adapter, AdapterInfo, RequestContext) ->
     catch
         Class:Error ->
             lager:error("Error in controller ~p ~p ~s", [Class, Error, boss_log_util:stacktrace()]),
-            {output, "Error in controller, see console.log for details\n"}
+            {error, "Error in controller, see console.log for details\n"}
     end.
 
 make_action_session_id(Controller, AppInfo, Req, undefined, Adapter) ->

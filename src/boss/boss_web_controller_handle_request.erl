@@ -285,7 +285,9 @@ process_not_found(Message, #boss_app_info{ router_pid = RouterPid } = AppInfo, R
                 {'EXIT', Reason} ->
                     {error, Reason};
                 {{ok, Payload, Headers}, _} ->
-                    {not_found, Payload, Headers}
+                    {not_found, Payload, Headers};
+                {{Code, Payload, Headers}, _} ->
+                    {Code, Payload, Headers}
             end;
         {ok, OtherLocation} ->
             {redirect, OtherLocation};
