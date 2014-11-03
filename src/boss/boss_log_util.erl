@@ -2,7 +2,7 @@
 -export([stacktrace/0]).
 
 stacktrace() ->
-    Multiline = boss_env:get_env(multiline_stack_traces, false),
+    Multiline = boss_env:get_env(log_stack_multiline, false),
     TraceString = string:join(
                     lists:map(
                       fun(Frame) ->
