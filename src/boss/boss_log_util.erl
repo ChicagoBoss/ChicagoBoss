@@ -1,7 +1,7 @@
 -module(boss_log_util).
--export([stacktrace/0]).
+-export([stacktrace/2]).
 
-stacktrace() ->
+stacktrace(Class, Error) ->
     Multiline = boss_env:get_env(log_stack_multiline, false),
     TraceString = string:join(
                     lists:map(
@@ -12,12 +12,13 @@ stacktrace() ->
                      ),
                     separator(Multiline)
                    ),
-    case Multiline of
-        true ->
-            [separator(true)|TraceString];
-        _ ->
-            "[" ++ TraceString ++ "]"
-    end.
+    TraceOutput = case Multiline of
+                      true ->
+                          [separator(true)|TraceString];
+                      _ ->
+                          "[" ++ TraceString ++ "]"
+                  end,
+    io_lib:format("~p:~p Stacktrace: ~s", [Class, Error, TraceOutput]).
 
 separator(true) ->
     io_lib:format("~n", []);
