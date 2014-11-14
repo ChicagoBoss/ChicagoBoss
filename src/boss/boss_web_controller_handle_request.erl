@@ -27,7 +27,7 @@ handle_request(Req, RequestMod, ResponseMod, RouterAdapter) ->
     catch Class:Error ->
     	%% Nuclear option: Something very serious happened and we don't want to
     	%% fail silently, but instead it should generate an error message.
-    	lager:error("Unhandled Error: ~p:~p. Stacktrace: ~p", [Class, Error, erlang:get_stacktrace()]),
+    	lager:error("Unhandled Error: ~s", [boss_log_util:stacktrace(Class, Error)]),
     	handle_fatal_error(Req, ResponseMod)
     end.
 
