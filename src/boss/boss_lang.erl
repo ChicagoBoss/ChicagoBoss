@@ -160,7 +160,11 @@ extract_view_strings(App) ->
         false ->
             lists:foldl(
                 fun(Module, Acc) ->
-                        Module:translatable_strings() ++ Module:translated_blocks() ++ Acc
+                	TranslatedBlocks = case lists:keysearch(translatable_blocks, 1, Module:module_info(exports)) of
+                	                       false -> [];
+                	                       {value, {translated_blocks, 0}} ->  Module:translated_blocks()
+                	                   end,
+                        Module:translatable_strings() ++ TranslatedBlocks ++ Acc
                 end, [], boss_env:get_env(App, view_modules, []) ++ boss_env:get_env(App, view_lib_tags_modules, []))
     end.
 
