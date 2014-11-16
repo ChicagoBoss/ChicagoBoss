@@ -32,66 +32,36 @@ separator(true) ->
 separator(_) ->
     ",".
 
-frame({Module, Func, Arity, [{file, Filename}, {line, LineNo}]}, true) when is_integer(Arity)->
+multiline_func_info(Module, Func, Arity) when is_integer(Arity) ->
+    io_lib:format(" [~s:~s/~b]", [atom_to_list(Module), atom_to_list(Func), Arity]);
+multiline_func_info(Module, Func, Args) ->
+    io_lib:format(" [~s:~s(~s)]", [atom_to_list(Module), atom_to_list(Func), arg_list(Args)]).
+
+default_func_info(Module, Func, ArityOrArgs) ->
     io_lib:format(
-      " ~s:~b [~s:~s/~b]",
-      [
-       Filename,
-       LineNo,
-       atom_to_list(Module),
-       atom_to_list(Func),
-       Arity
-      ]
-     );
-frame({Module, Func, Args, []}, true) ->
-    io_lib:format(
-      " [~s:~s/~p]",
+      "~s,~s,~p",
       [
        atom_to_list(Module),
        atom_to_list(Func),
-       Args
-      ]
-     );
-frame({Module, Func, Args, [{file, Filename}, {line, LineNo}]}, true) ->
-    io_lib:format(
-      " ~s:~b [~s:~s(~p)]",
-      [
-       Filename,
-       LineNo,
-       atom_to_list(Module),
-       atom_to_list(Func),
-       Args
-      ]
-     );
-frame({Module, Func, Arity, [{file, Filename}, {line, LineNo}]}, _) when is_integer(Arity) ->
-    io_lib:format(
-      "{~s,~s,~b,[{file,\"~s\"},{line,~b}]}",
-      [
-       atom_to_list(Module),
-       atom_to_list(Func),
-       Arity,
-       Filename,
-       LineNo
-      ]
-     );
-frame({Module, Func, Args, []}, _) ->
-    io_lib:format(
-      "{~s,~s,~p,[]}",
-      [
-       atom_to_list(Module),
-       atom_to_list(Func),
-       Args
-      ]
-     );
-frame({Module, Func, Args, [{file, Filename}, {line, LineNo}]}, _) ->
-    io_lib:format(
-      "{~s,~s,~p,[{file,\"~s\"},{line,~b}]}",
-      [
-       atom_to_list(Module),
-       atom_to_list(Func),
-       Args,
-       Filename,
-       LineNo
+       ArityOrArgs
       ]
      ).
 
+arg_list(Args) ->
+    string:join(
+      lists:map(
+        fun(Arg) ->
+                io_lib:format("~p", [Arg])
+        end,
+        Args),
+      ", "
+     ).
+
+frame({Module, Func, ArityOrArgs, [{file, Filename}, {line, LineNo}]}, true) ->
+    io_lib:format(" ~s:~b", [Filename, LineNo]) ++ multiline_func_info(Module, Func, ArityOrArgs);
+frame({Module, Func, ArityOrArgs, []}, true) ->
+    multiline_func_info(Module, Func, ArityOrArgs);
+frame({Module, Func, ArityOrArgs, [{file, Filename}, {line, LineNo}]}, _) ->
+    io_lib:format("{~s,[{file,\"~s\"},{line,~b}]}", [default_func_info(Module, Func, ArityOrArgs), Filename, LineNo]);
+frame({Module, Func, ArityOrArgs, []}, _) ->
+    io_lib:format("{~s,[]}", [default_func_info(Module, Func, ArityOrArgs)]).
