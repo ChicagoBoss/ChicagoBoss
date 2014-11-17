@@ -5,6 +5,10 @@
 -export([format_stacktrace/3]).
 -endif.
 
+-spec stacktrace(atom(), any()) -> [char()].
+
+%% @doc Generates a stacktrace and formats it according to the boss_env setting
+%% log_stack_multiline.
 stacktrace(Class, Error) ->
     format_stacktrace(Class, Error, erlang:get_stacktrace()).
 
