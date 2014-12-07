@@ -547,22 +547,11 @@ cookie_option(BossConf) ->
     end.
 
 otp_applications(BossConf) ->
-    EvalFun = fun (Apps) -> % should work similar to application:ensure_all_started(App) which was added in R16
-        "F = fun ([], Fun) ->
-                    ok;
-                 ([H | Tail] = L, Fun) ->
-                    case application:start(H) of
-                        {error, {not_started, Dep}} ->
-                            Fun([Dep], Fun),
-                            Fun(L, Fun);
-                        _ ->
-                            Fun(Tail, Fun)
-                    end
-        end,
-        F(" ++ lists:flatten(io_lib:format("~p", [Apps])) ++", F)."
+    ToEval = fun (Apps) ->
+        "[application:ensure_all_started(App) || App <- " ++ lists:flatten(io_lib:format("~p", [Apps])) ++"]."
     end,
     OtpApps = boss_config_value(BossConf, boss, otp_applications, []),
-    EvalFun(OtpApps).
+    ToEval(OtpApps).
 
 max_processes(BossConf) ->
     boss_config_value(BossConf, boss, vm_max_processes, 32768).
