@@ -155,8 +155,9 @@ start_cmd(_RebarConf, BossConf, AppFile) ->
 
   ErlCmd = erl_command(),
   VmArgs = vm_args(BossConf),
-  io:format("~s +K true +P ~B -pa ~s -boot start_sasl -config boss -s boss ~s -detached ~s~s~n",
-    [ErlCmd, MaxProcesses, string:join(EbinDirs, " -pa "), CookieOpt, NameArg, VmArgs]),
+  EvalOtpApps = otp_applications(BossConf),
+  io:format("~s +K true +P ~B -pa ~s -boot start_sasl -config boss -eval \"~s\" -s boss ~s -detached ~s~s~n",
+    [ErlCmd, MaxProcesses, string:join(EbinDirs, " -pa "), EvalOtpApps, CookieOpt, NameArg, VmArgs]),
   ok.
 
 %%--------------------------------------------------------------------
@@ -175,8 +176,9 @@ start_dev_cmd(_RebarConf, BossConf, AppFile) ->
   EbinDirs	= all_ebin_dirs(BossConf, AppFile),
   CookieOpt	= cookie_option(BossConf),
   VmArgs	= vm_args(BossConf),
-  io:format("~s -pa ~s -boss developing_app ~s -boot start_sasl -config boss ~s -s reloader -s lager -s boss ~s~s~n",
-    [ErlCmd, string:join(EbinDirs, " -pa "), AppName, CookieOpt, NameArg, VmArgs]),
+  EvalOtpApps = otp_applications(BossConf),
+  io:format("~s -pa ~s -boss developing_app ~s -boot start_sasl -config boss ~s -s reloader -s lager -eval \"~s\" -s boss ~s~s~n",
+    [ErlCmd, string:join(EbinDirs, " -pa "), AppName, CookieOpt, EvalOtpApps, NameArg, VmArgs]),
   ok.
 
 %%--------------------------------------------------------------------
@@ -544,6 +546,23 @@ cookie_option(BossConf) ->
         "-setcookie "++Cookie
     end.
 
+otp_applications(BossConf) ->
+    EvalFun = fun (Apps) -> % should work similar to application:ensure_all_started(App) which was added in R16
+        "F = fun ([], Fun) ->
+                    ok;
+                 ([H | Tail] = L, Fun) ->
+                    case application:start(H) of
+                        {error, {not_started, Dep}} ->
+                            Fun([Dep], Fun),
+                            Fun(L, Fun);
+                        _ ->
+                            Fun(Tail, Fun)
+                    end
+        end,
+        F(" ++ lists:flatten(io_lib:format("~p", [Apps])) ++", F)."
+    end,
+    OtpApps = boss_config_value(BossConf, boss, otp_applications, []),
+    EvalFun(OtpApps).
 
 max_processes(BossConf) ->
     boss_config_value(BossConf, boss, vm_max_processes, 32768).
