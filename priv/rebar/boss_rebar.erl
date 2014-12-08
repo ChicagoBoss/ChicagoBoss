@@ -155,8 +155,9 @@ start_cmd(_RebarConf, BossConf, AppFile) ->
 
   ErlCmd = erl_command(),
   VmArgs = vm_args(BossConf),
-  io:format("~s +K true +P ~B -pa ~s -boot start_sasl -config boss -s boss ~s -detached ~s~s~n",
-    [ErlCmd, MaxProcesses, string:join(EbinDirs, " -pa "), CookieOpt, NameArg, VmArgs]),
+  EvalOtpApps = otp_applications(BossConf),
+  io:format("~s +K true +P ~B -pa ~s -boot start_sasl -config boss -eval \"~s\" -s boss ~s -detached ~s~s~n",
+    [ErlCmd, MaxProcesses, string:join(EbinDirs, " -pa "), EvalOtpApps, CookieOpt, NameArg, VmArgs]),
   ok.
 
 %%--------------------------------------------------------------------
@@ -175,8 +176,9 @@ start_dev_cmd(_RebarConf, BossConf, AppFile) ->
   EbinDirs	= all_ebin_dirs(BossConf, AppFile),
   CookieOpt	= cookie_option(BossConf),
   VmArgs	= vm_args(BossConf),
-  io:format("~s -pa ~s -boss developing_app ~s -boot start_sasl -config boss ~s -s reloader -s lager -s boss ~s~s~n",
-    [ErlCmd, string:join(EbinDirs, " -pa "), AppName, CookieOpt, NameArg, VmArgs]),
+  EvalOtpApps = otp_applications(BossConf),
+  io:format("~s -pa ~s -boss developing_app ~s -boot start_sasl -config boss ~s -s reloader -s lager -eval \"~s\" -s boss ~s~s~n",
+    [ErlCmd, string:join(EbinDirs, " -pa "), AppName, CookieOpt, EvalOtpApps, NameArg, VmArgs]),
   ok.
 
 %%--------------------------------------------------------------------
@@ -379,7 +381,8 @@ boss_start_wait([App|Rest]) ->
 %% @end
 %%--------------------------------------------------------------------
 all_ebin_dirs(BossConf, AppFile) ->
-    BossAppEbinDir = all_boss_app_ebin_dirs(BossConf, AppFile) ++ all_deps_ebin_dirs(AppFile),
+    BossAppEbinDir =
+        all_boss_app_ebin_dirs(BossConf, AppFile) ++ all_otp_apps_ebin_dirs(AppFile) ++ all_deps_ebin_dirs(AppFile),
     MoreEbins = lists:foldl(fun({App, Config}, EbinDirs) ->
                         case lists:keyfind(path, 1, Config) of
                             false -> EbinDirs;
@@ -397,6 +400,9 @@ all_ebin_dirs(BossConf, AppFile) ->
                         end
                             end, [], lists:reverse(BossConf)),
     lists:sort(sets:to_list(sets:from_list(BossAppEbinDir ++ MoreEbins))).
+
+all_otp_apps_ebin_dirs(_AppFile)->
+    filelib:wildcard("./apps/*/ebin").
 
 all_deps_ebin_dirs(AppFile)->
     filelib:wildcard("./deps/*/ebin").
@@ -544,6 +550,12 @@ cookie_option(BossConf) ->
         "-setcookie "++Cookie
     end.
 
+otp_applications(BossConf) ->
+    ToEval = fun (Apps) ->
+        "[application:ensure_all_started(App) || App <- " ++ lists:flatten(io_lib:format("~p", [Apps])) ++"]."
+    end,
+    OtpApps = boss_config_value(BossConf, boss, otp_applications, []),
+    ToEval(OtpApps).
 
 max_processes(BossConf) ->
     boss_config_value(BossConf, boss, vm_max_processes, 32768).
