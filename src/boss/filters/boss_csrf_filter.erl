@@ -68,7 +68,11 @@ csrftoken_name() ->
 %%%%%%%%%%%%%%%%%
 
 new_token() ->
-    get_random_string(12).
+    <<Int1:32, Int2:32, Int3:32>> = crypto:rand_bytes(12),
+    Hex1 = integer_to_list(Int1, 16),
+    Hex2 = integer_to_list(Int2, 16),
+    Hex3 = integer_to_list(Int3, 16),
+    Hex1 ++ Hex2 ++ Hex3.
 
 pre_check_csrf_token(RequestContext, CSRF_Token, NewToken) ->
     Request = proplists:get_value(request, RequestContext),
@@ -114,17 +118,6 @@ get_csrf_token(Request) ->
         Token ->
             [Token, Token]
     end.
-
-get_random_string(Length) ->
-    %% Generates random string, used as CSRF Token
-    get_random_string(Length, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789").
-
-get_random_string(Length, AllowedChars) ->
-    lists:foldl(fun(_, Acc) ->
-                        [lists:nth(random:uniform(length(AllowedChars)),
-                                   AllowedChars)]
-                            ++ Acc
-                end, [], lists:seq(1, Length)).
 
 check_referer(Req) ->
     %% Check referer, if needed
