@@ -289,12 +289,9 @@ load_all_modules_and_emit_app_file(AppName, OutDir) ->
     DotAppSrc				    = boss_files:dot_app_src(AppName),
     {ok, [{application, AppName, AppData}]} = file:consult(DotAppSrc),
     AppData1				    = lists:keyreplace(modules, 1, AppData, {modules, AllModules}),
-    Vsn					    = proplists:get_value(vsn, AppData1, []),
-    ComputedVsn                             = make_computed_vsn(Vsn),
-    AppData2                                = lists:keyreplace(vsn, 1, AppData1, {vsn, ComputedVsn}),
-    DefaultEnv                              = proplists:get_value(env, AppData2, []),
-    AppData3                                = lists:keyreplace(env, 1, AppData2, {env, ModulePropList ++ DefaultEnv}),
-    IOList                                  = io_lib:format("~p.~n", [{application, AppName, AppData3}]),
+    DefaultEnv                              = proplists:get_value(env, AppData1, []),
+    AppData2                                = lists:keyreplace(env, 1, AppData1, {env, ModulePropList ++ DefaultEnv}),
+    IOList                                  = io_lib:format("~p.~n", [{application, AppName, AppData2}]),
     AppFile                                 = filename:join([OutDir, lists:concat([AppName, ".app"])]),
     file:write_file(AppFile, IOList).
 
@@ -705,28 +702,4 @@ view_custom_tags_dir_module(Application) ->
 
 incoming_mail_controller_module(Application) ->
     list_to_atom(lists:concat([Application, "_incoming_mail_controller"])).
-
-vcs_vsn_cmd(git) ->
-    case os:type() of
-        {win32,nt} ->
-            "FOR /F \"usebackq tokens=* delims=\" %i in "
-            "(`git log -n 1 \"--pretty=format:%h\" .`) do "
-            "@git describe --always --tags %i";
-        _ ->
-            "git describe --always --tags "
-            "`git log -n 1 --pretty=format:%h .`"
-    end;
-vcs_vsn_cmd(hg)  -> "hg identify -i";
-vcs_vsn_cmd(bzr) -> "bzr revno";
-vcs_vsn_cmd(svn) -> "svnversion";
-vcs_vsn_cmd("semver") ->
-    lager:error("Use atom 'semver' not string \"semver\""),
-    vcs_vsn_cmd(semver);
-vcs_vsn_cmd(semver) ->
-    case catch (rebar_vsn_plugin:make_vsn ()) of
-        {'EXIT', _} -> {unknown, "semver"};
-        Vsn         -> {unknown, Vsn}
-    end;
-vcs_vsn_cmd({cmd, _Cmd}=Custom) -> Custom;
-vcs_vsn_cmd(Version) -> {unknown, Version}.
 

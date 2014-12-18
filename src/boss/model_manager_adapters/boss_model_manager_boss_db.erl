@@ -60,9 +60,9 @@ to_json(Object) ->
     ({Attr, Val}) when is_list (Val) ->
        {Attr, list_to_binary (Val)};
     ({Attr, {_,_,_} = Val}) ->
-       {Attr, erlydtl_filters:date (calendar:now_to_datetime (Val), "F d, Y H:i:s")};
+       {Attr, iso8601:format(Val)};
     ({Attr, {{_, _, _}, {_, _, _}} = Val}) ->
-       {Attr, list_to_binary (erlydtl_filters:date (Val, "F d, Y H:i:s"))};
+       {Attr, iso8601:format(Val)};
     (Other) ->
        Other
   end, Object:attributes()),

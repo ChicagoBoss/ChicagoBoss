@@ -34,7 +34,7 @@ init_cache() ->
     case boss_env:get_env(cache_enable, false) of
         false -> ok;
         true  ->
-            CacheAdapter = boss_env:get_env(cache_adapter, memcached_bin),
+            CacheAdapter = boss_env:cache_adapter(),
             CacheOptions =
                 case CacheAdapter of
                     ets ->
@@ -90,30 +90,28 @@ init_webserver(ThisNode, MasterNode, ServerMod, SSLEnable, SSLOptions,
 	    error_logger:info_msg("Starting cowboy... on ~p~n", [MasterNode]),
 	    application:start(cowlib),
 	    application:start(ranch),
-            application:start(cowboy),
-            HttpPort = boss_env:get_env(port, 8001),
-            HttpIp = boss_env:get_env(ip, {0, 0, 0, 0}),
-            AcceptorCount = boss_env:get_env(acceptor_processes, 100),
-            case SSLEnable of
-                false ->
-                    error_logger:info_msg("Starting http listener... on ~s:~p ~n", [inet_parse:ntoa(HttpIp), HttpPort]),
-                    cowboy:start_http(boss_http_listener, AcceptorCount, [{port, HttpPort}, {ip, HttpIp}], [{env, []}]);
-                true ->
-                    error_logger:info_msg("Starting https listener... on ~s:~p ~n", [inet_parse:ntoa(HttpIp), HttpPort]),
-		    SSLConfig = [{port, HttpPort}, {ip, HttpIp}] ++ SSLOptions,
-		    cowboy:start_https(boss_https_listener, AcceptorCount, SSLConfig, [{env, []}])
-            end,
-            if
-        MasterNode =:= ThisNode ->
-            boss_service_sup:start_services(ServicesSupPid, boss_websocket_router);
-	true ->
-	    ok
-            end
+        application:start(cowboy),
+        HttpPort      = boss_env:get_env(port, 8001),
+        HttpIp        = boss_env:get_env(ip, {0, 0, 0, 0}),
+        AcceptorCount = boss_env:get_env(acceptor_processes, 100),
+        case SSLEnable of
+            false ->
+                error_logger:info_msg("Starting http listener... on ~s:~p ~n", [inet_parse:ntoa(HttpIp), HttpPort]),
+                cowboy:start_http(boss_http_listener, AcceptorCount, [{port, HttpPort}, {ip, HttpIp}], [{env, []}]);
+            true ->
+                error_logger:info_msg("Starting https listener... on ~s:~p ~n", [inet_parse:ntoa(HttpIp), HttpPort]),
+        	    SSLConfig = [{port, HttpPort}, {ip, HttpIp}] ++ SSLOptions,
+        	    cowboy:start_https(boss_https_listener, AcceptorCount, SSLConfig, [{env, []}])
+        end,
+        if MasterNode =:= ThisNode ->
+                boss_service_sup:start_services(ServicesSupPid, boss_websocket_router);
+	       true -> ok
+        end
     end.
 
 
 init_ssl() ->
-    SSLEnable = boss_env:get_env(ssl_enable, false),
+    SSLEnable  = boss_env:get_env(ssl_enable, false),
     SSLOptions = boss_env:get_env(ssl_options, []),
     error_logger:info_msg("SSL:~p~n", [SSLOptions]),
     {SSLEnable, SSLOptions}.
@@ -121,11 +119,11 @@ init_ssl() ->
 
 init_master_services(ThisNode, MasterNode) ->
     {ok, ServicesSupPid}  = case MasterNode of
-				ThisNode ->
-				    boss_service_sup:start_link();
-				_AnyNode ->
-				    {ok, undefined}
-			    end,
+                				ThisNode ->
+                				    boss_service_sup:start_link();
+                				_AnyNode ->
+                				    {ok, undefined}
+            			    end,
     ServicesSupPid.
 
 

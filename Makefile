@@ -44,7 +44,7 @@ app:
 	@echo ""
 	@echo "Your new app is created. You should head over there now:"
 	@echo ""
-	@echo "    cd ../$(PROJECT)"
+	@echo "    cd $(DEST)"
 	@echo ""
 	@echo "***********************************************************************"
 	@echo ""
@@ -76,6 +76,7 @@ rebarize:
 	@chmod +x $(APPDIR)/init.sh
 	@cp skel/init-dev.sh $(APPDIR)
 	@chmod +x $(APPDIR)/init-dev.sh
+	@cp skel/boss.config.* $(APPDIR)
 	@cp skel/rebar $(APPDIR)
 	@chmod +x $(APPDIR)/rebar
 	@cp skel/rebar.config $(APPDIR)

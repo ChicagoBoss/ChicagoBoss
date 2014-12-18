@@ -2,11 +2,13 @@
 %% Created: 01/04/2011
 %% Description: Minimalist Router system for Chicago Boss
 -module(boss_router).
+-behaviour(boss_router_adapter).
 
 %%
 %% Exported Functions
 %%
 -export([start/0, start/1, stop/0]).
+-export([find_application_for_path/3]).
 -export([reload/1, route/2, unroute/6, handle/2, get_all/1, set_controllers/2]).
 
 %%
@@ -26,6 +28,7 @@ reload(Pid) ->
     gen_server:call(Pid, reload).
 
 route(Pid, Url) ->
+	error_logger:info_msg("Route: ~pUrl~n~p",[Url, erlang:get_stacktrace()]),
     gen_server:call(Pid, {route, Url}).
 
 unroute(Pid, Application, ControllerList, Controller, undefined, Params) ->
@@ -72,3 +75,37 @@ get_all(Pid) ->
 
 set_controllers(Pid, Controllers) ->
     gen_server:call(Pid, {set_controllers, Controllers}).
+
+find_application_for_path(Req, Path, Applications) ->
+    Host    = Req:header(host),
+    UseHost = case Host of
+        undefined -> undefined;
+        _ -> hd(re:split(Host, ":", [{return, list}]))
+    end,
+    find_application_for_path(UseHost, Path, undefined, Applications, -1).
+
+find_application_for_path(_Host, _Path, Default, [], _MatchScore) ->
+    Default;
+find_application_for_path(Host, Path, Default, [App|Rest], MatchScore) ->
+    DomainScore = case Host of
+        undefined -> 0;
+        _ ->
+            case boss_web:domains(App) of
+                all -> 0;
+                Domains ->
+                    case lists:member(Host, Domains) of
+                        true -> 1;
+                        false -> -1
+                    end
+            end
+    end,
+    BaseURL = boss_web:base_url(App),
+    PathScore = length(BaseURL),
+    {UseApp, UseScore} = case (DomainScore >= 0) andalso (1000 * DomainScore + PathScore > MatchScore) andalso lists:prefix(BaseURL, Path) of
+        true -> {App, DomainScore * 1000 + PathScore};
+        false -> {Default, MatchScore}
+    end,
+    find_application_for_path(Host, Path, UseApp, Rest, UseScore).
+
+
+

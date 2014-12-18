@@ -3,6 +3,7 @@ clear
 
 PLT=plt/cb.plt
 echo $PLT
+mkdir -p plt
 
 if [ ! -f $PLT ]; then
    dialyzer  --build_plt --apps kernel stdlib mnesia  inets ssl crypto \
@@ -10,7 +11,7 @@ if [ ! -f $PLT ]; then
        syntax_tools edoc xmerl public_key inets \
        --statistics\
        --output_plt $PLT
-   rm deps/riak_core/ebin/*.beam
+   rm -f deps/riak_core/ebin/*.beam
    echo "********************************************************************************"
    dialyzer --add_to_plt deps/*/ebin						--plt $PLT
    echo "********************************************************************************"
