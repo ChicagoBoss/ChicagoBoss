@@ -142,6 +142,22 @@ compile_app(top, App, Path = ["src", "model", _]) ->
     CompileResult = maybe_compile(Filename, list_to_atom(App), OutDir, fun compile_model/2),
     error_logger:info_msg("Compile Result ~p", [CompileResult]).
 
+%%
+%% compile CB app in folders apps
+%% 
+compile_app(apps, App, Path = ["src", "controller", _]) ->
+    Filename = filename:join(Path),
+    OutDir = filename:join(["apps",App,"ebin"]),
+    error_logger:info_msg("compile controller module ~p -> ~p",[Filename, OutDir]),
+    CompileResult = maybe_compile(Filename, list_to_atom(App), OutDir, fun compile_controller/2),
+    error_logger:info_msg("Compile Result ~p", [CompileResult]);
+
+compile_app(apps, App, Path = ["src", "model", _]) ->
+    Filename = filename:join(Path),
+    OutDir = filename:join(["apps",App,"ebin"]),
+    error_logger:info_msg("compile model module ~p -> ~p",[Filename, OutDir]),
+    CompileResult = maybe_compile(Filename, list_to_atom(App), OutDir, fun compile_model/2),
+    error_logger:info_msg("Compile Result ~p", [CompileResult]).
 
 %% compile_app(top, App, Path = ["src", "view", _]) ->
 %%     Filename = filename:join(Path),
