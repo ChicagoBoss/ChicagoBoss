@@ -140,7 +140,14 @@ init_services() ->
 
     Env = boss_env:setup_boss_env(),
     error_logger:info_msg("Starting Boss in ~p mode....~n", [Env]),
+    start_load(Env),
     boss_model_manager:start(),
     init_cache(),
     boss_session:start(),
     Env.
+
+%%start_load(development) ->
+start_load(_) ->
+    application:start(fs),
+    boss_load:start_link().
+%%start_load(_) -> skip.
