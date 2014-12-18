@@ -86,9 +86,8 @@ handle_info({_Pid, {fs,file_event}, {Path, Flags}}, #load_state{root=Root} = Sta
     end,
 
     {noreply, State#load_state{last={event, Path, Flags, Result}}};
-handle_info({load_ebin, Atom}, State) -> 
-    error_logger:info_msg("load module ~p",[Atom]),
-    do_load_ebin(Atom), 
+handle_info({load_ebin, App, Atom}, State) -> 
+    do_load_ebin(App, Atom), 
     {noreply, State#load_state{last={do_load_ebin, Atom}}};
 handle_info(Info, State) -> {noreply, State#load_state{last={unk, Info}}}.
 terminate(_Reason, _State) -> ok.
@@ -131,33 +130,14 @@ compile_app(deps, App, Path) -> skip;
 compile_app(top, App, Path = ["src", "controller", _]) ->
     Filename = filename:join(Path),
     OutDir = "ebin",
-    error_logger:info_msg("compile controller module ~p -> ~p",[Filename, OutDir]),
     CompileResult = maybe_compile(Filename, list_to_atom(App), OutDir, fun compile_controller/2),
-    error_logger:info_msg("Compile Result ~p", [CompileResult]);
+    lager:notice("Compile Result ~p", [CompileResult]);
 
 compile_app(top, App, Path = ["src", "model", _]) ->
     Filename = filename:join(Path),
     OutDir = "ebin",
-    error_logger:info_msg("compile model module ~p -> ~p",[Filename, OutDir]),
     CompileResult = maybe_compile(Filename, list_to_atom(App), OutDir, fun compile_model/2),
-    error_logger:info_msg("Compile Result ~p", [CompileResult]).
-
-%%
-%% compile CB app in folders apps
-%% 
-compile_app(apps, App, Path = ["src", "controller", _]) ->
-    Filename = filename:join(Path),
-    OutDir = filename:join(["apps",App,"ebin"]),
-    error_logger:info_msg("compile controller module ~p -> ~p",[Filename, OutDir]),
-    CompileResult = maybe_compile(Filename, list_to_atom(App), OutDir, fun compile_controller/2),
-    error_logger:info_msg("Compile Result ~p", [CompileResult]);
-
-compile_app(apps, App, Path = ["src", "model", _]) ->
-    Filename = filename:join(Path),
-    OutDir = filename:join(["apps",App,"ebin"]),
-    error_logger:info_msg("compile model module ~p -> ~p",[Filename, OutDir]),
-    CompileResult = maybe_compile(Filename, list_to_atom(App), OutDir, fun compile_model/2),
-    error_logger:info_msg("Compile Result ~p", [CompileResult]).
+    lager:notice("Compile Result ~p", [CompileResult]);
 
 %% compile_app(top, App, Path = ["src", "view", _]) ->
 %%     Filename = filename:join(Path),
@@ -171,15 +151,30 @@ compile_app(apps, App, Path = ["src", "model", _]) ->
 %%     CompileResult = maybe_compile(Filename, list_to_atom(App), undefined, fun compile_lib/2),
 %%     error_logger:info_msg("Compile Result ~p", [CompileResult]).
 
+%%
+%% compile CB app in folders apps
+%% 
+compile_app(apps, App, Path = ["src", "controller", _]) ->
+    Filename = filename:join(["apps", App] ++ Path),
+    OutDir = filename:join(["apps",App,"ebin"]),
+    CompileResult = maybe_compile(Filename, list_to_atom(App), OutDir, fun compile_controller/2),
+    lager:notice("apps Compile Result ~p", [CompileResult]);
+
+compile_app(apps, App, Path = ["src", "model", _]) ->
+    Filename = filename:join(["apps", App] ++ Path),
+    OutDir = filename:join(["apps",App,"ebin"]),
+    CompileResult = maybe_compile(Filename, list_to_atom(App), OutDir, fun compile_model/2),
+    lager:notice("apps Compile Result ~p", [CompileResult]).
+
+
 load_ebin(App,EName) ->
-    error_logger:info_msg("load ebin: ~p,~p", [App,EName]),    
     Tokens = string:tokens(EName, "."),
     case Tokens of
-        [Name, "beam"] -> do_load_ebin(list_to_atom(Name));
+        [Name, "beam"] -> do_load_ebin(App, list_to_atom(Name));
         [Name, "bea#"] ->
             case monitor_handles_renames() of
                 false ->
-                    erlang:send_after(500, ?SERVER, {load_ebin, list_to_atom(Name)}),
+                    erlang:send_after(500, ?SERVER, {load_ebin, App, list_to_atom(Name)}),
                     delayed;
                 true ->
                     ignored
@@ -190,10 +185,10 @@ load_ebin(App,EName) ->
             ok
     end.
 
-do_load_ebin(Module) ->
+do_load_ebin(App, Module) ->
     {Module, Binary, Filename} = code:get_object_code(Module),
     code:load_binary(Module, Filename, Binary),
-    lager:notice("Reloading module: ~p~n\n\r", [Module]),
+    lager:notice("Reloading [~s] ~p", [App, Module]),
     reloaded.
 
 monitor_handles_renames([renamed|_]) -> true;
