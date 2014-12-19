@@ -1,7 +1,8 @@
 -module(boss_load).
 -behaviour(gen_server).
 -define(SERVER, ?MODULE).
--export([start_link/0]).
+-export([start_link/0, start_link/1]).
+-export([start/1, start/0]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 -export([
@@ -68,8 +69,19 @@
 
 %% code from project github.com/synrc/active 
 %%
+start() ->
+    start([]).
+start(Options) ->
+    application:start(fs),
+    boss_load_sup:start_link(Options).
+
+stop() ->
+    ok.
+
 start_link() -> 
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+    start_link([]).
+start_link(Options) -> 
+    gen_server:start_link({local, ?SERVER}, ?MODULE, [], Options).
 
 init(Opts) -> 
     lager:info("Starting boss_load..."),

@@ -146,6 +146,5 @@ init_services() ->
 
 %%start_load(development) ->
 start_load(_) ->
-    application:start(fs),
-    boss_load:start_link().
+    boss_load:start().
 %%start_load(_) -> skip.
