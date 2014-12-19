@@ -137,7 +137,7 @@ app(_, App, ["priv","linux"++_], _)  -> skip;
 app(Type, App, Path=["priv"|_], CBApps) -> 
     case hd(lists:reverse(Path)) of
         ".#" ++ _ -> skip; % mc temp files
-        %"#"  ++ _ -> skip;
+        "#"  ++ _ -> skip;
         Else      -> boss_load_lib:compile(Type, App, Path, CBApps)
     end;
 app(Type, App,Path=["include"|_], CBApps)   -> boss_load_lib:compile(Type, App, Path, CBApps);
@@ -211,6 +211,8 @@ path_filter_dir(".hg")  -> false;
 path_filter_dir(".svn") -> false;
 path_filter_dir("CVS")  -> false;
 path_filter_dir("log")  -> false;
+path_filter_dir("rel")  -> false;
+path_filter_dir("_rel") -> false;
 path_filter_dir(_)      -> true.
 
 path_filter_last(".rebarinfo")     -> false;   % new rebars
@@ -220,13 +222,17 @@ path_filter_last("4913")           -> false;
 path_filter_last(Last)             -> 
     case Last of
         "#" ++ _ -> false; % emacs temp file
-        ".#" ++ _ -> false; 
         Last -> check_extension(filename:extension(Last))
     end.
 check_extension(".erl~") -> false;
 check_extension(".erl#") -> false;
 check_extension(".swp") -> false; % vi temp file
-check_extension(_) -> true.
+check_extension(L) -> 
+    case lists:last(L) of
+        $~ -> false;
+        $# -> false;
+        _ -> true
+    end.
 
 
 load_all_modules(Application, TranslatorSupPid) ->
