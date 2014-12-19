@@ -104,6 +104,22 @@ compile_cbapp(top, App, Path = ["src", "view", "lib", "tag_modules"| _]) ->
     lager:notice("top [lib] Compile Result ~p", [CompileResult]);
 
 
+%% VIEW
+compile_cbapp(Type, App, Path = ["src", "view"| _]) when is_list(App) ->
+    compile_cbapp(Type, list_to_atom(App), Path);
+compile_cbapp(top, App, Path = ["src", "view"| _]) ->
+    Filename = filename:join(Path),
+    OutDir = "ebin",
+    TranslatorPid = boss_web:translator_pid(App),    
+    TplAdapter = boss_files:template_adapter_for_extension(
+                   filename:extension(Filename)),
+    CompileResult = boss_load:compile_view(App, Filename, TplAdapter, OutDir, TranslatorPid),
+    lager:notice("top [tag_html] Compile Result ~p, ~p", [CompileResult, TranslatorPid]);
+        
+
+                            %% ------------------- %%
+
+
 %% IN APPS/DEPS FOLDER
 %% CONTROLLER
 compile_cbapp(Type, App, Path = ["src", "controller", _]) ->
@@ -181,6 +197,20 @@ compile_cbapp(Type, App, Path = ["src", "view", "lib", "tag_modules"| _]) ->
                                             OutDir, 
                                             fun boss_load:compile/2),
     lager:notice("~p [mail] Compile Result ~p", [Type, CompileResult]);
+
+
+%% VIEW
+compile_cbapp(Type, App, Path = ["src", "view"| _]) when is_list(App) ->
+    compile_cbapp(Type, list_to_atom(App), Path);
+compile_cbapp(Type, App, Path = ["src", "view"| _]) ->
+    Folder = atom_to_list(Type),
+    Filename = filename:join([Folder, App] ++ Path),
+    OutDir = filename:join([Folder, App, "ebin"]),
+    TranslatorPid = boss_web:translator_pid(App),    
+    TplAdapter = boss_files:template_adapter_for_extension(
+                   filename:extension(Filename)),
+    CompileResult = boss_load:compile_view(App, Filename, TplAdapter, OutDir, TranslatorPid),
+    lager:notice("~p [tag_html] Compile Result ~p", [Type, CompileResult]);
 
 compile_cbapp(_Type, _App, _Path) -> 
     lager:info("ignore file ~p", [filename:join([_App |_Path])]),

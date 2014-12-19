@@ -26,7 +26,9 @@
          compile_model/2,
          compile/2,
          compile_view_dir_erlydtl/5,
-         compile_view/5]).
+         compile_view/5,
+         view_custom_tags_dir_module/1
+        ]).
 
 -include("boss_web.hrl").
 
@@ -68,7 +70,7 @@
 -define(CUSTOM_TAGS_DIR_MODULE, '_view_lib_tags').
 
 %% code from project github.com/synrc/active 
-%%
+%% modified for CB
 start() ->
     start([]).
 start(Options) ->
