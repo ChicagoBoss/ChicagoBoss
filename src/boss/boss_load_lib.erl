@@ -10,6 +10,15 @@ compile(Type, App, Path, CBApps) ->
             compile_app(Type, App, Path)
     end.
                      
+%% Compile Other
+compile_app(deps, App, Path = ["src" | _]) ->
+    Filename = filename:join(["deps", App] ++ Path),
+    OutDir   = filename:join(["deps", App, "ebin"]),
+    CompileResult = boss_load:maybe_compile(Filename, 
+                                            list_to_atom(App), 
+                                            OutDir, 
+                                            fun boss_load:compile/2),
+    lager:notice("[~s] ~p", [App, CompileResult]);
 
 compile_app(_, _, _) -> ignore.
 
