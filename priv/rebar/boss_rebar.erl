@@ -175,7 +175,6 @@ start_dev_cmd(_RebarConf, BossConf, AppFile) ->
   EbinDirs	= all_ebin_dirs(BossConf, AppFile),
   CookieOpt	= cookie_option(BossConf),
   VmArgs	= vm_args(BossConf),
-  %%io:format("~s -pa ~s -boss developing_app ~s -boot start_sasl -config boss ~s -s reloader -s lager -s boss ~s~s~n",
   io:format("~s -pa ~s -boss developing_app ~s -boot start_sasl -config boss ~s -s lager -s boss ~s~s~n",
     [ErlCmd, string:join(EbinDirs, " -pa "), AppName, CookieOpt, NameArg, VmArgs]),
   ok.

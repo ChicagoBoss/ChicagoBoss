@@ -1,4 +1,5 @@
 -module(boss_load_lib).
+-author('chan.sisowath@gmail.com').
 
 -export([compile/4]).
 
@@ -14,7 +15,7 @@ compile(Type, App, Path, CBApps) ->
 %% Compile Other
 %% ------------------------------------------------------------------------------    
 
-%% todo: fix here should not use alepo here to 
+%% todo: should not use alepo here to 
 %%       compile other apps than a cb app
 compile_app(deps, App, Path = ["src" | _]) ->
     Filename = filename:join(["deps", App] ++ Path),
@@ -51,7 +52,7 @@ compile_cbapp(top, App, Path = ["src", "model"| _]) ->
                                             list_to_atom(App), 
                                             OutDir, 
                                             fun boss_load:compile_model/2),
-    lager:notice("top [model] Compile Result ~p", [CompileResult]);
+    lager:notice("top [model] ~p", [CompileResult]);
 
 %% MAIL CONTROLLER
 compile_cbapp(top, App, Path = ["src", "mail"| _]) ->
@@ -61,7 +62,7 @@ compile_cbapp(top, App, Path = ["src", "mail"| _]) ->
                                             list_to_atom(App), 
                                             OutDir, 
                                             fun boss_load:compile/2),
-    lager:notice("top [mail] Compile Result ~p", [CompileResult]);
+    lager:notice("top [mail] ~p", [CompileResult]);
 
 %% LIBRARY
 compile_cbapp(top, App, Path = ["src", "lib"| _]) ->
@@ -71,7 +72,7 @@ compile_cbapp(top, App, Path = ["src", "lib"| _]) ->
                                             list_to_atom(App), 
                                             OutDir, 
                                             fun boss_load:compile/2),
-    lager:notice("top [lib] Compile Result ~p", [CompileResult]);
+    lager:notice("top [lib] ~p", [CompileResult]);
 
 %% WEBSOCKET
 compile_cbapp(top, App, Path = ["src", "websocket"| _]) ->
@@ -81,7 +82,7 @@ compile_cbapp(top, App, Path = ["src", "websocket"| _]) ->
                                             list_to_atom(App), 
                                             OutDir, 
                                             fun boss_load:compile/2),
-    lager:notice("top [lib] Compile Result ~p", [CompileResult]);
+    lager:notice("top [websocket] Compile Result ~p", [CompileResult]);
 
 %% VIEW LIB HELPER, FILTER
 compile_cbapp(top, App, Path = ["src", "view", "lib", "filter_modules"| _]) ->
@@ -91,7 +92,7 @@ compile_cbapp(top, App, Path = ["src", "view", "lib", "filter_modules"| _]) ->
                                             list_to_atom(App), 
                                             OutDir, 
                                             fun boss_load:compile/2),
-    lager:notice("top [lib] Compile Result ~p", [CompileResult]);
+    lager:notice("top [view filter] ~p", [CompileResult]);
 
 %% VIEW LIB HELPER, TAG
 compile_cbapp(top, App, Path = ["src", "view", "lib", "tag_modules"| _]) ->
@@ -101,7 +102,7 @@ compile_cbapp(top, App, Path = ["src", "view", "lib", "tag_modules"| _]) ->
                                             list_to_atom(App), 
                                             OutDir, 
                                             fun boss_load:compile/2),
-    lager:notice("top [lib] Compile Result ~p", [CompileResult]);
+    lager:notice("top [view tag] ~p", [CompileResult]);
 
 %% VIEW LIB TAG_HTML
 compile_cbapp(top, App, Path = ["src", "view", "lib", "tag_html"| _]) when is_list(App)->
@@ -114,7 +115,7 @@ compile_cbapp(top, App, _Path = ["src", "view", "lib", "tag_html"| _]) ->
                                                        boss_load:view_custom_tags_dir_module(App),
                                                        OutDir, 
                                                        TranslatorPid),
-    lager:notice("top [tag_html] Compile Result ~p", [CompileResult]);
+    lager:notice("top [tag_html] ~p", [CompileResult]);
 
 
 %% VIEW
@@ -127,7 +128,7 @@ compile_cbapp(top, App, Path = ["src", "view"| _]) ->
     TplAdapter = boss_files:template_adapter_for_extension(
                    filename:extension(Filename)),
     CompileResult = boss_load:compile_view(App, Filename, TplAdapter, OutDir, TranslatorPid),
-    lager:notice("top [tag_html] Compile Result ~p, ~p", [CompileResult, TranslatorPid]);
+    lager:notice("top [view] ~p, ~p", [CompileResult, TranslatorPid]);
         
 
                             %% ------------------- %%
@@ -143,7 +144,7 @@ compile_cbapp(Type, App, Path = ["src", "controller", _]) ->
                                             list_to_atom(App), 
                                             OutDir, 
                                             fun boss_load:compile_controller/2),
-    lager:notice("~p [controller] Compile Result ~p", [Type, CompileResult]);
+    lager:notice("~p [controller] ~p", [Type, CompileResult]);
 
 %% MODEL
 compile_cbapp(Type, App, Path = ["src", "model"| _]) ->
@@ -154,7 +155,7 @@ compile_cbapp(Type, App, Path = ["src", "model"| _]) ->
                                             list_to_atom(App), 
                                             OutDir, 
                                             fun boss_load:compile_model/2),
-    lager:notice("~p [model] Compile Result ~p", [Type, CompileResult]);
+    lager:notice("~p [model] ~p", [Type, CompileResult]);
 
 %% LIRARY
 compile_cbapp(Type, App, Path = ["src", "lib"| _]) ->
@@ -165,7 +166,7 @@ compile_cbapp(Type, App, Path = ["src", "lib"| _]) ->
                                             list_to_atom(App), 
                                             OutDir, 
                                             fun boss_load:compile/2),
-    lager:notice("~p [lib] Compile Result ~p", [Type, CompileResult]);
+    lager:notice("~p [lib] ~p", [Type, CompileResult]);
 
 %% MAIL CONTROLLER
 compile_cbapp(Type, App, Path = ["src", "mail"| _]) ->
@@ -176,7 +177,7 @@ compile_cbapp(Type, App, Path = ["src", "mail"| _]) ->
                                             list_to_atom(App), 
                                             OutDir, 
                                             fun boss_load:compile/2),
-    lager:notice("~p [mail] Compile Result ~p", [Type, CompileResult]);
+    lager:notice("~p [mail] ~p", [Type, CompileResult]);
 
 %% WEBSOCKET
 compile_cbapp(Type, App, Path = ["src", "websocket"| _]) ->
@@ -187,7 +188,7 @@ compile_cbapp(Type, App, Path = ["src", "websocket"| _]) ->
                                             list_to_atom(App), 
                                             OutDir, 
                                             fun boss_load:compile/2),
-    lager:notice("~p [mail] Compile Result ~p", [Type, CompileResult]);
+    lager:notice("~p [websocket] ~p", [Type, CompileResult]);
 
 %% VIEW LIB HELPER, FILER
 compile_cbapp(Type, App, Path = ["src", "view", "lib", "filter_modules"| _]) ->
@@ -198,7 +199,7 @@ compile_cbapp(Type, App, Path = ["src", "view", "lib", "filter_modules"| _]) ->
                                             list_to_atom(App), 
                                             OutDir, 
                                             fun boss_load:compile/2),
-    lager:notice("~p [mail] Compile Result ~p", [Type, CompileResult]);
+    lager:notice("~p [view filter] ~p", [Type, CompileResult]);
 
 %% VIEW LIB HELPER, TAG
 compile_cbapp(Type, App, Path = ["src", "view", "lib", "tag_modules"| _]) ->
@@ -209,7 +210,7 @@ compile_cbapp(Type, App, Path = ["src", "view", "lib", "tag_modules"| _]) ->
                                             list_to_atom(App), 
                                             OutDir, 
                                             fun boss_load:compile/2),
-    lager:notice("~p [mail] Compile Result ~p", [Type, CompileResult]);
+    lager:notice("~p [view tag] ~p", [Type, CompileResult]);
 
 %% VIEW LIB TAG_HTML
 compile_cbapp(Type, App, Path = ["src", "view", "lib", "tag_html"| _]) when is_list(App)->
@@ -223,7 +224,7 @@ compile_cbapp(Type, App, _Path = ["src", "view", "lib", "tag_html"| _]) ->
                                                        boss_load:view_custom_tags_dir_module(App),
                                                        OutDir, 
                                                        TranslatorPid),
-    lager:notice("top [tag_html] Compile Result ~p", [CompileResult]);
+    lager:notice("top [vieaw tag_html] ~p", [CompileResult]);
 
 %% VIEW
 compile_cbapp(Type, App, Path = ["src", "view"| _]) when is_list(App) ->
@@ -236,10 +237,10 @@ compile_cbapp(Type, App, Path = ["src", "view"| _]) ->
     TplAdapter = boss_files:template_adapter_for_extension(
                    filename:extension(Filename)),
     CompileResult = boss_load:compile_view(App, Filename, TplAdapter, OutDir, TranslatorPid),
-    lager:notice("~p [tag_html] Compile Result ~p", [Type, CompileResult]);
+    lager:notice("~p [view] ~p", [Type, CompileResult]);
 
 compile_cbapp(_Type, _App, _Path) -> 
-    lager:info("ignore file ~p", [filename:join([_App |_Path])]),
+    lager:info("boss_load ignore ~p", [filename:join([_App |_Path])]),
     ignore.
 
 
