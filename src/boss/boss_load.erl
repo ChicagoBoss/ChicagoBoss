@@ -21,7 +21,7 @@
     ]).
 -include("boss_web.hrl").
 
--record(load_state, {last, root}).
+-record(load_state, {last, root, apps}).
 
 
 -ifdef(TEST).
@@ -64,10 +64,12 @@ start_link() ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
 init(Opts) -> 
-    error_logger:info_msg("Starting boss_load..."),
+    lager:info("Starting boss_load..."),
     fs:subscribe(), 
+    Apps = [{atom_to_list(App), App} || X<- boss_env:get_env(applications)],
+    lager:info("Boss Apps under watch ~p",[Apps]),
     erlang:process_flag(priority, low), 
-    {ok, #load_state{last=fresh, root=fs:path()}}.
+    {ok, #load_state{last=fresh, root=fs:path(), apps=Apps}}.
 
 
 handle_call(_Request, _From, State) -> {reply, ok, State}.
@@ -94,78 +96,37 @@ terminate(_Reason, _State) -> ok.
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
 
 
-path_event(C, [E|_Events], _State) when E =:= created; E =:= modified; E =:= renamed ->
+path_event(C, [E|_Events], #load_state{apps=CBApps}) when E =:= created; E =:= modified; E =:= renamed ->
     case path_filter(C) of 
-        true  -> otp(C); 
+        true  -> otp(C, CBApps); 
         false -> ignore 
     end;
 path_event(C, [_E|Events], State) -> 
     path_event(C, Events, State);
 path_event(_, [], _State) -> done.
 
-otp(["deps",App|Rest]) -> app(deps, App,Rest);
-otp(["apps",App|Rest]) -> app(apps, App,Rest);
-otp([Some|Path])       -> app(top, top(),[Some|Path]);
-otp(_)                 -> ok.
+otp(["deps",App|Rest], CBApps) -> app(deps, App,Rest, CBApps);
+otp(["apps",App|Rest], CBApps) -> app(apps, App,Rest, CBApps);
+otp([Some|Path], CBApps)       -> app(top, top(),[Some|Path], CBApps);
+otp(_,_)                       -> ok.
 
-app(deps, App, ["ebin",Module|_]) -> skip; %%load_ebin(App, Module); %%
-app(_, App, ["ebin",Module|_])    -> load_ebin(App, Module);
-app(_, App, ["priv","fdlink"++_]) -> skip;
-app(_, App, ["priv","mac"++_])    -> skip;
-app(_, App, ["priv","windows"++_])-> skip;
-app(_, App, ["priv","linux"++_])  -> skip;
-app(Type, App, Path=["priv"|_]) -> 
+app(deps, App, ["ebin",Module|_], _) -> skip; %%load_ebin(App, Module); %%
+app(_, App, ["ebin",Module|_], _)    -> load_ebin(App, Module);
+app(_, App, ["priv","fdlink"++_], _) -> skip;
+app(_, App, ["priv","mac"++_], _)    -> skip;
+app(_, App, ["priv","windows"++_], _)-> skip;
+app(_, App, ["priv","linux"++_], _)  -> skip;
+app(Type, App, Path=["priv"|_], CBApps) -> 
     case hd(lists:reverse(Path)) of
         ".#" ++ _ -> skip; % mc temp files
-        Else      -> compile_app(Type, App, Path) 
+        Else      -> boss_load_lib:compile_app(Type, App, Path, CBApps) 
     end;
-app(Type, App,Path=["include"|_])   -> compile_app(Type, App, Path);
-app(Type, App,Path=["src"|_])       -> compile_app(Type, App, Path);
-app(_, _, _)                        -> ok.
+app(Type, App,Path=["include"|_], CBApps)   -> boss_load_lib:compile_app(Type, App, Path, CBApps);
+app(Type, App,Path=["src"|_], CBApps)       -> boss_load_lib:compile_app(Type, App, Path, CBApps);
+app(_, _, _, _)                        -> ok.
 
 top() -> 
     lists:last(filename:split(filename:absname(""))).
-
-compile_app(deps, App, Path) -> skip;
-compile_app(top, App, Path = ["src", "controller", _]) ->
-    Filename = filename:join(Path),
-    OutDir = "ebin",
-    CompileResult = maybe_compile(Filename, list_to_atom(App), OutDir, fun compile_controller/2),
-    lager:notice("Compile Result ~p", [CompileResult]);
-
-compile_app(top, App, Path = ["src", "model", _]) ->
-    Filename = filename:join(Path),
-    OutDir = "ebin",
-    CompileResult = maybe_compile(Filename, list_to_atom(App), OutDir, fun compile_model/2),
-    lager:notice("Compile Result ~p", [CompileResult]);
-
-%% compile_app(top, App, Path = ["src", "view", _]) ->
-%%     Filename = filename:join(Path),
-%%     error_logger:info_msg("compile view module ~p",[Filename]),
-%%     CompileResult = maybe_compile(Filename, list_to_atom(App), undefined, fun compile_view/2),
-%%     error_logger:info_msg("Compile Result ~p", [CompileResult]).
-
-%% compile_app(top, App, Path = ["src", "lib", _]) ->
-%%     Filename = filename:join(Path),
-%%     error_logger:info_msg("compile lib module ~p",[Filename]),
-%%     CompileResult = maybe_compile(Filename, list_to_atom(App), undefined, fun compile_lib/2),
-%%     error_logger:info_msg("Compile Result ~p", [CompileResult]).
-
-%%
-%% compile CB app in folders apps
-%% 
-compile_app(apps, App, Path = ["src", "controller", _]) ->
-    Filename = filename:join(["apps", App] ++ Path),
-    OutDir = filename:join(["apps",App,"ebin"]),
-    CompileResult = maybe_compile(Filename, list_to_atom(App), OutDir, fun compile_controller/2),
-    lager:notice("apps Compile Result ~p", [CompileResult]);
-
-compile_app(apps, App, Path = ["src", "model", _]) ->
-    Filename = filename:join(["apps", App] ++ Path),
-    OutDir = filename:join(["apps",App,"ebin"]),
-    CompileResult = maybe_compile(Filename, list_to_atom(App), OutDir, fun compile_model/2),
-    lager:notice("apps Compile Result ~p", [CompileResult]).
-
 
 load_ebin(App,EName) ->
     Tokens = string:tokens(EName, "."),
@@ -484,10 +445,10 @@ view_doc_root(ViewPath) ->
         [boss_files_util:web_view_path(), boss_files_util:mail_view_path()]).
 
 compile_view_dir_erlydtl(Application, LibPath, Module, OutDir, TranslatorPid) ->
-    TagHelpers                = lists:map(fun erlang:list_to_atom/1, boss_files_util:view_tag_helper_list(Application)),
-    FilterHelpers        = lists:map(fun erlang:list_to_atom/1, boss_files_util:view_filter_helper_list(Application)),
-    ExtraTagHelpers	= boss_env:get_env(template_tag_modules, []),
-    ExtraFilterHelpers	= boss_env:get_env(template_filter_modules, []),
+    TagHelpers         = lists:map(fun erlang:list_to_atom/1, boss_files_util:view_tag_helper_list(Application)),
+    FilterHelpers      = lists:map(fun erlang:list_to_atom/1, boss_files_util:view_filter_helper_list(Application)),
+    ExtraTagHelpers    = boss_env:get_env(template_tag_modules, []),
+    ExtraFilterHelpers = boss_env:get_env(template_filter_modules, []),
 
     lager:info("Compile Modules ~p  ~p", [LibPath, Module]),
     Res = erlydtl:compile_dir(LibPath, Module,
