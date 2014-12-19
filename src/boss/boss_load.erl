@@ -77,9 +77,15 @@ init(Opts) ->
     CBApps = boss_env:get_env(applications, []),
     lager:info("Boss Apps under watch ~p",[CBApps]),
     erlang:process_flag(priority, low), 
-    {ok, #load_state{last=fresh, root=fs:path(), apps=CBApps}}.
+    {ok, #load_state{last=fresh, root=fs:path(), 
+                     apps=[atom_to_list(App) || App <- CBApps]}}.
 
-
+handle_call({add_app, App}, _From, #load_state{apps=Apps}=State) -> 
+    NewApps = Apps ++ [atom_to_list(App)],
+    {reply, ok, State#load_state{apps=NewApps}};
+handle_call({del_app, App}, _From, #load_state{apps=Apps}=State) -> 
+    NewApps = Apps -- [atom_to_list(App)],
+    {reply, ok, State#load_state{apps=NewApps}};
 handle_call(_Request, _From, State) -> {reply, ok, State}.
 handle_cast(_Msg, State) -> {noreply, State}.
 handle_info({_Pid, {fs,file_event}, {Path, Flags}}, #load_state{root=Root} = State) ->
