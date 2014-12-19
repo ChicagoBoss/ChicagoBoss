@@ -103,6 +103,19 @@ compile_cbapp(top, App, Path = ["src", "view", "lib", "tag_modules"| _]) ->
                                             fun boss_load:compile/2),
     lager:notice("top [lib] Compile Result ~p", [CompileResult]);
 
+%% VIEW LIB TAG_HTML
+compile_cbapp(top, App, Path = ["src", "view", "lib", "tag_html"| _]) when is_list(App)->
+    compile_cbapp(top, list_to_atom(App), Path);
+compile_cbapp(top, App, _Path = ["src", "view", "lib", "tag_html"| _]) ->
+    OutDir = "ebin",
+    TranslatorPid = boss_web:translator_pi(App),
+    CompileResult = boss_load:compile_view_dir_erlydtl(App,
+                                                       boss_files_util:view_html_tags_path(), 
+                                                       boss_load:view_custom_tags_dir_module(App),
+                                                       OutDir, 
+                                                       TranslatorPid),
+    lager:notice("top [tag_html] Compile Result ~p", [CompileResult]);
+
 
 %% VIEW
 compile_cbapp(Type, App, Path = ["src", "view"| _]) when is_list(App) ->
@@ -198,6 +211,19 @@ compile_cbapp(Type, App, Path = ["src", "view", "lib", "tag_modules"| _]) ->
                                             fun boss_load:compile/2),
     lager:notice("~p [mail] Compile Result ~p", [Type, CompileResult]);
 
+%% VIEW LIB TAG_HTML
+compile_cbapp(Type, App, Path = ["src", "view", "lib", "tag_html"| _]) when is_list(App)->
+    compile_cbapp(top, list_to_atom(App), Path);
+compile_cbapp(Type, App, _Path = ["src", "view", "lib", "tag_html"| _]) ->
+    Folder = atom_to_list(Type),
+    OutDir = filename:join([Folder, App, "ebin"]),
+    TranslatorPid = boss_web:translator_pi(App),
+    CompileResult = boss_load:compile_view_dir_erlydtl(App,
+                                                       boss_files_util:view_html_tags_path(), 
+                                                       boss_load:view_custom_tags_dir_module(App),
+                                                       OutDir, 
+                                                       TranslatorPid),
+    lager:notice("top [tag_html] Compile Result ~p", [CompileResult]);
 
 %% VIEW
 compile_cbapp(Type, App, Path = ["src", "view"| _]) when is_list(App) ->
