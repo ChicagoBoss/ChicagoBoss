@@ -83,6 +83,26 @@ compile_cbapp(top, App, Path = ["src", "websocket"| _]) ->
                                             fun boss_load:compile/2),
     lager:notice("top [lib] Compile Result ~p", [CompileResult]);
 
+%% VIEW LIB HELPER, FILTER
+compile_cbapp(top, App, Path = ["src", "view", "lib", "filter_modules"| _]) ->
+    Filename = filename:join(Path),
+    OutDir = "ebin",
+    CompileResult = boss_load:maybe_compile(Filename, 
+                                            list_to_atom(App), 
+                                            OutDir, 
+                                            fun boss_load:compile/2),
+    lager:notice("top [lib] Compile Result ~p", [CompileResult]);
+
+%% VIEW LIB HELPER, TAG
+compile_cbapp(top, App, Path = ["src", "view", "lib", "tag_modules"| _]) ->
+    Filename = filename:join(Path),
+    OutDir = "ebin",
+    CompileResult = boss_load:maybe_compile(Filename, 
+                                            list_to_atom(App), 
+                                            OutDir, 
+                                            fun boss_load:compile/2),
+    lager:notice("top [lib] Compile Result ~p", [CompileResult]);
+
 
 %% IN APPS/DEPS FOLDER
 %% CONTROLLER
@@ -116,7 +136,7 @@ compile_cbapp(Type, App, Path = ["src", "lib"| _]) ->
                                             list_to_atom(App), 
                                             OutDir, 
                                             fun boss_load:compile/2),
-    lager:notice("top [lib] Compile Result ~p", [CompileResult]);
+    lager:notice("~p [lib] Compile Result ~p", [Type, CompileResult]);
 
 %% MAIL CONTROLLER
 compile_cbapp(Type, App, Path = ["src", "mail"| _]) ->
@@ -127,9 +147,9 @@ compile_cbapp(Type, App, Path = ["src", "mail"| _]) ->
                                             list_to_atom(App), 
                                             OutDir, 
                                             fun boss_load:compile/2),
-    lager:notice("top [mail] Compile Result ~p", [CompileResult]);
+    lager:notice("~p [mail] Compile Result ~p", [Type, CompileResult]);
 
-%% websocket
+%% WEBSOCKET
 compile_cbapp(Type, App, Path = ["src", "websocket"| _]) ->
     Folder = atom_to_list(Type),
     Filename = filename:join([Folder, App] ++ Path),
@@ -138,7 +158,29 @@ compile_cbapp(Type, App, Path = ["src", "websocket"| _]) ->
                                             list_to_atom(App), 
                                             OutDir, 
                                             fun boss_load:compile/2),
-    lager:notice("top [mail] Compile Result ~p", [CompileResult]);
+    lager:notice("~p [mail] Compile Result ~p", [Type, CompileResult]);
+
+%% VIEW LIB HELPER, FILER
+compile_cbapp(Type, App, Path = ["src", "view", "lib", "filter_modules"| _]) ->
+    Folder = atom_to_list(Type),
+    Filename = filename:join([Folder, App] ++ Path),
+    OutDir = filename:join([Folder, App, "ebin"]),
+    CompileResult = boss_load:maybe_compile(Filename, 
+                                            list_to_atom(App), 
+                                            OutDir, 
+                                            fun boss_load:compile/2),
+    lager:notice("~p [mail] Compile Result ~p", [Type, CompileResult]);
+
+%% VIEW LIB HELPER, TAG
+compile_cbapp(Type, App, Path = ["src", "view", "lib", "tag_modules"| _]) ->
+    Folder = atom_to_list(Type),
+    Filename = filename:join([Folder, App] ++ Path),
+    OutDir = filename:join([Folder, App, "ebin"]),
+    CompileResult = boss_load:maybe_compile(Filename, 
+                                            list_to_atom(App), 
+                                            OutDir, 
+                                            fun boss_load:compile/2),
+    lager:notice("~p [mail] Compile Result ~p", [Type, CompileResult]);
 
 compile_cbapp(_Type, _App, _Path) -> 
     lager:info("ignore file ~p", [filename:join([_App |_Path])]),
