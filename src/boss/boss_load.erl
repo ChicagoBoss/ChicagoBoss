@@ -95,8 +95,12 @@ handle_info({_Pid, {fs,file_event}, {Path, Flags}}, #load_state{root=Root} = Sta
     Result = case lists:prefix(Cur, P) of
         true ->
             Components = P -- Cur,
-            %%error_logger:info_msg("event: ~p ~p", [Components, Flags]),
-            path_event(Components, Flags, State);
+            case filelib:file_size(Path) of
+                0 -> ignore;
+                _ ->
+                    %%error_logger:info_msg("event: ~p ~p", [Components, Flags]),
+                    path_event(Components, Flags, State)
+            end;
         false ->
             ok
     end,
@@ -241,15 +245,15 @@ load_all_modules(Application, TranslatorSupPid, OutDir) ->
 -type op()       :: {op_key(), fun((atom(), string()) -> error(_))}.
 -spec(make_ops_list(pid()) -> [op()]).
 make_ops_list(TranslatorPid) ->
-    [{test_modules,	       fun load_test_modules/2 		},
+    [{test_modules,	       fun load_test_modules/2                  },
      {lib_modules,	       fun load_libraries/2			},
      {websocket_modules,       fun load_services_websockets/2		},
      {mail_modules,	       fun load_mail_controllers/2		},
      {controller_modules,      fun load_web_controllers/2		},
      {model_modules,	       fun load_models/2			},
      {view_lib_helper_modules, fun load_view_lib_modules/2		},
-     {view_lib_tags_modules,      load_view_lib(_, _, TranslatorPid)	},
-     {view_modules,               load_views(_, _,    TranslatorPid)	}].
+     {view_lib_tags_modules,       load_view_lib(_, _, TranslatorPid)	},
+     {view_modules,                load_views(_, _,    TranslatorPid)	}].
     
 -spec make_all_modules(atom(), string(), [op()]) -> [{atom(),_}].
 
