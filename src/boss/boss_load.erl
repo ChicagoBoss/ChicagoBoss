@@ -19,6 +19,14 @@
         module_is_loaded/1,
         reload_all/0
     ]).
+
+-export([compile_controller/2,
+         maybe_compile/4,
+         compile_model/2,
+         compile/2,
+         compile_view_dir_erlydtl/5,
+         compile_view/5]).
+
 -include("boss_web.hrl").
 
 -record(load_state, {last, root, apps}).
@@ -66,10 +74,10 @@ start_link() ->
 init(Opts) -> 
     lager:info("Starting boss_load..."),
     fs:subscribe(), 
-    Apps = [{atom_to_list(App), App} || X<- boss_env:get_env(applications)],
-    lager:info("Boss Apps under watch ~p",[Apps]),
+    CBApps = boss_env:get_env(applications, []),
+    lager:info("Boss Apps under watch ~p",[CBApps]),
     erlang:process_flag(priority, low), 
-    {ok, #load_state{last=fresh, root=fs:path(), apps=Apps}}.
+    {ok, #load_state{last=fresh, root=fs:path(), apps=CBApps}}.
 
 
 handle_call(_Request, _From, State) -> {reply, ok, State}.
@@ -119,10 +127,10 @@ app(_, App, ["priv","linux"++_], _)  -> skip;
 app(Type, App, Path=["priv"|_], CBApps) -> 
     case hd(lists:reverse(Path)) of
         ".#" ++ _ -> skip; % mc temp files
-        Else      -> boss_load_lib:compile_app(Type, App, Path, CBApps) 
+        Else      -> boss_load_lib:compile(Type, App, Path, CBApps) 
     end;
-app(Type, App,Path=["include"|_], CBApps)   -> boss_load_lib:compile_app(Type, App, Path, CBApps);
-app(Type, App,Path=["src"|_], CBApps)       -> boss_load_lib:compile_app(Type, App, Path, CBApps);
+app(Type, App,Path=["include"|_], CBApps)   -> boss_load_lib:compile(Type, App, Path, CBApps);
+app(Type, App,Path=["src"|_], CBApps)       -> boss_load_lib:compile(Type, App, Path, CBApps);
 app(_, _, _, _)                        -> ok.
 
 top() -> 
