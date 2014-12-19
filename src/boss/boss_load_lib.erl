@@ -15,7 +15,7 @@ compile(Type, App, Path, CBApps) ->
 %% Compile Other
 %% ------------------------------------------------------------------------------    
 
-%% todo: should not use alepo here to 
+%% todo: maybe should not use aleppo here to 
 %%       compile other apps than a cb app
 compile_app(deps, App, Path = ["src" | _]) ->
     Filename = filename:join(["deps", App] ++ Path),
@@ -34,6 +34,16 @@ compile_app(_, _, _) -> ignore.
 %% ------------------------------------------------------------------------------    
 
 %% TOP FOLLDER 
+%% TEST FUNTINAL
+compile_cbapp(top, App, Path = ["src", "test", "functional"| _]) ->
+    Filename = filename:join(Path),
+    OutDir = "ebin",
+    CompileResult = boss_load:maybe_compile(Filename, 
+                                            list_to_atom(App), 
+                                            OutDir, 
+                                            fun boss_load:compile/2),
+    lager:notice("top [test] ~p", [CompileResult]);
+
 %% CONTROLLER & MODEL
 compile_cbapp(top, App, Path = ["src", "controller", _]) ->
     Filename = filename:join(Path),
@@ -135,6 +145,17 @@ compile_cbapp(top, App, Path = ["src", "view"| _]) ->
 
 
 %% IN APPS/DEPS FOLDER
+%% TEST FUNCTIONAL
+compile_cbapp(Type, App, Path = ["src", "test", "functional"| _]) ->
+    Folder = atom_to_list(Type),
+    Filename = filename:join([Folder, App] ++ Path),
+    OutDir = filename:join([Folder, App, "ebin"]),
+    CompileResult = boss_load:maybe_compile(Filename, 
+                                            list_to_atom(App), 
+                                            OutDir, 
+                                            fun boss_load:compile/2),
+    lager:notice("~p [test] ~p", [Type, CompileResult]);
+
 %% CONTROLLER
 compile_cbapp(Type, App, Path = ["src", "controller", _]) ->
     Folder = atom_to_list(Type),
