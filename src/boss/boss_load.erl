@@ -133,6 +133,7 @@ app(_, App, ["priv","linux"++_], _)  -> skip;
 app(Type, App, Path=["priv"|_], CBApps) -> 
     case hd(lists:reverse(Path)) of
         ".#" ++ _ -> skip; % mc temp files
+        %"#"  ++ _ -> skip;
         Else      -> boss_load_lib:compile(Type, App, Path, CBApps)
     end;
 app(Type, App,Path=["include"|_], CBApps)   -> boss_load_lib:compile(Type, App, Path, CBApps);
@@ -193,7 +194,13 @@ path_shorten_r([], Acc, _) -> Acc.
 % Filters
 %
 
-path_filter(L) -> not lists:any(fun(E) -> not path_filter_dir(E) end, L) andalso path_filter_last(lists:last(L)).
+path_filter(L) -> 
+    not 
+        lists:any(fun(E) -> 
+                          not path_filter_dir(E) 
+                  end,L) 
+        andalso 
+        path_filter_last(lists:last(L)).
 
 path_filter_dir(".git") -> false;
 path_filter_dir(".hg")  -> false;
@@ -206,9 +213,15 @@ path_filter_last(".rebarinfo")     -> false;   % new rebars
 path_filter_last("LICENSE")        -> false;
 path_filter_last("4913 (deleted)") -> false;   % vim magical file
 path_filter_last("4913")           -> false;
-path_filter_last(".erl~")          -> false;
-path_filter_last(".erl#")          -> false;
-path_filter_last(_)                -> true.
+path_filter_last(Last)             -> 
+    case Last of
+        "#" ++ _ -> false; % emacs temp file
+        ".#" ++ _ -> false; 
+        Last -> check_extension(filename:extension(Last))
+    end.
+check_extension(".erl~") -> false;
+check_extension(".erl#") -> false;
+check_extension(_) -> true.
 
 
 load_all_modules(Application, TranslatorSupPid) ->
