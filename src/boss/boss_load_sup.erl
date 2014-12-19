@@ -15,9 +15,9 @@ start_link(StartArgs) ->
 
 init(StartArgs) ->
     {ok, {{one_for_one, 10, 10}, [
-                {boss_load, {boss_load, start_link, [StartArgs]},
+                {load_controller, {boss_load_controller, start_link, [StartArgs]},
                     permanent,
                     2000,
                     worker,
-                    [boss_load]}
+                    [boss_load_controller]}
                 ]}}.
