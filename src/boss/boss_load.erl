@@ -225,6 +225,7 @@ path_filter_last(Last)             ->
     end.
 check_extension(".erl~") -> false;
 check_extension(".erl#") -> false;
+check_extension(".swp") -> false; % vi temp file
 check_extension(_) -> true.
 
 
