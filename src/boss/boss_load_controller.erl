@@ -43,8 +43,12 @@ handle_info({_Pid, {fs,file_event}, {Path, Flags}}, #state{root=Root} = State) -
             case filelib:file_size(Path) of
                 0 -> ignore;
                 _ ->
-                    error_logger:info_msg("event: ~p ~p", [Components, Flags]),
-                    path_event(Components, Flags, State)
+                    %%error_logger:info_msg("event: ~p ~p", [Components, Flags]),
+                    case boss_env:boss_env() of
+                        development ->
+                            path_event(Components, Flags, State);
+                        _ -> ignore
+                    end
             end;
         false ->
             ok
