@@ -49,7 +49,7 @@
 -spec incoming_mail_controller_module(application()) -> atom().
 -spec load_all_modules(application(), atom() | pid() | {atom(),atom()}) ->
    {'ok',module_types()}.
--spec load_all_modules(application(),atom() | pid() | {atom(),atom()},_) ->
+-spec load_all_modules(application(),atom() | pid() | {atom(),atom()}, 'undefined' | string()) ->
    {'ok',module_types()}.
 -spec load_all_modules_and_emit_app_file(application(),atom() | binary() | [atom() | [any()] | char()]) -> 
    'ok' | {'error',atom()}.
