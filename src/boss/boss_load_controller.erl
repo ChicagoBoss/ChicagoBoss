@@ -43,7 +43,7 @@ handle_info({_Pid, {fs,file_event}, {Path, Flags}}, #state{root=Root} = State) -
             case filelib:file_size(Path) of
                 0 -> ignore;
                 _ ->
-                    %%error_logger:info_msg("event: ~p ~p", [Components, Flags]),
+                    error_logger:info_msg("event: ~p ~p", [Components, Flags]),
                     path_event(Components, Flags, State)
             end;
         false ->
@@ -87,7 +87,8 @@ app(Type, App, Path=["priv"|_], CBApps) ->
     end;
 app(Type, App,Path=["include"|_], CBApps)   -> boss_load_lib:compile(Type, App, Path, CBApps);
 app(Type, App,Path=["src"|_], CBApps)       -> boss_load_lib:compile(Type, App, Path, CBApps);
-app(_, _, _, _)                        -> ok.
+app(Type, App,Path=["test"|_], CBApps)      -> boss_load_lib:compile(Type, App, Path, CBApps);
+app(_, _, _, _)                             -> ok.
 
 top() -> 
     lists:last(filename:split(filename:absname(""))).
