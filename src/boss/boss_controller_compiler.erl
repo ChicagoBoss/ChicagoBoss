@@ -39,7 +39,7 @@
 
 
 -spec add_routes_to_forms([export_attr1(),...]) -> [syntaxTree()].
--spec add_routes_to_forms([any()],[any()],[token_ast_cons(),...]) -> [any(),...].
+-spec add_routes_to_forms([any()],[any()],[token_ast_cons(),...]|nil) -> [any(),...].
 
 -spec add_export_to_forms([export_attr1(),...])                    -> [export_attr()].
 -spec add_export_to_forms([any(),...],[any()])                     -> [any(),...].

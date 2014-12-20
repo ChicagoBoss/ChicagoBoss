@@ -343,8 +343,10 @@ compile_view_dir_erlydtl(Application, LibPath, Module, OutDir, TranslatorPid) ->
                                       end
                               end}]),
     case Res of
-        ok ->
-            {ok, Module};
+        {ok, M} ->
+            {ok, M};
+        {ok, M, _} ->
+            {ok, M};           
         Err -> Err
     end.
 
