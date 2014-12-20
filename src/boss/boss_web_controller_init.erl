@@ -144,7 +144,6 @@ init_services() ->
     boss_session:start(),
     Env.
 
-%%start_load(development) ->
-start_load(_) ->
-    boss_load:start().
-%%start_load(_) -> skip.
+start_load(development) ->
+    boss_load:start();
+start_load(_) -> skip.

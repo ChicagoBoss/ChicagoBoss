@@ -11,13 +11,15 @@ boss_env() ->
         Val -> Val
     end.
 
+
 -spec setup_boss_env() -> types:execution_mode().
-setup_boss_env() ->	
-    put(boss_environment, production), production.
-    %% case boss_load:module_is_loaded(reloader) of
-    %%     true  -> put(boss_environment, development), development;
-    %%     false -> put(boss_environment, production), production
-    %% end.			
+setup_boss_env() -> 
+    case get_env(mode, undefined) of
+        undefined -> put(boss_environment, production), production;
+        Mode -> put(boss_environment, Mode), Mode
+    end.
+
+
 
 -spec get_env(atom(),atom(),any()) -> any().
 get_env(App, Key, Default) when is_atom(App), is_atom(Key) ->
