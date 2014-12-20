@@ -427,13 +427,20 @@ load_views_inner(Application, OutDir, TranslatorPid) ->
 	    TemplateAdapter = boss_files:template_adapter_for_extension(
 				filename:extension(File)),
 	    ViewR = compile_view(Application, File, TemplateAdapter, OutDir, TranslatorPid),
+        lager:info("load_views_inner ~p",[ViewR]),
 	    case ViewR of
-		{ok, Module} ->
-		    [Module|Acc];
-		{error, Reason} ->
-		    lager:error("Unable to compile ~p because of ~p",
-				[File, Reason]),
-		    Acc
+    		{ok, R} ->
+                case R of
+                    Module when is_atom(Module)-> [Module|Acc];
+                    Err -> 
+                        lager:error("Unable to compile ~p because of ~p",
+                            [File, Err]),
+                        Acc
+                end;
+    		{error, Reason} ->
+    		    lager:error("Unable to compile ~p because of ~p",
+    				[File, Reason]),
+    		    Acc
 	    end
     end.
 
