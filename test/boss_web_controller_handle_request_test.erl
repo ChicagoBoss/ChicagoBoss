@@ -29,9 +29,10 @@ fold_operations_test() ->
 				       boss_web_controller_handle_request:fold_operations(app,List))
 		  end,perms(OKList)).
 
-make_controlle_names_test() ->
-    ?assertEqual(["foo","bar","baz"], 
-		 boss_web_controller_handle_request:make_controller_names([foo,bar,baz])).
+%% fun removed from the factoring in the new compile scheme, not need anymore,
+%% make_controlle_names_test() ->
+%%     ?assertEqual(["foo","bar","baz"], 
+%% 		 boss_web_controller_handle_request:make_controller_names([foo,bar,baz])).
 
 
 make_etag_test() ->
