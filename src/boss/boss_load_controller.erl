@@ -83,15 +83,15 @@ otp(_,_)                       -> ok.
 
 app(deps, App, ["ebin",Module|_], _) -> skip; %%load_ebin(App, Module); %%
 app(_, App, ["ebin",Module|_], _)    -> load_ebin(App, Module);
-app(_, App, ["priv","fdlink"++_], _) -> skip;
-app(_, App, ["priv","mac"++_], _)    -> skip;
-app(_, App, ["priv","windows"++_], _)-> skip;
-app(_, App, ["priv","linux"++_], _)  -> skip;
+app(_, _, ["priv","fdlink"++_], _) -> skip;
+app(_, _, ["priv","mac"++_], _)    -> skip;
+app(_, _, ["priv","windows"++_], _)-> skip;
+app(_, _, ["priv","linux"++_], _)  -> skip;
 app(Type, App, Path=["priv"|_], CBApps) -> 
     case hd(lists:reverse(Path)) of
         ".#" ++ _ -> skip; % mc temp files
         "#"  ++ _ -> skip;
-        Else      -> boss_load_lib:compile(Type, App, Path, CBApps)
+        _      -> boss_load_lib:compile(Type, App, Path, CBApps)
     end;
 app(Type, App,Path=["include"|_], CBApps)   -> boss_load_lib:compile(Type, App, Path, CBApps);
 app(Type, App,Path=["src"|_], CBApps)       -> boss_load_lib:compile(Type, App, Path, CBApps);
