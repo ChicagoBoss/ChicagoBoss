@@ -12,7 +12,8 @@
         static_prefix/1,
         translator_pid/1,
         router_pid/1,
-        application_info/1]).
+        application_info/1,
+        set_mode/1]).
 
 reload_routes() ->
     gen_server:call(boss_web, reload_routes).
@@ -52,3 +53,6 @@ router_pid(AppName) ->
 
 application_info(App) ->
     gen_server:call(boss_web, {application_info, App}).
+
+set_mode(Mode) ->
+    gen_server:call(boss_web, {set_mode, Mode}).

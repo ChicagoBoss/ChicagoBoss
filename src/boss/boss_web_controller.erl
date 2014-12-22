@@ -68,23 +68,26 @@ init_web_server_options() ->
 
 
 init(Config) ->
-    ThisNode					         = erlang:node(),
-    Env						             = boss_web_controller_init:init_services(),
-    {ok,MasterNode}				         = boss_web_controller_init:init_master_node(Env, ThisNode),
-    
+    ThisNode = erlang:node(),
+    Env	     = boss_web_controller_init:init_services(),
+    {ok,MasterNode} = boss_web_controller_init:init_master_node(Env, ThisNode),    
     boss_web_controller_init:init_mail_service(),
-    RouterAdapter                        = boss_env:router_adapter(), 
+    RouterAdapter = boss_env:router_adapter(), 
 
     {RequestMod, ResponseMod, ServerMod} = init_web_server_options(),
-    {SSLEnable, SSLOptions}			     = boss_web_controller_init:init_ssl(),
-    ServicesSupPid				         = boss_web_controller_init:init_master_services(ThisNode, MasterNode),
-    ServerConfig                         = init_server_config(Config, RequestMod, ResponseMod, RouterAdapter),
-    Pid						             = boss_web_controller_init:init_webserver(
-                                                ThisNode, MasterNode, ServerMod, SSLEnable,
-											    SSLOptions, ServicesSupPid, ServerConfig),
-    {ok, #state{ 
+    {SSLEnable, SSLOptions} = boss_web_controller_init:init_ssl(),
+    ServicesSupPid = boss_web_controller_init:init_master_services(ThisNode, MasterNode),
+    ServerConfig = init_server_config(Config, RequestMod, ResponseMod, RouterAdapter),
+    Pid	= boss_web_controller_init:init_webserver(
+            ThisNode, MasterNode, ServerMod, SSLEnable,
+            SSLOptions, ServicesSupPid, ServerConfig),
+    
+    {ok, LoadSupPid} = boss_load:start([{mode, Env}]),
+
+    {ok, #state{
                 router_adapter  = RouterAdapter,
-                service_sup_pid = ServicesSupPid, 
+                service_sup_pid = ServicesSupPid,
+                boss_load_sup   = LoadSupPid,
                 http_pid        = Pid, 
                 is_master_node  = (ThisNode =:= MasterNode) }, 0}.
 
@@ -107,7 +110,10 @@ handle_info(timeout, #state{service_sup_pid = ServicesSupPid} = State) ->
     {noreply, State#state{ applications = AppInfoList }}.
 
 
-
+handle_call({set_mode, Mode}, _From, #state{boss_load_sup=SupPid}=State) ->
+    [{_, LoadPid, _, _}] = supervisor:which_children(SupPid),
+    {ok, Mode} = gen_server:call(LoadPid, {set_mode, Mode}),
+    {reply, {ok, Mode}, State};    
 handle_call({reload_translation, Locale}, _From, State) ->
     lists:map(fun(AppInfo) ->
                 [{_, TranslatorPid, _, _}] = supervisor:which_children(AppInfo#boss_app_info.translator_sup_pid),

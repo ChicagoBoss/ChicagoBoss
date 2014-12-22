@@ -137,13 +137,9 @@ compile_cbapp(top, App, Path = ["src", "view"| _]) ->
     TranslatorPid = boss_web:translator_pid(App),    
     TplAdapter = boss_files:template_adapter_for_extension(
                    filename:extension(Filename)),
-    {ok, CompileResult} = boss_load:compile_view(App, Filename, TplAdapter, OutDir, TranslatorPid),
-    [begin 
-        case is_atom(X) of 
-            true -> lager:info("view ~p compile ok",[Filename]);
-            false -> lager:info("view ~p compile error ~p",[X])
-        end
-     end||X <- CompileResult];
+
+    CompileResult = boss_load:compile_view(App, Filename, TplAdapter, OutDir, TranslatorPid),
+    lager:notice("top [view] ~p", [CompileResult]);
         
 
                             %% ------------------- %%

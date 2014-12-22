@@ -25,6 +25,7 @@
 -record(state, {
         applications	= []	::[ #boss_app_info{}],
         router_adapter          ::atom(),
+        boss_load_sup           ::pid(),
         service_sup_pid		::pid(),
         http_pid		::pid(),
         smtp_pid		::pid(),

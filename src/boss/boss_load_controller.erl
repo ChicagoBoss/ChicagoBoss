@@ -7,7 +7,7 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 
--record(state, {last, root, apps}).
+-record(state, {mode, last, root, apps}).
 
 %% code from project github.com/synrc/active 
 %% modified for CB
@@ -18,11 +18,12 @@ start_link(Options) ->
 
 init(Opts) -> 
     lager:info("Starting boss_load..."),
-    fs:subscribe(), 
+    fs:subscribe(),
+    Mode = proplists:get_value(mode, Opts, development), 
     CBApps = boss_env:get_env(applications, []),
     lager:info("Boss Apps under watch ~p",[CBApps]),
     erlang:process_flag(priority, low), 
-    {ok, #state{last=fresh, root=fs:path(), 
+    {ok, #state{mode=Mode, last=fresh, root=fs:path(), 
                      apps=[atom_to_list(App) || App <- CBApps]}}.
 
 handle_call({add_app, App}, _From, #state{apps=Apps}=State) -> 
@@ -31,9 +32,12 @@ handle_call({add_app, App}, _From, #state{apps=Apps}=State) ->
 handle_call({del_app, App}, _From, #state{apps=Apps}=State) -> 
     NewApps = Apps -- [atom_to_list(App)],
     {reply, ok, State#state{apps=NewApps}};
+handle_call({set_mode, Mode}, _From, State) -> 
+    lager:info("boss_load set mode to ~p",[Mode]),
+    {reply, {ok, Mode}, State#state{mode=Mode}};
 handle_call(_Request, _From, State) -> {reply, ok, State}.
 handle_cast(_Msg, State) -> {noreply, State}.
-handle_info({_Pid, {fs,file_event}, {Path, Flags}}, #state{root=Root} = State) ->
+handle_info({_Pid, {fs,file_event}, {Path, Flags}}, #state{mode=Mode, root=Root} = State) ->
     Cur = path_shorten(filename:split(Root)),
     P = filename:split(Path),
 
@@ -43,8 +47,8 @@ handle_info({_Pid, {fs,file_event}, {Path, Flags}}, #state{root=Root} = State) -
             case filelib:file_size(Path) of
                 0 -> ignore;
                 _ ->
-                    %%error_logger:info_msg("event: ~p ~p", [Components, Flags]),
-                    case boss_env:boss_env() of
+                    %error_logger:info_msg("~p event: ~p ~p", [Mode, Components, Flags]),
+                    case Mode of
                         development ->
                             path_event(Components, Flags, State);
                         _ -> ignore

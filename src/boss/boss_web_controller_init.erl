@@ -135,10 +135,8 @@ init_mail_service() ->
 init_services() ->
     init_lager(),
     application:start(elixir),
-
     Env = boss_env:setup_boss_env(),
     error_logger:info_msg("Starting Boss in ~p mode....~n", [Env]),
-    boss_load:start(),
     boss_model_manager:start(),
     init_cache(),
     boss_session:start(),

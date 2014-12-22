@@ -421,11 +421,13 @@ process_result(_, _, {error, Payload, Headers}) ->
 process_result(_, _, {StatusCode, Payload, Headers}) when is_integer(StatusCode) ->
     {StatusCode, boss_web_controller:merge_headers(Headers, [{"Content-Type", "text/html"}]), Payload}.
 
-execute(Mode, {Controller, _, _} = Location, AppInfo, RequestContext) -> 
+execute(_Mode, {Controller, _, _} = Location, AppInfo, RequestContext) -> 
     case boss_files:is_controller_present(AppInfo#boss_app_info.application, Controller,
             AppInfo#boss_app_info.controller_modules) of
-        true -> execute_action(Location, AppInfo, RequestContext);
-        false -> {boss_web_controller_render:render_view(Location, AppInfo, RequestContext)}
+        true -> 
+            execute_action(Location, AppInfo, RequestContext);
+        false -> 
+            {boss_web_controller_render:render_view(Location, AppInfo, RequestContext)}
     end.
 
 handle_doc(development, {"doc", ModelName, _}, AppInfo, RequestContext) ->
@@ -441,7 +443,7 @@ handle_doc(development, {"doc", ModelName, _}, AppInfo, RequestContext) ->
             Controllers = AppInfo#boss_app_info.controller_modules,
             case lists:member(ModelName, Controllers) of
                     true ->
-                        Controller = list_to_atom(ModelName),  
+                        Controller = list_to_atom(ModelName),                          
                         {Controller, Edoc} = edoc:get_doc(boss_files_util:web_controller_path(ModelName ++ ".erl"), [{private, true}]),
                         {ok, correct_edoc_html(Edoc, AppInfo), []};
                     false ->
@@ -461,7 +463,6 @@ handle_doc(development, {"doc", ModelName, _}, AppInfo, RequestContext) ->
             end
     end,
     {Result, proplists:get_value(session_id, RequestContext)}.
-
 
 
 %% @desc function to correct path errors in HTML output produced by Edoc
