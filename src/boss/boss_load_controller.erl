@@ -181,6 +181,7 @@ path_filter_last(Last)             ->
 check_extension(".erl~") -> false;
 check_extension(".erl#") -> false;
 check_extension(".swp") -> false; % vi temp file
+check_extension([]) -> false; % don't crash if file have no extension
 check_extension(L) -> 
     case lists:last(L) of
         $~ -> false;
