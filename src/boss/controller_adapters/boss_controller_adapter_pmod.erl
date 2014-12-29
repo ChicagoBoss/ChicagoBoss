@@ -95,7 +95,7 @@ action({_, ExportStrings} = Info, RequestContext) ->
         4 ->
             ControllerInstance:ActionAtom(RequestMethod, Tokens, AuthInfo);
         _ ->
-	    {CMod, _} = ControllerInstance,
+	    CMod = element(1, ControllerInstance),
 	    lager:notice("[ChicagoBoss] The function ~p:~s/2 is not exported, "++
 			 "if in doubt add -export([~s/2])) to the module",
 			 [CMod, Action, Action]),
