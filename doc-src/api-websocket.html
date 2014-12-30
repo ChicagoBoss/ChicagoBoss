@@ -6,6 +6,10 @@
 <div class="code">
     WebSocket ! {text, &lt;&lt;"some text"&gt;&gt;}
 </div>
+<p>Furthermore, you can broadcast a message that will be handled by your <em>handle_broadcast/2</em> function by using the module name of your websocket module and the proper method of the <em>boss_service_worker</em> module:</p>
+<div class="code">
+    boss_service_worker:broadcast(myapp_myservice_websocket, MyMessage).
+</div>
 <p>To handle incoming messages from clients, you'll need to create WebSocket controllers in your project's <code>src/websocket</code> directory. Each controller module should have a name of the form <code>&lt;app name&gt;_&lt;service name&gt;_websocket.erl</code> and be a parameterized module with parameters for <code>Req</code> and <code>SessionId</code>, e.g.:</p>
 
 <div class="code">
