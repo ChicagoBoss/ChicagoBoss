@@ -12,3 +12,6 @@ src/boss/*.dtl.erl
 *.sw?
 .rebar
 plt/
+/.project
+/.settings/
+/ebin/
