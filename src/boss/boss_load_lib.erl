@@ -2,10 +2,12 @@
 -author('chan.sisowath@gmail.com').
 
 -export([compile/4]).
+-export([compile_cbapp/3]).
 
 compile(Type, App, Path, CBApps) -> 
     case lists:member(App, CBApps) of
         true  -> 
+            lager:info("true Type ~p, ~p, ~p",[Type, App, Path]),
             compile_cbapp(Type, App, Path);
         false -> 
             compile_app(Type, App, Path)
@@ -258,13 +260,13 @@ compile_cbapp(Type, App, Path = ["src", "view"| _]) ->
     TranslatorPid = boss_web:translator_pid(App),    
     TplAdapter = boss_files:template_adapter_for_extension(
                    filename:extension(Filename)),
-    {ok, CompileResult} = boss_load:compile_view(App, Filename, TplAdapter, OutDir, TranslatorPid),
-    [begin 
-        case is_atom(X) of 
-            true -> lager:info("view ~p compile ok",[Filename]);
-            false -> lager:info("view ~p compile error ~p",[X])
-        end
-     end||X <- CompileResult];
+    %% lager:info("### App ~p",[App]),
+    %% lager:info("### Filename ~p",[Filename]),
+    %% lager:info("### TplAdapter ~p",[TplAdapter]),
+    %% lager:info("### OutDir ~p",[OutDir]),
+    %% lager:info("### TranslatorPid ~p",[TranslatorPid]),
+    CompileResult = boss_load:compile_view(App, Filename, TplAdapter, OutDir, TranslatorPid),
+    lager:notice("deps [view] ~p", [CompileResult]);
 
 compile_cbapp(_Type, _App, _Path) -> 
     lager:info("boss_load ignore ~p", [filename:join([_App |_Path])]),
