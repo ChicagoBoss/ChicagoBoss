@@ -431,37 +431,42 @@ execute(_Mode, {Controller, _, _} = Location, AppInfo, RequestContext) ->
     end.
 
 handle_doc(development, {"doc", ModelName, _}, AppInfo, RequestContext) ->
+    lager:info("~p doc for ~p",[AppInfo#boss_app_info.application, ModelName]),
     ModelModules = AppInfo#boss_app_info.model_modules,
     Result = case lists:member(ModelName, ModelModules) of
-        true ->
-            Model = list_to_atom(ModelName),
-            {Model, Edoc} = boss_model_manager:edoc_module(
-                boss_files_util:model_path(ModelName ++ ".erl"), [{private, true}]),
-            {ok, correct_edoc_html(Edoc, AppInfo), []};
-        false ->
-            % ok, it's not model, so it could be web controller
-            Controllers = AppInfo#boss_app_info.controller_modules,
-            case lists:member(ModelName, Controllers) of
-                    true ->
-                        Controller = list_to_atom(ModelName),                          
-                        {Controller, Edoc} = edoc:get_doc(boss_files_util:web_controller_path(ModelName ++ ".erl"), [{private, true}]),
-                        {ok, correct_edoc_html(Edoc, AppInfo), []};
-                    false ->
-                        % nope, so just render index page
-                        case boss_html_doc_template:render([
-                                    {application, AppInfo#boss_app_info.application},
-                                    {'_doc', AppInfo#boss_app_info.doc_prefix},
-                                    {'_static', AppInfo#boss_app_info.static_prefix},
-                                    {'_base_url', AppInfo#boss_app_info.base_url},
-                                    {models, ModelModules},
-                                    {controllers, Controllers}]) of
-                            {ok, Payload} ->
-                                {ok, Payload, []};
-                            Err ->
-                                Err
-                        end
-            end
-    end,
+                 true ->
+                     Model = list_to_atom(ModelName),
+                     App = AppInfo#boss_app_info.application,
+                     Dir = model_path(App),
+                     ModelFiles = boss_files:find_file(Dir),
+                     File =  find_file(ModelName ++ ".erl", ModelFiles),
+                     {Model, Edoc} = boss_model_manager:edoc_module(
+                                       File, [{private, true}]),
+                     {ok,  correct_edoc_html(Edoc, AppInfo), []};
+                 false ->
+                     %% ok, it's not model, so it could be web controller
+                     Controllers = AppInfo#boss_app_info.controller_modules,
+                     case lists:member(ModelName, Controllers) of
+                         true ->
+                             Controller = list_to_atom(ModelName),                          
+                             {Controller, Edoc} = edoc:get_doc(boss_files_util:web_controller_path(ModelName ++ ".erl"), [{private, true}]),
+                             {ok, correct_edoc_html(Edoc, AppInfo), []};
+                         false ->
+                             %% nope, so just render index page
+                             case boss_html_doc_template:render([
+                                                                 {application, AppInfo#boss_app_info.application},
+                                                                 {'_doc', AppInfo#boss_app_info.doc_prefix},
+                                                                 {'_static', AppInfo#boss_app_info.static_prefix},
+                                                                 {'_base_url', AppInfo#boss_app_info.base_url},
+                                                                 {models, ModelModules},
+                                                                 {controllers, Controllers}]) of
+                                 {ok, Payload} ->
+                                     {ok, Payload, []};
+                                 Err ->
+                                     Err
+                             end
+                     end
+             end,
     {Result, proplists:get_value(session_id, RequestContext)}.
 
 
@@ -474,3 +479,19 @@ correct_edoc_html(Edoc, AppInfo) ->
 
 execute_action(Location, AppInfo, RequestContext) ->
     boss_web_controller:execute_action(Location, AppInfo, RequestContext, []).
+
+root_path(App) when is_atom(App)->
+    PrivDir = filename:split(code:priv_dir(App)),
+    ["priv" | P ] = lists:reverse(PrivDir, []),
+    lists:reverse(P, []).
+
+model_path(App) when is_atom(App)->
+    filename:join(root_path(App) ++ ["src","model"]).
+
+find_file(_File, []) ->  not_found;
+find_file(File, [Path|T]) -> 
+    Last = lists:last(filename:split(Path)),
+    case File of
+        Last -> Path;
+        _ -> find_file(File, T)
+    end.
