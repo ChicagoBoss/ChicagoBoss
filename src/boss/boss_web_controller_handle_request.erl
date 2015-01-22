@@ -455,7 +455,18 @@ handle_doc(development, {"doc", DocName, _}, AppInfo, RequestContext) ->
                              {ok, correct_edoc_html(Edoc, AppInfo), []};
                          false ->
                              %% nope, so just render index page
+                             Apps = boss_env:get_env(applications, [AppInfo#boss_app_info.application]),
+                             Docs = [begin 
+                                         BaseURL   = boss_env:get_env(App, base_url, "/"),
+                                         DocPrefix = boss_env:get_env(App, doc_prefix, "/doc"),
+                                         DocUrl    = case BaseURL of
+                                                         "/" -> DocPrefix;
+                                                         _ -> BaseURL ++ DocPrefix
+                                                     end,
+                                         [{doc_url, DocUrl},{doc_app, App}]
+                                     end || App <-Apps],
                              case boss_html_doc_template:render([
+                                                                 {docs, Docs},
                                                                  {application, AppInfo#boss_app_info.application},
                                                                  {'_doc', AppInfo#boss_app_info.doc_prefix},
                                                                  {'_static', AppInfo#boss_app_info.static_prefix},
