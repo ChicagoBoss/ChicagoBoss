@@ -120,21 +120,21 @@ make_etag(App, StaticPrefix, File) ->
 
 %% TODO: Refactor
 build_dynamic_response(App, Request, Response, Url, RouterAdapter) ->
-    Mode            = boss_web_controller_util:execution_mode(App),
-    AppInfo		    = boss_web:application_info(App),
+    Mode           = boss_web_controller_util:execution_mode(App),
+    AppInfo        = boss_web:application_info(App),
 
-    TranslatorPid	= boss_web:translator_pid(App),
-    RouterPid		= boss_web:router_pid(App),
-    ControllerList	= boss_files:web_controller_list(App),
-    TR              = set_timer(Request, 
-                                Url, 
-                                Mode,
-				                AppInfo, 
-                                TranslatorPid,
-				                RouterPid,
-				                ControllerList,
-                                RouterAdapter
-                                ),
+    TranslatorPidi = boss_web:translator_pid(App),
+    RouterPid	   = boss_web:router_pid(App),
+    ControllerList = boss_files:web_controller_list(App),
+    TR             = set_timer(Request, 
+                               Url, 
+                               Mode,
+                               AppInfo, 
+                               TranslatorPid,
+                               RouterPid,
+                               ControllerList,
+                               RouterAdapter
+                              ),
     {Time, {StatusCode, Headers, Payload}} = TR,
     ErrorFormat		= "~s ~s [~p] ~p ~pms",
     RequestMethod	= Request:request_method(),

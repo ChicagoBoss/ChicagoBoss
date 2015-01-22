@@ -18,11 +18,15 @@ start_boss_applications( Applications, ServicesSupPid, #state{router_adapter=Rou
                     _ ->                        
                         BaseURL        = boss_env:get_env(AppName, base_url, "/"),
                         StaticPrefix   = boss_env:get_env(AppName, static_prefix, "/static"),
-                        DocPrefix      = boss_env:get_env(AppName, doc_prefix, "/doc"),
+                        DocPrefix1     = boss_env:get_env(AppName, doc_prefix, "/doc"),
+                        DocPrefix      = case BaseURL of
+                                             "/" -> DocPrefix1;
+                                             _ -> BaseURL ++ DocPrefix1
+                                         end,
                         DomainList     = boss_env:get_env(AppName, domains, all),                
                         ModelList      = boss_files:model_list(AppName),
                         ViewList       = boss_files:view_module_list(AppName),
-                        IsMasterNode   = boss_env:is_master_node(),                        
+                        IsMasterNode   = boss_env:is_master_node(),
                         ControllerList = case boss_files:web_controller_list(AppName) of
                                              [] -> case boss_env:boss_env() == development of
                                                        true  -> [];
