@@ -41,18 +41,18 @@ handle_application(Req, ResponseMod, _Request, _FullUrl, undefined, _RouterAdapt
     Response1	 = (Response:status_code(404)):data(["No application configured at this URL"]),
     Response1:build_response();
 handle_application(Req, ResponseMod, Request, FullUrl,  App, RouterAdapter) ->
-    BaseURL		 = boss_web:base_url(App),
+    BaseURL	 = boss_web:base_url(App),
     DocRoot      = boss_files_util:static_path(App),
     StaticPrefix = boss_web:static_prefix(App),
-    Url			 = lists:nthtail(length(BaseURL), FullUrl),
+    Url		 = lists:nthtail(length(BaseURL), FullUrl),
     Response	 = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
     SpecialFiles = boss_env:get_env(App,
-            					   static_files,
-            					   [
-                                    "/favicon.ico", 
-                                    "/apple-touch-icon.png", 
-                                    "/robots.txt"
-                                   ]),
+                                    static_files,
+                                    [
+                                     "/favicon.ico", 
+                                     "/apple-touch-icon.png", 
+                                     "/robots.txt"
+                                    ]),
     IsSpecialFile= lists:member(Url,SpecialFiles),
    
     handle_result(Request, App, StaticPrefix, Url, Response, IsSpecialFile, RouterAdapter).
@@ -120,10 +120,10 @@ make_etag(App, StaticPrefix, File) ->
 
 %% TODO: Refactor
 build_dynamic_response(App, Request, Response, Url, RouterAdapter) ->
-    Mode           = boss_web_controller_util:execution_mode(App),
+    Mode           = boss_env:boss_env(), 
     AppInfo        = boss_web:application_info(App),
 
-    TranslatorPidi = boss_web:translator_pid(App),
+    TranslatorPid  = boss_web:translator_pid(App),
     RouterPid	   = boss_web:router_pid(App),
     ControllerList = boss_files:web_controller_list(App),
     TR             = set_timer(Request, 
@@ -138,7 +138,8 @@ build_dynamic_response(App, Request, Response, Url, RouterAdapter) ->
     {Time, {StatusCode, Headers, Payload}} = TR,
     ErrorFormat		= "~s ~s [~p] ~p ~pms",
     RequestMethod	= Request:request_method(),
-    FullUrl		    = Request:path(),
+    FullUrl		= Request:path(),
+    lager:info("Mode ~p, FullUrl ~p", [Mode, FullUrl]),
     ErrorArgs		= [RequestMethod, FullUrl, App, StatusCode, Time div 1000],
     log_status_code(StatusCode, ErrorFormat, ErrorArgs),
     Response1		= (Response:status_code(StatusCode)):data(Payload),
@@ -245,7 +246,6 @@ process_request(AppInfo, Req, Mode, Url, RouterAdapter) ->
     process_result_and_add_session(AppInfo, [{request, Req}, {session_id, SessionID1}], Result).
 
 process_dynamic_request(#boss_app_info{ router_pid = RouterPid } = AppInfo, Req, Mode, Url, RouterAdapter) ->
-    
     {Result, SessionID1} = case RouterAdapter:route(RouterPid, Url) of
             			       {ok, {Application, Controller, Action, Tokens}} when Application =:= AppInfo#boss_app_info.application ->
             				   Location = {Controller, Action, Tokens},
@@ -430,26 +430,28 @@ execute(_Mode, {Controller, _, _} = Location, AppInfo, RequestContext) ->
             {boss_web_controller_render:render_view(Location, AppInfo, RequestContext)}
     end.
 
-handle_doc(development, {"doc", ModelName, _}, AppInfo, RequestContext) ->
-    lager:info("~p doc for ~p",[AppInfo#boss_app_info.application, ModelName]),
+handle_doc(development, {"doc", DocName, _}, AppInfo, RequestContext) ->
     ModelModules = AppInfo#boss_app_info.model_modules,
-    Result = case lists:member(ModelName, ModelModules) of
+    App = AppInfo#boss_app_info.application,
+    Result = case lists:member(DocName, ModelModules) of
                  true ->
-                     Model = list_to_atom(ModelName),
-                     App = AppInfo#boss_app_info.application,
-                     Dir = model_path(App),
+                     Model = list_to_atom(DocName),
+                     Dir = model_dir(App),
                      ModelFiles = boss_files:find_file(Dir),
-                     File =  find_file(ModelName ++ ".erl", ModelFiles),
+                     File =  find_file(DocName ++ ".erl", ModelFiles),
                      {Model, Edoc} = boss_model_manager:edoc_module(
                                        File, [{private, true}]),
                      {ok,  correct_edoc_html(Edoc, AppInfo), []};
                  false ->
                      %% ok, it's not model, so it could be web controller
                      Controllers = AppInfo#boss_app_info.controller_modules,
-                     case lists:member(ModelName, Controllers) of
+                     case lists:member(DocName, Controllers) of
                          true ->
-                             Controller = list_to_atom(ModelName),                          
-                             {Controller, Edoc} = edoc:get_doc(boss_files_util:web_controller_path(ModelName ++ ".erl"), [{private, true}]),
+                             Controller = list_to_atom(DocName),
+                             Dir = controller_dir(App),
+                             CtrlFiles = boss_files:find_file(Dir),
+                             CtrlFile =  find_file(DocName ++ ".erl", CtrlFiles),
+                             {Controller, Edoc} = edoc:get_doc(CtrlFile, [{private, true}]),
                              {ok, correct_edoc_html(Edoc, AppInfo), []};
                          false ->
                              %% nope, so just render index page
@@ -480,13 +482,15 @@ correct_edoc_html(Edoc, AppInfo) ->
 execute_action(Location, AppInfo, RequestContext) ->
     boss_web_controller:execute_action(Location, AppInfo, RequestContext, []).
 
-root_path(App) when is_atom(App)->
+root_dir(App) when is_atom(App)->
     PrivDir = filename:split(code:priv_dir(App)),
     ["priv" | P ] = lists:reverse(PrivDir, []),
     lists:reverse(P, []).
 
-model_path(App) when is_atom(App)->
-    filename:join(root_path(App) ++ ["src","model"]).
+model_dir(App) when is_atom(App)->
+    filename:join(root_dir(App) ++ ["src","model"]).
+controller_dir(App) when is_atom(App)->
+    filename:join(root_dir(App) ++ ["src","controller"]).
 
 find_file(_File, []) ->  not_found;
 find_file(File, [Path|T]) -> 
