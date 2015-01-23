@@ -18,38 +18,58 @@
         find_file/1
     ]).
 
+-export([root_dir/1, controller_dir/1]).
 -export([make_extentions/1]).
 
 -ifdef(TEST).
 -compile(export_all).
 -endif.
 
--type input_string() :: string().
--spec root_priv_dir(_) -> input_string().
--spec websocket_mapping(_,_,[any()]) -> any().
--spec mail_controller_path() -> [input_string(),...].
--spec websocket_list(_) -> [any()].
--spec model_list(_) -> [any()].
--spec lib_module_list(_) -> [any()].
--spec web_controller_list(_) -> [any()].
--spec view_module_list(_) -> [string()].
--spec is_controller_present(_,_,_) -> boolean().
--spec web_controller(_,_,_) -> any().
--spec compiler_adapter_for_extension(_) -> any().
--spec template_adapter_for_extension(nonempty_maybe_improper_list()) -> any().
--spec adapter_for_extension(_,['boss_compiler_adapter_elixir' | 'boss_compiler_adapter_erlang' | 'boss_compiler_adapter_lfe' | 'boss_template_adapter_eex' | 'boss_template_adapter_erlydtl' | 'boss_template_adapter_jade',...]) -> any().
--spec template_extensions() -> any().
--spec view_file_list() -> [any()].
--spec init_file_list(_) -> [string()].
--spec routes_file(atom() | string() | number()) -> input_string().
--spec language_list(_) -> [input_string()].
--spec language_list_dir(input_string()) -> [input_string()].
--spec dot_app_src(atom() | string() | number()) -> input_string().
--spec model_list(_,[input_string(),...]) -> [any()].
+%% -type input_string() :: string().
+%% -spec root_priv_dir(_) -> input_string().
+%% -spec websocket_mapping(_,_,[any()]) -> any().
+%% -spec mail_controller_path() -> [input_string(),...].
+%% -spec websocket_list(_) -> [any()].
+%% -spec model_list(_) -> [any()].
+%% -spec lib_module_list(_) -> [any()].
+%% -spec web_controller_list(_) -> [any()].
+%% -spec view_module_list(_) -> [string()].
+%% -spec is_controller_present(_,_,_) -> boolean().
+%% -spec web_controller(_,_,_) -> any().
+%% -spec compiler_adapter_for_extension(_) -> any().
+%% -spec template_adapter_for_extension(nonempty_maybe_improper_list()) -> any().
+%% -spec adapter_for_extension(_,['boss_compiler_adapter_elixir' | 'boss_compiler_adapter_erlang' | 'boss_compiler_adapter_lfe' | 'boss_template_adapter_eex' | 'boss_template_adapter_erlydtl' | 'boss_template_adapter_jade',...]) -> any().
+%% -spec template_extensions() -> any().
+%% -spec view_file_list() -> [any()].
+%% -spec init_file_list(_) -> [string()].
+%% -spec routes_file(atom() | string() | number()) -> input_string().
+%% -spec language_list(_) -> [input_string()].
+%% -spec language_list_dir(input_string()) -> [input_string()].
+%% -spec dot_app_src(atom() | string() | number()) -> input_string().
+%% -spec model_list(_,[input_string(),...]) -> [any()].
 
--spec find_file(input_string()) -> [string()].
--spec find_file(input_string(),[]) -> [string()].
--spec find_file([string()],input_string(),[string()],[]) -> [string()].
+%% -spec find_file(input_string()) -> [string()].
+%% -spec find_file(input_string(),[]) -> [string()].
+%% -spec find_file([string()],input_string(),[string()],[]) -> [string()].
+
+root_dir(App) ->
+    [_|Root] = lists:reverse(filename:split(code:priv_dir(App))),
+    lists:reverse(Root).    
+
+controller_dir(App) ->
+    filename:join( root_dir(App) ++ ["src", "controller"]).
+
+module_list(Dir) when is_list(Dir)->
+    CompilerAdapters = boss_files_util:compiler_adapters(),
+    Extensions = 
+        lists:foldl(fun (Adapter, Acc) ->
+                            lists:map(fun(Ext) -> "." ++ Ext end, 
+                                      Adapter:file_extensions()) ++ Acc
+                    end, [], CompilerAdapters),
+    Files = find_file(Dir),
+    [begin
+         hd(string:tokens(lists:last(filename:split(X)), "."))
+     end || X <- Files, lists:member(filename:extension(X), Extensions)].
 
 root_priv_dir(App) -> 
     Default = filename:join([boss_files_util:root_dir(), "priv"]),
@@ -61,6 +81,7 @@ root_priv_dir(App) ->
                 Dir -> Dir
             end
    end.
+
 websocket_mapping(BaseURL, AppName, Modules) ->
     lists:foldl(fun([], Acc) -> Acc;
 		   (M, Acc) -> 
@@ -107,13 +128,21 @@ lib_module_list(AppName) ->
 
 web_controller_list(AppName) when is_list(AppName) ->
     web_controller_list(list_to_atom(AppName));
+
 web_controller_list(AppName) ->
-    case boss_env:is_developing_app(AppName) of
-        true ->
-            boss_files_util:module_list(AppName, boss_files_util:web_controller_path());
-        false ->
-            lists:map(fun atom_to_list/1, boss_env:get_env(AppName, controller_modules, []))
-    end.
+    web_controller_list(AppName, boss_env:boss_env()).
+web_controller_list(AppName, development) ->
+    module_list(controller_dir(AppName));
+web_controller_list(AppName, production) ->
+    lists:map(fun atom_to_list/1, boss_env:get_env(AppName, controller_modules, [])).
+
+%% web_controller_list(AppName) ->
+%%     case boss_env:is_developing_app(AppName) of
+%%         true ->
+%%             boss_files_util:module_list(AppName, boss_files_util:web_controller_path());
+%%         false ->
+%%             lists:map(fun atom_to_list/1, boss_env:get_env(AppName, controller_modules, []))
+%%     end.
 
 view_module_list(AppName) ->
     case boss_env:is_developing_app(AppName) of
