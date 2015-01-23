@@ -1,24 +1,41 @@
 -module(boss_files).
 -export([
-	websocket_list/1,
-	websocket_mapping/3,
-        dot_app_src/1,
-                    init_file_list/1, language_list/1, mail_controller_path/0,
-        model_list/1,
-        lib_module_list/1,
-        routes_file/1,
-        root_priv_dir/1, view_file_list/0,
-                                                        view_module_list/1,
-        compiler_adapter_for_extension/1,
-        template_adapter_for_extension/1,
-        template_extensions/0,
-        is_controller_present/3,
-        web_controller/3,
-        web_controller_list/1,
-        find_file/1
+         websocket_list/1,
+         websocket_mapping/3,
+         dot_app_src/1,
+         init_file_list/1, language_list/1, mail_controller_path/0,
+         model_list/1,
+         lib_module_list/1,
+         routes_file/1,
+         root_priv_dir/1, view_file_list/0,
+         view_module_list/1,
+         compiler_adapter_for_extension/1,
+         template_adapter_for_extension/1,
+         template_extensions/0,
+         is_controller_present/3,
+         web_controller/3,
+         web_controller_list/1,
+         find_file/1
     ]).
 
--export([root_dir/1, controller_dir/1]).
+-export([
+         root_dir/1
+        ,model_dir/1
+        ,controller_dir/1
+        ,view_dir/1
+        ,mail_dir/1
+        ,websocket_dir/1
+        ,lib_dir/1
+        ,libview_dir/1
+        ,static_dir/1
+        ,init_dir/1
+        ,rebar_dir/1
+        ,priv_dir/1
+        ,lang_dir/1
+        ,make_extentions/0
+        ,module_list/1
+        ]).
+
 -export([make_extentions/1]).
 
 -ifdef(TEST).
@@ -56,8 +73,30 @@ root_dir(App) ->
     [_|Root] = lists:reverse(filename:split(code:priv_dir(App))),
     lists:reverse(Root).    
 
-controller_dir(App) ->
-    filename:join( root_dir(App) ++ ["src", "controller"]).
+model_dir(App) when is_atom(App)->
+    filename:join( root_dir(App) ++ [ "src", "model"]).
+controller_dir(App) when is_atom(App)->
+    filename:join( root_dir(App) ++ [ "src", "controller"]).
+view_dir(App) ->
+    filename:join( root_dir(App) ++ [ "src", "view"]).
+mail_dir(App) ->
+    filename:join( root_dir(App) ++ [ "src", "mail"]).
+websocket_dir(App) ->
+    filename:join( root_dir(App) ++ [ "src", "websocket"]).
+lib_dir(App) ->
+    filename:join( root_dir(App) ++ [ "src", "lib"]).
+libview_dir(App) ->
+    filename:join( root_dir(App) ++ [ "src", "view", "lib"]).
+static_dir(App) ->
+    filename:join( root_dir(App) ++ ["priv", "static"]).
+init_dir(App) ->
+    filename:join( root_dir(App) ++ ["priv", "init"]).
+rebar_dir(App) ->
+    filename:join( root_dir(App) ++ ["priv", "rebar"]).
+priv_dir(App) ->
+    filename:join( root_dir(App) ++ ["priv", "rebar"]).
+lang_dir(App) ->
+    filename:join( root_dir(App) ++ ["priv", "lang"]).
 
 module_list(Dir) when is_list(Dir)->
     CompilerAdapters = boss_files_util:compiler_adapters(),

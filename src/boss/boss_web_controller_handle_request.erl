@@ -1,7 +1,6 @@
 -module(boss_web_controller_handle_request).
 
 -export([handle_request/4]).
-
 -export([process_request/5]).
 
 -ifdef(TEST).
@@ -72,24 +71,23 @@ handle_result(Request, App, StaticPrefix, Url, Response, _IsSpecialFile = false,
 build_static_response(App, StaticPrefix, Url, Response) ->
     [$/ |File]	 = lists:nthtail(length(StaticPrefix), Url),
     IsDevelopment= boss_env:boss_env(),
-    Sha1		 = make_etag(App, StaticPrefix, File),
+    Sha1	 = make_etag(App, StaticPrefix, File),
     Ops          = [
             	    fun(Resp) -> dev_headers(Resp, IsDevelopment) end,
             	    fun(Resp) ->  Resp:file([$/ |File])	end,
             	    fun(Resp) ->  case Sha1 of 
-            	                  	{error, _} -> Resp;
-            	                  	_          -> Resp:header("Etag",Sha1)
+                                      {error, _} -> Resp;
+                                      _          -> Resp:header("Etag",Sha1)
             	                  end end,
             	    fun(Resp) ->  Resp:build_response()	end
-           	       ],
-
+                   ],
+    
     lists:foldl(fun(Operation, Resp) ->
-			         Operation(Resp) 
-		        end, 
+                        Operation(Resp) 
+                end, 
                 Response, 
                 Ops).
 
-    
 
 -spec(dev_headers(any(), production|development)-> any()).
 dev_headers(Response, development) ->
@@ -97,32 +95,31 @@ dev_headers(Response, development) ->
 dev_headers(Response, _) ->
     Response.
     
-
 make_etag(App, StaticPrefix, File) ->
-	Priv = case code:priv_dir(App) of
-		{error, bad_name} ->
-			%% enuit isn't loading the application, so this will default for us
-			"../priv";
-		P ->
-			P
-	end,
-    FilePath      = Priv ++ "/" ++ StaticPrefix ++ "/" ++ File,
+    Priv = case code:priv_dir(App) of
+               {error, bad_name} ->
+                   %% enuit isn't loading the application, so this will default for us
+                   "../priv";
+               P ->
+                   P
+           end,
+    FilePath = Priv ++ "/" ++ StaticPrefix ++ "/" ++ File,
     case file:read_file(FilePath) of
     	{ok, Content} -> 
-    		binary_to_list(base64:encode(crypto:hash(sha, Content)));
+            binary_to_list(base64:encode(crypto:hash(sha, Content)));
     	{error, enoent} ->
-    		 lager:warning("application ~s file ~s not found", [App, FilePath]),
-    		 {error, enoent};
+            lager:warning("application ~s file ~s not found", [App, FilePath]),
+            {error, enoent};
     	Err ->
-    		Err
+            Err
     end.
-    
+
 
 %% TODO: Refactor
 build_dynamic_response(App, Request, Response, Url, RouterAdapter) ->
     Mode           = boss_env:boss_env(), 
     AppInfo        = boss_web:application_info(App),
-
+    
     TranslatorPid  = boss_web:translator_pid(App),
     RouterPid	   = boss_web:router_pid(App),
     ControllerList = boss_files:web_controller_list(App),
@@ -153,30 +150,26 @@ build_dynamic_response(App, Request, Response, Url, RouterAdapter) ->
 set_timer(Request, Url, Mode, AppInfo, TranslatorPid, RouterPid,
           ControllerList, RouterAdapter) ->
     NewAppInfo = AppInfo#boss_app_info{
-		   translator_pid            = TranslatorPid,
-		   router_pid                = RouterPid,
-		   controller_modules        = ControllerList
+		   translator_pid    = TranslatorPid,
+		   router_pid        = RouterPid,
+		   controller_modules= ControllerList
 		  },
-    %R = timer:tc(process_request,[NewAppInfo, Request, Mode, Url]),
+    %%R = timer:tc(process_request,[NewAppInfo, Request, Mode, Url]),
     R  = erlang:apply(?MODULE,process_request,[NewAppInfo, Request, Mode, Url, RouterAdapter]),
     {1,R}.
 
-
-
 handle_response(Request, _Payload = {stream, Generator, Acc0}, RequestMethod, Response2) ->
-    Protocol		= Request:protocol_version(),
-    TransferEncoding	= handle_protocol(Protocol),
-    Response3		= Response2:data(chunked),
+    Protocol = Request:protocol_version(),
+    TransferEncoding = handle_protocol(Protocol),
+    Response3 = Response2:data(chunked),
     Response3:build_response(),
     process_stream_generator(Request, TransferEncoding, RequestMethod, Generator, Acc0);
+
 handle_response(_Request, Payload , _RequestMethod, Response2) ->
     (Response2:data(Payload)):build_response().
 
-
 handle_protocol({1,1}) -> chunked;
 handle_protocol(_)     -> identity.
-
-
 
 log_status_code(500, ErrorFormat, ErrorArgs) ->
     error_logger:error_msg(ErrorFormat, ErrorArgs);
@@ -206,7 +199,6 @@ process_stream_generator(Req, identity, Method, Generator, Acc) ->
             process_stream_generator(Req, identity, Method, Generator, Acc1);
         done -> ok
     end.
-
 
 process_request(#boss_app_info{ doc_prefix = DocPrefix } = AppInfo, Req, development, DocPrefix, _RouterAdapter) ->
     {Result, SessionID1} = case catch handle_doc(development, {"doc", [], []}, AppInfo, [{request, Req}]) of
@@ -441,7 +433,7 @@ handle_doc(development, {"doc", DocName, _}, AppInfo, ReqCtx) ->
 handle_doc_model(true, DocName, AppInfo) ->
     App = AppInfo#boss_app_info.application,
     Model = list_to_atom(DocName),
-    Dir = model_dir(App),
+    Dir = boss_files:model_dir(App),
     ModelFiles = boss_files:find_file(Dir),
     File =  find_file(DocName ++ ".erl", ModelFiles),
     {Model, Edoc} = boss_model_manager:edoc_module(
@@ -454,17 +446,19 @@ handle_doc_model(false, DocName, AppInfo) ->
 
 handle_doc_controller(true, DocName, AppInfo) ->
     Controller = list_to_atom(DocName),
-    Dir = controller_dir(AppInfo#boss_app_info.application),
+    Dir = boss_files:controller_dir(AppInfo#boss_app_info.application),
     CtrlFiles = boss_files:find_file(Dir),
     CtrlFile =  find_file(DocName ++ ".erl", CtrlFiles),
     {Controller, Edoc} = edoc:get_doc(CtrlFile, [{private, true}]),
     {ok, correct_edoc_html(Edoc, AppInfo), []};
 
-%%FIX ME doc for filter ??
-%%FIX ME doc for custom tags ??
-%%FIX ME doc for lib ??
+handle_doc_controller(false, _DocName, AppInfo) ->
+    %%FIX ME doc for filter ??
+    %%FIX ME doc for custom tags ??
+    %%FIX ME doc for lib ??
+    handle_doc_index(AppInfo).
 
-handle_doc_controller(false, DocName, AppInfo) ->
+handle_doc_index(AppInfo) ->
     %% nope, so just render index page
     Apps = boss_env:get_env(applications, [AppInfo#boss_app_info.application]),
     Docs = [begin 
@@ -499,16 +493,6 @@ correct_edoc_html(Edoc, AppInfo) ->
     Result3 = re:replace(Result2, "erlang.png", AppInfo#boss_app_info.base_url++AppInfo#boss_app_info.static_prefix++"/edoc/erlang.png", [{return,list}, global]),
     Result3.
 
-
-root_dir(App) when is_atom(App)->
-    PrivDir = filename:split(code:priv_dir(App)),
-    ["priv" | P ] = lists:reverse(PrivDir, []),
-    lists:reverse(P, []).
-
-model_dir(App) when is_atom(App)->
-    filename:join(root_dir(App) ++ ["src","model"]).
-controller_dir(App) when is_atom(App)->
-    filename:join(root_dir(App) ++ ["src","controller"]).
 
 find_file(_File, []) ->  not_found;
 find_file(File, [Path|T]) -> 
