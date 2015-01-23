@@ -542,14 +542,16 @@ module_compiled_date(Module) when is_atom(Module) ->
 
 view_module(Application, RelativePath) ->
     view_module2(Application, filename:split(RelativePath)).
-view_module2(Application, ["deps", App, "src"| Path]) ->
+view_module2(Application, ["deps", _App, "src"| Path]) ->
     view_module2(Application, Path);
-view_module2(Application, ["apps", App, "src"| Path]) ->
+view_module2(Application, ["apps", _App, "src"| Path]) ->
     view_module2(Application, Path);
 view_module2(Application, ["src"| Path]) ->
     view_module2(Application, Path);
+view_module2(Application, [".."| Path]) ->
+    view_module2(Application, Path);
 view_module2(Application, Components) ->
-    Lc           = string:to_lower(lists:concat([Application, "_", string:join(Components, "_")])),
+    Lc = string:to_lower(lists:concat([Application, "_", string:join(Components, "_")])),
     ModuleIOList = re:replace(Lc, "\\.", "_", [global]),
     list_to_atom(binary_to_list(iolist_to_binary(ModuleIOList))).
 
