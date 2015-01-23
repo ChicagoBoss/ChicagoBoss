@@ -430,58 +430,67 @@ execute(_Mode, {Controller, _, _} = Location, AppInfo, RequestContext) ->
             {boss_web_controller_render:render_view(Location, AppInfo, RequestContext)}
     end.
 
-handle_doc(development, {"doc", DocName, _}, AppInfo, RequestContext) ->
-    ModelModules = AppInfo#boss_app_info.model_modules,
-    App = AppInfo#boss_app_info.application,
-    Result = case lists:member(DocName, ModelModules) of
-                 true ->
-                     Model = list_to_atom(DocName),
-                     Dir = model_dir(App),
-                     ModelFiles = boss_files:find_file(Dir),
-                     File =  find_file(DocName ++ ".erl", ModelFiles),
-                     {Model, Edoc} = boss_model_manager:edoc_module(
-                                       File, [{private, true}]),
-                     {ok,  correct_edoc_html(Edoc, AppInfo), []};
-                 false ->
-                     %% ok, it's not model, so it could be web controller
-                     Controllers = AppInfo#boss_app_info.controller_modules,
-                     case lists:member(DocName, Controllers) of
-                         true ->
-                             Controller = list_to_atom(DocName),
-                             Dir = controller_dir(App),
-                             CtrlFiles = boss_files:find_file(Dir),
-                             CtrlFile =  find_file(DocName ++ ".erl", CtrlFiles),
-                             {Controller, Edoc} = edoc:get_doc(CtrlFile, [{private, true}]),
-                             {ok, correct_edoc_html(Edoc, AppInfo), []};
-                         false ->
-                             %% nope, so just render index page
-                             Apps = boss_env:get_env(applications, [AppInfo#boss_app_info.application]),
-                             Docs = [begin 
-                                         BaseURL   = boss_env:get_env(App, base_url, "/"),
-                                         DocPrefix = boss_env:get_env(App, doc_prefix, "/doc"),
-                                         DocUrl    = case BaseURL of
-                                                         "/" -> DocPrefix;
-                                                         _ -> BaseURL ++ DocPrefix
-                                                     end,
-                                         [{doc_url, DocUrl},{doc_app, App}]
-                                     end || App <-Apps],
-                             case boss_html_doc_template:render([
-                                                                 {docs, Docs},
-                                                                 {application, AppInfo#boss_app_info.application},
-                                                                 {'_doc', AppInfo#boss_app_info.doc_prefix},
-                                                                 {'_static', AppInfo#boss_app_info.static_prefix},
-                                                                 {'_base_url', AppInfo#boss_app_info.base_url},
-                                                                 {models, ModelModules},
-                                                                 {controllers, Controllers}]) of
-                                 {ok, Payload} ->
-                                     {ok, Payload, []};
-                                 Err ->
-                                     Err
-                             end
-                     end
-             end,
-    {Result, proplists:get_value(session_id, RequestContext)}.
+execute_action(Location, AppInfo, RequestContext) ->
+    boss_web_controller:execute_action(Location, AppInfo, RequestContext, []).
 
+handle_doc(development, {"doc", DocName, _}, AppInfo, ReqCtx) ->
+    ModelModules = AppInfo#boss_app_info.model_modules,
+    Result = handle_doc_model(lists:member(DocName, ModelModules), DocName, AppInfo),
+    {Result, proplists:get_value(session_id, ReqCtx)}.
+
+handle_doc_model(true, DocName, AppInfo) ->
+    App = AppInfo#boss_app_info.application,
+    Model = list_to_atom(DocName),
+    Dir = model_dir(App),
+    ModelFiles = boss_files:find_file(Dir),
+    File =  find_file(DocName ++ ".erl", ModelFiles),
+    {Model, Edoc} = boss_model_manager:edoc_module(
+                      File, [{private, true}]),
+    {ok,  correct_edoc_html(Edoc, AppInfo), []};
+
+handle_doc_model(false, DocName, AppInfo) ->
+    Controllers = AppInfo#boss_app_info.controller_modules,
+    handle_doc_controller(lists:member(DocName, Controllers), DocName, AppInfo).
+
+handle_doc_controller(true, DocName, AppInfo) ->
+    Controller = list_to_atom(DocName),
+    Dir = controller_dir(AppInfo#boss_app_info.application),
+    CtrlFiles = boss_files:find_file(Dir),
+    CtrlFile =  find_file(DocName ++ ".erl", CtrlFiles),
+    {Controller, Edoc} = edoc:get_doc(CtrlFile, [{private, true}]),
+    {ok, correct_edoc_html(Edoc, AppInfo), []};
+
+%%FIX ME doc for filter ??
+%%FIX ME doc for custom tags ??
+%%FIX ME doc for lib ??
+
+handle_doc_controller(false, DocName, AppInfo) ->
+    %% nope, so just render index page
+    Apps = boss_env:get_env(applications, [AppInfo#boss_app_info.application]),
+    Docs = [begin 
+                BaseURL   = boss_env:get_env(X, base_url, "/"),
+                DocPrefix = boss_env:get_env(X, doc_prefix, "/doc"),
+                DocUrl    = case BaseURL of
+                                "/" -> DocPrefix;
+                                _ -> BaseURL ++ DocPrefix
+                            end,
+                [{doc_url, DocUrl},{doc_app, X}]
+            end || X <-Apps],
+    Params = [
+              {docs, Docs},
+              {application, AppInfo#boss_app_info.application},
+              {'_doc', AppInfo#boss_app_info.doc_prefix},
+              {'_static', AppInfo#boss_app_info.static_prefix},
+              {'_base_url', AppInfo#boss_app_info.base_url},
+              {models, AppInfo#boss_app_info.model_modules},
+              {controllers, AppInfo#boss_app_info.controller_modules}
+             ],
+    case boss_html_doc_template:render(Params) of
+        {ok, Payload} ->
+            {ok, Payload, []};
+        Err ->
+            Err
+    end.
 
 %% @desc function to correct path errors in HTML output produced by Edoc
 correct_edoc_html(Edoc, AppInfo) ->
@@ -490,8 +499,6 @@ correct_edoc_html(Edoc, AppInfo) ->
     Result3 = re:replace(Result2, "erlang.png", AppInfo#boss_app_info.base_url++AppInfo#boss_app_info.static_prefix++"/edoc/erlang.png", [{return,list}, global]),
     Result3.
 
-execute_action(Location, AppInfo, RequestContext) ->
-    boss_web_controller:execute_action(Location, AppInfo, RequestContext, []).
 
 root_dir(App) when is_atom(App)->
     PrivDir = filename:split(code:priv_dir(App)),
