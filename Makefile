@@ -2,6 +2,8 @@
 PREFIX:=../
 DEST:=$(PREFIX)$(PROJECT)
 ERL=erl
+GIT = git
+REBAR_VER = 2.5.1
 REBAR=./rebar
 SESSION_CONFIG_DIR=priv/test_session_config
 
@@ -48,7 +50,15 @@ app:
 	@echo ""
 	@echo "***********************************************************************"
 	@echo ""
-	
+
+rebar_src:
+	@rm -rf $(PWD)/rebar_src
+	@$(GIT) clone git://github.com/rebar/rebar.git rebar_src
+	@$(GIT) -C rebar_src checkout tags/$(REBAR_VER)
+	@cd $(PWD)/rebar_src/; ./bootstrap
+	@cp $(PWD)/rebar_src/rebar $(PWD)
+	@cp $(PWD)/rebar_src/rebar $(PWD)/skel
+	@rm -rf $(PWD)/rebar_src
 
 get-deps:
 	@$(REBAR) get-deps
