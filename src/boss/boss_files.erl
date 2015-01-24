@@ -32,8 +32,10 @@
         ,rebar_dir/1
         ,priv_dir/1
         ,lang_dir/1
+        ,migration_dir/1
         ,make_extentions/0
         ,module_list/1
+        ,adapter_for_extension/2
         ]).
 
 -export([make_extentions/1]).
@@ -69,10 +71,38 @@
 %% -spec find_file(input_string(),[]) -> [string()].
 %% -spec find_file([string()],input_string(),[string()],[]) -> [string()].
 
+-type path()            :: string().
+-type app()             :: atom().
+-type app_name()        :: string().
+-type uri_name()        :: string().
+-type uri_bin()         :: binary().
+-type module_name()     :: string().
+-type controller_name() :: string().
+-type ws_mapping()      :: {uri_bin(), module()}.
+-type file_extension()  :: string(). %% string start by "." 
+-type po_file()         :: path().
+
+-spec root_dir(App)       -> path() when App::app().
+-spec priv_dir(App)       -> path() when App::app().
+-spec model_dir(App)      -> path() when App::app().
+-spec controller_dir(App) -> path() when App::app().
+-spec view_dir(App)       -> path() when App::app().
+-spec websocket_dir(App)  -> path() when App::app().
+-spec mail_dir(App)       -> path() when App::app().
+-spec lib_dir(App)        -> path() when App::app().
+-spec libview_dir(App)    -> path() when App::app().
+-spec static_dir(App)     -> path() when App::app().
+-spec init_dir(App)       -> path() when App::app().
+-spec rebar_dir(App)      -> path() when App::app().
+-spec lang_dir(App)       -> path() when App::app().
+-spec migration_dir(App)  -> path() when App::app().
+
 root_dir(App) ->
     [_|Root] = lists:reverse(filename:split(code:priv_dir(App))),
     lists:reverse(Root).    
 
+priv_dir(App) ->
+    filename:join( root_dir(App) ++ ["priv"]).
 model_dir(App) when is_atom(App)->
     filename:join( root_dir(App) ++ [ "src", "model"]).
 controller_dir(App) when is_atom(App)->
@@ -93,11 +123,12 @@ init_dir(App) ->
     filename:join( root_dir(App) ++ ["priv", "init"]).
 rebar_dir(App) ->
     filename:join( root_dir(App) ++ ["priv", "rebar"]).
-priv_dir(App) ->
-    filename:join( root_dir(App) ++ ["priv", "rebar"]).
 lang_dir(App) ->
     filename:join( root_dir(App) ++ ["priv", "lang"]).
+migration_dir(App) ->
+    filename:join( root_dir(App) ++ ["priv", "migrations"]).
 
+-spec module_list(Dir) -> [string()] when Dir::path().
 module_list(Dir) when is_list(Dir)->
     CompilerAdapters = boss_files_util:compiler_adapters(),
     Extensions = 
@@ -121,6 +152,11 @@ root_priv_dir(App) ->
             end
    end.
 
+-spec websocket_mapping(BaseURL, AppName, Modules) -> [ws_mapping()] 
+  when 
+      BaseURL::uri_name(), 
+      AppName::app_name(), 
+      Modules::[module_name()].
 websocket_mapping(BaseURL, AppName, Modules) ->
     lists:foldl(fun([], Acc) -> Acc;
 		   (M, Acc) -> 
@@ -139,7 +175,8 @@ websocket_mapping(BaseURL, AppName, Modules) ->
 			Acc ++ [{list_to_binary(Url), list_to_atom(M)}]			
 		end, [], Modules).
 
-mail_controller_path() -> [filename:join([boss_files_util:root_src_dir(), "mail"])].
+mail_controller_path() -> 
+    [filename:join([boss_files_util:root_src_dir(), "mail"])].
 
 websocket_list(AppName) ->
     case boss_env:is_developing_app(AppName) of
@@ -165,6 +202,8 @@ lib_module_list(AppName) ->
             lists:map(fun atom_to_list/1, boss_env:get_env(AppName, lib_modules, []))
     end.
 
+-spec web_controller_list(AppName) -> [module_name()] when 
+      AppName::app().
 web_controller_list(AppName) when is_list(AppName) ->
     web_controller_list(list_to_atom(AppName));
 
@@ -183,6 +222,8 @@ web_controller_list(AppName, production) ->
 %%             lists:map(fun atom_to_list/1, boss_env:get_env(AppName, controller_modules, []))
 %%     end.
 
+-spec view_module_list(AppName) -> [module_name()] when 
+      AppName::app().
 view_module_list(AppName) ->
     case boss_env:is_developing_app(AppName) of
         true -> [];
@@ -190,6 +231,11 @@ view_module_list(AppName) ->
             lists:map(fun atom_to_list/1, boss_env:get_env(AppName, view_modules, []))
     end.
 
+
+-spec is_controller_present(AppName, Controller, ModuleList) -> boolean() when
+      AppName::app(),
+      Controller::controller_name(),
+      ModuleList::[module_name()].
 is_controller_present(AppName, Controller, ModuleList) ->
     CompilerAdapters = boss_files_util:compiler_adapters(),
     lists:foldl(fun(Adapter, false) ->
@@ -198,6 +244,10 @@ is_controller_present(AppName, Controller, ModuleList) ->
             (_, true) -> true
         end, false, CompilerAdapters).
 
+-spec web_controller(AppName, Controller, ControllerList) -> module() | undefined when
+      AppName::app(),
+      Controller::controller_name(),
+      ControllerList::[module_name()].
 web_controller(AppName, Controller, ControllerList) ->
     CompilerAdapters = boss_files_util:compiler_adapters(),
     lists:foldl(fun(Adapter, undefined) ->
@@ -209,13 +259,30 @@ web_controller(AppName, Controller, ControllerList) ->
             (_, Acc) -> Acc
         end, undefined, CompilerAdapters).
 
+-spec compiler_adapter_for_extension(file_extension()) -> [module()].
 compiler_adapter_for_extension(("." ++ Extension)) ->
     adapter_for_extension(Extension, boss_files_util:compiler_adapters());
 compiler_adapter_for_extension(_) -> undefined.
 
+-spec template_adapter_for_extension(file_extension()) -> [module()].
 template_adapter_for_extension(("." ++ Extension)) ->
     adapter_for_extension(Extension, boss_files_util:template_adapters()).
 
+-spec adapter_for_extension(Extension, Adapters) -> [module()] | [] when
+      Extension::file_extension(),
+      Adapters::[module()].
+%% adapter_for_extension(Extension, Adapters) -> 
+%%     adapter_for_extension(Extension, Adapters, []). 
+
+%% adapter_for_extension(_Extension, [], Acc) -> Acc;
+%% adapter_for_extension(Extension, [Adapter|T], Acc) -> 
+%%     case lists:member(Extension, Adapter:file_extensions()) of
+%%         true -> 
+%%             adapter_for_extension(Extension, T, [Adapter] ++ Acc);
+%%         false ->
+%%             %%just skip
+%%             adapter_for_extension(Extension, T, Acc)            
+%%     end.    
 adapter_for_extension(Extension, Adapters) ->
     lists:foldl(fun
             (Adapter, undefined) -> 
@@ -226,31 +293,43 @@ adapter_for_extension(Extension, Adapters) ->
             (_, Acc) -> Acc
         end, undefined, Adapters).
 
+-spec template_extensions() -> [file_extension()].
 template_extensions() ->
     lists:foldl(fun (Adapter, Acc) -> Acc ++ Adapter:file_extensions() end,
         [], boss_files_util:template_adapters()).
 
+%% FIXME: should take App as parameter.
+-spec view_file_list() -> [path()].
 view_file_list() ->
     ViewExtensions = template_extensions(),
     ViewFilePattern = ".*\\.(" ++ string:join(ViewExtensions, "|") ++ ")$",
-    ViewFiles = filelib:fold_files(filename:join([boss_files_util:root_src_dir(), "view"]), ViewFilePattern,
-        true, fun(F1,Acc1) -> [F1 | Acc1] end, []),
+    ViewFiles = filelib:fold_files(
+                  filename:join([boss_files_util:root_src_dir(), "view"]), 
+                  ViewFilePattern,
+                  true, 
+                  fun(F1,Acc1) -> [F1 | Acc1] end, []),
     MailPattern = filename:join([boss_files_util:root_src_dir(), "mail", "view", "*.{html,txt}"]),
     ViewFiles ++ filelib:wildcard(MailPattern).
 
+-spec init_file_list(App) -> [path()] when
+      App::app().
 init_file_list(App) ->
     lists:sort(filelib:wildcard(filename:join([root_priv_dir(App), "init", "*.erl"]))).
 
+-spec routes_file(App) -> path() when App::app().
 routes_file(App) ->
     filename:join([root_priv_dir(App), lists:concat([App, ".routes"])]).
 
+-spec language_list(App) -> [po_file()] when App::app().
 language_list(App) ->
     language_list_dir(boss_files_util:lang_path(App)).
 
 language_list_dir(Path) ->
     case file:list_dir(Path) of
         {ok, Files} ->
-            lists:sort(lists:map(fun("strings."++Lang) -> filename:basename(Lang, ".po") end,
+            lists:sort(lists:map(fun("strings."++Lang) -> 
+                                         filename:basename(Lang, ".po") 
+                                 end,
                     lists:filter(fun
                             ("strings."++_Lang) -> true;
                             (_) -> false
@@ -259,6 +338,7 @@ language_list_dir(Path) ->
             []
     end.
 
+-spec dot_app_src(AppName) -> path() when AppName::app_name().
 dot_app_src(AppName) ->
 	filename:join(["src", lists:concat([AppName, ".app.src"])]).
 
@@ -267,7 +347,6 @@ dot_app_src(AppName) ->
 
 model_list(Application, Dirs) ->
     model_list(Dirs, Application, []).
-
 
 model_list([], _Application, ModuleAcc) ->
     lists:sort(ModuleAcc);
@@ -301,8 +380,7 @@ make_modules_itterator(ExtensionProplist, Application) ->
 	    case filename:extension(File) of
 		[$. |Extension] ->
 		    AdapterVal = proplists:get_value(Extension, ExtensionProplist),
-		    lookup_module_by_adapater(Application, File, Acc,
-					      AdapterVal);
+		    lookup_module_by_adapater(Application, File, Acc, AdapterVal);
 		_ -> []
 	    end
     end.
@@ -313,6 +391,7 @@ lookup_module_by_adapater(_Application, _File, Acc, undefined) ->
 lookup_module_by_adapater(Application, File, Acc, Adapater) ->
     [Adapater:module_name_for_file(Application, File)|Acc].
 
+-spec find_file(Dir) -> [path()] when Dir::path().
 find_file(Dir) ->
     find_file(Dir, []).
 
@@ -330,7 +409,7 @@ find_file([H|T], Root, Acc, ModuleAcc) ->
     IsDir	= filelib:is_dir(Path),
     case IsDir of
         false ->
-            find_file(T, Root, [Path] ++ Acc,                     ModuleAcc);
+            find_file(T, Root, [Path] ++ Acc, ModuleAcc);
         true ->
             find_file(T, Root, find_file(Path, ModuleAcc) ++ Acc, ModuleAcc)
     end.
