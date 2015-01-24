@@ -72,7 +72,8 @@
 %% -spec find_file([string()],input_string(),[string()],[]) -> [string()].
 
 -type path()            :: string().
--type app()             :: atom().
+-type app()             :: types:application().
+-type tpl_adapter()     :: types:template_adapter().
 -type app_name()        :: string().
 -type uri_name()        :: string().
 -type uri_bin()         :: binary().
@@ -82,7 +83,7 @@
 -type file_extension()  :: string(). %% string start by "." 
 -type po_file()         :: path().
 
--spec root_dir(App)       -> path() when App::app().
+-spec root_dir(App)       -> [binary()|path()] when App::app().
 -spec priv_dir(App)       -> path() when App::app().
 -spec model_dir(App)      -> path() when App::app().
 -spec controller_dir(App) -> path() when App::app().
@@ -259,39 +260,22 @@ web_controller(AppName, Controller, ControllerList) ->
             (_, Acc) -> Acc
         end, undefined, CompilerAdapters).
 
--spec compiler_adapter_for_extension(file_extension()) -> [module()].
+-spec compiler_adapter_for_extension(file_extension()) -> tpl_adapter() | undefined.
 compiler_adapter_for_extension(("." ++ Extension)) ->
     adapter_for_extension(Extension, boss_files_util:compiler_adapters());
 compiler_adapter_for_extension(_) -> undefined.
 
--spec template_adapter_for_extension(file_extension()) -> [module()].
 template_adapter_for_extension(("." ++ Extension)) ->
     adapter_for_extension(Extension, boss_files_util:template_adapters()).
 
--spec adapter_for_extension(Extension, Adapters) -> [module()] | [] when
-      Extension::file_extension(),
-      Adapters::[module()].
-%% adapter_for_extension(Extension, Adapters) -> 
-%%     adapter_for_extension(Extension, Adapters, []). 
-
-%% adapter_for_extension(_Extension, [], Acc) -> Acc;
-%% adapter_for_extension(Extension, [Adapter|T], Acc) -> 
-%%     case lists:member(Extension, Adapter:file_extensions()) of
-%%         true -> 
-%%             adapter_for_extension(Extension, T, [Adapter] ++ Acc);
-%%         false ->
-%%             %%just skip
-%%             adapter_for_extension(Extension, T, Acc)            
-%%     end.    
 adapter_for_extension(Extension, Adapters) ->
-    lists:foldl(fun
-            (Adapter, undefined) -> 
-                case lists:member(Extension, Adapter:file_extensions()) of
-                    true -> Adapter;
-                    false -> undefined
-                end;
-            (_, Acc) -> Acc
-        end, undefined, Adapters).
+    lists:foldl(fun(Adapter, undefined) -> 
+                        case lists:member(Extension, Adapter:file_extensions()) of
+                            true -> Adapter;
+                            false -> undefined
+                        end;
+                   (_, Acc) -> Acc
+                end, undefined, Adapters).
 
 -spec template_extensions() -> [file_extension()].
 template_extensions() ->
@@ -355,11 +339,11 @@ model_list([Dir|Rest], Application, ModuleAcc) ->
     ModuleAcc1        = make_modules(Dir, Application, ModuleAcc, ExtensionProplist),
     model_list(Rest, Application, ModuleAcc1).
 
+
+
 make_extentions() ->
     CompilerAdapters  = boss_files_util:compiler_adapters(),
     make_extentions(CompilerAdapters).
-
-    
 
 -spec(make_extentions([types:compiler_adapters()]) ->
 	     [{string(), types:compiler_adapters()}]).
@@ -368,7 +352,6 @@ make_extentions(CompilerAdapters) ->
 			lists:map(fun(Ext) -> {Ext, Adapter} end, 
 				  Adapter:file_extensions()) ++ Acc
 		end, [], CompilerAdapters).
-
 
 make_modules(Dir, Application, ModuleAcc, ExtensionProplist) ->
     Itter = make_modules_itterator(ExtensionProplist, Application),
@@ -384,7 +367,6 @@ make_modules_itterator(ExtensionProplist, Application) ->
 		_ -> []
 	    end
     end.
-
 
 lookup_module_by_adapater(_Application, _File, Acc, undefined) ->
             Acc;
