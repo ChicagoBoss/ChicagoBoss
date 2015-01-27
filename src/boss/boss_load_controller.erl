@@ -57,17 +57,21 @@ handle_info({_Pid, {fs,file_event}, {Path, Flags}}, #state{mode=Mode, root=Root}
         false ->
             ok
     end,
-
     {noreply, State#state{last={event, Path, Flags, Result}}};
-handle_info({load_ebin, App, Atom}, State) -> 
-    do_load_ebin(App, Atom), 
+
+handle_info({load_ebin, App, Atom} = Event, State) -> 
+    do_load_ebin(App, Atom),
     {noreply, State#state{last={do_load_ebin, Atom}}};
 handle_info(Info, State) -> {noreply, State#state{last={unk, Info}}}.
 terminate(_Reason, _State) -> ok.
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
 
 
-path_event(C, [E|_Events], #state{apps=CBApps}) when E =:= created; E =:= modified; E =:= renamed ->
+path_event(C, [E|_Events], #state{apps=CBApps}) 
+  when 
+      E =:= created; 
+      E =:= modified; 
+      E =:= renamed ->
     case path_filter(C) of 
         true  -> otp(C, CBApps); 
         false -> ignore 
@@ -81,7 +85,7 @@ otp(["apps",App|Rest], CBApps) -> app(apps, App,Rest, CBApps);
 otp([Some|Path], CBApps)       -> app(top, top(),[Some|Path], CBApps);
 otp(_,_)                       -> ok.
 
-app(deps, App, ["ebin",Module|_], _) -> skip; %%load_ebin(App, Module); %%
+app(deps, App, ["ebin",Module|_], _) -> load_ebin(App, Module);
 app(_, App, ["ebin",Module|_], _)    -> load_ebin(App, Module);
 app(_, _, ["priv","fdlink"++_], _) -> skip;
 app(_, _, ["priv","mac"++_], _)    -> skip;

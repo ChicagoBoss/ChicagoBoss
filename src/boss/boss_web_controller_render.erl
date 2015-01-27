@@ -210,7 +210,6 @@ render_view({Controller, Template, _}, AppInfo, RequestContext, Variables, Heade
     Req			= proplists:get_value(request, RequestContext),
     SessionID		= proplists:get_value(session_id, RequestContext),
     TryExtensions	= boss_files:template_extensions(),
- 
     LoadResult		= load_result(Controller, Template, AppInfo, TryExtensions),
     BossFlash		= boss_flash:get_and_clear(SessionID),
     SessionData		= boss_session:get_session_data(SessionID),
@@ -287,13 +286,16 @@ extract_content_language_from_headers(Headers) ->
 load_result(Controller, Template, AppInfo, TryExtensions) ->
     lists:foldl(fun
 		    (Ext, {error, not_found}) ->
-			ViewPath = boss_files_util:web_view_path(Controller, Template, Ext),
-			boss_load:load_view_if_dev(AppInfo#boss_app_info.application,
-						   ViewPath, AppInfo#boss_app_info.view_modules,
+                        %%ViewPath is wrong in multi dev app
+                        App = AppInfo#boss_app_info.application,
+			ViewPath = boss_files:web_view_path(App, Controller, Template, Ext),
+			boss_load:load_view_if_dev(App,
+						   ViewPath, 
+                                                   AppInfo#boss_app_info.view_modules,
 				                   AppInfo#boss_app_info.translator_pid);
 		    (_, Acc) ->
 			Acc
-                end, {error, not_found}, TryExtensions).
+                    end, {error, not_found}, TryExtensions).
 
 choose_translation_fun(_, _, undefined, undefined) ->
     DefaultLang = boss_env:get_env(assume_locale, "en"),

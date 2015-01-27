@@ -1,3 +1,4 @@
+-compile({parse_transform, cut}).
 -module(boss_load).
 
 -export([
@@ -35,33 +36,37 @@
 -compile(export_all).
 -endif.
 
--type module_types() :: [{'controller_modules' | 'lib_modules' |
-                          'mail_modules' | 'model_modules' | 'test_modules' |
-                          'view_lib_helper_modules' | 'view_lib_tags_modules' | 'view_modules'
-                          | 'websocket_modules',maybe_improper_list()},...].
+%% -type module_types() :: [{ 'controller_modules' | 
+%%                            'lib_modules' |
+%%                            'mail_modules' | 
+%%                            'model_modules' | 
+%%                            'test_modules' |
+%%                            'view_lib_helper_modules' | 
+%%                            'view_lib_tags_modules' | 
+%%                            'view_modules' | 
+%%                            'websocket_modules'}].
+
+%% -type reload_error_status_values() :: 'badfile' | 'native_code' | 'nofile' | 'not_purged' | 'on_load' | 'sticky_directory'.
+%% -type application() :: types:application().
 
 
--type reload_error_status_values() :: 'badfile' | 'native_code' | 'nofile' | 'not_purged' | 'on_load' | 'sticky_directory'.
--type application() :: types:application().
-
-     
--spec incoming_mail_controller_module(application()) -> atom().
--spec load_all_modules(application(), atom() | pid() | {atom(),atom()}) ->
-   {'ok',module_types()}.
--spec load_all_modules(application(), atom() | pid() | {atom(),atom()}, string() | 'undefined') ->
-   {'ok',module_types()}.
--spec load_all_modules_and_emit_app_file(application(),atom() | binary() | [atom() | [any()] | char()]) -> 
-   'ok' | {'error',atom()}.
--spec load_libraries(application()) -> {'error',[any(),...]} | {'ok',[any()]}.
--spec load_mail_controllers(application()) -> {'error',[any(),...]} | {'ok',[any()]}.
--spec load_models(application()) -> {'error',[any(),...]} | {'ok',[any()]}.
--spec load_services_websockets(application()) -> {'error',[any(),...]} | {'ok',[any()]}.
--spec load_view_if_dev(application(), atom() | binary() | [atom() | [any()] | char()],_,_) -> any().
--spec load_view_lib_modules(application()) -> {'error',[any(),...]} | {'ok',[any()]}.
--spec load_web_controllers(application()) -> {'error',[any(),...]} | {'ok',[any()]}.
--spec module_is_loaded(atom()) -> boolean().
--spec reload_all() -> [{'error',reload_error_status_values()}|
-		       {'module', atom() | tuple()}].
+%% -spec incoming_mail_controller_module(application()) -> atom().
+%% -spec load_all_modules(application(), atom() | pid() | {atom(),atom()}) ->
+%%    {'ok',module_types()}.
+%% -spec load_all_modules(application(), atom() | pid() | {atom(),atom()}, string() | 'undefined') ->
+%%    {'ok',module_types()}.
+%% -spec load_all_modules_and_emit_app_file(application(),atom() | binary() | [atom() | [any()] | char()]) -> 
+%%    'ok' | {'error',atom()}.
+%% -spec load_libraries(application()) -> {'error',[any(),...]} | {'ok',[any()]}.
+%% -spec load_mail_controllers(application()) -> {'error',[any(),...]} | {'ok',[any()]}.
+%% -spec load_models(application()) -> {'error',[any(),...]} | {'ok',[any()]}.
+%% -spec load_services_websockets(application()) -> {'error',[any(),...]} | {'ok',[any()]}.
+%% -spec load_view_if_dev(application(), atom() | binary() | [atom() | [any()] | char()],_,_) -> any().
+%% -spec load_view_lib_modules(application()) -> {'error',[any(),...]} | {'ok',[any()]}.
+%% -spec load_web_controllers(application()) -> {'error',[any(),...]} | {'ok',[any()]}.
+%% -spec module_is_loaded(atom()) -> boolean().
+%% -spec reload_all() -> [{'error',reload_error_status_values()}|
+%% 		       {'module', atom() | tuple()}].
 
 -define(CUSTOM_TAGS_DIR_MODULE, '_view_lib_tags').
 
@@ -324,8 +329,12 @@ view_doc_root(ViewPath) ->
         [boss_files_util:web_view_path(), boss_files_util:mail_view_path()]).
 
 compile_view_dir_erlydtl(Application, LibPath, Module, OutDir, TranslatorPid) ->
-    TagHelpers         = lists:map(fun erlang:list_to_atom/1, boss_files_util:view_tag_helper_list(Application)),
-    FilterHelpers      = lists:map(fun erlang:list_to_atom/1, boss_files_util:view_filter_helper_list(Application)),
+    %%FIXME work on ./rebar boss c=compile
+    ViewTagHelperModule = boss_files_util:view_tag_helper_list(Application),
+    TagHelpers         = lists:map(fun erlang:list_to_atom/1, ViewTagHelperModule),
+
+    ViewFilterHelperModule = boss_files_util:view_filter_helper_list(Application),
+    FilterHelpers      = lists:map(fun erlang:list_to_atom/1, ViewFilterHelperModule),
     ExtraTagHelpers    = boss_env:get_env(template_tag_modules, []),
     ExtraFilterHelpers = boss_env:get_env(template_filter_modules, []),
 
@@ -428,7 +437,7 @@ load_views_inner(Application, OutDir, TranslatorPid) ->
 	    TemplateAdapter = boss_files:template_adapter_for_extension(
 				filename:extension(File)),
 	    ViewR = compile_view(Application, File, TemplateAdapter, OutDir, TranslatorPid),
-        lager:info("load_views_inner ~p",[ViewR]),
+            %%lager:info("load_views_inner ~p",[ViewR]),
 	    case ViewR of
     		{ok, R} ->
                 case R of
@@ -448,25 +457,39 @@ load_views_inner(Application, OutDir, TranslatorPid) ->
 load_view_if_old(Application, ViewPath, Module, TemplateAdapter, TranslatorPid) ->
     case load_view_lib_if_old(Application, TranslatorPid) of
         {ok, _} -> 
-            NeedCompile = case module_is_loaded(Module) of
-                true ->
-                    Dependencies = lists:map(fun
-                            ({File, _CheckSum}) -> File;
-                            (File) -> File
-                        end, [TemplateAdapter:source(Module) | TemplateAdapter:dependencies(Module)]),
-                    TagHelpers = lists:map(fun erlang:list_to_atom/1, boss_files_util:view_tag_helper_list(Application)),
-                    FilterHelpers = lists:map(fun erlang:list_to_atom/1, boss_files_util:view_filter_helper_list(Application)),
-                    ExtraTagHelpers = boss_env:get_env(template_tag_modules, []),
-                    ExtraFilterHelpers = boss_env:get_env(template_filter_modules, []),
-                    module_older_than(Module, 
-                        Dependencies ++ TagHelpers ++ FilterHelpers ++ ExtraTagHelpers ++ ExtraFilterHelpers);
-                false ->
-                    true
-            end,
+            NeedCompile = 
+                case module_is_loaded(Module) of
+                    false -> true;
+                    true ->
+                        Dependencies = 
+                            lists:map(fun({File, _CheckSum}) -> File;
+                                         (File) -> File
+                                      end, 
+                                      [
+                                       TemplateAdapter:source(Module) | 
+                                       TemplateAdapter:dependencies(Module)
+                                      ]
+                                     ),
+                        
+                        ViewTagHelperModule = boss_files:view_tag_helper_list(Application),
+                        TagHelpers = lists:map(fun erlang:list_to_atom/1, ViewTagHelperModule),
+                        
+                        ViewFilterHelperModule = boss_files:view_filter_helper_list(Application),
+                        FilterHelpers = lists:map(fun erlang:list_to_atom/1, ViewFilterHelperModule),
+                        
+                        ExtraTagHelpers = boss_env:get_env(template_tag_modules, []),
+                        ExtraFilterHelpers = boss_env:get_env(template_filter_modules, []),
+
+                        HelpersModules = Dependencies ++ TagHelpers ++ 
+                                         FilterHelpers ++ ExtraTagHelpers ++ 
+                                         ExtraFilterHelpers,
+                        module_older_than(Module, HelpersModules)
+                end,
             case NeedCompile of
                 true ->
-                    compile_view(Application, ViewPath, TemplateAdapter, 
-                        undefined, TranslatorPid);
+                    R = compile_view(Application, ViewPath, TemplateAdapter, undefined, TranslatorPid),
+                    lager:info("NeedCompile ~p ~p", [R, {Application, ViewPath, TemplateAdapter}]),
+                    R;
                 false ->
                     {ok, Module}
             end
@@ -475,7 +498,7 @@ load_view_if_old(Application, ViewPath, Module, TemplateAdapter, TranslatorPid) 
 load_view_if_dev(Application, ViewPath, ViewModules, TranslatorPid) ->
     Module          = view_module(Application, ViewPath),
     TemplateAdapter = boss_files:template_adapter_for_extension(filename:extension(ViewPath)),
-    case boss_env:is_developing_app(Application) of
+    case boss_env:boss_env() == development of
         true -> 
             case load_view_if_old(Application, ViewPath, Module, TemplateAdapter, TranslatorPid) of
                 {ok, Module} ->
@@ -490,7 +513,7 @@ load_view_if_dev(Application, ViewPath, ViewModules, TranslatorPid) ->
                 _ ->
                     {error, not_found}
             end
-    end.
+     end.
 
 module_is_loaded(Module) ->
     case code:is_loaded(Module) of
@@ -524,8 +547,15 @@ module_older_than(_Date, []) ->
 module_older_than(CompileDate, [File|Rest]) when is_list(File) ->
     module_older_than(CompileDate, [filelib:last_modified(File)|Rest]);
 module_older_than(CompileDate, [Module|Rest]) when is_atom(Module) ->
-    {file, Loaded} = code:is_loaded(Module),
-    module_older_than(CompileDate, [Loaded|Rest]);
+    %%lager:info("is_loaded Module ~p, ~p",[Module, code:is_loaded(Module)]),
+    %%11:10:54.953 [info] is_loaded Module subapp_custom_filters, false
+    %%FIXME : <app>_custom_filters
+    case code:is_loaded(Module) of
+        {file, Loaded} ->                      
+            module_older_than(CompileDate, [Loaded|Rest]);
+        false -> 
+            module_older_than(CompileDate, Rest)
+    end;    
 module_older_than(CompileDate, [CompareDate|Rest]) ->
     (CompareDate > CompileDate) orelse module_older_than(CompileDate, Rest).
 
