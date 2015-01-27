@@ -203,7 +203,7 @@ view_filter_helper_list(App) ->
 -spec web_view_path(App, Controller, Template, Extension) -> path() when 
       App::app(),
       Controller::controller_name(),
-      Template::strin(),
+      Template::string(),
       Extension::file_extension().
 web_view_path(App, Controller, Template, Extension) -> 
     filename:join([view_dir(App), Controller, lists:concat([Template, ".", Extension])]).
