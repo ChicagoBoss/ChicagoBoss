@@ -15,44 +15,43 @@ start_boss_applications( Applications, ServicesSupPid, #state{router_adapter=Rou
                         lager:error("BossApp [~p] not started for reason ~p",
                                     [AppName, Reason]), 
                         Err;
-                    _ ->                        
-                        BaseURL        = boss_env:get_env(AppName, base_url, "/"),
-                        StaticPrefix   = boss_env:get_env(AppName, static_prefix, "/static"),
-                        DocPrefix      = boss_env:get_env(AppName, doc_prefix, "/doc"),
-                        DomainList     = boss_env:get_env(AppName, domains, all),                
-                        ModelList      = boss_files:model_list(AppName),
-                        %%ViewList       = boss_files:view_module_list(AppName),
-                        ViewList       = boss_files:view_list(AppName),
-                        IsMasterNode   = boss_env:is_master_node(),
-                        ControllerList = case boss_files:web_controller_list(AppName) of
-                                             [] -> case boss_env:boss_env() == development of
-                                                       true  -> [];
-                                                       false -> 
-                                                           lager:warning("App ~p doesn't seem to have "
-                                                                         "controllers defined,~n"
-                                                                         "check your config file "
-                                                                         "at section <~p:controller_modules>,~n"
-                                                                         "have you compiled your CB application?",
-                                                                         [AppName, AppName]), 
-                                                           []
-                                                   end;
-                                             List -> 
-                                                 lager:info("~p ControllerList ~p",[AppName, List]),
-                                                 List
-                                         end,
-                        
-                        {ok, RouterSupPid}     = RouterAdapter:start([{application, AppName},
-                                                                      {controllers, ControllerList}]),
-                        {ok, TranslatorSupPid} = boss_translator:start([{application, AppName}]),
-                        init_app_load_on_dev(AppName, TranslatorSupPid),
-                        
-                        enable_master_apps(ServicesSupPid, 
-                                           AppName, 
-                                           BaseURL,
-                                           IsMasterNode),
-                        
-                        InitData = boss_web_controller:run_init_scripts(AppName),
-                        
+                    _ -> ok
+                end,
+                BaseURL        = boss_env:get_env(AppName, base_url, "/"),
+                StaticPrefix   = boss_env:get_env(AppName, static_prefix, "/static"),
+                DocPrefix      = boss_env:get_env(AppName, doc_prefix, "/doc"),
+                DomainList     = boss_env:get_env(AppName, domains, all),                
+                ModelList      = boss_files:model_list(AppName),
+                %%ViewList       = boss_files:view_module_list(AppName),
+                ViewList       = boss_files:view_list(AppName),
+                IsMasterNode   = boss_env:is_master_node(),
+                ControllerList = case boss_files:web_controller_list(AppName) of
+                                     [] -> case boss_env:boss_env() == development of
+                                               true  -> [];
+                                               false -> 
+                                                   lager:warning("App ~p doesn't seem to have "
+                                                                 "controllers defined,~n"
+                                                                 "check your config file "
+                                                                 "at section <~p:controller_modules>,~n"
+                                                                 "have you compiled your CB application?",
+                                                                 [AppName, AppName]), 
+                                                   []
+                                           end;
+                                     List -> List
+                                 end,
+                
+                {ok, RouterSupPid}     = RouterAdapter:start([{application, AppName},
+                                                              {controllers, ControllerList}]),
+                {ok, TranslatorSupPid} = boss_translator:start([{application, AppName}]),
+                init_app_load_on_dev(AppName, TranslatorSupPid),
+                
+                enable_master_apps(ServicesSupPid, 
+                                   AppName, 
+                                   BaseURL,
+                                   IsMasterNode),
+                
+                InitData = boss_web_controller:run_init_scripts(AppName),
+                
                 #boss_app_info{
                    application         = AppName,
                    init_data           = InitData,
@@ -66,7 +65,6 @@ start_boss_applications( Applications, ServicesSupPid, #state{router_adapter=Rou
                    view_modules        = ViewList,
                    controller_modules  = ControllerList
                   }
-                end
         end, Applications).
 
 init_app_load_on_dev(AppName, TranslatorSupPid) ->
