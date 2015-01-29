@@ -20,6 +20,8 @@
 
 -export([
         root_dir/1
+        ,include_dir/1
+        ,test_dir/1
         ,model_dir/1
         ,controller_dir/1
         ,view_dir/1
@@ -97,7 +99,9 @@
 -type file_extension()  :: string(). %% string start by "." 
 -type po_file()         :: path().
 
--spec root_dir(App)               -> [binary()|path()] when App::app().
+-spec root_dir(App)               -> path() when App::app().
+-spec test_dir(App)               -> path() when App::app().
+-spec include_dir(App)            -> path() when App::app().
 -spec priv_dir(App)               -> path() when App::app().
 -spec model_dir(App)              -> path() when App::app().
 -spec controller_dir(App)         -> path() when App::app().
@@ -134,8 +138,10 @@ root_dir(App) ->
             lists:reverse(Root)
     end.
 
-priv_dir(App) ->
-    filename:join( root_dir(App) ++ ["priv"]).
+test_dir(App) -> 
+    filename:join( root_dir(App) ++ [ "test", "functional"]).
+include_dir(App) when is_atom(App)->
+    filename:join( root_dir(App) ++ [ "include"]).
 model_dir(App) when is_atom(App)->
     filename:join( root_dir(App) ++ [ "src", "model"]).
 controller_dir(App) when is_atom(App)->
@@ -156,6 +162,9 @@ view_filter_helper_dir(App) ->
     filename:join( root_dir(App) ++ [ "src", "view", "lib", "filter_modules"]).
 view_html_tags_dir(App) ->
     filename:join( root_dir(App) ++ [ "src", "view", "lib", "tag_html"]).
+
+priv_dir(App) ->
+    filename:join( root_dir(App) ++ ["priv"]).
 static_dir(App) ->
     filename:join( root_dir(App) ++ ["priv", "static"]).
 init_dir(App) ->
@@ -166,8 +175,6 @@ lang_dir(App) ->
     filename:join( root_dir(App) ++ ["priv", "lang"]).
 migration_dir(App) ->
     filename:join( root_dir(App) ++ ["priv", "migrations"]).
-
-    
 
 compiler_adapters() -> 
     [boss_compiler_adapter_erlang, 

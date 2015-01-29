@@ -328,19 +328,35 @@ view_doc_root(ViewPath) ->
         end, "",
         [boss_files_util:web_view_path(), boss_files_util:mail_view_path()]).
 
+view_doc_root(App, ViewPath) ->
+    lists:foldl(fun
+            (LibPath, Best) when length(LibPath) > length(Best) ->
+                case lists:prefix(LibPath, ViewPath) of
+                    true ->
+                        LibPath;
+                    false ->
+                        Best
+                end;
+            (_, Best) ->
+                Best
+        end, "",
+        [boss_files:view_dir(App), boss_files:mail_dir(App)]).
+
 compile_view_dir_erlydtl(Application, LibPath, Module, OutDir, TranslatorPid) ->
     %%FIXME work on ./rebar boss c=compile
-    ViewTagHelperModule = boss_files_util:view_tag_helper_list(Application),
+    ViewTagHelperModule = boss_files:view_tag_helper_list(Application),
     TagHelpers         = lists:map(fun erlang:list_to_atom/1, ViewTagHelperModule),
 
-    ViewFilterHelperModule = boss_files_util:view_filter_helper_list(Application),
+    ViewFilterHelperModule = boss_files:view_filter_helper_list(Application),
     FilterHelpers      = lists:map(fun erlang:list_to_atom/1, ViewFilterHelperModule),
     ExtraTagHelpers    = boss_env:get_env(template_tag_modules, []),
     ExtraFilterHelpers = boss_env:get_env(template_filter_modules, []),
 
     lager:info("Compile Modules ~p  ~p", [LibPath, Module]),
     Res = erlydtl:compile_dir(LibPath, Module,
-                            [{doc_root, view_doc_root(LibPath)}, {compiler_options, []}, {out_dir, OutDir},
+                            [{doc_root, view_doc_root(Application, LibPath)}, 
+                             {compiler_options, []}, 
+                             {out_dir, OutDir},
                              {custom_tags_modules, TagHelpers ++ ExtraTagHelpers ++ [boss_erlydtl_tags]},
                              {custom_filters_modules, FilterHelpers ++ ExtraFilterHelpers},
                              {blocktrans_fun,
@@ -364,11 +380,11 @@ compile_view(Application, ViewPath, TemplateAdapter, OutDir, TranslatorPid) ->
             Module		= view_module(Application, ViewPath),
             HelperDirModule	= view_custom_tags_dir_module(Application),
             Locales		= boss_files:language_list(Application),
-            DocRoot		= view_doc_root(ViewPath),
+            DocRoot		= view_doc_root(Application, ViewPath),
             TagHelpers		= lists:map(fun erlang:list_to_atom/1, 
-					    boss_files_util:view_tag_helper_list(Application)),
+					    boss_files:view_tag_helper_list(Application)),
             FilterHelpers	= lists:map(fun erlang:list_to_atom/1, 
-					    boss_files_util:view_filter_helper_list(Application)),
+					    boss_files:view_filter_helper_list(Application)),
             TemplateAdapter:compile_file(ViewPath, Module, [
                     {out_dir, OutDir}, 
                     {doc_root, DocRoot},
@@ -382,17 +398,20 @@ compile_view(Application, ViewPath, TemplateAdapter, OutDir, TranslatorPid) ->
     end.
 
 compile_model(ModulePath, OutDir) ->
+    %%FIXME boss_files_util:include_dir() wrong in multi dev app
     IncludeDirs = [boss_files_util:include_dir() | boss_env:get_env(boss, include_dirs, [])],
     boss_model_manager:compile(ModulePath, [{out_dir, OutDir}, {include_dirs, IncludeDirs},
 			 {compiler_options, compiler_options()}]).
 
 compile_controller(ModulePath, OutDir) ->
+    %%FIXME boss_files_util:include_dir() wrong in multi dev app
     IncludeDirs = [boss_files_util:include_dir() | boss_env:get_env(boss, include_dirs, [])],
     Options = [{out_dir, OutDir}, {include_dirs, IncludeDirs}, {compiler_options, compiler_options()}],
     CompilerAdapter = boss_files:compiler_adapter_for_extension(filename:extension(ModulePath)),
     CompilerAdapter:compile_controller(ModulePath, Options).
 
 compile(ModulePath, OutDir) ->
+    %%FIXME boss_files_util:include_dir() wrong in multi dev app
     IncludeDirs = [boss_files_util:include_dir() | boss_env:get_env(boss, include_dirs, [])],
     Options = [{out_dir, OutDir}, {include_dirs, IncludeDirs}, {compiler_options, compiler_options()}],
     CompilerAdapter = boss_files:compiler_adapter_for_extension(filename:extension(ModulePath)),
@@ -403,12 +422,14 @@ compiler_options() ->
         boss_env:get_env(boss, compiler_options, [])).
 
 load_view_lib(Application, OutDir, TranslatorPid) ->
+    %%FIXME path??
     {ok, HelperDirModule} = compile_view_dir_erlydtl(Application,
         boss_files_util:view_html_tags_path(), view_custom_tags_dir_module(Application),
         OutDir, TranslatorPid),
     {ok, [HelperDirModule]}.
 
 load_view_lib_if_old(Application, TranslatorPid) ->
+    %%FIXME path??
     HelperDirModule = view_custom_tags_dir_module(Application),
     DirNeedsCompile = case module_is_loaded(HelperDirModule) of
         true ->
@@ -427,6 +448,7 @@ load_view_lib_if_old(Application, TranslatorPid) ->
     end.
 
 load_views(Application, OutDir, TranslatorPid) ->
+    %%FIXME path??    
     ModuleList = lists:foldr(load_views_inner(Application, OutDir,
 				              TranslatorPid),
 			     [], boss_files:view_file_list()),
@@ -470,7 +492,8 @@ load_view_if_old(Application, ViewPath, Module, TemplateAdapter, TranslatorPid) 
                                        TemplateAdapter:dependencies(Module)
                                       ]
                                      ),
-                        
+                        %%FIXME path ?? for dependencies
+                        lager:info("~p Dependencie ~p", [Application, Dependencies]),
                         ViewTagHelperModule = boss_files:view_tag_helper_list(Application),
                         TagHelpers = lists:map(fun erlang:list_to_atom/1, ViewTagHelperModule),
                         
@@ -487,6 +510,7 @@ load_view_if_old(Application, ViewPath, Module, TemplateAdapter, TranslatorPid) 
                 end,
             case NeedCompile of
                 true ->
+                    lager:info("Compile view ~p",[{Application, ViewPath, TemplateAdapter}]),
                     compile_view(Application, ViewPath, TemplateAdapter, undefined, TranslatorPid);
                 false ->
                     {ok, Module}
