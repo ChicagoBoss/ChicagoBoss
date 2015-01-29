@@ -47,7 +47,7 @@ handle_info({_Pid, {fs,file_event}, {Path, Flags}}, #state{mode=Mode, root=Root}
             case filelib:file_size(Path) of
                 0 -> ignore;
                 _ ->
-                    error_logger:info_msg("~p event: ~p ~p", [Mode, Components, Flags]),
+                    %%error_logger:info_msg("~p event: ~p ~p", [Mode, Components, Flags]),
                     case Mode of
                         development ->
                             path_event(Components, Flags, State);
