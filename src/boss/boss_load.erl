@@ -487,9 +487,7 @@ load_view_if_old(Application, ViewPath, Module, TemplateAdapter, TranslatorPid) 
                 end,
             case NeedCompile of
                 true ->
-                    R = compile_view(Application, ViewPath, TemplateAdapter, undefined, TranslatorPid),
-                    lager:info("NeedCompile ~p ~p", [R, {Application, ViewPath, TemplateAdapter}]),
-                    R;
+                    compile_view(Application, ViewPath, TemplateAdapter, undefined, TranslatorPid);
                 false ->
                     {ok, Module}
             end
