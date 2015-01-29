@@ -226,9 +226,24 @@ stop_init_scripts(Application, InitData) ->
 maybe_reload(AppInfo, App, Module) when is_atom(App)->
     maybe_reload(AppInfo, atom_to_list(App), Module);
 maybe_reload(AppInfo, App, Module) when is_atom(Module)->
-    Tokens = string:tokens(atom_to_list(Module), "_"), 
-    maybe_reload(AppInfo, App, Tokens, atom_to_list(Module), lists:last(Tokens)).
-maybe_reload(#boss_app_info{view_modules=ViewModules}=AppInfo, App, [App, "view" |_], View, _Extension) ->
+    TokensModule = string:tokens(atom_to_list(Module), "_"), 
+    TokensApp = string:tokens(App, "_"), 
+    App1 = case length(TokensApp) of
+               1 -> App;
+               N -> TokensApp
+           end,
+    IsPrefix = lists:prefix(TokensApp, TokensModule),
+    Tokens = case IsPrefix of 
+                 true -> TokensModule -- TokensApp;
+                 false -> tl(TokensModule)
+             end,
+    Last = case length(TokensModule) of
+               1 -> [];
+               _ -> lists:last(TokensModule)
+           end,
+    maybe_reload(AppInfo, IsPrefix, App, Tokens, atom_to_list(Module), Last).
+
+maybe_reload(#boss_app_info{view_modules=ViewModules}=AppInfo, true, App, ["view"|_], View, _Extension) ->
     case lists:member(View, ViewModules) of
         true -> 
             lager:notice("(^_^) it s a view, but not a new one"),
@@ -238,7 +253,7 @@ maybe_reload(#boss_app_info{view_modules=ViewModules}=AppInfo, App, [App, "view"
             lager:notice("(^_^) it s a view, new one got it, reload view_modules ~p", [New]),
             AppInfo#boss_app_info{view_modules=New}
     end;
-maybe_reload(#boss_app_info{controller_modules=Controllers}=AppInfo, App, [App |_], Controller, "controller") -> 
+maybe_reload(#boss_app_info{controller_modules=Controllers}=AppInfo, true, App, _, Controller, "controller") -> 
     case lists:member(Controller, Controllers) of
         true -> 
             lager:notice("(^_^) it s a controller, but not a new one"),
@@ -248,13 +263,14 @@ maybe_reload(#boss_app_info{controller_modules=Controllers}=AppInfo, App, [App |
             lager:notice("(^_^) it s a controller, new one detected, reload controller_modules ~p", [New]),
             AppInfo#boss_app_info{controller_modules=New}
     end;
-maybe_reload(#boss_app_info{model_modules=Models}=AppInfo, App, [App |_], Model, _) -> 
+maybe_reload(#boss_app_info{model_modules=Models}=AppInfo, _, App, _, Model, _) -> 
     case lists:member(Model, Models) of
         true -> 
-            lager:notice("(^_^) it s a controller, but not a new one"),
+            lager:notice("(^_^) it s a model, but not a new one"),
             AppInfo;
         false -> 
-            Export = Model:module_info(exports),
+            Module = list_to_atom(Model),
+            Export = Module:module_info(exports),
             case lists:keymember(attribute_names, 1, Export) andalso 
                 lists:keymember(attribute_types, 1, Export) andalso 
                 lists:keymember(attributes, 1, Export) andalso 
