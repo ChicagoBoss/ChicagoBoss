@@ -19,8 +19,7 @@
     ]).
 
 -export([
-        path_shorten/1
-        ,root_dir/1
+        root_dir/1
         ,model_dir/1
         ,controller_dir/1
         ,view_dir/1

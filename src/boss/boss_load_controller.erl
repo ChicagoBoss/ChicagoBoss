@@ -47,7 +47,7 @@ handle_info({_Pid, {fs,file_event}, {Path, Flags}}, #state{mode=Mode, root=Root}
             case filelib:file_size(Path) of
                 0 -> ignore;
                 _ ->
-                    %error_logger:info_msg("~p event: ~p ~p", [Mode, Components, Flags]),
+                    error_logger:info_msg("~p event: ~p ~p", [Mode, Components, Flags]),
                     case Mode of
                         development ->
                             path_event(Components, Flags, State);
@@ -127,8 +127,14 @@ do_load_ebin(App, Module) ->
     {Module, Binary, Filename} = code:get_object_code(Module),
     code:load_binary(Module, Filename, Binary),
     lager:notice("Reloading [~s] ~p", [App, Module]),
+    %%FIX for issue/323 and 322
+    notify_boss(App, Module),
+    %%FIX ME
     reloaded.
 
+notify_boss(App, Module) ->
+    gen_server:call(boss_web, {reloaded, App, Module}).
+    
 monitor_handles_renames([renamed|_]) -> true;
 monitor_handles_renames([_|Events]) -> monitor_handles_renames(Events);
 monitor_handles_renames([]) -> false.

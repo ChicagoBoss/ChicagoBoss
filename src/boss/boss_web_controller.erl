@@ -110,6 +110,20 @@ handle_info(timeout, #state{service_sup_pid = ServicesSupPid} = State) ->
     {noreply, State#state{ applications = AppInfoList }}.
 
 
+handle_call({reloaded, App0, Module}, _From, State) ->
+    lager:notice("boss notified: module ~p "
+               "from ~p have been reloaded...", [Module, App0]),
+    App = case is_list(App0) of true -> list_to_atom(App0); _ -> App0 end,
+    case lists:keyfind(App, 2, State#state.applications) of
+        false -> 
+            lager:notice("Not a CB app."),
+            {reply, {ok, not_cb_app}, State};
+        AppInfo ->
+            lager:notice("(^_^) OMG, it is CB app what should i do...."),
+            NewAppInfo = maybe_reload(AppInfo, App, Module),
+            AppsInfo = lists:keyreplace(App, 2, State#state.applications, NewAppInfo),
+            {reply, {ok, App, Module}, State#state{applications=AppsInfo}}            
+    end;
 handle_call({set_mode, Mode}, _From, #state{boss_load_sup=SupPid}=State) ->
     [{_, LoadPid, _, _}] = supervisor:which_children(SupPid),
     {ok, Mode} = gen_server:call(LoadPid, {set_mode, Mode}),
@@ -209,6 +223,51 @@ stop_init_scripts(Application, InitData) ->
         end, ok, boss_files:init_file_list(Application)).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+maybe_reload(AppInfo, App, Module) when is_atom(App)->
+    maybe_reload(AppInfo, atom_to_list(App), Module);
+maybe_reload(AppInfo, App, Module) when is_atom(Module)->
+    Tokens = string:tokens(atom_to_list(Module), "_"), 
+    maybe_reload(AppInfo, App, Tokens, atom_to_list(Module), lists:last(Tokens)).
+maybe_reload(#boss_app_info{view_modules=ViewModules}=AppInfo, App, [App, "view" |_], View, _Extension) ->
+    case lists:member(View, ViewModules) of
+        true -> 
+            lager:notice("(^_^) it s a view, but not a new one"),
+            AppInfo;
+        false -> 
+            New = ViewModules ++ [View],
+            lager:notice("(^_^) it s a view, new one got it, reload view_modules ~p", [New]),
+            AppInfo#boss_app_info{view_modules=New}
+    end;
+maybe_reload(#boss_app_info{controller_modules=Controllers}=AppInfo, App, [App |_], Controller, "controller") -> 
+    case lists:member(Controller, Controllers) of
+        true -> 
+            lager:notice("(^_^) it s a controller, but not a new one"),
+            AppInfo;
+        false -> 
+            New = Controllers ++ [Controller],
+            lager:notice("(^_^) it s a controller, new one detected, reload controller_modules ~p", [New]),
+            AppInfo#boss_app_info{controller_modules=New}
+    end;
+maybe_reload(#boss_app_info{model_modules=Models}=AppInfo, App, [App |_], Model, _) -> 
+    case lists:member(Model, Models) of
+        true -> 
+            lager:notice("(^_^) it s a controller, but not a new one"),
+            AppInfo;
+        false -> 
+            Export = Model:module_info(exports),
+            case lists:keymember(attribute_names, 1, Export) andalso 
+                lists:keymember(attribute_types, 1, Export) andalso 
+                lists:keymember(attributes, 1, Export) andalso 
+                lists:keymember(new, 1, Export) of
+                true ->
+                    New = Models ++ [Model],
+                    lager:notice("(^_^) it s a model, new one detected, reload model_modules ~p", [New]),
+                    AppInfo#boss_app_info{model_modules=New};
+                false ->
+                    AppInfo
+            end
+    end.
+
 run_init_scripts(AppName) ->
     lists:foldl(fun(File, Acc) ->
 			CompileResult = boss_compiler:compile(File, [{include_dirs, [boss_files_util:include_dir() | boss_env:get_env(boss, include_dirs, [])]}]),
