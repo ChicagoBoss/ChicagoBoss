@@ -19,7 +19,8 @@
     ]).
 
 -export([
-         root_dir/1
+        path_shorten/1
+        ,root_dir/1
         ,model_dir/1
         ,controller_dir/1
         ,view_dir/1
@@ -123,12 +124,12 @@
                               'boss_template_adapter_erlydtl' | 
                               'boss_template_adapter_jade'].
 
-
 root_dir(App) ->
     case code:priv_dir(App) of
         {error,bad_name} -> 
-            %% it happen when invoquing ./rebar boss c=compile
-            filename:join([filename:absname(""), "priv"]);
+            %%return absolute path is not an option, 
+            %%it mess with a lot of code
+            ["."];
         RootDir ->
             [_|Root] = lists:reverse(filename:split(RootDir)),
             lists:reverse(Root)
@@ -311,8 +312,14 @@ view_list(AppName) when is_atom(AppName)->
                         string:join([App | Rest], "_");
                     ["deps", App, "src" | Rest] ->
                         string:join([App | Rest], "_");
+                    [".", "apps",  App, "src" | Rest] ->
+                        string:join([App | Rest], "_");
+                    [".", "deps", App, "src" | Rest] ->
+                        string:join([App | Rest], "_");
                     ["..", App, "src" | Rest] ->
-                        string:join([App | Rest], "_")
+                        string:join([App | Rest], "_");
+                    [".", "src" | Rest] ->
+                        string:join([atom_to_list(AppName) | Rest], "_")                       
                 end,
          string:join(string:tokens(File, "."), "_")
      end || F <- Files, lists:member(filename:extension(F), ViewExtensions)].
