@@ -128,7 +128,6 @@ handle_call({set_mode, Mode}, _From, #state{boss_load_sup=SupPid}=State) ->
     [{_, LoadPid, _, _}] = supervisor:which_children(SupPid),
     {ok, Mode} = gen_server:call(LoadPid, {set_mode, Mode}),
     {reply, {ok, Mode}, State};    
-
 handle_call({reload_translation, App, Locale}, _From, State) ->
     AppInfo = lists:keyfind(list_to_atom(App),2,State#state.applications),
     [{_, TranslatorPid, _, _}] = supervisor:which_children(AppInfo#boss_app_info.translator_sup_pid),
@@ -151,6 +150,11 @@ handle_call(reload_routes, _From, #state{router_adapter=RouterAdapter}=State) ->
                 [{_, RouterPid, _, _}] = supervisor:which_children(AppInfo#boss_app_info.router_sup_pid),
                 RouterAdapter:reload(RouterPid)
         end, State#state.applications),
+    {reply, ok, State};
+handle_call({reload_routes, App}, _From, #state{router_adapter=RouterAdapter}=State) ->
+    AppInfo = lists:keyfind(list_to_atom(App),2,State#state.applications),
+    [{_, RouterPid, _, _}] = supervisor:which_children(AppInfo#boss_app_info.router_sup_pid),
+    RouterAdapter:reload(RouterPid),
     {reply, ok, State};
 handle_call(reload_init_scripts, _From, State) ->
     NewApplications = lists:map(fun(AppInfo) ->

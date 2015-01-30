@@ -229,7 +229,8 @@ process_request(AppInfo, Req, development, Url, RouterAdapter) ->
             ControllerList = boss_files:web_controller_list(AppInfo#boss_app_info.application),
             RouterPid = AppInfo#boss_app_info.router_pid,
             RouterAdapter:set_controllers(RouterPid, ControllerList),
-            RouterAdapter:reload(RouterPid),
+            %%no need to reload the routes file here.
+            %%RouterAdapter:reload(RouterPid),
             process_dynamic_request(AppInfo, Req, development, Url, RouterAdapter)
     end,
     process_result_and_add_session(AppInfo, [{request, Req}, {session_id, SessionID1}], Result);

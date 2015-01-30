@@ -279,6 +279,15 @@ compile_cbapp(_Type, App, ["priv", "lang" | _] = Path) ->
         _ -> skip
     end;
 
+%% RELOAD ROUTES FILES
+compile_cbapp(_Type, App, ["priv" | _] = Path) -> 
+    Last = lists:last(Path),
+    case filename:extension(Last) of
+        ".routes" -> 
+            boss_web:reload_routes(App);
+        _ -> skip
+    end;
+
 compile_cbapp(_Type, _App, _Path) -> 
     lager:info("boss_load ignore ~p", [filename:join([_App |_Path])]),
     ignore.
