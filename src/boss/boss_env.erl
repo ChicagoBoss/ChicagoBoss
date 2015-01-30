@@ -3,6 +3,7 @@
 -export([boss_env/0, setup_boss_env/0, get_env/2, get_env/3]).
 -export([master_node/0, is_master_node/0, is_developing_app/1]).
 -export([router_adapter/0, cache_adapter/0, session_adapter/0, mq_adapter/0]).
+-export([mode/1]).
 
 -spec boss_env() -> any().
 boss_env() ->
@@ -11,12 +12,17 @@ boss_env() ->
         Val -> Val
     end.
 
+-spec mode(atom()) -> any().
+mode(Mode) ->
+    {ok, Mode} = boss_web:set_mode(Mode),
+    put(boss_environment, Mode).
+
 -spec setup_boss_env() -> types:execution_mode().
-setup_boss_env() ->	
-    case boss_load:module_is_loaded(reloader) of
-        true  -> put(boss_environment, development), development;
-        false -> put(boss_environment, production), production
-    end.			
+setup_boss_env() -> 
+    case get_env(mode, undefined) of
+        undefined -> put(boss_environment, production), production;
+        Mode -> put(boss_environment, Mode), Mode
+    end.
 
 -spec get_env(atom(),atom(),any()) -> any().
 get_env(App, Key, Default) when is_atom(App), is_atom(Key) ->

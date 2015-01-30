@@ -1,21 +1,32 @@
 -module(boss_web).
 
--export([reload_routes/0,
-        reload_translation/1,
-        reload_all_translations/0,
-        reload_init_scripts/0,
-        get_all_routes/0,
-        get_all_models/0,
-        get_all_applications/0,
-        base_url/1,
-        domains/1,
-        static_prefix/1,
-        translator_pid/1,
-        router_pid/1,
-        application_info/1]).
+-export([
+         reload_routes/0,
+         reload_routes/1,
+         reload_translation/1,
+         reload_translation/2,
+         reload_all_translations/0,
+         reload_init_scripts/0,
+         get_all_routes/0,
+         get_all_models/0,
+         get_all_applications/0,
+         base_url/1,
+         domains/1,
+         static_prefix/1,
+         translator_pid/1,
+         router_pid/1,
+         application_info/1,
+         set_mode/1
+        ]).
 
 reload_routes() ->
     gen_server:call(boss_web, reload_routes).
+
+reload_routes(App) ->
+    gen_server:call(boss_web, {reload_routes, App}).
+
+reload_translation(App, Locale) ->
+    gen_server:call(boss_web, {reload_translation, App, Locale}).
 
 reload_translation(Locale) ->
     gen_server:call(boss_web, {reload_translation, Locale}).
@@ -52,3 +63,6 @@ router_pid(AppName) ->
 
 application_info(App) ->
     gen_server:call(boss_web, {application_info, App}).
+
+set_mode(Mode) ->
+    gen_server:call(boss_web, {set_mode, Mode}).
