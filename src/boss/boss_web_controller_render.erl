@@ -289,10 +289,15 @@ load_result(Controller, Template, AppInfo, TryExtensions) ->
                         %%ViewPath is wrong in multi dev app
                         App = AppInfo#boss_app_info.application,
 			ViewPath = boss_files:web_view_path(App, Controller, Template, Ext),
-			boss_load:load_view_if_dev(App,
-						   ViewPath, 
-                                                   AppInfo#boss_app_info.view_modules,
-				                   AppInfo#boss_app_info.translator_pid);
+                        %% FIXME: remove dead code
+			%% boss_load:load_view_if_dev(App,
+			%% 			   ViewPath, 
+                        %%                            AppInfo#boss_app_info.view_modules,
+			%% 	                   AppInfo#boss_app_info.translator_pid);
+			boss_load:load_view(App,
+                                            ViewPath, 
+                                            AppInfo#boss_app_info.view_modules
+                                           );
 		    (_, Acc) ->
 			Acc
                     end, {error, not_found}, TryExtensions).
