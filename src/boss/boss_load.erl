@@ -10,6 +10,7 @@
         load_services_websockets/1,
         load_mail_controllers/1,
         load_models/1,
+        load_view/3,
         load_view_if_dev/4,
         load_view_lib_modules/1,
         load_web_controllers/1,
@@ -536,6 +537,17 @@ load_view_if_dev(Application, ViewPath, ViewModules, TranslatorPid) ->
                     {error, not_found}
             end
      end.
+
+%%no need to compile again here, in the new compile scheme
+load_view(Application, ViewPath, ViewModules) ->
+    Module          = view_module(Application, ViewPath),
+    TemplateAdapter = boss_files:template_adapter_for_extension(filename:extension(ViewPath)),
+    case lists:member(atom_to_list(Module), ViewModules) of
+        true ->
+            {ok, Module, TemplateAdapter};
+        _ ->
+            {error, not_found}
+    end.
 
 module_is_loaded(Module) ->
     case code:is_loaded(Module) of
