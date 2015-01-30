@@ -20,6 +20,7 @@
 
 -export([
         root_dir/1
+        ,ebin_dir/1
         ,include_dir/1
         ,test_dir/1
         ,model_dir/1
@@ -99,8 +100,9 @@
 -type file_extension()  :: string(). %% string start by "." 
 -type po_file()         :: path().
 
--spec root_dir(App)               -> path() when App::app().
+-spec root_dir(App)               -> [binary() | path()] when App::app().
 -spec test_dir(App)               -> path() when App::app().
+-spec ebin_dir(App)               -> path() when App::app().
 -spec include_dir(App)            -> path() when App::app().
 -spec priv_dir(App)               -> path() when App::app().
 -spec model_dir(App)              -> path() when App::app().
@@ -140,6 +142,8 @@ root_dir(App) ->
 
 test_dir(App) -> 
     filename:join( root_dir(App) ++ [ "test", "functional"]).
+ebin_dir(App) when is_atom(App)->
+    filename:join( root_dir(App) ++ [ "ebin"]).
 include_dir(App) when is_atom(App)->
     filename:join( root_dir(App) ++ [ "include"]).
 model_dir(App) when is_atom(App)->
@@ -411,8 +415,10 @@ routes_file(App) ->
     filename:join([root_priv_dir(App), lists:concat([App, ".routes"])]).
 
 -spec language_list(App) -> [po_file()] when App::app().
+%% language_list(App) ->
+%%     language_list_dir(boss_files_util:lang_path(App)).
 language_list(App) ->
-    language_list_dir(boss_files_util:lang_path(App)).
+    language_list_dir(boss_files:lang_dir(App)).
 
 language_list_dir(Path) ->
     case file:list_dir(Path) of
@@ -428,6 +434,7 @@ language_list_dir(Path) ->
             []
     end.
 
+%%FIXME ??
 -spec dot_app_src(AppName) -> path() when AppName::app_name().
 dot_app_src(AppName) ->
 	filename:join(["src", lists:concat([AppName, ".app.src"])]).

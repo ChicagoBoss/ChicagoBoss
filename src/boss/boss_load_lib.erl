@@ -7,7 +7,7 @@
 compile(Type, App, Path, CBApps) -> 
     case lists:member(App, CBApps) of
         true  -> 
-            lager:info("true Type ~p, ~p, ~p",[Type, App, Path]),
+            %lager:info("true Type ~p, ~p, ~p",[Type, App, Path]),
             compile_cbapp(Type, App, Path);
         false -> 
             compile_app(Type, App, Path)
@@ -267,6 +267,17 @@ compile_cbapp(Type, App, Path = ["src", "view"| _]) ->
     %% lager:info("### TranslatorPid ~p",[TranslatorPid]),
     CompileResult = boss_load:compile_view(App, Filename, TplAdapter, OutDir, TranslatorPid),
     lager:notice("deps [view] ~p", [CompileResult]);
+
+%% RELOAD PO FILE 
+compile_cbapp(_Type, App, ["priv", "lang" | _] = Path) -> 
+    Last = lists:last(Path),
+    case filename:extension(Last) of
+        ".po" -> 
+            ["strings", Locale, "po"] = string:tokens(Last, "."),
+            File = filename:join([App | Path]),
+            boss_web:reload_translation(App, Locale);
+        _ -> skip
+    end;
 
 compile_cbapp(_Type, _App, _Path) -> 
     lager:info("boss_load ignore ~p", [filename:join([_App |_Path])]),

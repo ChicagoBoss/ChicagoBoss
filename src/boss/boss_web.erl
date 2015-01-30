@@ -2,6 +2,7 @@
 
 -export([reload_routes/0,
         reload_translation/1,
+        reload_translation/2,
         reload_all_translations/0,
         reload_init_scripts/0,
         get_all_routes/0,
@@ -17,6 +18,9 @@
 
 reload_routes() ->
     gen_server:call(boss_web, reload_routes).
+
+reload_translation(App, Locale) ->
+    gen_server:call(boss_web, {reload_translation, App, Locale}).
 
 reload_translation(Locale) ->
     gen_server:call(boss_web, {reload_translation, Locale}).
