@@ -236,7 +236,7 @@ maybe_reload(AppInfo, App, Module) when is_atom(Module)->
     TokensApp = string:tokens(App, "_"), 
     App1 = case length(TokensApp) of
                1 -> App;
-               N -> TokensApp
+               _ -> TokensApp
            end,
     IsPrefix = lists:prefix(TokensApp, TokensModule),
     Tokens = case IsPrefix of 
@@ -247,9 +247,9 @@ maybe_reload(AppInfo, App, Module) when is_atom(Module)->
                1 -> [];
                _ -> lists:last(TokensModule)
            end,
-    maybe_reload(AppInfo, IsPrefix, App, Tokens, atom_to_list(Module), Last).
+    maybe_reload(AppInfo, IsPrefix, App1, Tokens, atom_to_list(Module), Last).
 
-maybe_reload(#boss_app_info{view_modules=ViewModules}=AppInfo, true, App, ["view"|_], View, _Extension) ->
+maybe_reload(#boss_app_info{view_modules=ViewModules}=AppInfo, true, _, ["view"|_], View, _Extension) ->
     case lists:member(View, ViewModules) of
         true -> 
             lager:notice("(^_^) it s a view, but not a new one"),
@@ -259,7 +259,7 @@ maybe_reload(#boss_app_info{view_modules=ViewModules}=AppInfo, true, App, ["view
             lager:notice("(^_^) it s a view, new one got it, reload view_modules ~p", [New]),
             AppInfo#boss_app_info{view_modules=New}
     end;
-maybe_reload(#boss_app_info{controller_modules=Controllers}=AppInfo, true, App, _, Controller, "controller") -> 
+maybe_reload(#boss_app_info{controller_modules=Controllers}=AppInfo, true, _, _, Controller, "controller") -> 
     case lists:member(Controller, Controllers) of
         true -> 
             lager:notice("(^_^) it s a controller, but not a new one"),
@@ -269,7 +269,7 @@ maybe_reload(#boss_app_info{controller_modules=Controllers}=AppInfo, true, App, 
             lager:notice("(^_^) it s a controller, new one detected, reload controller_modules ~p", [New]),
             AppInfo#boss_app_info{controller_modules=New}
     end;
-maybe_reload(#boss_app_info{model_modules=Models}=AppInfo, _, App, _, Model, _) -> 
+maybe_reload(#boss_app_info{model_modules=Models}=AppInfo, _, _, _, Model, _) -> 
     case lists:member(Model, Models) of
         true -> 
             lager:notice("(^_^) it s a model, but not a new one"),
