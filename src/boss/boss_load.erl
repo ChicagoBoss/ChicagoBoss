@@ -604,18 +604,23 @@ module_compiled_date(Module) when is_atom(Module) ->
         _ -> 0
     end.
 
-view_module(Application, RelativePath) ->
-    view_module2(Application, filename:split(RelativePath)).
-view_module2(Application, ["deps", _App, "src"| Path]) ->
-    view_module2(Application, Path);
-view_module2(Application, ["apps", _App, "src"| Path]) ->
-    view_module2(Application, Path);
-view_module2(Application, ["src"| Path]) ->
-    view_module2(Application, Path);
-view_module2(Application, [".."| Path]) ->
-    view_module2(Application, Path);
-view_module2(Application, Components) ->
-    Lc = string:to_lower(lists:concat([Application, "_", string:join(Components, "_")])),
+view_module(App, RelativePath) when is_atom(App) ->
+    view_module(atom_to_list(App), RelativePath);
+view_module(App, RelativePath) ->
+    view_module2(App, filename:split(RelativePath)).
+
+view_module2(App, ["..", App, "src" | Path]) ->
+    view_module2(App, Path);
+view_module2(App, ["deps", App, "src"| Path]) ->
+    view_module2(App, Path);
+view_module2(App, ["apps", App, "src"| Path]) ->
+    view_module2(App, Path);
+view_module2(App, ["src"| Path]) ->
+    view_module2(App, Path);
+view_module2(App, [".." | Path]) ->
+    view_module2(App, Path);
+view_module2(App, Components) ->
+    Lc = string:to_lower(lists:concat([App, "_", string:join(Components, "_")])),
     ModuleIOList = re:replace(Lc, "\\.", "_", [global]),
     list_to_atom(binary_to_list(iolist_to_binary(ModuleIOList))).
 
