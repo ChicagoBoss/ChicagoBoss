@@ -188,9 +188,8 @@ render_multipart_view1([{FileName, MimeType, Body}|Rest], Boundary, CharSet) ->
         "\r\n\r\n",
         wrap_to_76(base64:encode(erlang:iolist_to_binary(Body))), "\r\n", render_multipart_view1(Rest, Boundary, CharSet)];
 render_multipart_view1([{MimeType, Body}|Rest], Boundary, CharSet) ->
-    ["--", Boundary, "\r\n", "Content-Type: ", build_content_type(MimeType, CharSet), "\r\n\r\n",
-        Body, "\r\n", render_multipart_view1(Rest, Boundary, CharSet)].
-
+    ["--", Boundary, "\r\n", "Content-Type: ", build_content_type(MimeType, CharSet), "\r\n", "Content-Transfer-Encoding: base64", "\r\n\r\n",
+        wrap_to_76(base64:encode(erlang:iolist_to_binary(Body))), "\r\n", render_multipart_view1(Rest, Boundary, CharSet)].
 
 wrap_to_76(String) ->
     [wrap_to_76(String, [])].
