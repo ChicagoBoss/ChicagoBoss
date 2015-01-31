@@ -1,5 +1,8 @@
 language: erlang
 otp_release:
+   - 17.1
+   - 17.0
+   - R16B03-1
    - R16B02
    - R16B01
 
@@ -10,4 +13,4 @@ script:
   - mkdir plt
   - ./travis-dialyzer.sh
 notifications:
-  email: false 
+  email: false
