@@ -22,8 +22,7 @@ start_boss_applications( Applications, ServicesSupPid, #state{router_adapter=Rou
                 DocPrefix      = boss_env:get_env(AppName, doc_prefix, "/doc"),
                 DomainList     = boss_env:get_env(AppName, domains, all),                
                 ModelList      = boss_files:model_list(AppName),
-                %%ViewList       = boss_files:view_module_list(AppName),
-                ViewList       = boss_files:view_list(AppName),
+                ViewList       = boss_files:view_module_list(AppName),
                 IsMasterNode   = boss_env:is_master_node(),
                 ControllerList = case boss_files:web_controller_list(AppName) of
                                      [] -> case boss_env:boss_env() == development of

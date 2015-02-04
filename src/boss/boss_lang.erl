@@ -9,6 +9,8 @@
         update_po/1,
         update_po/4]).
 
+-export([process_view_file/1]).
+
 -type application() :: types:application().
 -type lang() ::types:language().
 -type mode() :: all|filled.
@@ -152,20 +154,29 @@ extract_model_strings(App) ->
         end, [], boss_files:model_list(App)).
 
 extract_view_strings(App) ->
-    case boss_env:is_developing_app(App) of
+    %%case boss_env:is_developing_app(App) of
+    case boss_env:boss_env() == development of
         true ->
-            ViewFiles = boss_files:view_file_list(),
-            lists:foldl(fun(File, Acc) -> Acc ++ process_view_file(File) ++ process_view_file_blocks(File) end,
+            ViewFiles = boss_files:view_file_list(App),            
+            lists:foldl(fun(File, Acc) -> 
+                                    Acc ++ 
+                                    process_view_file(File) ++ 
+                                    process_view_file_blocks(File) 
+                        end,
                 [], ViewFiles);
         false ->
+            ModuleLists = boss_env:get_env(App, view_modules, []) ++ 
+                boss_env:get_env(App, view_lib_tags_modules, []),
             lists:foldl(
-                fun(Module, Acc) ->
-                	TranslatedBlocks = case lists:keysearch(translatable_blocks, 1, Module:module_info(exports)) of
-                	                       false -> [];
-                	                       {value, {translated_blocks, 0}} ->  Module:translated_blocks()
-                	                   end,
-                        Module:translatable_strings() ++ TranslatedBlocks ++ Acc
-                end, [], boss_env:get_env(App, view_modules, []) ++ boss_env:get_env(App, view_lib_tags_modules, []))
+              fun(Module, Acc) ->
+                      Exports = Module:module_info(exports),
+                      TranslatedBlocks = case lists:keysearch(translatable_blocks, 1, Exports) of
+                                             false -> [];
+                                             {value, {translated_blocks, 0}} -> Module:translated_blocks()
+                                         end,
+                      Module:translatable_strings() ++ TranslatedBlocks ++ Acc
+              end, [], 
+              ModuleLists)
     end.
 
 extract_module_strings(App) when is_atom(App)->

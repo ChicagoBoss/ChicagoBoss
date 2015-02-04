@@ -45,7 +45,7 @@
         ,make_extentions/0
         ,module_list/1
         ,adapter_for_extension/2
-        ,view_list/1
+        ,view_file_list/1
         ,view_tag_helper_list/1
         ,view_filter_helper_list/1
         ]).
@@ -304,44 +304,41 @@ web_controller_list(AppName, production) ->
       AppName::app().
 view_module_list(AppName) ->
     view_module_list(AppName, boss_env:boss_env()).
-%view_module_list(AppName, development) -> [];
-view_module_list(AppName, _) -> 
-    lists:map(fun atom_to_list/1, boss_env:get_env(AppName, view_modules, [])).
 
-view_list(AppName) when is_atom(AppName)->
+%%FIXME
+%%view_module_list(App, development) -> [];
+view_module_list(App, development) when is_atom(App)->
     ViewExtensions = ["." ++ X || X <- template_extensions()],
-    Dir = view_dir(AppName),
+    Dir = view_dir(App),
     Files = find_file(Dir),
-    %%lager:info("View Files ~p", [Files]),
-    %%lager:info("View Extensions ~p", [ViewExtensions]),
-    App = atom_to_list(AppName),
+    AppName = atom_to_list(App),
     [begin 
          Tokens = filename:split(F),         
          File = case Tokens of
-                    ["apps",  App, "src" | Rest] ->
-                        string:join([App | Rest], "_");
+                    ["apps",  AppName, "src" | Rest] ->
+                        string:join([AppName | Rest], "_");
                     ["deps", App, "src" | Rest] ->
-                        string:join([App | Rest], "_");
-                    [".", "apps",  App, "src" | Rest] ->
-                        string:join([App | Rest], "_");
-                    [".", "deps", App, "src" | Rest] ->
-                        string:join([App | Rest], "_");
-                    ["..", App, "src" | Rest] ->
-                        string:join([App | Rest], "_");
+                        string:join([AppName | Rest], "_");
+                    [".", "apps",  AppName, "src" | Rest] ->
+                        string:join([AppName | Rest], "_");
+                    [".", "deps", AppName, "src" | Rest] ->
+                        string:join([AppName | Rest], "_");
+                    ["..", AppName, "src" | Rest] ->
+                        string:join([AppName | Rest], "_");
                     [".", "src" | Rest] ->
                         string:join([atom_to_list(AppName) | Rest], "_")                       
                 end,
          string:join(string:tokens(File, "."), "_")
-     end || F <- Files, lists:member(filename:extension(F), ViewExtensions)].
+     end || F <- Files, lists:member(filename:extension(F), ViewExtensions)];
+view_module_list(AppName, _) -> 
+    lists:map(fun atom_to_list/1, boss_env:get_env(AppName, view_modules, [])).
+
+-spec view_file_list(App) -> [path()] when App::app().
+view_file_list(App) when is_atom(App)->
+    ViewExtensions = ["." ++ X || X <- template_extensions()],
+    Files = find_file(view_dir(App)),
+    [ F || F <- Files, lists:member(filename:extension(F), ViewExtensions)].
     
-
-
-    %% case boss_env:is_developing_app(AppName) of
-    %%     true -> [];
-    %%     false ->
-    %%         lists:map(fun atom_to_list/1, boss_env:get_env(AppName, view_modules, []))
-    %% end.
-
 
 -spec is_controller_present(AppName, Controller, ModuleList) -> boolean() when
       AppName::app(),
@@ -421,17 +418,17 @@ language_list(App) ->
     language_list_dir(boss_files:lang_dir(App)).
 
 language_list_dir(Path) ->
-    case file:list_dir(Path) of
-        {ok, Files} ->
-            lists:sort(lists:map(fun("strings."++Lang) -> 
-                                         filename:basename(Lang, ".po") 
-                                 end,
-                    lists:filter(fun
-                            ("strings."++_Lang) -> true;
-                            (_) -> false
-                        end, Files)));
-        {error, enoent} ->
-            []
+    Files = find_file(Path),
+    language_list_dir(Files, []).
+
+language_list_dir([], Acc) -> Acc;
+language_list_dir([F|T], Acc) -> 
+    Last = lists:last(filename:split(F)),
+    case string:tokens(Last, ".") of
+        ["strings", Locale, "po"] -> 
+            language_list_dir(T, [Locale] ++ Acc);
+        _ -> 
+            language_list_dir(T, Acc)
     end.
 
 %%FIXME ??

@@ -10,7 +10,7 @@
             
         <ul>
         {% for doc in docs %}
-          <li><a href="{{doc.doc_url}}"> {{ doc.doc_app }} doc </a></li>
+          <li><a href="{{doc.doc_url}}"> {{ doc.doc_app }} </a></li>
         {% endfor %}
          </ul>
 
