@@ -170,7 +170,7 @@ route(Url, State) ->
         _Rte = #boss_route{ application = App, controller = C, action = A, params = P } -> 
             lager:info("Boss Route ~p ~p ~p ~p", [App, C, A, P]),
             ControllerModule = list_to_atom(boss_files:web_controller(App, C, State#state.controllers)),
-            {Tokens, []}     = boss_controller_lib:convert_params_to_tokens(P, ControllerModule, list_to_atom(A)),
+            {[], Tokens} = boss_controller_lib:convert_params_to_tokens(P, ControllerModule, list_to_atom(A)),
             {ok, {App, C, A, Tokens}}
     end.
 
