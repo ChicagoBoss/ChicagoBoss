@@ -305,7 +305,7 @@ web_controller_list(AppName, production) ->
 view_module_list(AppName) ->
     view_module_list(AppName, boss_env:boss_env()).
 
-%%FIXME
+%%FIXME??
 %%view_module_list(App, development) -> [];
 view_module_list(App, development) when is_atom(App)->
     ViewExtensions = ["." ++ X || X <- template_extensions()],
@@ -326,10 +326,11 @@ view_module_list(App, development) when is_atom(App)->
                     ["..", AppName, "src" | Rest] ->
                         string:join([AppName | Rest], "_");
                     [".", "src" | Rest] ->
-                        string:join([atom_to_list(AppName) | Rest], "_")                       
+                        string:join([AppName | Rest], "_")                       
                 end,
          string:join(string:tokens(File, "."), "_")
      end || F <- Files, lists:member(filename:extension(F), ViewExtensions)];
+%%FIXME: helper script to create the boss.config
 view_module_list(AppName, _) -> 
     lists:map(fun atom_to_list/1, boss_env:get_env(AppName, view_modules, [])).
 
