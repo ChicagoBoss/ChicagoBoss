@@ -58,36 +58,6 @@
 -compile(export_all).
 -endif.
 
-%% -type input_string() :: string().
-%% -spec root_priv_dir(_) -> input_string().
-%% -spec websocket_mapping(_,_,[any()]) -> any().
-%% -spec mail_controller_path() -> [input_string(),...].
-%% -spec websocket_list(_) -> [any()].
-%% -spec model_list(_) -> [any()].
-%% -spec lib_module_list(_) -> [any()].
-%% -spec web_controller_list(_) -> [any()].
-%% -spec view_module_list(_) -> [string()].
-%% -spec is_controller_present(_,_,_) -> boolean().
-%% -spec web_controller(_,_,_) -> any().
-%% -spec compiler_adapter_for_extension(_) -> any().
-%% -spec template_adapter_for_extension(nonempty_maybe_improper_list()) -> any().
-%% -spec adapter_for_extension(_,['boss_compiler_adapter_elixir' | 'boss_compiler_adapter_erlang' | 'boss_compiler_adapter_lfe' | 'boss_template_adapter_eex' | 'boss_template_adapter_erlydtl' | 'boss_template_adapter_jade',...]) -> any().
-%% -spec template_extensions() -> any().
-%% -spec view_file_list() -> [any()].
-%% -spec init_file_list(_) -> [string()].
-%% -spec routes_file(atom() | string() | number()) -> input_string().
-%% -spec language_list(_) -> [input_string()].
-%% -spec language_list_dir(input_string()) -> [input_string()].
-%% -spec dot_app_src(atom() | string() | number()) -> input_string().
-%% -spec model_list(_,[input_string(),...]) -> [any()].
-
-%% -spec find_file(input_string()) -> [string()].
-%% -spec find_file(input_string(),[]) -> [string()].
-%% -spec find_file([string()],input_string(),[string()],[]) -> [string()].
-
-%% -export_type([execution_mode/0, application/0, language/0, webserver/0, cb_node/0]).
-%% -export_type([controller/0, compiler_adapters/0]).
-
 -type path()            :: string().
 -type app()             :: types:application().
 -type tpl_adapter()     :: types:template_adapter().
@@ -97,8 +67,9 @@
 -type module_name()     :: string().
 -type controller_name() :: string().
 -type ws_mapping()      :: {uri_bin(), module()}.
--type file_extension()  :: string(). %% string start by "." 
+-type file_extension()  :: string(). %% "erl" | "dtl" | "css" ... 
 -type po_file()         :: path().
+-type locale()          :: string(). %% "en" | "cn" | "it" | "es" ...
 
 -spec root_dir(App)               -> [binary() | path()] when App::app().
 -spec test_dir(App)               -> path() when App::app().
@@ -412,7 +383,7 @@ init_file_list(App) ->
 routes_file(App) ->
     filename:join([root_priv_dir(App), lists:concat([App, ".routes"])]).
 
--spec language_list(App) -> [po_file()] when App::app().
+-spec language_list(App) -> [locale()] when App::app().
 %% language_list(App) ->
 %%     language_list_dir(boss_files_util:lang_path(App)).
 language_list(App) ->
