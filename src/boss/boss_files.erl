@@ -288,7 +288,7 @@ view_module_list(App, development) when is_atom(App)->
          File = case Tokens of
                     ["apps",  AppName, "src" | Rest] ->
                         string:join([AppName | Rest], "_");
-                    ["deps", App, "src" | Rest] ->
+                    ["deps", AppName, "src" | Rest] ->
                         string:join([AppName | Rest], "_");
                     [".", "apps",  AppName, "src" | Rest] ->
                         string:join([AppName | Rest], "_");
