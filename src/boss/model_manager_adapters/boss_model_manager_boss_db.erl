@@ -24,9 +24,9 @@ start() ->
                     {ok, Val} -> [{OptName, Val}|Acc];
                     _ -> Acc
                 end
-        end, [], [db_port, db_host, db_username, db_password, db_database, 
-            db_replication_set, db_read_mode, db_write_mode, 
-            db_write_host, db_write_host_port, db_read_capacity, 
+        end, [], [db_port, db_host, db_username, db_password, db_database, db_ssl, db_configure,
+            db_replication_set, db_read_mode, db_write_mode,
+            db_write_host, db_write_host_port, db_read_capacity,
             db_write_capacity, db_model_read_capacity, db_model_write_capacity]),
 
     DBAdapter = boss_env:get_env(db_adapter, mock),
