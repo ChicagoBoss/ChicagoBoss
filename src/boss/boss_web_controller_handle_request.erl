@@ -156,11 +156,7 @@ set_timer(Request, Url, Mode, AppInfo, TranslatorPid, RouterPid,
 		   router_pid                = RouterPid,
 		   controller_modules        = ControllerList
 		  },
-    %R = timer:tc(process_request,[NewAppInfo, Request, Mode, Url]),
-    R  = erlang:apply(?MODULE,process_request,[NewAppInfo, Request, Mode, Url, RouterAdapter]),
-    {1,R}.
-
-
+    timer:tc(?MODULE,process_request,[NewAppInfo, Request, Mode, Url, RouterAdapter]).
 
 handle_response(Request, _Payload = {stream, Generator, Acc0}, RequestMethod, Response2) ->
     Protocol		= Request:protocol_version(),
