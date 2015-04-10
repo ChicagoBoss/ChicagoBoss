@@ -15,7 +15,7 @@ load_view_inner_test() ->
 load_view_inner_bad_test() ->
     Inner	= boss_load:load_views_inner(test, ".", self()),
     ?assert(is_function(Inner, 2)),
-    ?assertEqual([],Inner("../test/bad.dtl", [])).
+    ?assertEqual([test], Inner("../test/bad.dtl", [test]) ).
    
 
 load_view_inner_no_file_test() ->
