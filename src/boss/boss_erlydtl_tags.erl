@@ -5,7 +5,7 @@ url(Variables, Options) ->
     ListVars = lists:map(fun 
             ({K, V}) when is_binary(V) -> {K, binary_to_list(V)}; 
             ({K, V}) -> {K, V} 
-        end, Variables),
+        end, lists:flatten(Variables)),
     ThisApp = proplists:get_value(application, Options),
     LinkedApp = proplists:get_value(application, ListVars, ThisApp),
     LinkedAppAtom = list_to_atom(lists:concat([LinkedApp])),
