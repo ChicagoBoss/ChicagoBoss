@@ -1,5 +1,10 @@
 language: erlang
+sudo: false
 otp_release:
+# Test on all supported releases
+#   - 18.0
+   - 17.5
+   - 17.4
    - 17.1
    - 17.0
    - R16B03-1
@@ -7,10 +12,9 @@ otp_release:
    - R16B01
 
 script:
-  - rebar get-deps
-  - rebar compile 
-  - rebar eunit -v skip_deps=true
-  - mkdir plt
-  - ./travis-dialyzer.sh
+  - make
+#  - rebar eunit -v skip_deps=true
+  - make plt
+  - make dialyze
 notifications:
   email: false

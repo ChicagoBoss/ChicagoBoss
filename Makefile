@@ -1,15 +1,16 @@
-
 PREFIX:=../
 DEST:=$(PREFIX)$(PROJECT)
 ERL=erl
-GIT = git
-REBAR_VER = 2.5.1
 REBAR=./rebar
+GIT = git
+REBAR_VER = 2.6.0
 SESSION_CONFIG_DIR=priv/test_session_config
 
 .PHONY: deps get-deps test
 
-all:
+all: compile
+
+compile:
 	@$(REBAR) get-deps
 	@$(REBAR) compile
 	@echo ""
@@ -26,10 +27,6 @@ all:
 
 boss:
 	@$(REBAR) compile skip_deps=true
-
-clean:
-	@$(REBAR) clean
-	@rm -f src/boss/*.dtl.erl
 
 edoc:
 	$(ERL) -pa ebin -pa deps/*/ebin -run boss_doc run -noshell -s init stop
@@ -65,6 +62,32 @@ get-deps:
 
 deps:
 	@$(REBAR) compile
+
+## dialyzer
+PLT_FILE = ~/chicagoboss.plt
+PLT_APPS ?= kernel stdlib erts compiler runtime_tools syntax_tools crypto \
+		mnesia ssl public_key eunit xmerl inets asn1 hipe deps/*/ebin
+DIALYZER_OPTS ?= -Werror_handling -Wrace_conditions -Wunmatched_returns \
+		-Wunderspecs --verbose --fullpath -n
+
+.PHONY: dialyze
+dialyze: all
+	@[ -f $(PLT_FILE) ] || $(MAKE) plt
+	@dialyzer --plt $(PLT_FILE) $(DIALYZER_OPTS) ebin || [ $$? -eq 2 ];
+
+## In case you are missing a plt file for dialyzer,
+## you can run/adapt this command
+.PHONY: plt
+plt:
+	@echo "Building PLT, may take a few minutes"
+	@dialyzer --build_plt --output_plt $(PLT_FILE) --apps \
+		$(PLT_APPS) || [ $$? -eq 2 ];
+
+clean:
+	@$(REBAR) clean
+	@rm -f src/boss/*.dtl.erl
+	rm -fv erl_crash.dump
+	rm -f $(PLT_FILE)
 
 test:
 	@$(REBAR) skip_deps=true eunit
