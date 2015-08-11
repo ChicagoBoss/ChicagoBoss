@@ -28,10 +28,6 @@ compile:
 boss:
 	@$(REBAR) compile skip_deps=true
 
-clean:
-	@$(REBAR) clean
-	@rm -f src/boss/*.dtl.erl
-
 edoc:
 	$(ERL) -pa ebin -pa deps/*/ebin -run boss_doc run -noshell -s init stop
 #$(ERL) -pa ebin -noshell -eval "boss_doc:run()" -s init stop
@@ -89,6 +85,7 @@ plt:
 
 clean:
 	@$(REBAR) clean
+	@rm -f src/boss/*.dtl.erl
 	rm -fv erl_crash.dump
 	rm -f $(PLT_FILE)
 
