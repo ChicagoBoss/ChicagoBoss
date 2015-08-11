@@ -2,7 +2,7 @@ Chicago Boss: Start small, dream big
 ====================================
 [![Build Status](https://travis-ci.org/ChicagoBoss/ChicagoBoss.svg?branch=master)](https://travis-ci.org/ChicagoBoss/ChicagoBoss)
 
-Attention! This is a legacy branch supporting Erlang R16. For newer Elang versions use master branch.
+Attention! This is a legacy branch supporting Erlang R16. For newer Erlang versions use master branch.
 
 Chicago Boss is a server framework inspired by Rails and written in Erlang. It
 offers all the conveniences of modern web development, including Comet. What sets
