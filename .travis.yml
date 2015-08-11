@@ -2,14 +2,11 @@ language: erlang
 sudo: false
 otp_release:
 # Test on all supported releases
-#   - 18.0
+   - 18.0
    - 17.5
    - 17.4
    - 17.1
    - 17.0
-   - R16B03-1
-   - R16B02
-   - R16B01
 
 script:
   - make
