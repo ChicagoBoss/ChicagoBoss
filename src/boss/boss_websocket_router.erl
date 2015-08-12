@@ -30,8 +30,8 @@
 	 terminate/2, code_change/3]).
 
 -define(SERVER, ?MODULE). 
--record(state, {consumers  ::dict(), 
-		services   ::dict(), 
+-record(state, {consumers  ::dict:dict(), 
+		services   ::dict:dict(), 
 		nb_consumer}).
 
 -spec start_link() -> 'ignore' | {'error',_} | {'ok',pid()}.
@@ -43,7 +43,7 @@
 -spec join(_,_,_,_) -> 'ok'.
 -spec close(_,_,_,_,_) -> 'ok'.
 -spec incoming(_,_,_,_,_) -> 'ok'.
--spec init([]) -> {'ok',#state{consumers::dict(),services::dict(),nb_consumer::0}}.
+-spec init([]) -> {'ok',#state{consumers::dict:dict(),services::dict:dict(),nb_consumer::0}}.
 -spec handle_call(_,_,#state{}) -> {'reply','ok' | [any()] | {'error','service_notfound'} | {'ok',_},#state{}}.
 -spec handle_cast(_,#state{}) -> {'noreply',#state{}}.
 -spec handle_info(_,#state{}) -> {'noreply',#state{}}.
