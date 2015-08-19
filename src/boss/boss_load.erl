@@ -54,7 +54,7 @@ load_all_modules(Application, TranslatorSupPid) ->
     load_all_modules(Application, TranslatorSupPid, undefined).
 
 load_all_modules(Application, TranslatorSupPid, OutDir) ->
-    lager:info("Loading application ~p", [Application]),
+    lager:debug("Loading application ~p", [Application]),
     [{_, TranslatorPid, _, _}]	= supervisor:which_children(TranslatorSupPid),
     
     Ops = make_ops_list(TranslatorPid),
@@ -305,7 +305,7 @@ compile_view_dir_erlydtl(Application, LibPath, Module, OutDir, TranslatorPid) ->
     ExtraTagHelpers	= boss_env:get_env(template_tag_modules, []),
     ExtraFilterHelpers	= boss_env:get_env(template_filter_modules, []),
 
-    lager:info("Compile Modules ~p  ~p", [LibPath, Module]),
+    lager:debug("Compile Modules ~p  ~p", [LibPath, Module]),
     Res = erlydtl:compile_dir(LibPath, Module,
                             [{doc_root, view_doc_root(LibPath)}, {compiler_options, []}, {out_dir, OutDir},
                              {custom_tags_modules, TagHelpers ++ ExtraTagHelpers ++ [boss_erlydtl_tags]},

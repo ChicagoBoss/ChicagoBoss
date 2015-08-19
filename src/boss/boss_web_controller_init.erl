@@ -57,7 +57,7 @@ init_master_node(Env, ThisNode) ->
     MasterNode = boss_env:master_node(),
     if
         MasterNode =:= ThisNode ->
-            error_logger:info_msg("Starting master services on ~p~n", [MasterNode]),
+            lager:debug("Starting master services on ~p", [MasterNode]),
             boss_mq:start(),
             boss_news:start(),
             case boss_env:get_env(smtp_server_enable, false) of
@@ -73,7 +73,7 @@ init_master_node(Env, ThisNode) ->
                     ok
             end;
         true ->
-            error_logger:info_msg("Pinging master node ~p from ~p~n", [MasterNode, ThisNode]),
+            lager:debug("Pinging master node ~p from ~p", [MasterNode, ThisNode]),
             pong = net_adm:ping(MasterNode)
     end,
     {ok,MasterNode}.
@@ -87,7 +87,7 @@ init_webserver(ThisNode, MasterNode, ServerMod, SSLEnable, SSLOptions,
       mochiweb_http:start([{ssl, SSLEnable}, {ssl_opts, SSLOptions} | ServerConfig]);
   cowboy ->
 	    %Dispatch = [{'_', [{'_', boss_mochicow_handler, [{loop, {boss_mochicow_handler, loop}}]}]}],
-	    error_logger:info_msg("Starting cowboy... on ~p~n", [MasterNode]),
+        lager:debug("Starting cowboy... on ~p", [MasterNode]),
 	    application:start(cowlib),
 	    application:start(ranch),
         application:start(cowboy),
@@ -96,10 +96,10 @@ init_webserver(ThisNode, MasterNode, ServerMod, SSLEnable, SSLOptions,
         AcceptorCount = boss_env:get_env(acceptor_processes, 100),
         case SSLEnable of
             false ->
-                error_logger:info_msg("Starting http listener... on ~s:~p ~n", [inet_parse:ntoa(HttpIp), HttpPort]),
+                lager:debug("Starting http listener... on ~s:~p", [inet_parse:ntoa(HttpIp), HttpPort]),
                 cowboy:start_http(boss_http_listener, AcceptorCount, [{port, HttpPort}, {ip, HttpIp}], [{env, []}]);
             true ->
-                error_logger:info_msg("Starting https listener... on ~s:~p ~n", [inet_parse:ntoa(HttpIp), HttpPort]),
+                lager:debug("Starting https listener... on ~s:~p", [inet_parse:ntoa(HttpIp), HttpPort]),
         	    SSLConfig = [{port, HttpPort}, {ip, HttpIp}] ++ SSLOptions,
         	    cowboy:start_https(boss_https_listener, AcceptorCount, SSLConfig, [{env, []}])
         end,
@@ -113,7 +113,6 @@ init_webserver(ThisNode, MasterNode, ServerMod, SSLEnable, SSLOptions,
 init_ssl() ->
     SSLEnable  = boss_env:get_env(ssl_enable, false),
     SSLOptions = boss_env:get_env(ssl_options, []),
-    error_logger:info_msg("SSL:~p~n", [SSLOptions]),
     {SSLEnable, SSLOptions}.
 
 
@@ -137,7 +136,7 @@ init_services() ->
     application:start(elixir),
 
     Env = boss_env:setup_boss_env(),
-    error_logger:info_msg("Starting Boss in ~p mode....~n", [Env]),
+    lager:info("Starting Boss in ~p mode...", [Env]),
     boss_model_manager:start(),
     init_cache(),
     boss_session:start(),

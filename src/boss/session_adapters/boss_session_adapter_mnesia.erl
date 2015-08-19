@@ -19,13 +19,13 @@ stop(_) ->
     ok.
 
 init(_) ->
-    error_logger:info_msg("Starting distributed session mnesia storage~n"),
+    lager:info("Starting distributed session mnesia storage"),
     ok = ensure_schema(),  % Expects Mnesia to be stopped
     mnesia:start(),
     %%Checks for table, after some time tries to recreate it
     case mnesia:wait_for_tables([?TABLE], ?TIMEOUT) of
         ok -> 
-            error_logger:info_msg("mnesia session table ok~n"),	
+            lager:debug("mnesia session table ok"),
             noop;
         {timeout,[?TABLE]} ->
             create_session_storage()		
@@ -92,9 +92,9 @@ ensure_schema() ->
 
 create_session_storage()->
     Nodes = mnesia_nodes(),
-    error_logger:info_msg("Creating mnesia table for nodes ~p~n",  [Nodes]),
+    lager:notice("Creating mnesia table for nodes ~p",  [Nodes]),
     case mnesia:create_table(?TABLE,[{disc_copies,  Nodes}, {attributes, record_info(fields, boss_session)}]) of
-        {aborted, Reason} -> error_logger:error_msg("Error creating mnesia table for sessions: ~p~n", [Reason]);
+        {aborted, Reason} -> lager:error("Error creating mnesia table for sessions: ~p", [Reason]);
         {atomic, ok} -> ok
     end.
 

@@ -81,7 +81,7 @@ init([Handler, ServiceUrl]) when is_atom(Handler) ->
 	    boss_websocket_router:register(ServiceUrl, Handler),
 	    {ok, #state{handler=Handler, internal=Internal}}
     catch Class:Reason ->
-	    error_logger:error_msg(
+        lager:error(
 	      "** Boss Service Handler ~p terminating in init/0~n"
 	      "   for the reason ~p:~p~n"
 	      "** Stacktrace: ~p~n~n",
@@ -131,7 +131,7 @@ handle_cast({join_service, ServiceUrl, WebSocketId, Req, SessionId}, State) ->
 	    {stop, InternalReason, #state{handler=Handler, internal=NewInternal}}
 
 	catch Class:Reason ->
-		error_logger:error_msg(
+        lager:error(
 		  "** Boss Service Handler ~p terminating in join/0~n"
 		  "   for the reason ~p:~p~n"
   		  "ServiceUrl: ~p~n"
@@ -156,7 +156,7 @@ handle_cast({terminate_service, Reason, ServiceUrl, WebSocketId, Req, SessionId}
 	    {stop, InternalReason, #state{handler=Handler, internal=NewInternal}}
 		
     catch Class:Reason ->
-	    error_logger:error_msg(
+        lager:error(
 	      "** Handler ~p terminating in init/0~n"
 	      "   for the reason ~p:~p~n"
 	      "ServiceUrl: ~p~n"
@@ -180,7 +180,7 @@ handle_cast({incoming_msg, ServiceUrl, WebSocketId, Req, SessionId, Message}, St
 	{stop, _Reason, NewInternal} ->
 	    {stop, _Reason, #state{handler=Handler, internal=NewInternal}}		
     catch Class:Reason ->
-	    error_logger:error_msg(
+        lager:error(
 	      "** Boss Service Handler ~p terminating in handle_incoming/4~n"
 	      "   for the reason ~p:~p~n"
 	      "ServiceUrl: ~p~n"
@@ -204,7 +204,7 @@ handle_cast({broadcast, Message}, State) ->
 	{stop, _Reason, NewInternal} ->
 	    {stop, _Reason, #state{handler=Handler, internal=NewInternal}}
     catch Class:Reason ->
-	    error_logger:error_msg(
+        lager:error(
 	      "** Boss Service Handler ~p terminating in broadcast~n"
 	      "   for the reason ~p:~p~n"
 	      "Message    : ~p~n"
@@ -237,7 +237,7 @@ handle_info(_Info, State) ->
 	{stop, InternalReason, NewInternal} ->
 	    {stop, InternalReason, #state{handler=Handler, internal=NewInternal}}
     catch Class:Reason ->
-	    error_logger:error_msg(
+        lager:error(
 	      "** Handler ~p terminating in handle_info/2~n"
 	      "   for the reason ~p:~p~n"
 	      "** Stacktrace: ~p~n~n",
@@ -265,7 +265,7 @@ terminate(_Reason, _State) ->
 	ok ->
 	    ok
     catch Class:Reason ->
-	    error_logger:error_msg(
+        lager:error(
 	      "** Boss Service Handler ~p terminating in handle_info/0~n"
 	      "   for the reason ~p:~p~n"
 	      "** Stacktrace: ~p~n~n",

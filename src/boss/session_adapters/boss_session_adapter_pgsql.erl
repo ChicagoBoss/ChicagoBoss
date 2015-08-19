@@ -20,7 +20,7 @@ stop(_Conn) ->
     ok.
 
 init(_Options) ->
-    error_logger:info_msg("Starting distributed session Postgresql storage~n"),
+    lager:info("Starting distributed session Postgresql storage"),
 
     %% Do we have a session table?  If not, create it.
     case boss_db:table_exists(boss_session) of
