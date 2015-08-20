@@ -20,7 +20,6 @@ handle_request(Req, RequestMod, ResponseMod, RouterAdapter) ->
     ApplicationForPath	= RouterAdapter:find_application_for_path(Request,
                                                                   FullUrl, 
                                                                   LoadedApplications),
-    lager:notice("ApplicationForPath ~p~n", [ApplicationForPath]),
     
     try
 	   handle_application(Req, ResponseMod, Request, FullUrl, ApplicationForPath, RouterAdapter)
@@ -174,11 +173,11 @@ handle_protocol(_)     -> identity.
 
 
 log_status_code(500, ErrorFormat, ErrorArgs) ->
-    error_logger:error_msg(ErrorFormat, ErrorArgs);
+    lager:error(ErrorFormat, ErrorArgs);
 log_status_code(404, ErrorFormat, ErrorArgs) ->
-    error_logger:warning_msg(ErrorFormat, ErrorArgs);
+    lager:warning(ErrorFormat, ErrorArgs);
 log_status_code(_, ErrorFormat, ErrorArgs) ->
-    error_logger:info_msg(ErrorFormat, ErrorArgs).
+    lager:info(ErrorFormat, ErrorArgs).
 
 process_stream_generator(_Req, _TransferEncoding, 'HEAD', _Generator, _Acc) ->
     ok;
@@ -294,7 +293,7 @@ process_not_found(Message, #boss_app_info{ router_pid = RouterPid } = AppInfo, R
     end.
 
 process_error(Payload, AppInfo, RequestContext, development, RouterAdapter) ->
-    error_logger:error_report(Payload),
+    lager:error("~p", [Payload]),
     ExtraMessage = case RouterAdapter:handle(AppInfo#boss_app_info.router_pid, 500) of
         not_found ->
             ["This message will appear in production; you may want to define a 500 handler in ", boss_files:routes_file(AppInfo#boss_app_info.application)];
@@ -304,7 +303,7 @@ process_error(Payload, AppInfo, RequestContext, development, RouterAdapter) ->
     boss_web_controller_render:render_error(io_lib:print(Payload), ExtraMessage, AppInfo, RequestContext);
     
 process_error(Payload, #boss_app_info{ router_pid = RouterPid } = AppInfo, RequestContext, Mode, RouterAdapter) ->
-    error_logger:error_report(Payload),
+    lager:error("~p", [Payload]),
     case RouterAdapter:handle(RouterPid, 500) of
         {ok, {Application, Controller, Action, Tokens}} when Application =:= AppInfo#boss_app_info.application ->
             ErrorLocation = {Controller, Action, Tokens},

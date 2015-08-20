@@ -198,7 +198,7 @@ stop_init_scripts(Application, InitData) ->
                            ScriptInitData ->
                                catch Module:stop(ScriptInitData)
                        end;
-                   Error -> error_logger:error_msg("Compilation of ~p failed: ~p~n", [File, Error])
+                   Error -> lager:error("Compilation of ~p failed: ~p", [File, Error])
                 end
         end, ok, boss_files:init_file_list(Application)).
 
@@ -213,7 +213,7 @@ process_compile_result(File, Acc, {ok, Module}) ->
     InitResult =  Module:init(),
     init_result(File, Acc, Module, InitResult);
 process_compile_result(File, Acc, Error) ->
-    error_logger:error_msg("Compilation of ~p failed: ~p~n", [File, Error]),
+    lager:error("Compilation of ~p failed: ~p", [File, Error]),
     Acc.
 
 init_result(_File, Acc, Module, {ok, Info}) ->
@@ -221,7 +221,7 @@ init_result(_File, Acc, Module, {ok, Info}) ->
 init_result(_File, Acc, Module, ok) ->
     [{Module, true}|Acc];
 init_result(File, Acc, _Module,Error) ->
-    error_logger:error_msg("Execution of ~p failed: ~p~n", [File, Error]),
+    lager:error("Execution of ~p failed: ~p", [File, Error]),
     Acc.
 
 generate_session_id(Request) ->

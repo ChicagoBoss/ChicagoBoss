@@ -92,7 +92,6 @@ handle_info(_Info, State) ->
 
 load(State) ->
     RoutesFile = boss_files:routes_file(State#state.application),
-    error_logger:info_msg("Loading routes from ~p ....", [RoutesFile]),
     case file:consult(RoutesFile) of
         {ok, OrderedRoutes} -> 
             lists:foldl(fun
@@ -135,7 +134,7 @@ load(State) ->
                         Number+1
                 end, 1, OrderedRoutes);
         Error -> 
-            error_logger:error_msg("Missing or invalid boss.routes file in ~p~n~p~n", [RoutesFile, Error])
+            lager:error("Missing or invalid boss.routes file in ~p; Error reason: ~p", [RoutesFile, Error])
     end.
 
 handle(StatusCode, State) ->
@@ -168,7 +167,6 @@ route(Url, State) ->
                     not_found
             end;
         _Rte = #boss_route{ application = App, controller = C, action = A, params = P } -> 
-            lager:info("Boss Route ~p ~p ~p ~p", [App, C, A, P]),
             ControllerModule = list_to_atom(boss_files:web_controller(App, C, State#state.controllers)),
             {Tokens, []}     = boss_controller_lib:convert_params_to_tokens(P, ControllerModule, list_to_atom(A)),
             {ok, {App, C, A, Tokens}}
