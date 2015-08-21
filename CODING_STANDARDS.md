@@ -1,9 +1,7 @@
 # Contributing to Chicago Boss
-Zachary Kessin
-Dec 30 2013
 
 If you would like to contribute to Chicago Boss or the related
-projects including boss_db, tiny_pq and so on then we welcome your
+projects including boss_db, tiny_pq and so on, then we welcome your
 contributions. However in order to keep our code quality as high as
 we can we ask that everyone read this guide before sending pull
 requests. (And if you don't get it perfect we won't bite your head
@@ -18,11 +16,11 @@ pull requests.
 
 ## Make it pass Dialyzer
 
-I run dialyzer on everything, if it breaks it probably means that I
+I run dialyzer on everything, if it breaks it probably means that we
 have more work to do, so try to make it pass.
 
 ## Tests are required
-I have been adding tests with proper to boss_db and they will show up
+We have been adding tests with proper to boss_db and they will show up
 in boss sooner or later. While historically most of the code does not
 have any sort of tests we need to start adding it. Unit tests are
 good, property based tests are better.
@@ -35,3 +33,10 @@ needs to be re factored. Really keep the functions short.
 Please use EDoc (http://www.erlang.org/doc/apps/edoc/chapter.html) 
 compatible comments for your functions and modules. In-code comments 
 are welcome too. 
+
+## Coding style
+Last, but not least.
+* Please use [EditorConfig](http://editorconfig.org) to ensure consistent 
+line-endings, tabs/spaces, etc. or make sure, that your editor does 
+satisfy the coding styles defined within .editorconfig file shipped 
+with a project
