@@ -14,7 +14,7 @@ migration_list(App) ->
 %% Create a migration.  MigrationName is an atom to use as the name of
 %% the migration.
 make(App, MigrationName) when is_atom(MigrationName) ->
-    {MegaSeconds, Seconds, _Microsecs} = erlang:now(),
+    {MegaSeconds, Seconds, _Microsecs} = os:timestamp(),
     Filename = filename:join([boss_files:root_priv_dir(App), "migrations",
 			      io_lib:format("~p~p_~s.erl", [MegaSeconds, Seconds, MigrationName])]),
     file:write_file(Filename, io_lib:format("%% Migration: ~p~n~n{~p,~n  fun(up) -> undefined;~n     (down) -> undefined~n  end}.~n", [MigrationName, MigrationName])).

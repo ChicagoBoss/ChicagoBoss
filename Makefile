@@ -66,7 +66,7 @@ deps:
 ## dialyzer
 PLT_FILE = ~/chicagoboss.plt
 PLT_APPS ?= kernel stdlib erts compiler runtime_tools syntax_tools crypto \
-		mnesia ssl public_key eunit xmerl inets asn1 hipe deps/*/ebin
+		mnesia ssl public_key eunit xmerl inets asn1 hipe edoc deps/*/ebin
 DIALYZER_OPTS ?= -Werror_handling -Wrace_conditions -Wunmatched_returns \
 		-Wunderspecs --verbose --fullpath -n
 

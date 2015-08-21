@@ -19,7 +19,7 @@ start_link(Args) ->
 
 init(Options) ->
     Adapter = proplists:get_value(adapter, Options, boss_session_adapter_mock),
-    {A1, A2, A3} = now(),
+    {A1, A2, A3} = os:timestamp(),
     random:seed(A1,A2,A3),
     {ok, Conn} = Adapter:start(Options),
     {ok, #state{adapter = Adapter, connection = Conn }}.

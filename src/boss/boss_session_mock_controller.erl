@@ -120,6 +120,6 @@ prune_expired_sessions(#state{ ttl_tree = Tree, session_dict = Dict, table = Tab
     State#state{ ttl_tree = NewTree, session_dict = NewDict }.
 
 now_seconds() ->
-    {A, B, _} = erlang:now(),
+    {A, B, _} = os:timestamp(),
     A * 1000 * 1000 + B.
 
