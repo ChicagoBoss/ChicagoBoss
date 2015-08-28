@@ -34,8 +34,8 @@
 -export_type([export_attr1/0, export_attr2/0, export_attr/0, route_form/0, syntaxTree/0]).
 -endif.
 
--spec compile(binary() | [atom() | [any()] | char()]) -> any().
--spec compile(binary() | [atom() | [any()] | char()],[any()]) -> any().
+-spec compile(binary() | [atom() | [any()] | char()]) -> {'error',atom() | {_,[any(),...]}}.
+-spec compile(binary() | [atom() | [any()] | char()],[any()]) -> {'error',atom() | {_,[any(),...]}}.
 
 
 -spec add_routes_to_forms([export_attr1(),...]) -> [syntaxTree()].

@@ -9,12 +9,12 @@
 
 ensure_started(App) ->
     case application:start(App) of
-	ok ->
-	    ok;
-	{error, {already_started, App}} ->
-	    ok
+    ok ->
+        ok;
+    {error, {already_started, App}} ->
+        ok
     end.
-	
+    
 %% @spec start() -> ok
 %% @doc Start the boss server.
 start() ->
@@ -26,8 +26,8 @@ start() ->
 %% @spec stop() -> ok
 %% @doc Stop the boss server.
 stop() ->
-    Res = application:stop(boss),    
-    application:stop(mimetypes),    
+    Res = application:stop(boss),
+    application:stop(mimetypes),
     application:stop(crypto),
     Res.
 

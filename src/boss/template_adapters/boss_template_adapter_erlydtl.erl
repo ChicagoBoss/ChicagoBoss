@@ -6,8 +6,8 @@
 -spec source(atom() | tuple()) -> any().
 -spec dependencies(atom() | tuple()) -> any().
 -spec render(atom() | tuple(),_,_) -> {ok, iolist()}|{error, _}.
--spec compile_file(atom() | binary() | [atom() | [any()] | char()],_,[any()]) -> any().
--spec compile(atom() | binary() | [atom() | [any()] | char()],_,_,_,_,_,_,_,[any()],[any()],[any()],_,_) -> any().
+-spec compile_file(atom() | binary() | [atom() | [any()] | char()],atom(),[any()]) -> {'ok',atom() | [{[any()],[any()]}]}.
+-spec compile(atom() | binary() | [atom() | [any()] | char()],atom(),_,_,_,_,_,_,[any()],[any()],[any()],_,_) -> {'error',[{[any()],[any()]}]} | {'ok',atom()}.
 file_extensions() -> ["dtl", "html", "txt", "js"].
 
 translatable_strings(Module) ->

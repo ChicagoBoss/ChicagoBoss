@@ -126,7 +126,7 @@ handle_DATA(FromAddress, ToAddressList, _Data, State) ->
     reply_with_errors(FromAddress, ToAddressList, State).
 
 reply_with_errors(_FromAddress, _ToAddressList, #state{ errors = [] } = State) ->
-    Reference = lists:flatten([io_lib:format("~2.16.0b", [X]) || <<X>> <= erlang:md5(term_to_binary(erlang:now()))]),
+    Reference = lists:flatten([io_lib:format("~2.16.0b", [X]) || <<X>> <= erlang:md5(term_to_binary(os:timestamp()))]),
     {ok, Reference, State};
 reply_with_errors(FromAddress, ToAddressList, #state{ errors = Errors } = State) ->
     FirstAddress = hd(ToAddressList),

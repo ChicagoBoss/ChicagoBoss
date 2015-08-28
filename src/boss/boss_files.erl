@@ -1,14 +1,14 @@
 -module(boss_files).
 -export([
-	websocket_list/1,
-	websocket_mapping/3,
+        websocket_list/1,
+        websocket_mapping/3,
         dot_app_src/1,
-                    init_file_list/1, language_list/1, mail_controller_path/0,
+        init_file_list/1, language_list/1, mail_controller_path/0,
         model_list/1,
         lib_module_list/1,
         routes_file/1,
         root_priv_dir/1, view_file_list/0,
-                                                        view_module_list/1,
+        view_module_list/1,
         compiler_adapter_for_extension/1,
         template_adapter_for_extension/1,
         template_extensions/0,
@@ -28,11 +28,11 @@
 -spec root_priv_dir(_) -> input_string().
 -spec websocket_mapping(_,_,[any()]) -> any().
 -spec mail_controller_path() -> [input_string(),...].
--spec websocket_list(_) -> [any()].
--spec model_list(_) -> [any()].
--spec lib_module_list(_) -> [any()].
--spec web_controller_list(_) -> [any()].
--spec view_module_list(_) -> [string()].
+-spec websocket_list(atom()) -> [any()].
+-spec model_list(atom()) -> [any()].
+-spec lib_module_list(atom()) -> [any()].
+-spec web_controller_list(atom() | string()) -> [any()].
+-spec view_module_list(atom()) -> [string()].
 -spec is_controller_present(_,_,_) -> boolean().
 -spec web_controller(_,_,_) -> any().
 -spec compiler_adapter_for_extension(_) -> any().
@@ -40,12 +40,12 @@
 -spec adapter_for_extension(_,['boss_compiler_adapter_elixir' | 'boss_compiler_adapter_erlang' | 'boss_compiler_adapter_lfe' | 'boss_template_adapter_eex' | 'boss_template_adapter_erlydtl' | 'boss_template_adapter_jade',...]) -> any().
 -spec template_extensions() -> any().
 -spec view_file_list() -> [any()].
--spec init_file_list(_) -> [string()].
+-spec init_file_list(atom()) -> [string()].
 -spec routes_file(atom() | string() | number()) -> input_string().
--spec language_list(_) -> [input_string()].
+-spec language_list(atom()) -> [string()].
 -spec language_list_dir(input_string()) -> [input_string()].
 -spec dot_app_src(atom() | string() | number()) -> input_string().
--spec model_list(_,[input_string(),...]) -> [any()].
+-spec model_list(atom(),[string(),...]) -> [any()].
 
 -spec find_file(input_string()) -> [string()].
 -spec find_file(input_string(),[]) -> [string()].

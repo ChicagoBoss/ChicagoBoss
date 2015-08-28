@@ -42,7 +42,7 @@
 -spec http_not_modified({http_status_code(),_,_,_})    -> http_status_result().
 -spec http_bad_request({http_status_code(),_,_,_})     -> http_status_result().
 -spec http_not_found({http_status_code(),_,_,_})       -> http_status_result().
--spec link_with_text([any()],{_,_,_} | {_,_,_,_}) -> {'false',[any(),...]} | {'true',[any(),...]}.
+-spec link_with_text([any()],{_,_,maybe_improper_list() | tuple()} | {_,_,_,maybe_improper_list() | tuple()}) -> {'false',[any(),...]} | {'true',[any(),...]}.
 -spec tag_with_text([any()],[any()],{_,_,maybe_improper_list() | tuple()} | {_,_,_,maybe_improper_list() | tuple()}) -> {'false',[any(),...]} | {'true',[any(),...]}.
 -spec header([any()],[any()],{[any()],_,_} | {_,_,[any()],_}) -> {'false',[any(),...]} | {'true',[any(),...]}.
 -spec location_header([any()],{[any()],_,_} | {_,_,[any()],_}) -> {'false',[any(),...]} | {'true',[any(),...]}.
@@ -57,7 +57,7 @@
 -spec email_received(maybe(string()))           -> http_status_result().
 -spec email_not_received(maybe(string()))       -> http_status_result().
 -spec tag_with_text1([any()],[any()],maybe_improper_list() | tuple()) -> {'false',[any(),...]} | {'true',[any(),...]}.
--spec link_with_text1([any()],_) -> {'false',[any(),...]} | {'true',[any(),...]}.
+-spec link_with_text1([any()],maybe_improper_list() | tuple()) -> {'false',[any(),...]} | {'true',[any(),...]}.
 -spec has_tag_with_text(_,_,maybe_improper_list() | tuple()) -> boolean().
 %% @spec http_ok(Response) -> {Passed, ErrorMessage}
 %% @doc Compares the HTTP status code in `Response' to 200 (HTTP OK).
