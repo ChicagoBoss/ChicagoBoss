@@ -81,33 +81,14 @@ init_master_node(Env, ThisNode) ->
 
 init_webserver(ThisNode, MasterNode, ServerMod, SSLEnable, SSLOptions,
                ServicesSupPid, ServerConfig) ->
-    case ServerMod of
-  mochiweb_http ->
-      application:start(mochiweb),
-      mochiweb_http:start([{ssl, SSLEnable}, {ssl_opts, SSLOptions} | ServerConfig]);
-  cowboy ->
-	    %Dispatch = [{'_', [{'_', boss_mochicow_handler, [{loop, {boss_mochicow_handler, loop}}]}]}],
-        lager:debug("Starting cowboy... on ~p", [MasterNode]),
-	    application:start(cowlib),
-	    application:start(ranch),
-        application:start(cowboy),
-        HttpPort      = boss_env:get_env(port, 8001),
-        HttpIp        = boss_env:get_env(ip, {0, 0, 0, 0}),
-        AcceptorCount = boss_env:get_env(acceptor_processes, 100),
-        case SSLEnable of
-            false ->
-                lager:debug("Starting http listener... on ~s:~p", [inet_parse:ntoa(HttpIp), HttpPort]),
-                cowboy:start_http(boss_http_listener, AcceptorCount, [{port, HttpPort}, {ip, HttpIp}], [{env, []}]);
-            true ->
-                lager:debug("Starting https listener... on ~s:~p", [inet_parse:ntoa(HttpIp), HttpPort]),
-        	    SSLConfig = [{port, HttpPort}, {ip, HttpIp}] ++ SSLOptions,
-        	    cowboy:start_https(boss_https_listener, AcceptorCount, SSLConfig, [{env, []}])
-        end,
+
+        lager:debug("Starting webserver... on ~p", [MasterNode]),
+		application:start(simple_bridge),
+
         if MasterNode =:= ThisNode ->
                 boss_service_sup:start_services(ServicesSupPid, boss_websocket_router);
 	       true -> ok
-        end
-    end.
+        end.
 
 
 init_ssl() ->

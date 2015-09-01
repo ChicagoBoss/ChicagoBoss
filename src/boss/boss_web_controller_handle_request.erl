@@ -1,6 +1,6 @@
 -module(boss_web_controller_handle_request).
 
--export([handle_request/4]).
+-export([handle_request/2]).
 
 -export([process_request/5]).
 
@@ -11,40 +11,36 @@
 -include("boss_web.hrl").
 
 %% TODO REFACTOR AND TEST
-handle_request(Req, RequestMod, ResponseMod, RouterAdapter) ->
+handle_request(Bridge, RouterAdapter) ->
   
     LoadedApplications	= boss_web:get_all_applications(),
-    Request		= simple_bridge:make_request(RequestMod, Req),
-    FullUrl		= Request:path(),
+    FullUrl		= Bridge:path(),
 
-    ApplicationForPath	= RouterAdapter:find_application_for_path(Request,
+    ApplicationForPath	= RouterAdapter:find_application_for_path(Bridge,
                                                                   FullUrl, 
                                                                   LoadedApplications),
     
     try
-	   handle_application(Req, ResponseMod, Request, FullUrl, ApplicationForPath, RouterAdapter)
+	   handle_application(Bridge, FullUrl, ApplicationForPath, RouterAdapter)
     catch Class:Error ->
     	%% Nuclear option: Something very serious happened and we don't want to
     	%% fail silently, but instead it should generate an error message.
     	lager:error("Unhandled Error: ~s", [boss_log_util:stacktrace(Class, Error)]),
-    	handle_fatal_error(Req, ResponseMod)
+    	handle_fatal_error(Bridge)
     end.
 
-handle_fatal_error(Req, ResponseMod) ->
-	Response  = simple_bridge:make_response(ResponseMod, {Req, undefined}),
-	Response1 = (Response:status_code(500)):data(["An unhandled and unrecoverable error occurred. Please check error logs."]),
-	Response1:build_response().
+handle_fatal_error(Bridge) ->
+	Response1 = (Bridge:status_code(500)):data(["An unhandled and unrecoverable error occurred. Please check error logs."]),
+	Response1.
 
-handle_application(Req, ResponseMod, _Request, _FullUrl, undefined, _RouterAdapter) ->
-    Response	 = simple_bridge:make_response(ResponseMod, {Req, undefined}),
-    Response1	 = (Response:status_code(404)):data(["No application configured at this URL"]),
-    Response1:build_response();
-handle_application(Req, ResponseMod, Request, FullUrl,  App, RouterAdapter) ->
+handle_application(Bridge, _FullUrl, undefined, _RouterAdapter) ->
+    Response1	 = (Bridge:status_code(404)):data(["No application configured at this URL"]),
+    Response1;
+handle_application(Bridge, FullUrl,  App, RouterAdapter) ->
     BaseURL		 = boss_web:base_url(App),
     DocRoot      = boss_files_util:static_path(App),
     StaticPrefix = boss_web:static_prefix(App),
     Url			 = lists:nthtail(length(BaseURL), FullUrl),
-    Response	 = simple_bridge:make_response(ResponseMod, {Req, DocRoot}),
     SpecialFiles = boss_env:get_env(App,
             					   static_files,
             					   [
@@ -54,38 +50,38 @@ handle_application(Req, ResponseMod, Request, FullUrl,  App, RouterAdapter) ->
                                    ]),
     IsSpecialFile= lists:member(Url,SpecialFiles),
    
-    handle_result(Request, App, StaticPrefix, Url, Response, IsSpecialFile, RouterAdapter).
+    handle_result(Bridge, App, StaticPrefix, Url, IsSpecialFile, RouterAdapter).
 
 
-handle_result(_Request, _App, _StaticPrefix, Url, Response, _IsSpecialFile = true, _) ->
-    (Response:file(Url)):build_response();
-handle_result(Request, App, StaticPrefix, Url, Response, _IsSpecialFile = false, RouterAdapter) ->
+handle_result(Bridge, _App, _StaticPrefix, Url, _IsSpecialFile = true, _) ->
+    Bridge:set_response_file(Url);
+handle_result(Bridge, App, StaticPrefix, Url, _IsSpecialFile = false, RouterAdapter) ->
     TestStaticPrefix = string:substr(Url, 1, length(StaticPrefix)),
     case TestStaticPrefix of
 	StaticPrefix ->
-	    build_static_response(App, StaticPrefix, Url, Response);
+	    build_static_response(App, StaticPrefix, Url, Bridge);
 	_ ->
-	    build_dynamic_response(App, Request, Response, Url, RouterAdapter)
+	    build_dynamic_response(App, Bridge, Url, RouterAdapter)
     end.
 
-build_static_response(App, StaticPrefix, Url, Response) ->
+build_static_response(App, StaticPrefix, Url, Bridge) ->
     [$/ |File]	 = lists:nthtail(length(StaticPrefix), Url),
     IsDevelopment= boss_env:boss_env(),
     Sha1		 = make_etag(App, StaticPrefix, File),
     Ops          = [
             	    fun(Resp) -> dev_headers(Resp, IsDevelopment) end,
-            	    fun(Resp) ->  Resp:file([$/ |File])	end,
+            	    fun(Resp) ->  Resp:set_response_file([$/ |File])	end,
             	    fun(Resp) ->  case Sha1 of 
             	                  	{error, _} -> Resp;
-            	                  	_          -> Resp:header("Etag",Sha1)
+            	                  	_          -> Resp:set_header("Etag",Sha1)
             	                  end end,
-            	    fun(Resp) ->  Resp:build_response()	end
+            	    fun(Resp) ->  Resp	end
            	       ],
 
     lists:foldl(fun(Operation, Resp) ->
 			         Operation(Resp) 
 		        end, 
-                Response, 
+                Bridge, 
                 Ops).
 
     
@@ -118,14 +114,14 @@ make_etag(App, StaticPrefix, File) ->
     
 
 %% TODO: Refactor
-build_dynamic_response(App, Request, Response, Url, RouterAdapter) ->
+build_dynamic_response(App, Bridge, Url, RouterAdapter) ->
     Mode            = boss_web_controller_util:execution_mode(App),
     AppInfo		    = boss_web:application_info(App),
 
     TranslatorPid	= boss_web:translator_pid(App),
     RouterPid		= boss_web:router_pid(App),
     ControllerList	= boss_files:web_controller_list(App),
-    TR              = set_timer(Request, 
+    TR              = set_timer(Bridge, 
                                 Url, 
                                 Mode,
 				                AppInfo, 
@@ -136,17 +132,17 @@ build_dynamic_response(App, Request, Response, Url, RouterAdapter) ->
                                 ),
     {Time, {StatusCode, Headers, Payload}} = TR,
     ErrorFormat		= "~s ~s [~p] ~p ~pms",
-    RequestMethod	= Request:request_method(),
-    FullUrl		= Request:path(),
+    RequestMethod	= Bridge:request_method(),
+    FullUrl		= Bridge:path(),
     ErrorArgs		= [RequestMethod, FullUrl, App, StatusCode, Time div 1000],
     log_status_code(StatusCode, ErrorFormat, ErrorArgs),
-    Response1		= (Response:status_code(StatusCode)):data(Payload),
+    Response1		= Bridge:set_status_code(StatusCode),
     Response2		= lists:foldl(fun({K, V}, Acc) ->
-					      Acc:header(K, V) 
+					      Acc:set_header(K, V) 
 				      end, 
 				      Response1, 
 				      Headers),
-    handle_response(Request, Payload, RequestMethod, Response2).
+    handle_response(Response2, Payload, RequestMethod).
 
 set_timer(Request, Url, Mode, AppInfo, TranslatorPid, RouterPid,
           ControllerList, RouterAdapter) ->
@@ -157,14 +153,14 @@ set_timer(Request, Url, Mode, AppInfo, TranslatorPid, RouterPid,
 		  },
     timer:tc(?MODULE,process_request,[NewAppInfo, Request, Mode, Url, RouterAdapter]).
 
-handle_response(Request, _Payload = {stream, Generator, Acc0}, RequestMethod, Response2) ->
-    Protocol		= Request:protocol_version(),
+handle_response(Bridge, _Payload = {stream, Generator, Acc0}, RequestMethod) ->
+    Protocol		= Bridge:protocol_version(),
     TransferEncoding	= handle_protocol(Protocol),
-    Response3		= Response2:data(chunked),
-    Response3:build_response(),
-    process_stream_generator(Request, TransferEncoding, RequestMethod, Generator, Acc0);
-handle_response(_Request, Payload , _RequestMethod, Response2) ->
-    (Response2:data(Payload)):build_response().
+    Response3		= Bridge:set_response_data(chunked),
+    Response3,
+    process_stream_generator(Bridge, TransferEncoding, RequestMethod, Generator, Acc0);
+handle_response(Bridge, Payload , _RequestMethod) ->
+    Bridge:set_response_data(Payload).
 
 
 handle_protocol({1,1}) -> chunked;

@@ -33,13 +33,7 @@ terminate(_Reason, #state{router_adapter=RouterAdapter}=State) ->
         end, State#state.applications),
     Services = [ boss_translator, RouterAdapter, boss_model_manager, boss_cache],
     [Service:stop() ||Service <- Services],
-    case boss_env:get_env(server, ?DEFAULT_WEB_SERVER) of
-        mochiweb ->
-            mochiweb_http:stop();
-        cowboy   ->
-            cowboy:stop_listener(boss_http_listener),
-            cowboy:stop_listener(boss_https_listener)
-    end,
+    application:stop(simple_bridge),
     application:stop(elixir).
 
 
@@ -98,12 +92,12 @@ handle_info(timeout, #state{service_sup_pid = ServicesSupPid} = State) ->
     AppInfoList     = boss_web_controller_util:start_boss_applications(Applications, 
                                                                        ServicesSupPid, 
                                                                        State),
-    case boss_env:get_env(server, ?DEFAULT_WEB_SERVER) of
-        cowboy ->
-            boss_web_controller_cowboy:dispatch_cowboy(Applications);
-        _Oops ->
-            _Oops
-    end,
+%%     case boss_env:get_env(server, ?DEFAULT_WEB_SERVER) of
+%%         cowboy ->
+%%             boss_web_controller_cowboy:dispatch_cowboy(Applications);
+%%         _Oops ->
+%%             _Oops
+%%     end,
     {noreply, State#state{ applications = AppInfoList }}.
 
 

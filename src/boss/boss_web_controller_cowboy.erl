@@ -1,19 +1,26 @@
 -module(boss_web_controller_cowboy).
 
+-export([dispacher/0]).
 -export([dispatch_cowboy/1]).
+
+dispacher() ->
+	Applications	= boss_env:get_env(applications, []),
+	dispatch_cowboy(Applications).
+
 
 %% cowboy dispatch rule for static content
 dispatch_cowboy(Applications) ->
     AppStaticDispatches = create_cowboy_dispatches(Applications),
     RouterAdapter       = boss_env:router_adapter(),
-    BossDispatch	= [{'_', boss_mochicow_handler, [{loop, {boss_mochicow_handler, loop, [RouterAdapter]}}]}],
+    BossDispatch	= [{'_', cowboy_simple_bridge_anchor,[]}],
     % [{"/", boss_mochicow_handler, []}],
     %Dispatch		= [{'_',
 
     Dispatch		= [{'_', AppStaticDispatches ++ BossDispatch}],
-    SSLEnabled = boss_env:get_env(ssl_enable, false),
-    CowboyListener        = get_listener(SSLEnabled),
-    cowboy:set_env(CowboyListener, dispatch, cowboy_router:compile(Dispatch)).
+    %SSLEnabled = boss_env:get_env(ssl_enable, false),
+    %CowboyListener        = get_listener(SSLEnabled),
+    %cowboy:set_env(CowboyListener, dispatch, cowboy_router:compile(Dispatch)).
+	cowboy_router:compile(Dispatch).
 
 -spec(get_listener(boolean()) -> boss_https_listener|boss_http_listener).
 get_listener(true) -> boss_https_listener;
