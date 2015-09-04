@@ -1,7 +1,6 @@
 
 -define(DEBUGPRINT(A), error_logger:info_report("~~o)> " ++ A)).
 -define(BUILTIN_CONTROLLER_FILTERS, [boss_lang_filter, boss_cache_page_filter, boss_cache_vars_filter]).
--define(DEFAULT_WEB_SERVER, cowboy).
 -define(PRINT(N,V),
 	lager:notice(" ~s ~p", [ N,V])).
 -include_lib("eunit/include/eunit.hrl").

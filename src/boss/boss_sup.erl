@@ -41,16 +41,8 @@ upgrade() ->
 %% @spec init([]) -> SupervisorTree
 %% @doc supervisor callback.
 init([]) ->
-    Ip = case os:getenv("MOCHIWEB_IP") of false -> "0.0.0.0"; Any -> Any end,
-    Port = case application:get_env(port) of
-        {ok, {env, PortVar}} ->
-            case os:getenv(PortVar) of
-                false -> 8001;
-                PortStr -> list_to_integer(PortStr)
-            end;
-        {ok, P} when is_integer(P) -> P;
-        undefined -> 8001
-    end,
+    Ip = "0.0.0.0",
+    Port = 8001,
     WebConfig = [ {ip, Ip}, {port, Port} ],
     Web = {boss_web_controller,
 	   {boss_web_controller, start_link, [WebConfig]},

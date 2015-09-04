@@ -3,7 +3,7 @@
 -type execution_mode()		:: 'development' | 'production'.
 -type application()  	        :: atom().
 -type language()		:: any().
--type webserver()               :: 'cowboy' | 'mochiweb_http'.
+-type webserver()               :: any().
 -type cb_node()                 :: node().
 -type controller()              :: any().
 -type compiler_adapters() :: 'boss_compiler_adapter_elixir' | 'boss_compiler_adapter_erlang' | 'boss_compiler_adapter_lfe'.

@@ -42,10 +42,11 @@ middle_filter(Other, _, _) ->
 
 after_filter({Whatever, Content, Headers}, _, RequestContext) ->
     Token = proplists:get_value(?CSRFTOKEN_NAME, RequestContext, new_token()),
+    Request = proplists:get_value(request, RequestContext, []),
 
     %% Set ?CSRFTOKEN_NAME cookie
     {Whatever, Content, [
-        mochiweb_cookies:cookie(
+        Request:set_cookie(
             ?CSRFTOKEN_NAME,
             Token,
           [{path, "/"}, {max_age, boss_session:get_session_exp_time()}]) | Headers]};

@@ -51,15 +51,6 @@ stop_smtp() ->
             ok
     end.
 
-init_web_server_options() ->
-    {ServerMod, RequestMod, ResponseMod} =
-        case boss_env:get_env(server, ?DEFAULT_WEB_SERVER) of
-            mochiweb -> {mochiweb_http, mochiweb_request_bridge, mochiweb_response_bridge};
-            cowboy   -> {cowboy, mochiweb_request_bridge, mochiweb_response_bridge}
-        end,
-    {RequestMod, ResponseMod, ServerMod}.
-
-
 
 init(Config) ->
     ThisNode					         = erlang:node(),
@@ -69,22 +60,21 @@ init(Config) ->
     boss_web_controller_init:init_mail_service(),
     RouterAdapter                        = boss_env:router_adapter(), 
 
-    {RequestMod, ResponseMod, ServerMod} = init_web_server_options(),
     {SSLEnable, SSLOptions}			     = boss_web_controller_init:init_ssl(),
     ServicesSupPid				         = boss_web_controller_init:init_master_services(ThisNode, MasterNode),
-    ServerConfig                         = init_server_config(Config, RequestMod, ResponseMod, RouterAdapter),
-    Pid						             = boss_web_controller_init:init_webserver(
-                                                ThisNode, MasterNode, ServerMod, SSLEnable,
-											    SSLOptions, ServicesSupPid, ServerConfig),
+    ServerConfig                         = init_server_config(Config, RouterAdapter),
+    Pid                                  = boss_web_controller_init:init_webserver(
+                                                ThisNode, MasterNode, SSLEnable,
+                                                SSLOptions, ServicesSupPid, ServerConfig),
     {ok, #state{ 
                 router_adapter  = RouterAdapter,
                 service_sup_pid = ServicesSupPid, 
                 http_pid        = Pid, 
                 is_master_node  = (ThisNode =:= MasterNode) }, 0}.
 
-init_server_config(Config, RequestMod, ResponseMod, RouterAdapter) ->
+init_server_config(Config, RouterAdapter) ->
     [{loop, fun(Req) ->
-		    boss_web_controller_handle_request:handle_request(Req, RequestMod, ResponseMod, RouterAdapter)
+		    boss_web_controller_handle_request:handle_request(Req, RouterAdapter)
             end} | Config].
 
 handle_info(timeout, #state{service_sup_pid = ServicesSupPid} = State) ->
@@ -92,12 +82,6 @@ handle_info(timeout, #state{service_sup_pid = ServicesSupPid} = State) ->
     AppInfoList     = boss_web_controller_util:start_boss_applications(Applications, 
                                                                        ServicesSupPid, 
                                                                        State),
-%%     case boss_env:get_env(server, ?DEFAULT_WEB_SERVER) of
-%%         cowboy ->
-%%             boss_web_controller_cowboy:dispatch_cowboy(Applications);
-%%         _Oops ->
-%%             _Oops
-%%     end,
     {noreply, State#state{ applications = AppInfoList }}.
 
 
