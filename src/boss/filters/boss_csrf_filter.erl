@@ -15,14 +15,23 @@ before_filter(Config, RequestContext) ->
                    false ->
                        Config
                end,
-
+    
     [CSRF_Token, NewToken] = get_csrf_token(Request),
     case lists:member(proplists:get_value(method, RequestContext),
                       ['GET', 'HEAD', 'OPTIONS', 'TRACE']) of
         true -> accept_(RequestContext, NewToken);
         false ->
             case proplists:is_defined(do_not_enforce_csrf_checks, ReConfig) of
-                true -> accept_(RequestContext, NewToken);
+                true -> 
+                    case proplists:get_bool(do_not_enforce_csrf_checks, ReConfig) of
+                        true -> accept_(RequestContext, NewToken);
+                        false -> 
+                            case check_referer(Request) of
+                                false -> reject_(incorrect_referer);
+                                true ->
+                                    pre_check_csrf_token(RequestContext, CSRF_Token, NewToken)
+                            end
+                    end;
                 false ->
                     case check_referer(Request) of
                         false -> reject_(incorrect_referer);
