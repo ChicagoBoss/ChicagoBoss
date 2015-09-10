@@ -34,20 +34,25 @@ ws_message({text, Data}, Bridge, State) ->
     #state{websocket_id=WebsocketId, 
        session_id=SessionId, 
        service_url=ServiceUrl } = State,
-    Response = boss_websocket_router:incoming(ServiceUrl, WebsocketId, Bridge, SessionId, Data),
-    {Response, State};
+    case boss_websocket_router:incoming(ServiceUrl, WebsocketId, Bridge, SessionId, Data) of
+        ok -> Response = noreply;
+        {ok, NewState} -> Response = {noreply, NewState};
+        Response -> Response
+    end,
+    Response;
 ws_message({binary, Data}, Bridge, State) ->
     #state{websocket_id=WebsocketId, 
        session_id=SessionId, 
        service_url=ServiceUrl } = State,
-    Response = boss_websocket_router:incoming(ServiceUrl, WebsocketId, Bridge, SessionId, Data),
-    {reply, atom_to_list(Response), State};
-ws_message(Other, _Bridge, State) ->
-	lager:error("ws_message other called with data ~p", [Other]),
-	{reply, Other, State}.
+    case boss_websocket_router:incoming(ServiceUrl, WebsocketId, Bridge, SessionId, Data) of
+        ok -> Response = noreply;
+        {ok, NewState} -> Response = {noreply, NewState};
+        Response -> Response
+    end,
+    Response.
 
 ws_info(Data, _Bridge, _State) ->
-	%lager:info("ws_info called with data ~p", [Data]),
+    %lager:info("ws_info called with data ~p", [Data]),
     Reply = Data,
     {reply, Reply}.
 
