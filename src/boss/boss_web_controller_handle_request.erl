@@ -101,7 +101,7 @@ make_etag(App, StaticPrefix, File) ->
 	Priv = case code:priv_dir(App) of
 		{error, bad_name} ->
 			%% enuit isn't loading the application, so this will default for us
-			"../priv";
+			"./priv";
 		P ->
 			P
 	end,
