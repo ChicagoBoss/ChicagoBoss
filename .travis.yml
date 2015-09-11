@@ -13,6 +13,7 @@ otp_release:
 
 script:
   - make
+  - rm -rf .rebar
   - rebar eunit -v skip_deps=true
   - make plt
   - make dialyze
