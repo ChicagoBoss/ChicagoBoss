@@ -1,7 +1,7 @@
 {application, boss,
     [
     {description, "Chicago Boss web framework, now serving three flavors of Comet"},
-    {vsn, "0.8.17"},
+    {vsn, "0.8.18"},
     {registered, [
         boss_mq, boss_mq_sup,
         boss_session, boss_session_sup,
