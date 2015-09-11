@@ -22,7 +22,7 @@ spec_test_() ->
 -type datetime() :: {date(), time()}.
 prop_pull_recieve() ->
     ?FORALL({Msg, PullTime},
-            {{refrence, datetime(), jsx:json_term()},
+            {{refrence, datetime(), jsx:json_text()},
              datetime()},
              begin
                  self() ! Msg,

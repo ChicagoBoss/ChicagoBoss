@@ -13,8 +13,14 @@ otp_release:
 
 script:
   - make
-#  - rebar eunit -v skip_deps=true
+  - rebar eunit -v skip_deps=true
   - make plt
   - make dialyze
+# some real world action
+  - make app PROJECT=whakamutunga
+  - cd ../whakamutunga/
+  - rm -rf deps/*/.rebar
+  - make
+
 notifications:
   email: false
