@@ -69,23 +69,17 @@ init_app_load_on_dev(AppName, TranslatorSupPid) ->
 enable_master_apps(ServicesSupPid, AppName, BaseURL, IsMasterNode) ->
     if
         IsMasterNode ->
-            case boss_env:get_env(server, ?DEFAULT_WEB_SERVER) of
-                cowboy ->
-                    WebSocketModules = boss_files:websocket_list(AppName),
-                    MappingServices  = boss_files:websocket_mapping(BaseURL,
-                        atom_to_list(AppName),
-                        WebSocketModules),
-                    boss_service_sup:start_services(ServicesSupPid, MappingServices);
-                _Any ->
-                    _Any
-            end;
+            WebSocketModules = boss_files:websocket_list(AppName),
+            MappingServices  = boss_files:websocket_mapping(BaseURL,
+                                                            atom_to_list(AppName),
+                                                            WebSocketModules),
+            boss_service_sup:start_services(ServicesSupPid, MappingServices);
         true ->
             ok
     end.
 
-
 execution_mode(App) ->
     case boss_env:is_developing_app(App) of
-	true  -> development;
-	false -> production
+        true  -> development;
+        false -> production
     end.

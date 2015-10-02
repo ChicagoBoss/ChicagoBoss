@@ -6,7 +6,7 @@
 
 -export([init_master_node/2]).
 
--export([init_webserver/7]).
+-export([init_webserver/6]).
 
 -export([init_ssl/0]).
 
@@ -22,7 +22,7 @@
 -spec init_master_node(_,cb_node()) -> {'ok',_}.
 -spec init_master_services(cb_node(),cb_node()) -> any().
 -spec init_ssl() -> {boolean(),_}.
--spec init_webserver(cb_node,cb_node(),types:webserver(),boolean(),_,pid()|undefined,_) -> any().
+-spec init_webserver(cb_node,cb_node(),boolean(),_,pid()|undefined,_) -> any().
 
 init_lager() ->
     case boss_env:get_env(log_enable, true) of
@@ -38,13 +38,13 @@ init_cache() ->
             CacheOptions =
                 case CacheAdapter of
                     ets ->
-                        MaxSize		= boss_env:get_env(ets_maxsize, 32 * 1024 * 1024),
-                        Threshold	= boss_env:get_env(ets_threshold, 0.85),
-                        Weight		= boss_env:get_env(ets_weight, 30),
+                        MaxSize        = boss_env:get_env(ets_maxsize, 32 * 1024 * 1024),
+                        Threshold    = boss_env:get_env(ets_threshold, 0.85),
+                        Weight        = boss_env:get_env(ets_weight, 30),
                         [{adapter, ets}, 
-			 {ets_maxsize, MaxSize},
+             {ets_maxsize, MaxSize},
                          {ets_threshold, Threshold},
-			 {ets_weight, Weight}];
+             {ets_weight, Weight}];
                     _ ->
                         [{adapter, CacheAdapter},
                          {cache_servers, boss_env:get_env(cache_servers, [{"127.0.0.1", 11211, 1}])}]
@@ -63,10 +63,10 @@ init_master_node(Env, ThisNode) ->
             case boss_env:get_env(smtp_server_enable, false) of
                 true ->
                     Options = [
-                        {domain,	boss_env:get_env(smtp_server_domain, "localhost")},
-                        {address,	boss_env:get_env(smtp_server_address, {0, 0, 0, 0})},
-                        {port,		boss_env:get_env(smtp_server_port, 25)},
-                        {protocol,	boss_env:get_env(smtp_server_protocol, tcp)},
+                        {domain,    boss_env:get_env(smtp_server_domain, "localhost")},
+                        {address,    boss_env:get_env(smtp_server_address, {0, 0, 0, 0})},
+                        {port,        boss_env:get_env(smtp_server_port, 25)},
+                        {protocol,    boss_env:get_env(smtp_server_protocol, tcp)},
                         {sessionoptions, [{boss_env, Env}]}],
                     gen_smtp_server:start({global, boss_smtp_server}, boss_smtp_server, [Options]);
                 _ ->
@@ -79,35 +79,16 @@ init_master_node(Env, ThisNode) ->
     {ok,MasterNode}.
 
 
-init_webserver(ThisNode, MasterNode, ServerMod, SSLEnable, SSLOptions,
+init_webserver(ThisNode, MasterNode, SSLEnable, SSLOptions,
                ServicesSupPid, ServerConfig) ->
-    case ServerMod of
-  mochiweb_http ->
-      application:start(mochiweb),
-      mochiweb_http:start([{ssl, SSLEnable}, {ssl_opts, SSLOptions} | ServerConfig]);
-  cowboy ->
-	    %Dispatch = [{'_', [{'_', boss_mochicow_handler, [{loop, {boss_mochicow_handler, loop}}]}]}],
-        lager:debug("Starting cowboy... on ~p", [MasterNode]),
-	    application:start(cowlib),
-	    application:start(ranch),
-        application:start(cowboy),
-        HttpPort      = boss_env:get_env(port, 8001),
-        HttpIp        = boss_env:get_env(ip, {0, 0, 0, 0}),
-        AcceptorCount = boss_env:get_env(acceptor_processes, 100),
-        case SSLEnable of
-            false ->
-                lager:debug("Starting http listener... on ~s:~p", [inet_parse:ntoa(HttpIp), HttpPort]),
-                cowboy:start_http(boss_http_listener, AcceptorCount, [{port, HttpPort}, {ip, HttpIp}], [{env, []}]);
-            true ->
-                lager:debug("Starting https listener... on ~s:~p", [inet_parse:ntoa(HttpIp), HttpPort]),
-        	    SSLConfig = [{port, HttpPort}, {ip, HttpIp}] ++ SSLOptions,
-        	    cowboy:start_https(boss_https_listener, AcceptorCount, SSLConfig, [{env, []}])
-        end,
+
+        lager:debug("Starting webserver... on ~p", [MasterNode]),
+        application:start(simple_bridge),
+
         if MasterNode =:= ThisNode ->
                 boss_service_sup:start_services(ServicesSupPid, boss_websocket_router);
-	       true -> ok
-        end
-    end.
+           true -> ok
+        end.
 
 
 init_ssl() ->
@@ -118,11 +99,11 @@ init_ssl() ->
 
 init_master_services(ThisNode, MasterNode) ->
     {ok, ServicesSupPid}  = case MasterNode of
-                				ThisNode ->
-                				    boss_service_sup:start_link();
-                				_AnyNode ->
-                				    {ok, undefined}
-            			    end,
+                                ThisNode ->
+                                    boss_service_sup:start_link();
+                                _AnyNode ->
+                                    {ok, undefined}
+                            end,
     ServicesSupPid.
 
 

@@ -6,6 +6,12 @@ errors compiling templates. The easiest way is probably with:
     wget https://github.com/ChicagoBoss/ChicagoBoss/raw/master/skel/rebar
     chmod a+x rebar
 
+Upgrade: From 0.8 to 0.9
+------------------------
+
+boss.config need to be updated with new simple_bridge section
+(see sa,ple config in skel dir)
+
 Upgrade: From 0.7 to 0.8
 ------------------------
 
