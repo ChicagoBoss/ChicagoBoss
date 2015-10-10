@@ -15,13 +15,13 @@
 
 -spec apply_middle_filters(atom() | tuple(),_,_,_) -> any().
 -spec choose_language_from_qvalues(_,_,[{[any()],float()}]) -> {_,_}.
--spec choose_translation_fun(_,_,_,_) -> {_,_}.
+-spec choose_translation_fun(_,_,_,_) -> {_,'none' | fun((_) -> any())}.
 -spec expand_action_result(_) -> {action_results(), _,_,_ }|{action_results(), _,_ } |any().
 -spec load_result(_,_,_,[any()]) -> any().
 -spec process_action_result({_,_,nonempty_maybe_improper_list()},_,[],_) -> any().
 -spec process_location(_,nonempty_maybe_improper_list(),#boss_app_info{}) -> {_,string(),_}.
 -spec process_redirect(_,_,_) -> any().
--spec render_error(_,_,#boss_app_info{},[any()]) -> any().
+-spec render_error(_,_,#boss_app_info{application::atom(),base_url::'undefined' | string(),static_prefix::'undefined' | string(),doc_prefix::'undefined' | string(),domains::'all' | 'undefined' | [string()],init_data::'undefined' | [{atom(),_}],router_sup_pid::'undefined' | pid(),router_pid::'undefined' | pid(),translator_sup_pid::'undefined' | pid(),translator_pid::'undefined' | pid(),model_modules::[atom()],view_modules::[atom()],controller_modules::[atom()]},[any()]) -> {'error',_} | {'error',[any()],[]}.
 -spec render_errors(_,#boss_app_info{},[any()]) -> any().
 -spec render_result(_,_,_,_,_,_,_,_) -> any().
 -spec render_view({_,_,_},_,[any()]) -> any().
@@ -46,14 +46,14 @@ render_error(Error, ExtraMessage, AppInfo, RequestContext) ->
 render_result(Location, AppInfo, _RequestContext, LocationTrail, Adapter,
               AdapterInfo, ActionResult, RequestContext3) ->
     case ActionResult of
-	undefined ->
-	    render_view(Location, AppInfo, RequestContext3, [], []);
-	_ ->
-	    ExpandedResult	= expand_action_result(ActionResult),
-	    TransformedResult	= apply_middle_filters(Adapter, AdapterInfo,
-						     RequestContext3, ExpandedResult),
-	    process_action_result({Location, RequestContext3, [Location|LocationTrail]},
-				  TransformedResult, [], AppInfo)
+    undefined ->
+        render_view(Location, AppInfo, RequestContext3, [], []);
+    _ ->
+        ExpandedResult    = expand_action_result(ActionResult),
+        TransformedResult    = apply_middle_filters(Adapter, AdapterInfo,
+                             RequestContext3, ExpandedResult),
+        process_action_result({Location, RequestContext3, [Location|LocationTrail]},
+                  TransformedResult, [], AppInfo)
     end.
 
 apply_middle_filters(Adapter, AdapterInfo, RequestContext, ActionResult) ->
@@ -61,28 +61,28 @@ apply_middle_filters(Adapter, AdapterInfo, RequestContext, ActionResult) ->
     ActionFilters = Adapter:filters('middle', AdapterInfo, RequestContext, GlobalFilters),
 
     lists:foldl(fun
-		    (_Filter, {StatusCode, Payload, Headers}) when is_integer(StatusCode) ->
-			{StatusCode, Payload, Headers};
-		    (_Filter, {ok, Payload, Headers}) ->
-			{ok, Payload, Headers};
-		    (Filter, Result) when is_atom(Filter) ->
-			{FilterKey, DefaultConfig} = boss_web_controller:filter_config(Filter),
-			FilterConfig = Adapter:filter_config(AdapterInfo, FilterKey, DefaultConfig, RequestContext),
-			case proplists:get_value(middle_filter, Filter:module_info(exports)) of
-			    3 -> Filter:middle_filter(Result, FilterConfig, RequestContext);
-			    _ -> Result
-			end
-		end, ActionResult, ActionFilters).
+            (_Filter, {StatusCode, Payload, Headers}) when is_integer(StatusCode) ->
+            {StatusCode, Payload, Headers};
+            (_Filter, {ok, Payload, Headers}) ->
+            {ok, Payload, Headers};
+            (Filter, Result) when is_atom(Filter) ->
+            {FilterKey, DefaultConfig} = boss_web_controller:filter_config(Filter),
+            FilterConfig = Adapter:filter_config(AdapterInfo, FilterKey, DefaultConfig, RequestContext),
+            case proplists:get_value(middle_filter, Filter:module_info(exports)) of
+                3 -> Filter:middle_filter(Result, FilterConfig, RequestContext);
+                _ -> Result
+            end
+        end, ActionResult, ActionFilters).
 
 
 process_location(Controller,  [{_, _}|_] = Where, AppInfo) ->
     {_, TheController, TheAction, CleanParams} = process_redirect(Controller, Where, AppInfo),
-    ControllerModule	= list_to_atom(boss_files:web_controller(
-					 AppInfo#boss_app_info.application, 
-					 Controller, 
-					 AppInfo#boss_app_info.controller_modules)),
-    ActionAtom		= to_atom(TheAction),
-    {Tokens, []}	= boss_controller_lib:convert_params_to_tokens(CleanParams, ControllerModule, ActionAtom),
+    ControllerModule    = list_to_atom(boss_files:web_controller(
+                     AppInfo#boss_app_info.application, 
+                     Controller, 
+                     AppInfo#boss_app_info.controller_modules)),
+    ActionAtom        = to_atom(TheAction),
+    {Tokens, []}    = boss_controller_lib:convert_params_to_tokens(CleanParams, ControllerModule, ActionAtom),
     {TheController, TheAction, Tokens}.
 
 to_atom(A) when is_atom(A) -> A;
@@ -90,12 +90,12 @@ to_atom(L) when is_list(L) -> list_to_atom(L);
 to_atom(B) when is_binary(B) -> list_to_atom(binary_to_list(B)).
 
 process_redirect(Controller, [{_, _}|_] = Where, AppInfo) ->
-    TheApplication	= proplists:get_value(application, Where, AppInfo#boss_app_info.application),
-    TheController	= proplists:get_value(controller, Where, Controller),
-    TheAction		= proplists:get_value(action, Where),
-    CleanParams		= lists:foldl(fun(Key, Vars) ->
-					      proplists:delete(Key, Vars)
-				      end, Where, [application, controller, action]),
+    TheApplication    = proplists:get_value(application, Where, AppInfo#boss_app_info.application),
+    TheController    = proplists:get_value(controller, Where, Controller),
+    TheAction        = proplists:get_value(action, Where),
+    CleanParams        = lists:foldl(fun(Key, Vars) ->
+                          proplists:delete(Key, Vars)
+                      end, Where, [application, controller, action]),
     {TheApplication, TheController, TheAction, CleanParams};
 process_redirect(_, Where, _) ->
     Where.
@@ -107,12 +107,12 @@ expand_action_result({Keyword, Data}) when Keyword =:= ok; Keyword =:= render ->
 expand_action_result({ok, Data, Headers}) ->
     {render, Data, Headers};
 expand_action_result({render_other, OtherLocation}) ->
-	expand_action_result({render_other, OtherLocation, []});
+    expand_action_result({render_other, OtherLocation, []});
 expand_action_result({render_other, [{_,_}|_]=OtherLocation, Data}) ->
     {render_other, OtherLocation, Data, []};
 expand_action_result({render_other, OtherLocation, _Data}) ->
-	lager:error("Action returned an invalid Location with render_other. Expected a proplist, but returned ~p", [OtherLocation]),
-	{output, "bad return value from controller action\n", []};
+    lager:error("Action returned an invalid Location with render_other. Expected a proplist, but returned ~p", [OtherLocation]),
+    {output, "bad return value from controller action\n", []};
 expand_action_result({redirect, Where}) ->
     {redirect, Where, []};
 expand_action_result({redirect, Where, Headers}) ->
@@ -139,11 +139,11 @@ expand_action_result(Other) ->
 
 
 process_action_result({Location, RequestContext, _},
-		      {render, Data, Headers}, ExtraHeaders, AppInfo) ->
+              {render, Data, Headers}, ExtraHeaders, AppInfo) ->
     render_view(Location, AppInfo, RequestContext, Data, boss_web_controller:merge_headers(Headers, ExtraHeaders));
 
 process_action_result({{Controller, _, _}, RequestContext, _}, 
-		      {render_other, OtherLocation, Data, Headers}, ExtraHeaders, AppInfo) ->
+              {render_other, OtherLocation, Data, Headers}, ExtraHeaders, AppInfo) ->
     TheApplication = proplists:get_value(application, OtherLocation, AppInfo#boss_app_info.application),
     TheAppInfo = boss_web:application_info(TheApplication),
     TheAppInfo1 = TheAppInfo#boss_app_info{ translator_pid = boss_web:translator_pid(TheApplication),
@@ -173,14 +173,14 @@ process_action_result({{Controller, _, _}, _, _}, {redirect, Where, Headers}, Ex
 
 process_action_result(Info, {js, Data, Headers}, ExtraHeaders, AppInfo) ->
     process_action_result(Info, {render, Data, boss_web_controller:merge_headers(Headers, [{"Content-Type", "application/javascript"}])},
-			  ExtraHeaders, AppInfo);
+              ExtraHeaders, AppInfo);
 process_action_result(Info, {json, Data, Headers}, ExtraHeaders, AppInfo) ->
     process_action_result(Info, {output, boss_json:encode(Data, AppInfo#boss_app_info.model_modules),
-				 boss_web_controller:merge_headers(Headers, [{"Content-Type", "application/json"}])}, ExtraHeaders, AppInfo);
+                 boss_web_controller:merge_headers(Headers, [{"Content-Type", "application/json"}])}, ExtraHeaders, AppInfo);
 process_action_result(Info, {jsonp, Callback, Data, Headers}, ExtraHeaders, AppInfo) ->
     JsonData  = boss_json:encode(Data, AppInfo#boss_app_info.model_modules),
     process_action_result(Info, {output, Callback ++ "(" ++ JsonData ++ ");",
-				 boss_web_controller:merge_headers(Headers, [{"Content-Type", "application/javascript"}])}, ExtraHeaders, AppInfo);
+                 boss_web_controller:merge_headers(Headers, [{"Content-Type", "application/javascript"}])}, ExtraHeaders, AppInfo);
 process_action_result(_, {output, Payload, Headers}, ExtraHeaders, _) ->
     {ok, Payload, boss_web_controller:merge_headers(Headers, ExtraHeaders)};
 process_action_result(_, Else, _, _) ->
@@ -196,7 +196,7 @@ render_errors(ErrorList, AppInfo, RequestContext) ->
         {ok, Payload} ->
             {ok, Payload, []};
         Err ->
-	    lager:error("Unable to render boss_html_errors_template ~p",[Err]),
+        lager:error("Unable to render boss_html_errors_template ~p",[Err]),
             Err
     end.
 
@@ -207,13 +207,13 @@ render_view(Location, AppInfo, RequestContext, Variables) ->
     render_view(Location, AppInfo, RequestContext, Variables, []).
 
 render_view({Controller, Template, _}, AppInfo, RequestContext, Variables, Headers) ->
-    Req			= proplists:get_value(request, RequestContext),
-    SessionID		= proplists:get_value(session_id, RequestContext),
-    TryExtensions	= boss_files:template_extensions(),
+    Req            = proplists:get_value(request, RequestContext),
+    SessionID        = proplists:get_value(session_id, RequestContext),
+    TryExtensions    = boss_files:template_extensions(),
  
-    LoadResult		= load_result(Controller, Template, AppInfo, TryExtensions),
-    BossFlash		= boss_flash:get_and_clear(SessionID),
-    SessionData		= boss_session:get_session_data(SessionID),
+    LoadResult        = load_result(Controller, Template, AppInfo, TryExtensions),
+    BossFlash        = boss_flash:get_and_clear(SessionID),
+    SessionData        = boss_session:get_session_data(SessionID),
     case LoadResult of
         {ok, Module, TemplateAdapter} ->
             render_with_template(Controller, Template, AppInfo, RequestContext,
@@ -242,7 +242,7 @@ render_with_template(Controller, Template, AppInfo, RequestContext,
     ContentLanguage = extract_content_language(RequestContext, Headers),
     
     {Lang, TranslationFun} = choose_translation_fun(TranslatorPid, TranslatableStrings,
-						    AcceptLanguage, ContentLanguage),
+                            AcceptLanguage, ContentLanguage),
 
     BeforeVars = case proplists:get_value('_before', RequestContext) of
                      undefined -> [];
@@ -252,21 +252,21 @@ render_with_template(Controller, Template, AppInfo, RequestContext,
                                              {"_req", Req}, {"_base_url", AppInfo#boss_app_info.base_url} | Variables],
     RenderVars = [{"_vars", RenderVars0} | RenderVars0],
     RenderOptions = [
-			{translation_fun, TranslationFun},
-			{locale, Lang},
-			{host, Req:header(host)},
-			{application, atom_to_list(AppInfo#boss_app_info.application)},
-			{controller, Controller},
-			{action, Template},
-			{router_pid, AppInfo#boss_app_info.router_pid}
-		    ],
+            {translation_fun, TranslationFun},
+            {locale, Lang},
+            {host, Req:header(host)},
+            {application, atom_to_list(AppInfo#boss_app_info.application)},
+            {controller, Controller},
+            {action, Template},
+            {router_pid, AppInfo#boss_app_info.router_pid}
+            ],
 
     try TemplateAdapter:render(Module, RenderVars, RenderOptions) of
-	{ok, Payload} ->
-	    MergedHeaders = boss_web_controller:merge_headers([{"Content-Language", Lang}], Headers),
-	    {ok, Payload, MergedHeaders};
-	Err ->
-	    Err
+    {ok, Payload} ->
+        MergedHeaders = boss_web_controller:merge_headers([{"Content-Language", Lang}], Headers),
+        {ok, Payload, MergedHeaders};
+    Err ->
+        Err
     catch
         Class:Error ->
             lager:error("Error in view ~p ~s", [Module, boss_log_util:stacktrace(Class, Error)])
@@ -280,19 +280,19 @@ extract_content_language(RequestContext, Headers) ->
 
 extract_content_language_from_headers(Headers) ->
     case [V || {K,V} <- Headers, (is_list(K) andalso string:to_lower(K)=:="content-language")] of
-	[Lang|_] -> Lang;
-	[] -> undefined
+    [Lang|_] -> Lang;
+    [] -> undefined
     end.
 
 load_result(Controller, Template, AppInfo, TryExtensions) ->
     lists:foldl(fun
-		    (Ext, {error, not_found}) ->
-			ViewPath = boss_files_util:web_view_path(Controller, Template, Ext),
-			boss_load:load_view_if_dev(AppInfo#boss_app_info.application,
-						   ViewPath, AppInfo#boss_app_info.view_modules,
-				                   AppInfo#boss_app_info.translator_pid);
-		    (_, Acc) ->
-			Acc
+            (Ext, {error, not_found}) ->
+            ViewPath = boss_files_util:web_view_path(Controller, Template, Ext),
+            boss_load:load_view_if_dev(AppInfo#boss_app_info.application,
+                           ViewPath, AppInfo#boss_app_info.view_modules,
+                                   AppInfo#boss_app_info.translator_pid);
+            (_, Acc) ->
+            Acc
                 end, {error, not_found}, TryExtensions).
 
 choose_translation_fun(_, _, undefined, undefined) ->

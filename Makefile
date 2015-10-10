@@ -3,7 +3,7 @@ DEST:=$(PREFIX)$(PROJECT)
 ERL=erl
 REBAR=./rebar
 GIT = git
-REBAR_VER = 2.6.0
+REBAR_VER = 2.6.1
 SESSION_CONFIG_DIR=priv/test_session_config
 
 .PHONY: deps get-deps test
