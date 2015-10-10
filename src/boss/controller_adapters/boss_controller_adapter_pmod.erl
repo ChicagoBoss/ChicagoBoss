@@ -4,7 +4,7 @@
 
 
 -spec get_instance({atom() | tuple(),[any()]},[any()]) -> any().
--spec accept(_,_,[any()]) -> boolean().
+-spec accept(atom() | string() | number(),atom() | string() | number(),[any()]) -> boolean().
 -spec wants_session(_,_,_) -> boolean().
 -spec init(types:application(),types:controller(),[types:controller()],_) -> 
     {module(),[{_,_}]}.

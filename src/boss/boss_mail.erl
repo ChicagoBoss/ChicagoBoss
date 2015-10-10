@@ -2,7 +2,7 @@
 -export([start/1, stop/0, send_template/3, send_template/4, 
         send/4, send/5, send/6]).
 
--spec start(_) -> any().
+-spec start(_) -> 'ignore' | {'error',_} | {'ok',pid()}.
 -spec stop() -> 'ok'.
 -spec send_template(types:application(),atom(),[any()]) -> any().
 -spec send_template(types:application(),atom(),[any()],_) -> any().
@@ -10,17 +10,17 @@
 -spec send(_,_,_,atom() | binary() | string(),[any()]) -> any().
 -spec send(_,_,_,atom() | binary() | string(),[any()],_) -> any().
 -spec do_send(_,_,_,_,_) -> any().
--spec send_message(_,_,_,atom(),_,_,_,_) -> any().
--spec build_message(_,atom(),[{_,_}],_,[any()]) -> [[any()],...].
+-spec send_message(atom(),_,_,atom(),_,_,_,_) -> any().
+-spec build_message(atom(),atom(),[{_,_}],_,[any()]) -> [[any()],...].
 -spec convert_unix_newlines_to_dos(binary() | [any()]) -> [any()].
 -spec convert_unix_newlines_to_dos([any()],[any()]) -> [any()].
 -spec build_message_header([{_,_}],[[[any()] | 61 | 95] | 1..255,...],_) -> [[any(),...]].
 -spec add_fields([{_,_}],[any()],[[any(),...]]) -> [[any(),...]].
--spec build_message_body_attachments(_,_,_,[{_,_} | {_,_,binary() | maybe_improper_list(any(),binary() | [])}],_,_) -> 'undefined' | {[[[any()] | 61 | 95] | 1..255,...],_}.
--spec build_message_body(_,_,_,_,_) -> 'undefined' | {[[[any()] | 61 | 95] | 1..255,...],_}.
--spec render_view(types:application(),{_,[104 | 108 | 109 | 116 | 120,...]},_,_) -> any().
--spec render_multipart_view([{_,_} | {_,_,binary() | maybe_improper_list(any(),binary() | [])},...],[[[any()] | 61 | 95],...],_) -> [[any(),...],...].
--spec render_multipart_view1([{_,_} | {_,_,binary() | maybe_improper_list(any(),binary() | [])}],[[[any()] | 61 | 95],...],_) -> [any(),...].
+-spec build_message_body_attachments(atom(),atom() | string() | number(),_,[{_,binary() | maybe_improper_list(any(),binary() | [])} | {_,_,binary() | maybe_improper_list(any(),binary() | [])}],_,_) -> 'undefined' | {[[[any()] | 61 | 95] | 1..255,...],_}.
+-spec build_message_body(atom(),atom() | string() | number(),_,_,_) -> 'undefined' | {[[[any()] | 61 | 95] | 1..255,...],_}.
+-spec render_view(atom(),{atom() | string() | number(),[104 | 108 | 109 | 116 | 120,...]},_,_) -> any().
+-spec render_multipart_view([{_,binary() | maybe_improper_list(any(),binary() | [])} | {_,_,binary() | maybe_improper_list(any(),binary() | [])},...],[[[any()] | 61 | 95],...],_) -> [[any(),...],...].
+-spec render_multipart_view1([{_,binary() | maybe_improper_list(any(),binary() | [])} | {_,_,binary() | maybe_improper_list(any(),binary() | [])}],[[[any()] | 61 | 95],...],_) -> [any(),...].
 -spec wrap_to_76(binary()) -> [binary(),...].
 -spec wrap_to_76(binary(),[<<_:16,_:_*592>>]) -> binary().
 

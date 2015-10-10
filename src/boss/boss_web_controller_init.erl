@@ -18,7 +18,7 @@
 -type cb_node() :: types:cb_node().
 -spec init_cache() -> 'ignore' | 'ok' | {'error',_} | {'ok',pid()}.
 -spec init_lager() -> 'ok'.
--spec init_mail_service() -> any().
+-spec init_mail_service() -> 'ignore' | {'error',_} | {'ok',pid()}.
 -spec init_master_node(_,cb_node()) -> {'ok',_}.
 -spec init_master_services(cb_node(),cb_node()) -> any().
 -spec init_ssl() -> {boolean(),_}.

@@ -19,14 +19,14 @@
 -type channel()   ::string().
 -type mq_return() :: {ok, integer(), [_]}|{error,string()}.
 
--spec start() -> any().
+-spec start() -> 'ignore' | {'error',_} | {'ok',pid()}.
 start() ->
     MQOptions	= make_queue_options(),
     MQAdapter	= get_mq_adapater(),
     MQOptions1	= [{adapter, list_to_atom("boss_mq_adapter_"++atom_to_list(MQAdapter))}|MQOptions],
     start(MQOptions1).
 
--spec start(_) -> any().
+-spec start(_) -> 'ignore' | {'error',_} | {'ok',pid()}.
 start(Options) ->
     boss_mq_sup:start_link(Options).
 

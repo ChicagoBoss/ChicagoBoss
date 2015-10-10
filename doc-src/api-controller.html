@@ -420,6 +420,19 @@ before_(_, _, _) -&gt;
 </div>
 <div class="example row1">
     <div class="code spec">
+        protocol_version() -&gt; tuple()
+    </div>
+    <p>Get the request protocol version (e.g "{1,1}")</p>
+</div>
+<div class="example row2">
+    <div class="code spec">
+        uri() -&gt; string()
+    </div>
+    <p>Get the URI as string</p>
+</div>
+
+<div class="example row1">
+    <div class="code spec">
             query_param(&nbsp;Key<span class="typevar">::string()</span>&nbsp;)&nbsp;-&gt; string()&nbsp;|&nbsp;undefined<br />
             query_param(&nbsp;Key<span class="typevar">::string()</span>,&nbsp;DefaultValue<span class="typevar">::term()</span>&nbsp;)&nbsp;-&gt;&nbsp;string()&nbsp;|&nbsp;Default&nbsp;Value
     </div>
