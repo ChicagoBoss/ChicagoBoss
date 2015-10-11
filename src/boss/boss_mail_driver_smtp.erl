@@ -2,7 +2,7 @@
 -export([start/0, stop/1, deliver/5]).
 
 start() ->
-    OptionsBase = [{ssl, false}, {hostname, smtp_util:guess_FQDN()}, {retries, 1}],
+    OptionsBase = [{ssl, false}, {no_mx_lookups, true}, {hostname, smtp_util:guess_FQDN()}, {retries, 3}],
     {ok, OptionsBase ++ get_tls() ++ get_host() ++ get_port() ++ get_credentials()}.
 
 get_tls() ->
