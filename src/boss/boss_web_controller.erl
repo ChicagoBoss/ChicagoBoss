@@ -46,22 +46,22 @@ stop_smtp() ->
     case boss_env:get_env(smtp_server_enable, false) of
         true ->
             SMTPPid = global:whereis_name(boss_smtp_server),
-	    terminate_smtp(SMTPPid);
+        terminate_smtp(SMTPPid);
         _ ->
             ok
     end.
 
 
 init(Config) ->
-    ThisNode					         = erlang:node(),
-    Env						             = boss_web_controller_init:init_services(),
-    {ok,MasterNode}				         = boss_web_controller_init:init_master_node(Env, ThisNode),
+    ThisNode                             = erlang:node(),
+    Env                                     = boss_web_controller_init:init_services(),
+    {ok,MasterNode}                         = boss_web_controller_init:init_master_node(Env, ThisNode),
     
     boss_web_controller_init:init_mail_service(),
     RouterAdapter                        = boss_env:router_adapter(), 
 
-    {SSLEnable, SSLOptions}			     = boss_web_controller_init:init_ssl(),
-    ServicesSupPid				         = boss_web_controller_init:init_master_services(ThisNode, MasterNode),
+    {SSLEnable, SSLOptions}                 = boss_web_controller_init:init_ssl(),
+    ServicesSupPid                         = boss_web_controller_init:init_master_services(ThisNode, MasterNode),
     ServerConfig                         = init_server_config(Config, RouterAdapter),
     Pid                                  = boss_web_controller_init:init_webserver(
                                                 ThisNode, MasterNode, SSLEnable,
@@ -74,11 +74,11 @@ init(Config) ->
 
 init_server_config(Config, RouterAdapter) ->
     [{loop, fun(Req) ->
-		    boss_web_controller_handle_request:handle_request(Req, RouterAdapter)
+            boss_web_controller_handle_request:handle_request(Req, RouterAdapter)
             end} | Config].
 
 handle_info(timeout, #state{service_sup_pid = ServicesSupPid} = State) ->
-    Applications	= boss_env:get_env(applications, []),
+    Applications    = boss_env:get_env(applications, []),
     AppInfoList     = boss_web_controller_util:start_boss_applications(Applications, 
                                                                        ServicesSupPid, 
                                                                        State),
@@ -183,15 +183,15 @@ stop_init_scripts(Application, InitData) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 run_init_scripts(AppName) ->
     lists:foldl(fun(File, Acc) ->
-			CompileResult = boss_compiler:compile(File, [{include_dirs, [boss_files_util:include_dir() | boss_env:get_env(boss, include_dirs, [])]}]),
-			process_compile_result(File, Acc, CompileResult)
-		end, [], boss_files:init_file_list(AppName)).
+            CompileResult = boss_compiler:compile(File, [{include_dirs, [boss_files_util:include_dir() | boss_env:get_env(boss, include_dirs, [])]}]),
+            process_compile_result(File, Acc, CompileResult)
+        end, [], boss_files:init_file_list(AppName)).
 
 process_compile_result(File, Acc, {ok, Module}) ->
     InitResult =  Module:init(),
     init_result(File, Acc, Module, InitResult);
 process_compile_result(File, Acc, Error) ->
-    lager:error("Compilation of ~p failed: ~p", [File, Error]),
+    _ = lager:error("Compilation of ~p failed: ~p", [File, Error]),
     Acc.
 
 init_result(_File, Acc, Module, {ok, Info}) ->
@@ -199,7 +199,7 @@ init_result(_File, Acc, Module, {ok, Info}) ->
 init_result(_File, Acc, Module, ok) ->
     [{Module, true}|Acc];
 init_result(File, Acc, _Module,Error) ->
-    lager:error("Execution of ~p failed: ~p", [File, Error]),
+    _ = lager:error("Execution of ~p failed: ~p", [File, Error]),
     Acc.
 
 generate_session_id(Request) ->
@@ -219,8 +219,8 @@ execute_action({Controller, Action, Tokens}, AppInfo, RequestContext, LocationTr
     execute_action({Controller, atom_to_list(Action), Tokens}, AppInfo, RequestContext, LocationTrail);
 
 execute_action({Controller, Action, Tokens} = Location, AppInfo, RequestContext, LocationTrail) ->
-    Req	  	   = proplists:get_value(request, RequestContext),
-    SessionID	   = proplists:get_value(session_id, RequestContext),
+    Req             = proplists:get_value(request, RequestContext),
+    SessionID       = proplists:get_value(session_id, RequestContext),
     IsMemberOfList = lists:member(Location, LocationTrail),
     execute_action_check_for_circular_redirect(Controller, Action, Tokens,
                                                Location, AppInfo,
@@ -237,11 +237,11 @@ execute_action_check_for_circular_redirect(Controller, Action, Tokens,
                                            LocationTrail, Req, SessionID,
                                            false) ->
     execute_action_inner(Controller, Action, Tokens, Location, AppInfo,
-			 RequestContext, LocationTrail, Req, SessionID).
+             RequestContext, LocationTrail, Req, SessionID).
 
 
 execute_action_inner(Controller, Action, Tokens, Location, AppInfo,
-		     RequestContext, LocationTrail, Req, SessionID) ->
+             RequestContext, LocationTrail, Req, SessionID) ->
     % do not convert a list to an atom until we are sure the controller/action
     % pair exists. this prevents a memory leak due to atom creation.
     Adapters                            = [boss_controller_adapter_pmod,
@@ -249,44 +249,44 @@ execute_action_inner(Controller, Action, Tokens, Location, AppInfo,
    
     Adapter                             = make_action_adapter(Controller, AppInfo, Adapters),
     SessionID1                          = make_action_session_id(Controller, AppInfo, Req,
-						                 SessionID, Adapter),
+                                         SessionID, Adapter),
     RequestMethod                       = Req:request_method(),
     RequestContext1                     = [{request, Req},
                                            {session_id, SessionID1},
-					   {method, RequestMethod},
+                       {method, RequestMethod},
                                            {action, Action},
                                            {tokens, Tokens}],
     AdapterInfo                         = Adapter:init(AppInfo#boss_app_info.application, 
-						       Controller,
+                               Controller,
                                                        AppInfo#boss_app_info.controller_modules, 
-						       RequestContext1),
+                               RequestContext1),
     
     RequestContext2                     = [{controller_module, element(1, AdapterInfo)}|RequestContext1],
     {ActionResult, RequestContext3}     = apply_action(Req, Adapter,
-						       AdapterInfo,
-						       RequestContext2),
+                               AdapterInfo,
+                               RequestContext2),
     RenderedResult                      = boss_web_controller_render:render_result(Location, AppInfo, RequestContext,
-							                           LocationTrail, Adapter, AdapterInfo,
-							                           ActionResult, RequestContext3),
+                                                       LocationTrail, Adapter, AdapterInfo,
+                                                       ActionResult, RequestContext3),
     FinalResult                         = apply_after_filters(Adapter, 
-							      AdapterInfo, 
-							      RequestContext3,
-							      RenderedResult),
+                                  AdapterInfo, 
+                                  RequestContext3,
+                                  RenderedResult),
     {FinalResult, SessionID1}.
 
 apply_action(Req, Adapter, AdapterInfo, RequestContext2) ->
     case apply_before_filters(Adapter, AdapterInfo, RequestContext2) of
-	{ok, RC3} ->
-	    EffectiveRequestMethod = case Req:request_method() of
-					 'HEAD' -> 'GET';
-					 Method -> Method
-				     end,
-	  
+    {ok, RC3} ->
+        EffectiveRequestMethod = case Req:request_method() of
+                     'HEAD' -> 'GET';
+                     Method -> Method
+                     end,
+      
             RequestContext = lists:keyreplace(method, 1, RC3, {method, EffectiveRequestMethod}),
-	    {call_controller_action(Adapter, AdapterInfo, RequestContext),
-	     RC3};
-	{not_ok, RC3, NotOK} ->
-	    {NotOK, RC3}
+        {call_controller_action(Adapter, AdapterInfo, RequestContext),
+         RC3};
+    {not_ok, RC3, NotOK} ->
+        {NotOK, RC3}
     end.
 
 call_controller_action(Adapter, AdapterInfo, RequestContext) ->
@@ -294,16 +294,16 @@ call_controller_action(Adapter, AdapterInfo, RequestContext) ->
         Adapter:action(AdapterInfo, RequestContext)
     catch
         Class:Error ->
-            lager:error("Error in controller ~s", [boss_log_util:stacktrace(Class, Error)]),
+            _ = lager:error("Error in controller ~s", [boss_log_util:stacktrace(Class, Error)]),
             {error, "Error in controller, see console.log for details\n"}
     end.
 
 make_action_session_id(Controller, AppInfo, Req, undefined, Adapter) ->
     case Adapter:wants_session(AppInfo#boss_app_info.application,
-			       Controller,
-			       AppInfo#boss_app_info.controller_modules) of
-	true -> generate_session_id(Req);
-	_    -> undefined
+                   Controller,
+                   AppInfo#boss_app_info.controller_modules) of
+    true -> generate_session_id(Req);
+    _    -> undefined
     end;
 make_action_session_id(_Controller, _AppInfo, _Req, SessionID, _Adapter) ->
     SessionID.
@@ -311,13 +311,13 @@ make_action_session_id(_Controller, _AppInfo, _Req, SessionID, _Adapter) ->
 
 make_action_adapter(Controller, AppInfo, Adapters) ->
     lists:foldl(fun
-		    (A, false) ->
-			case A:accept(AppInfo#boss_app_info.application, Controller,
-				      AppInfo#boss_app_info.controller_modules) of
-			    true -> A;
-			    _ -> false
-			end;
-		    (_, Acc) -> Acc
+            (A, false) ->
+            case A:accept(AppInfo#boss_app_info.application, Controller,
+                      AppInfo#boss_app_info.controller_modules) of
+                true -> A;
+                _ -> false
+            end;
+            (_, Acc) -> Acc
                 end, false, Adapters).
 
 process_before_filter_result({ok, Context}, _) -> {ok, Context};

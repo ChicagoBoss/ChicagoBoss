@@ -32,7 +32,7 @@ stop() ->
     Res.
 
 is_compatible("R16B03") ->
-    lager:emergency("Chicago Boss is not compatible with R16B03"),
+    _ = lager:emergency("Chicago Boss is not compatible with R16B03"),
     erlang:halt(1, "Chicago Boss is not compatible with R16B03");
 is_compatible(_) ->
     ok.

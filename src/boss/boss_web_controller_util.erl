@@ -22,7 +22,7 @@ start_boss_applications( Applications, ServicesSupPid, #state{router_adapter=Rou
                                         [] -> case boss_env:is_developing_app(AppName) of
                                                 true  -> [];
                                                 false -> 
-                                                    lager:warning("App ~p doesn't seem to have controllers defined,~n"
+                                                    _ = lager:warning("App ~p doesn't seem to have controllers defined,~n"
                                                                   "check your config file at section <~p:controller_modules>,~n"
                                                                   "have you compiled your CB application?",[AppName, AppName]), 
                                                     []

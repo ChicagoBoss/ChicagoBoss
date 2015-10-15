@@ -33,7 +33,7 @@ redo(App, Tag) ->
 
 load_migrations(App) ->
     lists:map(fun(File) ->
-		      lager:info("Reading migration file: ~p~n", [File]),
+		      _ = lager:info("Reading migration file: ~p~n", [File]),
 		      {ok, Terms} = file:script(File),
 		      Terms
 	      end, migration_list(App)).

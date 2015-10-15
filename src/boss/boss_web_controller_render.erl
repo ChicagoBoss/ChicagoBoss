@@ -111,7 +111,7 @@ expand_action_result({render_other, OtherLocation}) ->
 expand_action_result({render_other, [{_,_}|_]=OtherLocation, Data}) ->
     {render_other, OtherLocation, Data, []};
 expand_action_result({render_other, OtherLocation, _Data}) ->
-    lager:error("Action returned an invalid Location with render_other. Expected a proplist, but returned ~p", [OtherLocation]),
+    _ = lager:error("Action returned an invalid Location with render_other. Expected a proplist, but returned ~p", [OtherLocation]),
     {output, "bad return value from controller action\n", []};
 expand_action_result({redirect, Where}) ->
     {redirect, Where, []};
@@ -128,10 +128,10 @@ expand_action_result({output, Payload}) ->
 expand_action_result({output, Payload, Headers}) ->
     {output, Payload, Headers};
 expand_action_result({Directive, _}) when is_list(Directive) ->
-    lager:error("Action returned an invalid return ~p should be an atom not a string", [Directive]),
+    _ = lager:error("Action returned an invalid return ~p should be an atom not a string", [Directive]),
     {output, "bad return value from controller action\n",[]};
 expand_action_result({Directive,_, _}) when is_list(Directive) ->
-    lager:error("Action returned an invalid return ~p should be an atom not a string", [Directive]),
+    _ = lager:error("Action returned an invalid return ~p should be an atom not a string", [Directive]),
     {output, "bad return value from controller action\n",[]};
 expand_action_result(Other) ->
     Other.
@@ -196,7 +196,7 @@ render_errors(ErrorList, AppInfo, RequestContext) ->
         {ok, Payload} ->
             {ok, Payload, []};
         Err ->
-        lager:error("Unable to render boss_html_errors_template ~p",[Err]),
+        _ = lager:error("Unable to render boss_html_errors_template ~p",[Err]),
             Err
     end.
 
@@ -225,10 +225,10 @@ render_view({Controller, Template, _}, AppInfo, RequestContext, Variables, Heade
         {error, {File, [{0, _Module, "Failed to read file"}]}} ->
             {not_found, io_lib:format("The requested template (~p) was not found.~n", [File]) };
         {error, Error = {ErrorType, EProblem, ELine}}->
-            lager:error("Template \"~s\" has Error ~p: \"~p\" on line ~p", [Template,ErrorType, EProblem, ELine + 1 ]),
+            _ = lager:error("Template \"~s\" has Error ~p: \"~p\" on line ~p", [Template,ErrorType, EProblem, ELine + 1 ]),
             render_errors([Error], AppInfo, RequestContext);
         {error, Error}->
-            lager:error("Template Error template : ~p  error: ~p ", [Template,Error]),
+            _ = lager:error("Template Error template : ~p  error: ~p ", [Template,Error]),
             render_errors([Error], AppInfo, RequestContext)
     end.
 

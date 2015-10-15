@@ -33,14 +33,14 @@ create_dispatch(AppName) ->
 create_cowboy_static_opts(AppName, Extra) ->
     case code:priv_dir(AppName) of
         {error, bad_name} ->
-            lager:warning("Unable to determine code:priv_dir for app ~p. The most common cause of this is your ChicagoBoss app having a different name than the directory it's in. Using ./priv/", [AppName]),
+            _ = lager:warning("Unable to determine code:priv_dir for app ~p. The most common cause of this is your ChicagoBoss app having a different name than the directory it's in. Using ./priv/", [AppName]),
             {dir, "./priv/static", Extra};
         Priv ->
             case filelib:is_dir(Priv) of
                 true ->
                     {priv_dir, AppName, "static", Extra};
                 false ->
-                    lager:warning("~p's priv_dir ~p was not found. Using ./priv/ as a fallback.", [AppName, Priv]),
+                    _ = lager:warning("~p's priv_dir ~p was not found. Using ./priv/ as a fallback.", [AppName, Priv]),
                     {dir, "./priv/static", Extra}
             end
     end.

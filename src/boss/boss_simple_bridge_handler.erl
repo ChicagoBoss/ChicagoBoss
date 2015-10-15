@@ -15,7 +15,7 @@ run(Bridge) ->
          Bridge2 = boss_web_controller_handle_request:handle_request(Bridge, boss_router),
         Bridge2:build_response()
     catch E:C ->
-        lager:error("~p:~p: ~p",[E, C, erlang:get_stacktrace()]),
+        _ = lager:error("~p:~p: ~p",[E, C, erlang:get_stacktrace()]),
         exit("Error building response")
     end.
 
