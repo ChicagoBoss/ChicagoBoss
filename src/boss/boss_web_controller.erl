@@ -51,21 +51,20 @@ stop_smtp() ->
             ok
     end.
 
-
 init(Config) ->
-    ThisNode                             = erlang:node(),
-    Env                                     = boss_web_controller_init:init_services(),
-    {ok,MasterNode}                         = boss_web_controller_init:init_master_node(Env, ThisNode),
+    ThisNode                   = erlang:node(),
+    Env                        = boss_web_controller_init:init_services(),
+    {ok,MasterNode}            = boss_web_controller_init:init_master_node(Env, ThisNode),
     
     boss_web_controller_init:init_mail_service(),
-    RouterAdapter                        = boss_env:router_adapter(), 
-
-    {SSLEnable, SSLOptions}                 = boss_web_controller_init:init_ssl(),
-    ServicesSupPid                         = boss_web_controller_init:init_master_services(ThisNode, MasterNode),
-    ServerConfig                         = init_server_config(Config, RouterAdapter),
-    Pid                                  = boss_web_controller_init:init_webserver(
-                                                ThisNode, MasterNode, SSLEnable,
-                                                SSLOptions, ServicesSupPid, ServerConfig),
+    RouterAdapter              = boss_env:router_adapter(), 
+    
+    {SSLEnable, SSLOptions}    = boss_web_controller_init:init_ssl(),
+    ServicesSupPid             = boss_web_controller_init:init_master_services(ThisNode, MasterNode),
+    ServerConfig               = init_server_config(Config, RouterAdapter),
+    Pid                        = boss_web_controller_init:init_webserver(
+                                   ThisNode, MasterNode, SSLEnable,
+                                   SSLOptions, ServicesSupPid, ServerConfig),
     {ok, #state{ 
                 router_adapter  = RouterAdapter,
                 service_sup_pid = ServicesSupPid, 
@@ -87,19 +86,19 @@ handle_info(timeout, #state{service_sup_pid = ServicesSupPid} = State) ->
 
 
 handle_call({reload_translation, Locale}, _From, State) ->
-    lists:map(fun(AppInfo) ->
+    _ = lists:map(fun(AppInfo) ->
                 [{_, TranslatorPid, _, _}] = supervisor:which_children(AppInfo#boss_app_info.translator_sup_pid),
                 boss_translator:reload(TranslatorPid, Locale)
         end, State#state.applications),
     {reply, ok, State};
 handle_call(reload_all_translations, _From, State) ->
-    lists:map(fun(AppInfo) ->
+    _ = lists:map(fun(AppInfo) ->
                 [{_, TranslatorPid, _, _}] = supervisor:which_children(AppInfo#boss_app_info.translator_sup_pid),
                 boss_translator:reload_all(TranslatorPid)
         end, State#state.applications),
     {reply, ok, State};
 handle_call(reload_routes, _From, #state{router_adapter=RouterAdapter}=State) ->
-    lists:map(fun(AppInfo) ->
+    _ = lists:map(fun(AppInfo) ->
                 [{_, RouterPid, _, _}] = supervisor:which_children(AppInfo#boss_app_info.router_sup_pid),
                 RouterAdapter:reload(RouterPid)
         end, State#state.applications),
@@ -241,37 +240,37 @@ execute_action_check_for_circular_redirect(Controller, Action, Tokens,
 
 
 execute_action_inner(Controller, Action, Tokens, Location, AppInfo,
-             RequestContext, LocationTrail, Req, SessionID) ->
+                     RequestContext, LocationTrail, Req, SessionID) ->
     % do not convert a list to an atom until we are sure the controller/action
     % pair exists. this prevents a memory leak due to atom creation.
     Adapters                            = [boss_controller_adapter_pmod,
                                            boss_controller_adapter_elixir],
-   
+    
     Adapter                             = make_action_adapter(Controller, AppInfo, Adapters),
     SessionID1                          = make_action_session_id(Controller, AppInfo, Req,
-                                         SessionID, Adapter),
+                                                                 SessionID, Adapter),
     RequestMethod                       = Req:request_method(),
     RequestContext1                     = [{request, Req},
                                            {session_id, SessionID1},
-                       {method, RequestMethod},
+                                           {method, RequestMethod},
                                            {action, Action},
                                            {tokens, Tokens}],
     AdapterInfo                         = Adapter:init(AppInfo#boss_app_info.application, 
-                               Controller,
+                                                       Controller,
                                                        AppInfo#boss_app_info.controller_modules, 
-                               RequestContext1),
+                                                       RequestContext1),
     
     RequestContext2                     = [{controller_module, element(1, AdapterInfo)}|RequestContext1],
     {ActionResult, RequestContext3}     = apply_action(Req, Adapter,
-                               AdapterInfo,
-                               RequestContext2),
+                                                       AdapterInfo,
+                                                       RequestContext2),
     RenderedResult                      = boss_web_controller_render:render_result(Location, AppInfo, RequestContext,
-                                                       LocationTrail, Adapter, AdapterInfo,
-                                                       ActionResult, RequestContext3),
+                                                                                   LocationTrail, Adapter, AdapterInfo,
+                                                                                   ActionResult, RequestContext3),
     FinalResult                         = apply_after_filters(Adapter, 
-                                  AdapterInfo, 
-                                  RequestContext3,
-                                  RenderedResult),
+                                                              AdapterInfo, 
+                                                              RequestContext3,
+                                                              RenderedResult),
     {FinalResult, SessionID1}.
 
 apply_action(Req, Adapter, AdapterInfo, RequestContext2) ->

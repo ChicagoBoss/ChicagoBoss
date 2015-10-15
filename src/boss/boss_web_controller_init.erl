@@ -58,8 +58,8 @@ init_master_node(Env, ThisNode) ->
     if
         MasterNode =:= ThisNode ->
             _ = lager:debug("Starting master services on ~p", [MasterNode]),
-            boss_mq:start(),
-            boss_news:start(),
+            boss_util:ensure_started(boss_mq),
+            boss_util:ensure_started(boss_news),
             case boss_env:get_env(smtp_server_enable, false) of
                 true ->
                     Options = [

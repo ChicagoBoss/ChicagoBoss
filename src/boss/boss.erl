@@ -7,20 +7,12 @@
 -author('Evan Miller <emmiller@gmail.com>').
 -export([start/0, stop/0]).
 
-ensure_started(App) ->
-    case application:start(App) of
-    ok ->
-        ok;
-    {error, {already_started, App}} ->
-        ok
-    end.
-    
 %% @spec start() -> ok
 %% @doc Start the boss server.
 start() ->
     is_compatible(erlang:system_info(otp_release)),
-    ensure_started(crypto),
-    ensure_started(mimetypes),
+    boss_util:ensure_started(crypto),
+    boss_util:ensure_started(mimetypes),
     application:start(boss).
 
 %% @spec stop() -> ok
