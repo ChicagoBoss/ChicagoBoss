@@ -6,7 +6,6 @@
 build_and_compile() ->
     Applications        = boss_env:get_env(applications, []),
     AppStaticDispatches = create_cowboy_dispatches(Applications),
-    RouterAdapter       = boss_env:router_adapter(),
     BossDispatch        = [{'_', cowboy_simple_bridge_anchor,[]}],
     Dispatch            = [{'_', AppStaticDispatches ++ BossDispatch}],
 
