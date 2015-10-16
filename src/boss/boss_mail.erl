@@ -34,7 +34,7 @@ send_template(Application, Action, Args) ->
     send_template(Application, Action, Args, undefined).
 
 send_template(Application, Action, Args, Callback) ->
-    boss_load:load_mail_controllers(Application),
+    _ = boss_load:load_mail_controllers(Application),
     Controller = list_to_atom(lists:concat([Application, "_outgoing_mail_controller"])),
     case apply(Controller, Action, Args) of
         {ok, FromAddress, ToAddress, HeaderFields} ->

@@ -28,7 +28,7 @@ init(_) ->
             _ = lager:debug("mnesia session table ok"),
             noop;
         {timeout,[?TABLE]} ->
-            create_session_storage()		
+            create_session_storage()
     end,
 
     {ok, undefined}.

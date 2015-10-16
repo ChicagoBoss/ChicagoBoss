@@ -31,10 +31,8 @@
 
      
 -spec incoming_mail_controller_module(application()) -> atom().
--spec load_all_modules(application(), atom() | pid() | {atom(),atom()}) ->
-   {'ok',module_types()}.
--spec load_all_modules(application(),atom() | pid() | {atom(),atom()},_) ->
-   {'ok',module_types()}.
+-spec load_all_modules(application(), atom() | pid() | {atom(),atom()}) -> {'ok',module_types()}.
+-spec load_all_modules(application(),atom() | pid() | {atom(),atom()},_) -> {'ok',module_types()}.
 -spec load_all_modules_and_emit_app_file(atom(),string()) -> 'ok' | {'error',atom()}.
 -spec load_libraries(application()) -> {'error',[any(),...]} | {'ok',[any()]}.
 -spec load_mail_controllers(application()) -> {'error',[any(),...]} | {'ok',[any()]}.
@@ -60,6 +58,7 @@ load_all_modules(Application, TranslatorSupPid, OutDir) ->
 
     AllModules = make_all_modules(Application, OutDir, Ops),
     {ok, AllModules}.
+
 -type error(X)   :: {ok, X} | {error, string()}.
 -type op_key()   :: test_modules|lib_modules|websocket_modules|mail_modules|controller_modules|
                     model_modules| view_lib_tags_modules|view_lib_helper_modules|view_modules.
