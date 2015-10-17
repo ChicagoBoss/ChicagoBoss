@@ -1,5 +1,5 @@
 -module(boss_util).
--export([ensure_started/1]).
+-export([ensure_started/1, ensure_stopped/1]).
 
 -spec ensure_started(atom()) -> 'ok'.
 -spec ensure_stopped(atom()) -> 'ok'.
