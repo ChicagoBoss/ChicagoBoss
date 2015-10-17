@@ -34,26 +34,26 @@ ws_message({text, Data}, Bridge, State) ->
     #state{websocket_id=WebsocketId, 
        session_id=SessionId, 
        service_url=ServiceUrl } = State,
-    case boss_websocket_router:incoming(ServiceUrl, WebsocketId, Bridge, SessionId, Data) of
+    Response = case boss_websocket_router:incoming(ServiceUrl, WebsocketId, Bridge, SessionId, Data) of
         ok ->
-            Response = noreply;
+            noreply;
         {ok, NewState} ->
-            Response = {noreply, NewState};
-        Response ->
-            Response
+            {noreply, NewState};
+        Res ->
+            Res
     end,
     Response;
 ws_message({binary, Data}, Bridge, State) ->
     #state{websocket_id=WebsocketId, 
        session_id=SessionId, 
        service_url=ServiceUrl } = State,
-    case boss_websocket_router:incoming(ServiceUrl, WebsocketId, Bridge, SessionId, Data) of
+    Response = case boss_websocket_router:incoming(ServiceUrl, WebsocketId, Bridge, SessionId, Data) of
         ok ->
-            Response = noreply;
+            noreply;
         {ok, NewState} ->
-            Response = {noreply, NewState};
-        Response ->
-            Response
+            {noreply, NewState};
+        Res ->
+            Res
     end,
     Response.
 

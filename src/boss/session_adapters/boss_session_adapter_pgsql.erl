@@ -65,7 +65,7 @@ set_session_value(Conn, Sid, Key, Value) when is_list(Key) ->
                 Data3
         end,
     delete_session_value(Conn, Sid, Key),
-    case lookup_session(Conn, Sid) of
+    _ = case lookup_session(Conn, Sid) of
         [] ->
             {ok,_} = boss_db:execute("UPDATE boss_session SET data='"
                                          ++ Key ++ "=>" ++ F(Value) ++ "'::hstore WHERE id=$1;", [Sid]);
