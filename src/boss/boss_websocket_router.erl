@@ -98,9 +98,7 @@ services() ->
 
 consumers() ->
     gen_server:call({global, ?SERVER}, {get_consumers}).
-    
 
-    
 
 %async
 join(ServiceUrl, WebSocketId, Req, SessionId) ->
@@ -139,7 +137,7 @@ init([]) ->
 %% @spec handle_call(Request, From, State) ->
 %%                                   {reply, Reply, State} |
 %%                                   {reply, Reply, State, Timeout} |
- %%                                   {noreply, State} |
+%%                                   {noreply, State} |
 %%                                   {noreply, State, Timeout} |
 %%                                   {stop, Reason, Reply, State} |
 %%                                   {stop, Reason, State}

@@ -1,7 +1,14 @@
-%% @author Evan Miller <emmiller@gmail.com>
-%% @copyright YYYY author.
-
+%%-------------------------------------------------------------------
+%% @author 
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright 
+%%     This file is part of ChicagoBoss project. 
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
 %% @doc Callbacks for the rr application.
+%%-------------------------------------------------------------------
 
 -module(boss_app).
 -author('Evan Miller <emmiller@gmail.com>').
