@@ -21,13 +21,17 @@ before_filter({vars, _}, RequestContext) ->
             ControllerModule = proplists:get_value(controller_module, RequestContext),
             Action = proplists:get_value(action, RequestContext),
             Tokens = proplists:get_value(tokens, RequestContext, []),
+            Req = proplists:get_value(request, RequestContext, []),
+            Query = Req:query_params(),
 
-            CacheKey = {ControllerModule, Action, Tokens, Language},
+            CacheKey = {ControllerModule, Action, Tokens, Language, Query},
 
             case boss_cache:get(?VARIABLES_CACHE_PREFIX, CacheKey) of
                 undefined -> 
+                    _ = lager:debug("cache: vars not in cache"),
                     {ok, RequestContext ++ [{cache_vars, true}, {cache_key, CacheKey}]};
                 CachedActionResult -> 
+                    _ = lager:debug("cache: hit!"),
                     CachedActionResult
             end;
         false ->
@@ -48,6 +52,7 @@ middle_filter({render, _, _} = ActionResult, {vars, CacheOptions}, RequestContex
                         fun ?MODULE:handle_news_for_cache/3, {?VARIABLES_CACHE_PREFIX, CacheKey},
                         CacheTTL)
             end,
+            _ = lager:debug("cache: saving vars"),
             boss_cache:set(?VARIABLES_CACHE_PREFIX, CacheKey, ActionResult, CacheTTL);
         false ->
             ok

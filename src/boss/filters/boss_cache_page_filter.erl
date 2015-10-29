@@ -3,7 +3,7 @@
 -export([before_filter/2, middle_filter/3, after_filter/3]).
 
 -define(PAGE_CACHE_PREFIX, "boss_web_controller_page").
--define(PAGE_CACHE_DEFAULT_TTL, 60).
+-define(PAGE_CACHE_DEFAULT_TTL, 3600).
 
 config_key() -> cache.
 config_default_value() -> none.
@@ -19,13 +19,17 @@ before_filter({page, _}, RequestContext) ->
             ControllerModule = proplists:get_value(controller_module, RequestContext),
             Action = proplists:get_value(action, RequestContext),
             Tokens = proplists:get_value(tokens, RequestContext, []),
+            Req = proplists:get_value(request, RequestContext, []),
+            Query = Req:query_params(),
 
-            CacheKey = {ControllerModule, Action, Tokens, Language},
+            CacheKey = {ControllerModule, Action, Tokens, Language, Query},
 
             case boss_cache:get(?PAGE_CACHE_PREFIX, CacheKey) of
                 undefined ->
+                    _ = lager:debug("cache: page not in cache"),
                     {ok, RequestContext ++ [{cache_page, true}, {cache_key, CacheKey}]};
                 CachedRenderedResult ->
+                    _ = lager:debug("cache: hit!"),
                     {cached_page, CachedRenderedResult}
             end;
         false ->
@@ -50,6 +54,7 @@ after_filter({ok, _, _} = Rendered, {page, CacheOptions}, RequestContext) ->
                     boss_news:set_watch({?PAGE_CACHE_PREFIX, CacheKey}, CacheWatchString,
                         fun boss_web_controller:handle_news_for_cache/3, {?PAGE_CACHE_PREFIX, CacheKey}, CacheTTL)
             end,
+            _ = lager:debug("cache: saving page"),
             boss_cache:set(?PAGE_CACHE_PREFIX, CacheKey, Rendered, CacheTTL);
         false ->
             ok
