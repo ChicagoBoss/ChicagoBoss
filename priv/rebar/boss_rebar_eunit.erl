@@ -91,48 +91,16 @@ eunit(RebarConf, BossConf, AppFile) ->
     true = code:add_patha(eunit_dir()),
     true = code:add_pathz(ebin_dir()),
 
-    %% Obtain all the test modules for inclusion in the compile stage.
-    %% boss_change: compile only src/test/eunit tests
-    TestErls = rebar_utils:find_files(filename:join(["src", "test", "eunit"]), ".*\\.erl\$"),
-
-    %% Copy source files to eunit dir for cover in case they are not directly
-    %% in src but in a subdirectory of src. Cover only looks in cwd and ../src
-    %% for source files.
-    SrcErls = rebar_utils:find_files("src", ".*\\.erl\$"),
-
-    %% If it is not the first time rebar eunit is executed, there will be source
-    %% files already present in ?EUNIT_DIR. Since some SCMs (like Perforce) set
-    %% the source files as being read only (unless they are checked out), we
-    %% need to be sure that the files already present in ?EUNIT_DIR are writable
-    %% before doing the copy. This is done here by removing any file that was
-    %% already present before calling rebar_file_utils:cp_r.
-
-    %% Get the full path to a file that was previously copied in ?EUNIT_DIR
-    ToCleanUp = fun(F, Acc) ->
-                        F2 = filename:basename(F),
-                        F3 = filename:join([?EUNIT_DIR, F2]),
-                        case filelib:is_regular(F3) of
-                            true -> [F3|Acc];
-                            false -> Acc
-                        end
-                end,
-
-    ok = rebar_file_utils:delete_each(lists:foldl(ToCleanUp, [], TestErls)),
-    ok = rebar_file_utils:delete_each(lists:foldl(ToCleanUp, [], SrcErls)),
-    
-    %% boss_change
-    %ok = rebar_file_utils:cp_r(SrcErls ++ TestErls, ?EUNIT_DIR),
-
     %% boss_change
     %% Compilation (boss-way)
-    boss_rebar:compile(RebarConf, BossConf, AppFile, ?EUNIT_DIR),    
+    boss_rebar:compile(RebarConf, BossConf, AppFile, ?EUNIT_DIR),
 
     %% Compile erlang code to ?EUNIT_DIR, using a tweaked config
     %% with appropriate defines for eunit, and include all the test modules
     %% as well.
 
-    rebar_erlc_compiler:doterl_compile(eunit_config(Config),
-                                       ?EUNIT_DIR, TestErls),
+    {ok, SrcErls} = rebar_erlc_compiler:test_compile(Config, "eunit", ?EUNIT_DIR),
+
     %% boss_change
     %% Load all boss ebin dir and start boss
     boss_rebar:boss_load(BossConf, AppFile),
