@@ -144,24 +144,24 @@ is_base_dir(RebarConf) ->
 
 %% Gets the boss.config central configuration file
 boss_config(Command) ->
-    IsTest		= lists:prefix("test_", Command),
-    BossConfFile	= get_config_file(IsTest),
-    ConfigData		= file:consult(BossConfFile),
+    IsTest        = lists:prefix("test_", Command),
+    BossConfFile    = get_config_file(IsTest),
+    ConfigData        = file:consult(BossConfFile),
     validate_config_data(BossConfFile, ConfigData).
 
 get_config_file(false) ->
-	    ?BOSS_CONFIG_FILE;
+        ?BOSS_CONFIG_FILE;
 get_config_file(true) ->
     case file:read_file_info(?BOSS_TEST_CONFIG_FILE) of
-	{ok, _} -> ?BOSS_TEST_CONFIG_FILE;
-	_ -> ?BOSS_CONFIG_FILE
+    {ok, _} -> ?BOSS_TEST_CONFIG_FILE;
+    _ -> ?BOSS_CONFIG_FILE
     end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 validate_config_data(BossConfFile, {error, {Line, _Mod, [Term|_]}}) ->
     io:format("FATAL: Config file ~p has a syntax error on line ~p, ~n ~p ~n~n", 
-	      [BossConfFile, Line,  Term]),
+          [BossConfFile, Line,  Term]),
     halt(1);
 validate_config_data(BossConfFile, {error, enoent}) ->
     io:format("FATAL: Config file ~p not found.~n", [BossConfFile]),

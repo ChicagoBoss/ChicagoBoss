@@ -27,7 +27,7 @@ get_and_clear(SessionID) ->
 %% @doc Add a message to the flash message stack for `SessionID'.
 add(SessionID, Type, Title) ->
     add(SessionID, Type, Title, undefined, undefined).
-	
+    
 %% @spec add(SessionID, Type, Title, Message) -> ok | {error, Reason}
 %% @doc Add a message to the flash message stack for `SessionID'.
 add(SessionID, Type, Title, Message) ->

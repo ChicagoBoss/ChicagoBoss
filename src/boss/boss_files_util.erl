@@ -99,7 +99,7 @@ web_view_path(Controller) ->
 -spec web_view_path(atom() | binary() | [atom() | [any()] | char()],atom() | string() | number(),atom() | string() | number()) -> input_string().
 web_view_path(Controller, Template, Extension) -> 
     filename:join([web_view_path(Controller),
-		   lists:concat([Template, ".", Extension])]).
+           lists:concat([Template, ".", Extension])]).
 -spec mail_view_path() -> input_string().
 
 mail_view_path() ->
@@ -124,7 +124,7 @@ static_path(App) -> filename:join([boss_files:root_priv_dir(App), "static"]).
 -spec lang_path(_,atom() | string() | number()) -> input_string().
 lang_path(App, Lang) ->
     filename:join([lang_path(App),
-		   lists:concat(["strings.", Lang, ".po"])]).
+           lists:concat(["strings.", Lang, ".po"])]).
 -spec view_lib_path() -> input_string().
 
 view_lib_path() -> filename:join([root_src_dir(), "view", "lib"]).

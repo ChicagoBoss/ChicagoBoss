@@ -55,7 +55,7 @@ create_session(_, SessionID, Data) ->
     ok.
 
 lookup_session(_, SessionID) ->
-    recover_data(SessionID).	
+    recover_data(SessionID).    
 
 lookup_session_value(_, SessionID, Key) ->
     Data = recover_data(SessionID),
@@ -72,7 +72,7 @@ set_session_value(_, Sid, Key, Value) ->
     end,
 
     Update = fun() -> NewSession = #boss_session{sid=Sid,data=Data1,ttl=0}, mnesia:write(NewSession) end,
-    {atomic,ok} = mnesia:transaction(Update),	
+    {atomic,ok} = mnesia:transaction(Update),    
     ok.
 
 delete_session(_, Sid) ->
@@ -90,7 +90,7 @@ delete_session_value(_, Sid, Key) ->
         false ->
             ok
     end.
-	
+    
 %%--------------------------------------------------------------------
 %%% Internal functions
 %%--------------------------------------------------------------------

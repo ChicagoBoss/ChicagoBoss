@@ -76,8 +76,8 @@
 %% Public API
 %% ===================================================================
 eunit(RebarConf, BossConf, AppFile) ->
-	%% boss_change
-	Config = RebarConf,
+    %% boss_change
+    Config = RebarConf,
     %% Make sure ?EUNIT_DIR/ and ebin/ directory exists (tack on dummy module)
     ok = filelib:ensure_dir(eunit_dir() ++ "/foo"),
     ok = filelib:ensure_dir(ebin_dir() ++ "/foo"),
@@ -92,7 +92,7 @@ eunit(RebarConf, BossConf, AppFile) ->
     true = code:add_pathz(ebin_dir()),
 
     %% Obtain all the test modules for inclusion in the compile stage.
-	%% boss_change: compile only src/test/eunit tests
+    %% boss_change: compile only src/test/eunit tests
     TestErls = rebar_utils:find_files(filename:join(["src", "test", "eunit"]), ".*\\.erl\$"),
 
     %% Copy source files to eunit dir for cover in case they are not directly
@@ -119,7 +119,7 @@ eunit(RebarConf, BossConf, AppFile) ->
 
     ok = rebar_file_utils:delete_each(lists:foldl(ToCleanUp, [], TestErls)),
     ok = rebar_file_utils:delete_each(lists:foldl(ToCleanUp, [], SrcErls)),
-	
+    
     %% boss_change
     %ok = rebar_file_utils:cp_r(SrcErls ++ TestErls, ?EUNIT_DIR),
 
@@ -131,12 +131,12 @@ eunit(RebarConf, BossConf, AppFile) ->
     %% with appropriate defines for eunit, and include all the test modules
     %% as well.
 
-	rebar_erlc_compiler:doterl_compile(eunit_config(Config),
+    rebar_erlc_compiler:doterl_compile(eunit_config(Config),
                                        ?EUNIT_DIR, TestErls),
-	%% boss_change
-	%% Load all boss ebin dir and start boss
-	boss_rebar:boss_load(BossConf, AppFile),
-	boss_rebar:boss_start(BossConf),
+    %% boss_change
+    %% Load all boss ebin dir and start boss
+    boss_rebar:boss_load(BossConf, AppFile),
+    boss_rebar:boss_start(BossConf),
 
     %% Build a list of all the .beams in ?EUNIT_DIR -- use this for
     %% cover and eunit testing. Normally you can just tell cover

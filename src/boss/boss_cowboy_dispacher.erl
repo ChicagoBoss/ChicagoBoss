@@ -21,7 +21,7 @@ build_and_compile() ->
     BossDispatch        = [{'_', cowboy_simple_bridge_anchor,[]}],
     Dispatch            = [{'_', AppStaticDispatches ++ BossDispatch}],
 
-	cowboy_router:compile(Dispatch).
+    cowboy_router:compile(Dispatch).
 
 create_cowboy_dispatches(Applications) ->
     lists:map(fun create_dispatch/1, Applications).
