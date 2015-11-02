@@ -1,4 +1,15 @@
-%% vim: ts=4 sw=4 et
+%%-------------------------------------------------------------------
+%% @author 
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright 
+%%     This file is part of ChicagoBoss project. 
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
+%% @doc 
+%%-------------------------------------------------------------------
+
 -module(boss_simple_bridge_handler).
 -behaviour(simple_bridge_handler).
 -export([run/1,

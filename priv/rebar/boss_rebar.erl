@@ -1,9 +1,18 @@
-%%%-------------------------------------------------------------------
-%%% @author Jose Luis Gordo Romero <jgordor@gmail.com>
-%%% @doc Chicago Boss rebar functions, called from boss_plugin
-%%%  Managing compilation/configuration/scripts stuff, the boss way
-%%% @end
-%%%-------------------------------------------------------------------
+%%-------------------------------------------------------------------
+%% @author 
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright 
+%%     This file is part of ChicagoBoss project. 
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
+%% @doc 
+%%     Chicago Boss rebar functions, called from boss_plugin
+%%     Managing compilation/configuration/scripts stuff, the boss way
+%% @end
+%%-------------------------------------------------------------------
+
 -module(boss_rebar).
 
 -export([run/4,

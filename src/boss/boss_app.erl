@@ -11,7 +11,6 @@
 %%-------------------------------------------------------------------
 
 -module(boss_app).
--author('Evan Miller <emmiller@gmail.com>').
 
 -behaviour(application).
 -export([start/2,stop/1]).

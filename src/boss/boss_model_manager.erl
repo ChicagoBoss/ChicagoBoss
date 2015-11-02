@@ -1,9 +1,14 @@
-%%
-%%
-%% Module:  boss_model -- description
-%% Created: 01-MAY-2012 16:32
-%% Author:  tmr
-%%
+%%-------------------------------------------------------------------
+%% @author 
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright 
+%%     This file is part of ChicagoBoss project. 
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
+%% @doc 
+%%-------------------------------------------------------------------
 
 -module (boss_model_manager).
 -behaviour (boss_model_manager_adapter).

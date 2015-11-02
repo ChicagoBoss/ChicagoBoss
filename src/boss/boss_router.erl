@@ -1,6 +1,15 @@
-%% Author: jgordor
-%% Created: 01/04/2011
-%% Description: Minimalist Router system for Chicago Boss
+%%-------------------------------------------------------------------
+%% @author 
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright 
+%%     This file is part of ChicagoBoss project. 
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
+%% @doc Minimalist Router system for Chicago Boss
+%%-------------------------------------------------------------------
+
 -module(boss_router).
 -behaviour(boss_router_adapter).
 

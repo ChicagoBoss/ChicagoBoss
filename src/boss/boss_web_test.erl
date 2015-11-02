@@ -1,4 +1,15 @@
-% web-centric functional tests
+%%-------------------------------------------------------------------
+%% @author 
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright 
+%%     This file is part of ChicagoBoss project. 
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
+%% @doc web-centric functional tests
+%%-------------------------------------------------------------------
+
 -module(boss_web_test).
 -export([start/1, run_tests/1, get_request/4, post_request/5, read_email/4]).
 -export([follow_link/4, follow_redirect/3, follow_redirect/4, submit_form/5]).

@@ -1,11 +1,15 @@
 %%%-------------------------------------------------------------------
-%%% @author mihawk <mihawk@monolite>
-%%% @copyright (C) 2012, mihawk
-%%% @doc
-%%%
-%%% @end
-%%% Created : 18 Jul 2012 by mihawk <mihawk@monolite>
-%%%-------------------------------------------------------------------
+%% @author 
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright 
+%%     This file is part of ChicagoBoss project. 
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
+%% @doc 
+%%-------------------------------------------------------------------
+
 -module(boss_websocket_router).
 
 -behaviour(gen_server).

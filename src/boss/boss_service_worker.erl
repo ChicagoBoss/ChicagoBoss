@@ -1,11 +1,16 @@
 %%%-------------------------------------------------------------------
-%%% @author mihawk <mihawk@monolite>
-%%% @copyright (C) 2012, mihawk
-%%% @doc
-%%%         generic boss_service to handle websocket event {join/close/incoming}
-%%% @end
-%%% Created : 23 Jul 2012 by mihawk <mihawk@monolite>
-%%%-------------------------------------------------------------------
+%%-------------------------------------------------------------------
+%% @author 
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright 
+%%     This file is part of ChicagoBoss project. 
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
+%% @doc generic boss_service to handle websocket event {join/close/incoming}
+%%-------------------------------------------------------------------
+
 -module(boss_service_worker).
 
 -behaviour(gen_server).

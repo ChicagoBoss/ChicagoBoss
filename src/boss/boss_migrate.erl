@@ -1,5 +1,17 @@
-%% boss_migrate handles the chicago boss specific bits of migrations,
-%% in collaboration with boss_db.
+%%-------------------------------------------------------------------
+%% @author 
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright 
+%%     This file is part of ChicagoBoss project. 
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
+%% @doc
+%%     boss_migrate handles the chicago boss specific bits of migrations,
+%%     in collaboration with boss_db.
+%% @end
+%%-------------------------------------------------------------------
 
 -module(boss_migrate).
 

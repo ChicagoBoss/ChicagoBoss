@@ -1,10 +1,16 @@
-%% @author Evan Miller <emmiller@gmail.com>
-%% @copyright 2009 author.
-
-%% @doc TEMPLATE.
+%%-------------------------------------------------------------------
+%% @author 
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright 
+%%     This file is part of ChicagoBoss project. 
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
+%% @doc 
+%%-------------------------------------------------------------------
 
 -module(boss).
--author('Evan Miller <emmiller@gmail.com>').
 -export([start/0, stop/0]).
 
 %% @spec start() -> ok
