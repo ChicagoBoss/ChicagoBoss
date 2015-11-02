@@ -51,14 +51,17 @@ middle_filter(Other, _, _) ->
 
 after_filter({Whatever, Content, Headers}, _, RequestContext) ->
     Token = proplists:get_value(?CSRFTOKEN_NAME, RequestContext, new_token()),
-    Request = proplists:get_value(request, RequestContext, []),
 
-    %% Set ?CSRFTOKEN_NAME cookie
-    {Whatever, Content, [
-        Request:set_cookie(
-            ?CSRFTOKEN_NAME,
-            Token,
-          [{path, "/"}, {max_age, boss_session:get_session_exp_time()}]) | Headers]};
+%% Set ?CSRFTOKEN_NAME cookie
+    CookieOptions    = [
+                        {domain, boss_env:get_env(session_domain, undefined)}, 
+                        {path, "/"}, 
+                        {max_age, boss_session:get_session_exp_time()},
+                        {secure, boss_env:get_env(session_cookie_secure, false)},
+                        {http_only, boss_env:get_env(session_cookie_http_only, true)}
+                       ],
+    Cookie = mochiweb_cookies:cookie(?CSRFTOKEN_NAME, Token, CookieOptions),
+    {Whatever, Content, [Cookie | Headers]};
 after_filter(Other, _, _) ->
     Other.
 

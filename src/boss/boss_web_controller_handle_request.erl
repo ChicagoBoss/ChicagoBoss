@@ -324,19 +324,15 @@ process_result_and_add_session(AppInfo, RequestContext, Result) ->
 
 add_session_to_headers(Req, Headers, SessionID) ->
     SessionExpTime    = boss_session:get_session_exp_time(),
-    CookieOptions    = [{path, "/"}, {max_age, SessionExpTime}],
-    CookieOptions2    = case boss_env:get_env(session_domain, undefined) of
-                  undefined ->
-                  CookieOptions;
-                  CookieDomain ->
-                  lists:merge(CookieOptions, [{domain, CookieDomain}])
-              end,
-    HttpOnly        = boss_env:get_env(session_cookie_http_only, false),
-    Secure            = boss_env:get_env(session_cookie_secure, false),
-    CookieOptions3    = lists:merge(CookieOptions2, [{http_only, HttpOnly},
-                                                   {secure, Secure}]),
+    CookieOptions    = [
+                        {domain, boss_env:get_env(session_domain, undefined)}, 
+                        {path, "/"}, 
+                        {max_age, SessionExpTime},
+                        {secure, boss_env:get_env(session_cookie_secure, false)},
+                        {http_only, boss_env:get_env(session_cookie_http_only, true)}
+                       ],
     SessionKey        = boss_session:get_session_key(),
-    lists:merge(Headers, [Req:set_cookie(SessionKey, SessionID, CookieOptions3)]).
+    lists:merge(Headers, [mochiweb_cookies:cookie(SessionKey, SessionID, CookieOptions)]).
 
 
 %TODO: Refactor this
