@@ -18,7 +18,7 @@
 -callback init(_) -> any().
 -callback session_exists(_, _) -> any().
 -callback create_session(_, _, _) -> any().
--callback lookup_session(_, _, _) -> any().
+-callback lookup_session(_, _) -> any().
 -callback lookup_session_value(_, _, _) -> any().
 -callback set_session_value(_, _, _, _) -> any().
 -callback delete_session(_, _) -> any().
