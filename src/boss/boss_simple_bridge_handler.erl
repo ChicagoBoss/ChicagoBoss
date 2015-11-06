@@ -1,4 +1,15 @@
-%% vim: ts=4 sw=4 et
+%%-------------------------------------------------------------------
+%% @author 
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright 
+%%     This file is part of ChicagoBoss project. 
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
+%% @doc 
+%%-------------------------------------------------------------------
+
 -module(boss_simple_bridge_handler).
 -behaviour(simple_bridge_handler).
 -export([run/1,
@@ -15,7 +26,7 @@ run(Bridge) ->
          Bridge2 = boss_web_controller_handle_request:handle_request(Bridge, boss_router),
         Bridge2:build_response()
     catch E:C ->
-        lager:error("~p:~p: ~p",[E, C, erlang:get_stacktrace()]),
+        _ = lager:error("~p:~p: ~p",[E, C, erlang:get_stacktrace()]),
         exit("Error building response")
     end.
 
@@ -34,20 +45,26 @@ ws_message({text, Data}, Bridge, State) ->
     #state{websocket_id=WebsocketId, 
        session_id=SessionId, 
        service_url=ServiceUrl } = State,
-    case boss_websocket_router:incoming(ServiceUrl, WebsocketId, Bridge, SessionId, Data) of
-        ok -> Response = noreply;
-        {ok, NewState} -> Response = {noreply, NewState};
-        Response -> Response
+    Response = case boss_websocket_router:incoming(ServiceUrl, WebsocketId, Bridge, SessionId, Data) of
+        ok ->
+            noreply;
+        {ok, NewState} ->
+            {noreply, NewState};
+        Res ->
+            Res
     end,
     Response;
 ws_message({binary, Data}, Bridge, State) ->
     #state{websocket_id=WebsocketId, 
        session_id=SessionId, 
        service_url=ServiceUrl } = State,
-    case boss_websocket_router:incoming(ServiceUrl, WebsocketId, Bridge, SessionId, Data) of
-        ok -> Response = noreply;
-        {ok, NewState} -> Response = {noreply, NewState};
-        Response -> Response
+    Response = case boss_websocket_router:incoming(ServiceUrl, WebsocketId, Bridge, SessionId, Data) of
+        ok ->
+            noreply;
+        {ok, NewState} ->
+            {noreply, NewState};
+        Res ->
+            Res
     end,
     Response.
 

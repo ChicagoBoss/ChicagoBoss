@@ -1,3 +1,15 @@
+%%-------------------------------------------------------------------
+%% @author 
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright 
+%%     This file is part of ChicagoBoss project. 
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
+%% @doc 
+%%-------------------------------------------------------------------
+
 -module(boss_env).
 
 -export([boss_env/0, setup_boss_env/0, get_env/2, get_env/3]).
@@ -12,11 +24,11 @@ boss_env() ->
     end.
 
 -spec setup_boss_env() -> types:execution_mode().
-setup_boss_env() ->	
+setup_boss_env() ->    
     case boss_load:module_is_loaded(reloader) of
         true  -> put(boss_environment, development), development;
         false -> put(boss_environment, production), production
-    end.			
+    end.            
 
 -spec get_env(atom(),atom(),any()) -> any().
 get_env(App, Key, Default) when is_atom(App), is_atom(Key) ->
@@ -43,22 +55,22 @@ is_master_node() ->
 
 -spec is_developing_app(types:application()) -> boolean().
 is_developing_app(AppName) ->
-    BossEnv		= boss_env:boss_env(),
-    DevelopingApp	= boss_env:get_env(developing_app, undefined),
-    AppName		=:= DevelopingApp andalso BossEnv =:= development.
+    BossEnv        = boss_env:boss_env(),
+    DevelopingApp    = boss_env:get_env(developing_app, undefined),
+    AppName        =:= DevelopingApp andalso BossEnv =:= development.
 
 -spec router_adapter() -> atom().
 router_adapter() ->
-	get_env(router_adapter, boss_router).
+    get_env(router_adapter, boss_router).
 
 -spec cache_adapter() -> atom().
 cache_adapter() ->
-	get_env(cache_adapter, memcached_bin).
+    get_env(cache_adapter, memcached_bin).
 
 -spec session_adapter() -> atom().
 session_adapter() ->
-	get_env(session_adapter, mock).
+    get_env(session_adapter, mock).
 
 -spec mq_adapter() -> atom().
 mq_adapter() ->
-	get_env(mq_adapter, tinymq).
+    get_env(mq_adapter, tinymq).

@@ -1,6 +1,19 @@
-% Assertion helper functions
-% Four-tuples are an HTTP response {Status, Location, Headers, ParsedHtml}, 
-% three-tuples are an Email {Headers, TextBody, ParsedHtml}
+%%-------------------------------------------------------------------
+%% @author 
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright 
+%%     This file is part of ChicagoBoss project. 
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
+%% @doc 
+%%     Assertion helper functions
+%%     Four-tuples are an HTTP response {Status, Location, Headers, ParsedHtml}, 
+%%     three-tuples are an Email {Headers, TextBody, ParsedHtml}
+%% @end
+%%-------------------------------------------------------------------
+
 -module(boss_assert).
 -export([
         http_ok/1, 

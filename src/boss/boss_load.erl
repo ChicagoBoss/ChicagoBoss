@@ -1,3 +1,15 @@
+%%-------------------------------------------------------------------
+%% @author 
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright 
+%%     This file is part of ChicagoBoss project. 
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
+%% @doc 
+%%-------------------------------------------------------------------
+
 -module(boss_load).
 -export([
         incoming_mail_controller_module/1,
@@ -31,10 +43,8 @@
 
      
 -spec incoming_mail_controller_module(application()) -> atom().
--spec load_all_modules(application(), atom() | pid() | {atom(),atom()}) ->
-   {'ok',module_types()}.
--spec load_all_modules(application(),atom() | pid() | {atom(),atom()},_) ->
-   {'ok',module_types()}.
+-spec load_all_modules(application(), atom() | pid() | {atom(),atom()}) -> {'ok',module_types()}.
+-spec load_all_modules(application(),atom() | pid() | {atom(),atom()},_) -> {'ok',module_types()}.
 -spec load_all_modules_and_emit_app_file(atom(),string()) -> 'ok' | {'error',atom()}.
 -spec load_libraries(application()) -> {'error',[any(),...]} | {'ok',[any()]}.
 -spec load_mail_controllers(application()) -> {'error',[any(),...]} | {'ok',[any()]}.
@@ -53,13 +63,14 @@ load_all_modules(Application, TranslatorSupPid) ->
     load_all_modules(Application, TranslatorSupPid, undefined).
 
 load_all_modules(Application, TranslatorSupPid, OutDir) ->
-    lager:debug("Loading application ~p", [Application]),
+    _ = lager:debug("Loading application ~p", [Application]),
     [{_, TranslatorPid, _, _}]    = supervisor:which_children(TranslatorSupPid),
     
     Ops = make_ops_list(TranslatorPid),
 
     AllModules = make_all_modules(Application, OutDir, Ops),
     {ok, AllModules}.
+
 -type error(X)   :: {ok, X} | {error, string()}.
 -type op_key()   :: test_modules|lib_modules|websocket_modules|mail_modules|controller_modules|
                     model_modules| view_lib_tags_modules|view_lib_helper_modules|view_modules.
@@ -84,7 +95,7 @@ make_all_modules(Application, OutDir, Ops) ->
               {ok, Modules} ->
                   {Key, Modules};
               {error, Message} ->
-                  lager:error("Load Module Error ~p : ~p", [Key, Message]),
+                  _ = lager:error("Load Module Error ~p : ~p", [Key, Message]),
                   {Key, []}
               end
               end, Ops).
@@ -118,7 +129,7 @@ make_computed_vsn(Cmd ) ->
         
 
 reload_all() ->
-    lager:notice("Reload All"),
+    _ = lager:notice("Reload All"),
     Modules = [M || {M, F} <- code:all_loaded(), is_list(F), not code:is_sticky(M)],
     [begin 
      code:purge(M), 
@@ -254,10 +265,10 @@ compile_and_accumulate_errors([Filename|Rest], Application, OutDir, Compiler, {M
                         {ok, Module} ->
                             {[Module|Modules], Errors};
                         {error, Error} ->
-                lager:error("Compile Error, ~p -> ~p", [Filename, Error]),
+                _ = lager:error("Compile Error, ~p -> ~p", [Filename, Error]),
                             {Modules, [Error | Errors]};
                         {error, NewErrors, _NewWarnings} when is_list(NewErrors) ->
-                lager:error("Compile Error, ~p -> ~p", [Filename, NewErrors]),
+                _ = lager:error("Compile Error, ~p -> ~p", [Filename, NewErrors]),
                             {Modules, NewErrors ++ Errors}
                     end
             end
@@ -304,7 +315,7 @@ compile_view_dir_erlydtl(Application, LibPath, Module, OutDir, TranslatorPid) ->
     ExtraTagHelpers    = boss_env:get_env(template_tag_modules, []),
     ExtraFilterHelpers    = boss_env:get_env(template_filter_modules, []),
 
-    lager:debug("Compile Modules ~p  ~p", [LibPath, Module]),
+    _ = lager:debug("Compile Modules ~p  ~p", [LibPath, Module]),
     Res = erlydtl:compile_dir(LibPath, Module,
                             [{doc_root, view_doc_root(LibPath)}, {compiler_options, []}, {out_dir, OutDir},
                              {custom_tags_modules, TagHelpers ++ ExtraTagHelpers ++ [boss_erlydtl_tags]},
@@ -405,7 +416,7 @@ load_views_inner(Application, OutDir, TranslatorPid) ->
         {ok, Module} ->
             [Module|Acc];
         {error, Reason} ->
-            lager:error("Unable to compile ~p because of ~p",
+            _ = lager:error("Unable to compile ~p because of ~p",
                 [File, Reason]),
             Acc
         end

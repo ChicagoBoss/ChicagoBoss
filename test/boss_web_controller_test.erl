@@ -1,3 +1,15 @@
+%%-------------------------------------------------------------------
+%% @author 
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright 
+%%     This file is part of ChicagoBoss project. 
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
+%% @doc 
+%%-------------------------------------------------------------------
+
 -module(boss_web_controller_test).
 -include_lib("proper/include/proper.hrl").
 -include_lib("eunit/include/eunit.hrl").
@@ -22,10 +34,10 @@ make_action_session_id_test() ->
     R = make_ref(),
     ?assertEqual(R,  boss_web_controller:make_action_session_id({},{}, {}, R, {})),
     ?assertEqual(undefined, boss_web_controller:make_action_session_id(false,
-								       #boss_app_info{}, 
-								       {}, 
-								       undefined, 
-								       ?MODULE)).
+                                       #boss_app_info{}, 
+                                       {}, 
+                                       undefined, 
+                                       ?MODULE)).
 
 handle_call_application_info_test() ->
     ?assert(proper:quickcheck(prop_handle_call_application_info(),

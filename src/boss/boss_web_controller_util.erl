@@ -1,3 +1,15 @@
+%%-------------------------------------------------------------------
+%% @author 
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright 
+%%     This file is part of ChicagoBoss project. 
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
+%% @doc 
+%%-------------------------------------------------------------------
+
 -module(boss_web_controller_util).
 
 -export([start_boss_applications/3]).
@@ -22,7 +34,7 @@ start_boss_applications( Applications, ServicesSupPid, #state{router_adapter=Rou
                                         [] -> case boss_env:is_developing_app(AppName) of
                                                 true  -> [];
                                                 false -> 
-                                                    lager:warning("App ~p doesn't seem to have controllers defined,~n"
+                                                    _ = lager:warning("App ~p doesn't seem to have controllers defined,~n"
                                                                   "check your config file at section <~p:controller_modules>,~n"
                                                                   "have you compiled your CB application?",[AppName, AppName]), 
                                                     []

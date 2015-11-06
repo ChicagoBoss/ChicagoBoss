@@ -1,22 +1,20 @@
-%%% @author mihawk <mihawk@monolite>
-%%% @copyright (C) 2012, mihawk
-%%% @doc
-%%%
-%%% @end
-%%% Created : 23 Jul 2012 by mihawk <mihawk@monolite>
+%%-------------------------------------------------------------------
+%% @author 
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright 
+%%     This file is part of ChicagoBoss project. 
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
+%% @doc 
+%%-------------------------------------------------------------------
 
 -module(boss_service_handler).
--export([behaviour_info/1]).
 
-%% @spec behaviour_info( atom() ) -> [ {Function::atom(), Arity::integer()} ] | undefined
-behaviour_info(callbacks) ->
-    [
-        {init, 0}, 
-        {handle_join, 3},
-        {handle_close, 4},
-        {handle_incoming, 4},
-        {handle_info, 2},
-        {terminate, 2}
-    ];
-behaviour_info(_Other) ->
-    undefined.
+-callback init() -> any().
+-callback handle_join(_, _, _) -> any().
+-callback handle_close(_, _, _, _) -> any().
+-callback handle_incoming(_, _, _, _) -> any().
+-callback handle_info(_, _) -> any().
+-callback terminate(_, _) -> any().

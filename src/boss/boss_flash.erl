@@ -1,3 +1,15 @@
+%%-------------------------------------------------------------------
+%% @author 
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright 
+%%     This file is part of ChicagoBoss project. 
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
+%% @doc 
+%%-------------------------------------------------------------------
+
 -module(boss_flash).
 -export([get_and_clear/1, add/5, add/4, add/3]).
 
@@ -15,7 +27,7 @@ get_and_clear(SessionID) ->
 %% @doc Add a message to the flash message stack for `SessionID'.
 add(SessionID, Type, Title) ->
     add(SessionID, Type, Title, undefined, undefined).
-	
+    
 %% @spec add(SessionID, Type, Title, Message) -> ok | {error, Reason}
 %% @doc Add a message to the flash message stack for `SessionID'.
 add(SessionID, Type, Title, Message) ->

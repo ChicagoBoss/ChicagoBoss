@@ -1,3 +1,15 @@
+%%-------------------------------------------------------------------
+%% @author 
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright 
+%%     This file is part of ChicagoBoss project. 
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
+%% @doc 
+%%-------------------------------------------------------------------
+
 -module(boss_mail).
 -export([start/1, stop/0, send_template/3, send_template/4, 
         send/4, send/5, send/6]).
@@ -34,7 +46,7 @@ send_template(Application, Action, Args) ->
     send_template(Application, Action, Args, undefined).
 
 send_template(Application, Action, Args, Callback) ->
-    boss_load:load_mail_controllers(Application),
+    _ = boss_load:load_mail_controllers(Application),
     Controller = list_to_atom(lists:concat([Application, "_outgoing_mail_controller"])),
     case apply(Controller, Action, Args) of
         {ok, FromAddress, ToAddress, HeaderFields} ->
@@ -44,10 +56,10 @@ send_template(Application, Action, Args, Callback) ->
         {ok, FromAddress, ToAddress, HeaderFields, Variables, Options} -> 
             send_message(Application, FromAddress, ToAddress, Action, HeaderFields, Variables, Options, Callback);
         {nevermind, Reason} ->
-            lager:info("Mail Not sent because of ~p", [Reason]),
-	    {ok, Reason};
+            _ = lager:info("Mail Not sent because of ~p", [Reason]),
+        {ok, Reason};
         nevermind ->
-            lager:info("Mail Not sent no reason"),
+            _ = lager:info("Mail Not sent no reason"),
             ok
     end.
 

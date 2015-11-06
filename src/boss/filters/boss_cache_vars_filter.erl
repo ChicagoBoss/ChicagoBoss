@@ -1,3 +1,15 @@
+%%-------------------------------------------------------------------
+%% @author 
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright 
+%%     This file is part of ChicagoBoss project. 
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
+%% @doc 
+%%-------------------------------------------------------------------
+
 -module(boss_cache_vars_filter).
 -export([config_key/0, config_default_value/0]).
 -export([before_filter/2, middle_filter/3]).
@@ -21,13 +33,17 @@ before_filter({vars, _}, RequestContext) ->
             ControllerModule = proplists:get_value(controller_module, RequestContext),
             Action = proplists:get_value(action, RequestContext),
             Tokens = proplists:get_value(tokens, RequestContext, []),
+            Req = proplists:get_value(request, RequestContext, []),
+            Query = Req:query_params(),
 
-            CacheKey = {ControllerModule, Action, Tokens, Language},
+            CacheKey = {ControllerModule, Action, Tokens, Language, Query},
 
             case boss_cache:get(?VARIABLES_CACHE_PREFIX, CacheKey) of
                 undefined -> 
+                    _ = lager:debug("cache: vars not in cache"),
                     {ok, RequestContext ++ [{cache_vars, true}, {cache_key, CacheKey}]};
                 CachedActionResult -> 
+                    _ = lager:debug("cache: hit!"),
                     CachedActionResult
             end;
         false ->
@@ -48,6 +64,7 @@ middle_filter({render, _, _} = ActionResult, {vars, CacheOptions}, RequestContex
                         fun ?MODULE:handle_news_for_cache/3, {?VARIABLES_CACHE_PREFIX, CacheKey},
                         CacheTTL)
             end,
+            _ = lager:debug("cache: saving vars"),
             boss_cache:set(?VARIABLES_CACHE_PREFIX, CacheKey, ActionResult, CacheTTL);
         false ->
             ok

@@ -1,3 +1,15 @@
+%%-------------------------------------------------------------------
+%% @author 
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright 
+%%     This file is part of ChicagoBoss project. 
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
+%% @doc 
+%%-------------------------------------------------------------------
+
 -module(boss_web_controller_handle_request).
 
 -export([handle_request/2]).
@@ -24,7 +36,7 @@ handle_request(Bridge, RouterAdapter) ->
     catch Class:Error ->
         %% Nuclear option: Something very serious happened and we don't want to
         %% fail silently, but instead it should generate an error message.
-        lager:error("Unhandled Error: ~s", [boss_log_util:stacktrace(Class, Error)]),
+        _ = lager:error("Unhandled Error: ~s", [boss_log_util:stacktrace(Class, Error)]),
         handle_fatal_error(Bridge)
     end.
 
@@ -105,7 +117,7 @@ make_etag(App, StaticPrefix, File) ->
         {ok, Content} -> 
             binary_to_list(base64:encode(crypto:hash(sha, Content)));
         {error, enoent} ->
-             lager:warning("application ~s file ~s not found", [App, FilePath]),
+             _ = lager:warning("application ~s file ~s not found", [App, FilePath]),
              {error, enoent};
         Err ->
             Err
@@ -235,36 +247,35 @@ process_request(AppInfo, Req, Mode, Url, RouterAdapter) ->
     process_result_and_add_session(AppInfo, [{request, Req}, {session_id, SessionID1}], Result).
 
 process_dynamic_request(#boss_app_info{ router_pid = RouterPid } = AppInfo, Req, Mode, Url, RouterAdapter) ->
-    
     {Result, SessionID1} = case RouterAdapter:route(RouterPid, Url) of
                                {ok, {Application, Controller, Action, Tokens}} when Application =:= AppInfo#boss_app_info.application ->
-                               Location = {Controller, Action, Tokens},
-                              
-                               RequestContext = [{request, Req}], 
-                               ExecuteResults = load_and_execute(Mode, Location, AppInfo, RequestContext),
-
-                               case  ExecuteResults of
-                                   {'EXIT', Reason} ->
-                                   {{error, Reason}, undefined};
-                                   {{not_found, Message}, S1} ->
-                                   {process_not_found(Message, AppInfo, [{request, Req}, {session_id, S1}], Mode, RouterAdapter), S1};
-                                   {not_found, S1} ->
-                                   {process_not_found("File not found.", AppInfo, [{request, Req}, {session_id, S1}], Mode, RouterAdapter), S1};
-                                   Ok ->
-                                   Ok
-                               end;
+                                   Location = {Controller, Action, Tokens},
+                                   
+                                   RequestContext = [{request, Req}], 
+                                   ExecuteResults = load_and_execute(Mode, Location, AppInfo, RequestContext),
+                                   
+                                   case  ExecuteResults of
+                                       {'EXIT', Reason} ->
+                                           {{error, Reason}, undefined};
+                                       {{not_found, Message}, S1} ->
+                                           {process_not_found(Message, AppInfo, [{request, Req}, {session_id, S1}], Mode, RouterAdapter), S1};
+                                       {not_found, S1} ->
+                                           {process_not_found("File not found.", AppInfo, [{request, Req}, {session_id, S1}], Mode, RouterAdapter), S1};
+                                       Ok ->
+                                           Ok
+                                   end;
                                {ok, {OtherApplication, Controller, Action, Tokens}} ->
-                               {{redirect, {OtherApplication, Controller, Action, Tokens}}, undefined};
+                                   {{redirect, {OtherApplication, Controller, Action, Tokens}}, undefined};
                                not_found ->
-                               {process_not_found("No routes matched the requested URL.", AppInfo, [{request, Req}], Mode, RouterAdapter),
-                                undefined}
+                                   {process_not_found("No routes matched the requested URL.", AppInfo, [{request, Req}], Mode, RouterAdapter),
+                                    undefined}
                            end,
     FinalResult = case Result of
-              {error, Payload} ->
-            process_error(Payload, AppInfo, [{request, Req}, {session_id, SessionID1}], Mode, RouterAdapter);
-        _ ->
-            Result
-    end,
+                      {error, Payload} ->
+                          process_error(Payload, AppInfo, [{request, Req}, {session_id, SessionID1}], Mode, RouterAdapter);
+                      _ ->
+                          Result
+                  end,
     {FinalResult, SessionID1}.
 
 process_not_found(Message, #boss_app_info{ router_pid = RouterPid } = AppInfo, RequestContext, Mode, RouterAdapter) ->
@@ -288,7 +299,7 @@ process_not_found(Message, #boss_app_info{ router_pid = RouterPid } = AppInfo, R
     end.
 
 process_error(Payload, AppInfo, RequestContext, development, RouterAdapter) ->
-    lager:error("~p", [Payload]),
+    _ = lager:error("~p", [Payload]),
     ExtraMessage = case RouterAdapter:handle(AppInfo#boss_app_info.router_pid, 500) of
         not_found ->
             ["This message will appear in production; you may want to define a 500 handler in ", boss_files:routes_file(AppInfo#boss_app_info.application)];
@@ -298,7 +309,7 @@ process_error(Payload, AppInfo, RequestContext, development, RouterAdapter) ->
     boss_web_controller_render:render_error(io_lib:print(Payload), ExtraMessage, AppInfo, RequestContext);
     
 process_error(Payload, #boss_app_info{ router_pid = RouterPid } = AppInfo, RequestContext, Mode, RouterAdapter) ->
-    lager:error("~p", [Payload]),
+    _ = lager:error("~p", [Payload]),
     case RouterAdapter:handle(RouterPid, 500) of
         {ok, {Application, Controller, Action, Tokens}} when Application =:= AppInfo#boss_app_info.application ->
             ErrorLocation = {Controller, Action, Tokens},
@@ -325,19 +336,15 @@ process_result_and_add_session(AppInfo, RequestContext, Result) ->
 
 add_session_to_headers(Req, Headers, SessionID) ->
     SessionExpTime    = boss_session:get_session_exp_time(),
-    CookieOptions    = [{path, "/"}, {max_age, SessionExpTime}],
-    CookieOptions2    = case boss_env:get_env(session_domain, undefined) of
-                  undefined ->
-                  CookieOptions;
-                  CookieDomain ->
-                  lists:merge(CookieOptions, [{domain, CookieDomain}])
-              end,
-    HttpOnly        = boss_env:get_env(session_cookie_http_only, false),
-    Secure            = boss_env:get_env(session_cookie_secure, false),
-    CookieOptions3    = lists:merge(CookieOptions2, [{http_only, HttpOnly},
-                                                   {secure, Secure}]),
+    CookieOptions    = [
+                        {domain, boss_env:get_env(session_domain, undefined)}, 
+                        {path, "/"}, 
+                        {max_age, SessionExpTime},
+                        {secure, boss_env:get_env(session_cookie_secure, false)},
+                        {http_only, boss_env:get_env(session_cookie_http_only, true)}
+                       ],
     SessionKey        = boss_session:get_session_key(),
-    lists:merge(Headers, [Req:set_cookie(SessionKey, SessionID, CookieOptions3)]).
+    lists:merge(Headers, [mochiweb_cookies:cookie(SessionKey, SessionID, CookieOptions)]).
 
 
 %TODO: Refactor this
@@ -471,7 +478,6 @@ load_and_execute(development,
     Res  = fold_operations(Application, Ops),
     run_controller(Controller, Location, AppInfo, Application,
                           RequestContext, SessionID, Res).
-    
 
 run_controller(Controller, Location, AppInfo, Application,
                RequestContext, SessionID, {ok,Controllers}) ->

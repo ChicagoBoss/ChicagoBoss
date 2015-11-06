@@ -1,11 +1,15 @@
-%%%-------------------------------------------------------------------
-%%% @author mihawk <mihawk@monolite>
-%%% @copyright (C) 2012, mihawk
-%%% @doc
-%%%
-%%% @end
-%%% Created : 18 Jul 2012 by mihawk <mihawk@monolite>
-%%%-------------------------------------------------------------------
+%%-------------------------------------------------------------------
+%% @author 
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright 
+%%     This file is part of ChicagoBoss project. 
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
+%% @doc 
+%%-------------------------------------------------------------------
+
 -module(boss_service_sup).
 
 -behaviour(supervisor).
@@ -52,21 +56,21 @@ start_link() ->
 
 start_services(SupPid, boss_websocket_router) ->
     {ok, BossWebSocketRouterPid} = 
-	supervisor:start_child(SupPid,
-			       {boss_websocket_router, {boss_websocket_router, start_link, []},
-				permanent, 5000, worker, [boss_websocket_router]}),
+    supervisor:start_child(SupPid,
+                   {boss_websocket_router, {boss_websocket_router, start_link, []},
+                permanent, 5000, worker, [boss_websocket_router]}),
     {ok, BossWebSocketRouterPid};
 
 
 start_services(SupPid, Services) ->
     lists:foldl(
       fun([], Acc) -> Acc ;
-	 ({ServiceUrl, Service}, Acc) ->
-	      {ok, ServicePid} = 
-		  supervisor:start_child(SupPid,
-					 {Service, {boss_service_worker, start_link, [Service, ServiceUrl]},
-					  permanent, 5000, worker, [Service]}),
-	      Acc ++ [{ok, ServicePid}]
+     ({ServiceUrl, Service}, Acc) ->
+          {ok, ServicePid} = 
+          supervisor:start_child(SupPid,
+                     {Service, {boss_service_worker, start_link, [Service, ServiceUrl]},
+                      permanent, 5000, worker, [Service]}),
+          Acc ++ [{ok, ServicePid}]
       end, 
       [], 
       Services ),

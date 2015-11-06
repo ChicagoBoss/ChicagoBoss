@@ -1,10 +1,21 @@
--module (boss_model_manager_adapter).
--export ([behaviour_info/1]).
+%%-------------------------------------------------------------------
+%% @author 
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright 
+%%     This file is part of ChicagoBoss project. 
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
+%% @doc 
+%%-------------------------------------------------------------------
 
-%% @spec behaviour_info( atom() ) -> [ {Function::atom(), Arity::integer()} ] | undefined
-behaviour_info (callbacks) ->
-  [ {start, 0}, {stop, 0}, {compile, 2}, {edoc_module, 2},
-    {is_model_instance, 2}, {dummy_instance, 1},
-    {to_json, 1} %, {from_json, 1}
-  ];
-behaviour_info (_Other) -> undefined.
+-module (boss_model_manager_adapter).
+
+-callback start() -> any().
+-callback stop() -> any().
+-callback compile(_, _) -> any().
+-callback edoc_module(_, _) -> any().
+-callback is_model_instance(_, _) -> any().
+-callback dummy_instance(_) -> any().
+-callback to_json(_) -> any().

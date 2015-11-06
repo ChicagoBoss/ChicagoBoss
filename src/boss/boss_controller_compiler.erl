@@ -1,3 +1,15 @@
+%%-------------------------------------------------------------------
+%% @author 
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright 
+%%     This file is part of ChicagoBoss project. 
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
+%% @doc 
+%%-------------------------------------------------------------------
+
 -module(boss_controller_compiler).
 -export([compile/1, compile/2, add_routes_to_forms/1]).
 -include_lib("proper/include/proper.hrl").
@@ -56,7 +68,7 @@ compile(File) ->
     compile(File, []).
 
 compile(File, Options) ->
-    lager:info("Compile controller ~s", [File]), 
+    _ = lager:info("Compile controller ~s", [File]), 
     boss_compiler:compile(File,
                           [debug_info,{pre_revert_transform, fun ?MODULE:add_routes_to_forms/1}|Options]).
 

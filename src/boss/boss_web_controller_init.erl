@@ -1,3 +1,15 @@
+%%-------------------------------------------------------------------
+%% @author 
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright 
+%%     This file is part of ChicagoBoss project. 
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
+%% @doc 
+%%-------------------------------------------------------------------
+
 -module(boss_web_controller_init).
 
 -export([init_lager/0]).
@@ -57,9 +69,9 @@ init_master_node(Env, ThisNode) ->
     MasterNode = boss_env:master_node(),
     if
         MasterNode =:= ThisNode ->
-            lager:debug("Starting master services on ~p", [MasterNode]),
-            boss_mq:start(),
-            boss_news:start(),
+            _ = lager:debug("Starting master services on ~p", [MasterNode]),
+            boss_util:ensure_started(boss_mq),
+            boss_util:ensure_started(boss_news),
             case boss_env:get_env(smtp_server_enable, false) of
                 true ->
                     Options = [
@@ -73,7 +85,7 @@ init_master_node(Env, ThisNode) ->
                     ok
             end;
         true ->
-            lager:debug("Pinging master node ~p from ~p", [MasterNode, ThisNode]),
+            _ = lager:debug("Pinging master node ~p from ~p", [MasterNode, ThisNode]),
             pong = net_adm:ping(MasterNode)
     end,
     {ok,MasterNode}.
@@ -82,7 +94,7 @@ init_master_node(Env, ThisNode) ->
 init_webserver(ThisNode, MasterNode, SSLEnable, SSLOptions,
                ServicesSupPid, ServerConfig) ->
 
-        lager:debug("Starting webserver... on ~p", [MasterNode]),
+        _ = lager:debug("Starting webserver... on ~p", [MasterNode]),
         application:start(simple_bridge),
 
         if MasterNode =:= ThisNode ->
@@ -117,7 +129,7 @@ init_services() ->
     application:start(elixir),
 
     Env = boss_env:setup_boss_env(),
-    lager:info("Starting Boss in ~p mode...", [Env]),
+    _ = lager:info("Starting Boss in ~p mode...", [Env]),
     boss_model_manager:start(),
     init_cache(),
     boss_session:start(),

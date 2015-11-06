@@ -1,3 +1,15 @@
+%%-------------------------------------------------------------------
+%% @author 
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright 
+%%     This file is part of ChicagoBoss project. 
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
+%% @doc 
+%%-------------------------------------------------------------------
+
 -module(boss_session_adapter_mnesia).
 -behaviour(boss_session_adapter).
 -export([start/0, start/1, stop/1, init/1]).
@@ -19,16 +31,16 @@ stop(_) ->
     ok.
 
 init(_) ->
-    lager:info("Starting distributed session mnesia storage"),
+    _ = lager:info("Starting distributed session mnesia storage"),
     ok = ensure_schema(),  % Expects Mnesia to be stopped
     mnesia:start(),
     %%Checks for table, after some time tries to recreate it
     case mnesia:wait_for_tables([?TABLE], ?TIMEOUT) of
         ok -> 
-            lager:debug("mnesia session table ok"),
+            _ = lager:debug("mnesia session table ok"),
             noop;
         {timeout,[?TABLE]} ->
-            create_session_storage()		
+            create_session_storage()
     end,
 
     {ok, undefined}.
@@ -43,7 +55,7 @@ create_session(_, SessionID, Data) ->
     ok.
 
 lookup_session(_, SessionID) ->
-    recover_data(SessionID).	
+    recover_data(SessionID).    
 
 lookup_session_value(_, SessionID, Key) ->
     Data = recover_data(SessionID),
@@ -60,7 +72,7 @@ set_session_value(_, Sid, Key, Value) ->
     end,
 
     Update = fun() -> NewSession = #boss_session{sid=Sid,data=Data1,ttl=0}, mnesia:write(NewSession) end,
-    {atomic,ok} = mnesia:transaction(Update),	
+    {atomic,ok} = mnesia:transaction(Update),    
     ok.
 
 delete_session(_, Sid) ->
@@ -78,7 +90,7 @@ delete_session_value(_, Sid, Key) ->
         false ->
             ok
     end.
-	
+    
 %%--------------------------------------------------------------------
 %%% Internal functions
 %%--------------------------------------------------------------------
@@ -92,7 +104,7 @@ ensure_schema() ->
 
 create_session_storage()->
     Nodes = mnesia_nodes(),
-    lager:notice("Creating mnesia table for nodes ~p",  [Nodes]),
+    _ = lager:notice("Creating mnesia table for nodes ~p",  [Nodes]),
     case mnesia:create_table(?TABLE,[{disc_copies,  Nodes}, {attributes, record_info(fields, boss_session)}]) of
         {aborted, Reason} -> lager:error("Error creating mnesia table for sessions: ~p", [Reason]);
         {atomic, ok} -> ok

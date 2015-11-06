@@ -1,5 +1,14 @@
-%% @author Evan Miller
+%%-------------------------------------------------------------------
+%% @author 
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright 
+%%     This file is part of ChicagoBoss project. 
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
 %% @doc Generate documentation for the Chicago Boss external API.
+%%-------------------------------------------------------------------
 
 -module(boss_doc).
 -export([run/0, run/2]).

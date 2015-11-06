@@ -1,4 +1,14 @@
+%%-------------------------------------------------------------------
+%% @author 
+%%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
+%% @end
+%% @copyright 
+%%     This file is part of ChicagoBoss project. 
+%%     See AUTHORS file in root directory
+%%     for license information, see LICENSE file in root directory
+%% @end
 %% @doc Chicago Boss messaging abstraction
+%%-------------------------------------------------------------------
 
 -module(boss_mq).
 
@@ -21,9 +31,9 @@
 
 -spec start() -> 'ignore' | {'error',_} | {'ok',pid()}.
 start() ->
-    MQOptions	= make_queue_options(),
-    MQAdapter	= get_mq_adapater(),
-    MQOptions1	= [{adapter, list_to_atom("boss_mq_adapter_"++atom_to_list(MQAdapter))}|MQOptions],
+    MQOptions    = make_queue_options(),
+    MQAdapter    = get_mq_adapater(),
+    MQOptions1    = [{adapter, list_to_atom("boss_mq_adapter_"++atom_to_list(MQAdapter))}|MQOptions],
     start(MQOptions1).
 
 -spec start(_) -> 'ignore' | {'error',_} | {'ok',pid()}.
@@ -36,18 +46,18 @@ stop() ->
 
 -spec get_mq_adapater() -> atom().
 get_mq_adapater() ->
-	boss_env:mq_adapter().
+    boss_env:mq_adapter().
 
 -spec make_queue_options() -> [{atom(), term()}].
 make_queue_options() ->
     lists:foldl(fun(OptName, Acc) ->
-			case application:get_env(OptName) of
-			    {ok, Val} -> [{OptName, Val}|Acc];
-			    _ -> Acc
-			end
+            case application:get_env(OptName) of
+                {ok, Val} -> [{OptName, Val}|Acc];
+                _ -> Acc
+            end
                 end,
-		[], 
-		[mq_port, mq_host, mq_max_age]).
+        [], 
+        [mq_port, mq_host, mq_max_age]).
 
 
 
@@ -77,11 +87,11 @@ pull(Channel, Timestamp, Timeout) when is_list(Channel) ->
 -spec pull_recieve('infinity' | non_neg_integer(),{ok, _}|any()) -> mq_return().
 pull_recieve(TimeoutMs, {ok, PullTime}) ->
     receive
-	{_From, NewTimestamp, Messages} ->
-	    {ok, NewTimestamp, Messages}
+    {_From, NewTimestamp, Messages} ->
+        {ok, NewTimestamp, Messages}
     after
-	TimeoutMs ->
-	    {ok, PullTime, []}
+    TimeoutMs ->
+        {ok, PullTime, []}
     end;
 pull_recieve(_, Error) -> Error.
 
