@@ -11,22 +11,15 @@
 %%-------------------------------------------------------------------
 
 -module(boss_session_adapter).
--export([behaviour_info/1]).
 
-%% @spec behaviour_info( atom() ) -> [ {Function::atom(), Arity::integer()} ] | undefined
-behaviour_info(callbacks) ->
-    [
-     {start, 0}, 
-     {start, 1},
-     {stop, 1}, 
-     {init, 1},
-     {session_exists, 2}, 
-     {create_session, 3}, 
-     {lookup_session, 2}, 
-     {lookup_session_value, 3}, 
-     {set_session_value, 4}, 
-     {delete_session, 2}, 
-     {delete_session_value, 3}
-    ];
-behaviour_info(_Other) ->
-    undefined.
+-callback start() -> any().
+-callback start(_) -> any().
+-callback stop(_) -> any().
+-callback init(_) -> any().
+-callback session_exists(_, _) -> any().
+-callback create_session(_, _, _) -> any().
+-callback lookup_session(_, _, _) -> any().
+-callback lookup_session_value(_, _, _) -> any().
+-callback set_session_value(_, _, _, _) -> any().
+-callback delete_session(_, _) -> any().
+-callback delete_session_value(_, _, _) -> any().
