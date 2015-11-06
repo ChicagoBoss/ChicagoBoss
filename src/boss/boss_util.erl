@@ -23,6 +23,8 @@ ensure_started(App) ->
         ok ->
             ok;
         {error, {already_started, App}} ->
+            ok;
+        {error, {"no such file or directory", _}} ->
             ok
     end.
 
