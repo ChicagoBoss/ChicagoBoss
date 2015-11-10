@@ -1,13 +1,13 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
-%% @doc 
+%% @doc
 %%-------------------------------------------------------------------
 
 -module(boss_files_test).
@@ -22,7 +22,7 @@ make_extentions_test() ->
 
 lookup_module_by_adapater_test() ->
     ?assertEqual([], boss_files:lookup_module_by_adapater([], [], [], undefined)),
-    Modules = boss_files:lookup_module_by_adapater(test_app, "test_file", [], 
+    Modules = boss_files:lookup_module_by_adapater(test_app, "test_file", [],
                            boss_compiler_adapter_erlang),
     ?assertEqual(["test_file"], Modules).
 
@@ -38,8 +38,8 @@ make_modules_test() ->
 
 find_file_4_test() ->
     ?assertEqual([test], boss_files:find_file([], undefined, [test], undefined)).
-    
-    
+
+
 make_modules_itterator_test()->
     Extentions    = boss_files:make_extentions(),
     Itter    = boss_files:make_modules_itterator(Extentions, test),
@@ -51,4 +51,4 @@ make_modules_itterator_test()->
     ?assertEqual(["test"],        Itter("test.lfe", [])),
     ?assertEqual([],            Itter("test",     [])).
 
-    
+

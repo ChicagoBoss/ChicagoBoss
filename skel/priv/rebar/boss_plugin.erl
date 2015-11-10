@@ -27,16 +27,16 @@
 %%--------------------------------------------------------------------
 boss(RebarConf, AppFile) ->
   case is_base_dir(RebarConf) of
-    true -> 
+    true ->
       Command = rebar_config:get_global(RebarConf, c, "help"),
       {ok, BossConf} = init(RebarConf, AppFile, Command),
       case boss_rebar:run(?BOSS_PLUGIN_CLIENT_VERSION, Command, RebarConf, BossConf, AppFile) of
         {error, command_not_found} ->
-          io:format("ERROR: boss command not found.~n"), 
+          io:format("ERROR: boss command not found.~n"),
           boss_rebar:help(),
           halt(1);
-        {error, Reason} -> 
-          io:format("ERROR: executing ~s task: ~s~n", [Command, Reason]), 
+        {error, Reason} ->
+          io:format("ERROR: executing ~s task: ~s~n", [Command, Reason]),
           halt(1);
         ok -> ok
       end;
@@ -46,7 +46,7 @@ boss(RebarConf, AppFile) ->
 %%--------------------------------------------------------------------
 %% @doc initializes the rebar boss connector plugin
 %% @spec init(Config, AppFile) -> {ok, BossConf} | {error, Reason}
-%%       Set's the ebin cb_apps and loads the connector 
+%%       Set's the ebin cb_apps and loads the connector
 %% @end
 %%--------------------------------------------------------------------
 init(RebarConf, AppFile, Command) ->
@@ -65,9 +65,9 @@ init(RebarConf, AppFile, Command) ->
            Val -> Val
          end,
   RebarErls = rebar_utils:find_files(filename:join([BossPath, "priv", "rebar"]), ".*\\.erl\$"),
-  
+
   rebar_log:log(debug, "Auto-loading boss rebar modules ~p~n", [RebarErls]),
-  
+
   lists:map(fun(F) ->
             case compile:file(F, [binary]) of
               error ->
@@ -81,7 +81,7 @@ init(RebarConf, AppFile, Command) ->
 
   %% add all cb_apps defined in config file to code path
   %% including the deps ebin dirs
-  
+
   case is_base_dir(RebarConf) of
   true ->
     code:add_paths(["ebin" | filelib:wildcard(rebar_config:get_xconf(RebarConf, base_dir, undefined) ++ "/deps/*/ebin")]);
@@ -90,9 +90,9 @@ init(RebarConf, AppFile, Command) ->
   end,
   %% Load the config in the environment
   boss_rebar:init_conf(BossConf),
-  
+
   {ok, BossConf}.
-  
+
 %%--------------------------------------------------------------------
 %% @doc pre_compile hook
 %% @spec pre_compile(_Config, AppFile) -> ok | {error, Reason}
@@ -104,7 +104,7 @@ init(RebarConf, AppFile, Command) ->
 %%--------------------------------------------------------------------
 pre_compile(RebarConf, AppFile) ->
   case is_boss_app(AppFile)  orelse is_base_dir(RebarConf) of
-    true -> 
+    true ->
       {ok, BossConf} = init(RebarConf, AppFile, "compile"),
       boss_rebar:run(?BOSS_PLUGIN_CLIENT_VERSION, compile, RebarConf, BossConf, AppFile),
       halt(0);
@@ -122,7 +122,7 @@ pre_compile(RebarConf, AppFile) ->
 %%--------------------------------------------------------------------
 pre_eunit(RebarConf, AppFile) ->
   case is_boss_app(AppFile) orelse is_base_dir(RebarConf) of
-    true -> 
+    true ->
       {ok, BossConf} = init(RebarConf, AppFile, "test_eunit"),
       boss_rebar:run(?BOSS_PLUGIN_CLIENT_VERSION, test_eunit, RebarConf, BossConf, AppFile),
       halt(0);
@@ -160,7 +160,7 @@ get_config_file(true) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 validate_config_data(BossConfFile, {error, {Line, _Mod, [Term|_]}}) ->
-    io:format("FATAL: Config file ~p has a syntax error on line ~p, ~n ~p ~n~n", 
+    io:format("FATAL: Config file ~p has a syntax error on line ~p, ~n ~p ~n~n",
           [BossConfFile, Line,  Term]),
     halt(1);
 validate_config_data(BossConfFile, {error, enoent}) ->
@@ -168,7 +168,7 @@ validate_config_data(BossConfFile, {error, enoent}) ->
     halt(1);
 validate_config_data(BossConfFile, {ok, [BossConfig]}) ->
     {BossConfig, BossConfFile}.
-    
+
 
 
 %%--------------------------------------------------------------------
@@ -179,11 +179,11 @@ validate_config_data(BossConfFile, {ok, [BossConfig]}) ->
 %%--------------------------------------------------------------------
 boss_config_value(App, Key, BossConfig) ->
   case lists:keyfind(App, 1, BossConfig) of
-    false -> 
+    false ->
       {error, boss_config_app_not_found};
-    {App, AppConfig} -> 
+    {App, AppConfig} ->
       case lists:keyfind(Key, 1, AppConfig) of
-        false -> 
+        false ->
           {error, boss_config_app_setting_not_found};
         {Key, KeyConfig} ->
           KeyConfig

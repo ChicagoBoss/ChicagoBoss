@@ -113,7 +113,7 @@ span.var {
 div.nav {
     clear: both;
     color: white;
-    font-size: 20px; 
+    font-size: 20px;
     margin-bottom: 20px;
 }
 div.nav a {
@@ -121,7 +121,7 @@ div.nav a {
     font-size: 20px; margin-top: 40px; margin-bottom: 20px;
 }
 div.subnav {
-    text-align: center; 
+    text-align: center;
     font-size: 14px;
     padding: 16px;
 }
@@ -163,27 +163,27 @@ div.main_header {
     width: 900px; margin-left: auto; margin-right: auto;
 }
 div.main_logo {
-    text-align: left; 
-    padding: 40px 40px 40px 30px; 
-    color: white; 
-    margin-right: auto; 
-    width: 280px; 
+    text-align: left;
+    padding: 40px 40px 40px 30px;
+    color: white;
+    margin-right: auto;
+    width: 280px;
     float: left;
 }
 div.main_checklist {
-    color: black; 
-    font-size: 30px; 
-    text-align: left; 
-    float: left; 
-    margin-top: 40px; 
+    color: black;
+    font-size: 30px;
+    text-align: left;
+    float: left;
+    margin-top: 40px;
     line-height: 36px;
 }
 div.secondary_header {
-    width: 790px; 
-    height: 50px; 
-    margin-left: auto; 
-    margin-right: auto; 
-    text-align: left; 
+    width: 790px;
+    height: 50px;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: left;
     color: white;
 }
 div.secondary_logo {
@@ -197,11 +197,11 @@ div.secondary_quote {
     float: right;
 }
 div.content {
-    text-align: left; 
+    text-align: left;
     background-color: white;
-    position: absolute; 
-    margin-left: -425px; 
-    left: 50%; 
+    position: absolute;
+    margin-left: -425px;
+    left: 50%;
     padding: 30px 30px;
     width: 790px;
     font-size: 20px; padding-bottom: 300px;

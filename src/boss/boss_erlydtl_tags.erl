@@ -1,22 +1,22 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
-%% @doc 
+%% @doc
 %%-------------------------------------------------------------------
 
 -module(boss_erlydtl_tags).
 -export([url/2]).
 
 url(Variables, Options) ->
-    ListVars = lists:map(fun 
-            ({K, V}) when is_binary(V) -> {K, binary_to_list(V)}; 
-            ({K, V}) -> {K, V} 
+    ListVars = lists:map(fun
+            ({K, V}) when is_binary(V) -> {K, binary_to_list(V)};
+            ({K, V}) -> {K, V}
         end, Variables),
     ThisApp = proplists:get_value(application, Options),
     LinkedApp = proplists:get_value(application, ListVars, ThisApp),
@@ -48,10 +48,10 @@ url(Variables, Options) ->
         false ->
             case boss_web:domains(LinkedAppAtom) of
                 all -> "";
-                Domains -> 
+                Domains ->
                     UseSameDomain = case proplists:get_value(host, Options) of
                         undefined -> false;
-                        DefinedHost -> 
+                        DefinedHost ->
                             [H|_] = re:split(DefinedHost, ":", [{return, list}]),
                             lists:member(H, Domains)
                     end,

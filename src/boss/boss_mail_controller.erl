@@ -1,13 +1,13 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
-%% @doc 
+%% @doc
 %%-------------------------------------------------------------------
 
 -module(boss_mail_controller).
@@ -33,7 +33,7 @@ init(Options) ->
 
 handle_call({deliver, FromAddress, ToAddress, BodyFun, ResultFun}, _From, State) ->
     Driver = State#state.driver,
-    {reply, Driver:deliver(State#state.connection, 
+    {reply, Driver:deliver(State#state.connection,
             FromAddress, ToAddress, BodyFun, ResultFun), State}.
 
 handle_cast(_Request, State) ->

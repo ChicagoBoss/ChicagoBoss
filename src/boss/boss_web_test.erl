@@ -1,9 +1,9 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
@@ -32,7 +32,7 @@ bootstrap_test_env(Application, Adapter) ->
     ok = application:start(Application),
     ControllerList     = boss_files:web_controller_list(Application),
     RouterAdapter     = boss_env:router_adapter(),
-    {ok, RouterSupPid} = RouterAdapter:start([{application, Application}, 
+    {ok, RouterSupPid} = RouterAdapter:start([{application, Application},
             {controllers, ControllerList}]),
     boss_db:start([{adapter, Adapter}|DBOptions]),
     boss_session:start(),
@@ -44,7 +44,7 @@ bootstrap_test_env(Application, Adapter) ->
     boss_mail:start([{driver, boss_mail_driver_mock}]),
     {ok, TranslatorSupPid} = boss_translator:start([{application, Application}]),
     boss_load:load_all_modules(Application, TranslatorSupPid),
-    #boss_app_info{ 
+    #boss_app_info{
         application        = Application,
         base_url        = "",
         init_data        = [],
@@ -103,7 +103,7 @@ post_request(Url, Headers, Contents, Assertions, Continuations) ->
 
 %% @spec follow_link(LinkName, Response, Assertions, Continuations) -> [{NumPassed, ErrorMessages}]
 %% @doc This test looks for a link labeled `LinkName' in `Response' and issues
-%% an HTTP GET request to the associated URL. The label may be an "alt" attribute of a 
+%% an HTTP GET request to the associated URL. The label may be an "alt" attribute of a
 %% hyperlinked &amp;lt;img&amp;gt; tag.
 follow_link(LinkName, {_, Uri, _, ParseTree} = _Response, Assertions, Continuations) ->
     follow_link1(LinkName, Uri, ParseTree, Assertions, Continuations);
@@ -130,12 +130,12 @@ follow_redirect({302, _, Headers, _} = _Response, Hdrs, Assertions, Continuation
 
 %% @spec submit_form(FormName, FormValues::proplist(), Response, Assertions, Continuations) -> [{NumPassed, ErrorMessages}]
 %% @doc This test inspects `Response' for an HTML form with a "name" attribute equal to `FormName',
-%% and submits it using `FormValues', a proplist with keys equal to the labels of form fields. 
+%% and submits it using `FormValues', a proplist with keys equal to the labels of form fields.
 %% (So all visible form fields should be labeled with a &amp;lt;label&amp;gt; HTML tag!)
 %% If a particular value is not specified, the form's default value is used.
 submit_form(FormName, FormValues, {_, Uri, _, ParseTree} = _Response, Assertions, Continuations) ->
     case find_form_named(FormName, ParseTree) of
-        undefined -> 
+        undefined ->
             {0, ["No form to submit!"]};
         {Method, Action, InputFields, InputLabels} ->
             FormAction = case Action of undefined -> Uri; Action -> binary_to_list(Action) end,
@@ -163,11 +163,11 @@ read_email(ToAddress, Subject, Assertions, Continuations) ->
     end,
     case boss_mail_driver_mock:read(ToAddress, Subject) of
         undefined ->
-            boss_test:process_assertions_and_continuations(Assertions, Continuations, undefined, 
+            boss_test:process_assertions_and_continuations(Assertions, Continuations, undefined,
                 PushFun, PopFun, fun boss_db:dump/0);
         {Type, SubType, Headers, _, Body} ->
             {TextBody, HtmlBody} = parse_email_body(Type, SubType, Body),
-            boss_test:process_assertions_and_continuations(Assertions, Continuations, {Headers, TextBody, HtmlBody}, 
+            boss_test:process_assertions_and_continuations(Assertions, Continuations, {Headers, TextBody, HtmlBody},
                 PushFun, PopFun, fun boss_db:dump/0)
     end.
 
@@ -175,7 +175,7 @@ read_email(ToAddress, Subject, Assertions, Continuations) ->
 
 follow_link1(LinkName, ThisUrl, ParseTree, Assertions, Continuations) ->
     case find_link_with_text(LinkName, ParseTree) of
-        undefined -> 
+        undefined ->
             {0, ["No link to follow!"]};
         Url ->
             AbsPath = case parse_url(Url) of
@@ -192,8 +192,8 @@ parse_email_body(<<"text">>, <<"plain">>, Body) ->
     {Body, []};
 parse_email_body(<<"text">>, <<"html">>, Body) ->
     {[], parse_html_email_body(Body)};
-parse_email_body(<<"multipart">>, <<"alternative">>, 
-    [{<<"text">>, <<"plain">>, _, _, TextBody}, 
+parse_email_body(<<"multipart">>, <<"alternative">>,
+    [{<<"text">>, <<"plain">>, _, _, TextBody},
         {<<"text">>, <<"html">>, _, _, HtmlBody}]) ->
     {TextBody, parse_html_email_body(HtmlBody)}.
 
@@ -349,7 +349,7 @@ get_request_loop(AppInfo) ->
             [{_, TranslatorPid, _, _}] = supervisor:which_children(AppInfo#boss_app_info.translator_sup_pid),
             RouterAdapter = boss_env:router_adapter(),
             Result = boss_web_controller_handle_request:process_request(AppInfo#boss_app_info {
-                    router_pid = RouterPid, translator_pid = TranslatorPid }, 
+                    router_pid = RouterPid, translator_pid = TranslatorPid },
                 Req, testing, FullUrl, RouterAdapter),
             From ! {self(), FullUrl, Result};
         Other ->
@@ -366,14 +366,14 @@ post_request_loop(AppInfo) ->
             [{_, RouterPid, _, _}]    = supervisor:which_children(AppInfo#boss_app_info.router_sup_pid),
             [{_, TranslatorPid, _, _}]    = supervisor:which_children(AppInfo#boss_app_info.translator_sup_pid),
             RouterAdapter = boss_env:router_adapter(),
-            Req = make_request('POST', Uri, 
+            Req = make_request('POST', Uri,
                    [{"Content-Encoding", "application/x-www-form-urlencoded"} | Headers]),
             FullUrl = Req:path(),
             Result = boss_web_controller_handle_request:process_request(AppInfo#boss_app_info{
-                               router_pid     = RouterPid, 
-                               translator_pid = TranslatorPid }, 
-                             Req, 
-                             testing, 
+                               router_pid     = RouterPid,
+                               translator_pid = TranslatorPid },
+                             Req,
+                             testing,
                              FullUrl,
                              RouterAdapter),
 

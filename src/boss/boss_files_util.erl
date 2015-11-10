@@ -1,13 +1,13 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
-%% @doc 
+%% @doc
 %%-------------------------------------------------------------------
 
 -module(boss_files_util).
@@ -89,15 +89,15 @@ root_src_dir() -> "src".
 web_view_path() ->
     filename:join([root_src_dir(), "view"]).
 -spec web_view_path(atom() | binary() | [atom() | [any()] | char()],atom() | string() | number()) -> input_string().
-web_view_path(Controller, Template) -> 
+web_view_path(Controller, Template) ->
     web_view_path(Controller, Template, "html").
 
 
 -spec web_view_path(atom() | binary() | [atom() | [any()] | char()]) -> input_string().
-web_view_path(Controller) -> 
+web_view_path(Controller) ->
     filename:join([web_view_path(), Controller]).
 -spec web_view_path(atom() | binary() | [atom() | [any()] | char()],atom() | string() | number(),atom() | string() | number()) -> input_string().
-web_view_path(Controller, Template, Extension) -> 
+web_view_path(Controller, Template, Extension) ->
     filename:join([web_view_path(Controller),
            lists:concat([Template, ".", Extension])]).
 -spec mail_view_path() -> input_string().
@@ -107,7 +107,7 @@ mail_view_path() ->
 
 
 -spec mail_view_path(atom() | string() | number(),atom() | string() | number()) -> input_string().
-mail_view_path(Template, Extension) -> 
+mail_view_path(Template, Extension) ->
     filename:join([mail_view_path(), lists:concat([Template, ".", Extension])]).
 
 -spec model_path() -> [input_string(),...].
@@ -157,18 +157,18 @@ module_list1([Dir|Rest], Application, ModuleAcc) ->
                            fun("."++_, Acc) -> Acc;
                               (File, Acc) ->
                                    %% TODO check is_file/is_dir?
-                                   case filename:extension(File) of 
-                                       [$.|Extension] ->                                       
+                                   case filename:extension(File) of
+                                       [$.|Extension] ->
                                            case proplists:get_value(Extension, ExtensionProplist) of
-                                               undefined -> 
+                                               undefined ->
                                                    Acc;
-                                               Adapter -> 
+                                               Adapter ->
                                                    [Adapter:module_name_for_file(Application, File)|Acc]
                                            end;
                                        _ -> []
                                    end
-                           end, 
-                           ModuleAcc, 
+                           end,
+                           ModuleAcc,
                            Files);
 
                      _ ->
@@ -196,7 +196,7 @@ ebin_dir() -> filename:join([root_dir(), "ebin"]).
 view_filter_helper_list(AppName) -> module_list(AppName, [view_filter_helper_path()]).
 -spec web_controller_path(atom() | binary() | [atom() | [any()] | char()]) -> input_string().
 
-web_controller_path(Controller) -> 
+web_controller_path(Controller) ->
     filename:join([hd(web_controller_path()), Controller]).
 -spec lib_path() -> [input_string(),...].
 
@@ -209,7 +209,7 @@ test_path() -> [filename:join([root_src_dir(), "test", "functional"])].
 websocket_path() -> [filename:join([root_src_dir(), "websocket"])].
 -spec compiler_adapters() -> [types:compiler_adapters()].
 
-compiler_adapters() -> 
+compiler_adapters() ->
     [boss_compiler_adapter_erlang, boss_compiler_adapter_elixir, boss_compiler_adapter_lfe].
 -spec template_adapters() -> ['boss_template_adapter_eex' | 'boss_template_adapter_erlydtl' | 'boss_template_adapter_jade',...].
 

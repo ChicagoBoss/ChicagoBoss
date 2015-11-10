@@ -1,13 +1,13 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
-%% @doc 
+%% @doc
 %%-------------------------------------------------------------------
 
 -module(boss_simple_bridge_handler).
@@ -34,16 +34,16 @@ ws_init(Bridge) ->
     SessionKey = boss_env:get_env(session_key, "_boss_session"),
     ServiceUrl = list_to_binary(Bridge:path()),
     SessionId  = Bridge:cookie(list_to_binary(SessionKey)),
-    WebsocketId = self(),    
-    State = #state{websocket_id=WebsocketId, 
+    WebsocketId = self(),
+    State = #state{websocket_id=WebsocketId,
           session_id=SessionId,
           service_url=ServiceUrl},
     boss_websocket_router:join(ServiceUrl, WebsocketId, Bridge, SessionId),
     {ok, State}.
 
 ws_message({text, Data}, Bridge, State) ->
-    #state{websocket_id=WebsocketId, 
-       session_id=SessionId, 
+    #state{websocket_id=WebsocketId,
+       session_id=SessionId,
        service_url=ServiceUrl } = State,
     Response = case boss_websocket_router:incoming(ServiceUrl, WebsocketId, Bridge, SessionId, Data) of
         ok ->
@@ -55,8 +55,8 @@ ws_message({text, Data}, Bridge, State) ->
     end,
     Response;
 ws_message({binary, Data}, Bridge, State) ->
-    #state{websocket_id=WebsocketId, 
-       session_id=SessionId, 
+    #state{websocket_id=WebsocketId,
+       session_id=SessionId,
        service_url=ServiceUrl } = State,
     Response = case boss_websocket_router:incoming(ServiceUrl, WebsocketId, Bridge, SessionId, Data) of
         ok ->

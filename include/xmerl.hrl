@@ -34,7 +34,7 @@
 %% XML declaration
 -record(xmlDecl,{
 	  vsn,        % string() XML version
-	  encoding,   % string() Character encoding 
+	  encoding,   % string() Character encoding
 	  standalone, % (yes | no)
 	  attributes  % [#xmlAttribute()] Other attributes than above
 	 }).
@@ -239,6 +239,6 @@
 -define(condstrip3,  {_, T3,  S3}  = condstrip(T2,S2,false)).
 -define(condstrip4,  {_, T4,  S4}  = condstrip(T3,S3,false)).
 
--define(bump_col(N), 
+-define(bump_col(N),
 	?dbg("bump_col(~p), US = ~p~n", [N, S0#xmerl_scanner.user_state]),
 	S = S0#xmerl_scanner{col = S0#xmerl_scanner.col + N}).

@@ -1,8 +1,8 @@
 {% extends "api.html" %}
 {% block api_content %}
-<p style="font-size: 14px;"><em>Jump to: </em> 
-<a href="#mappings">Specifying table and column names</a> 
-&nbsp; <a href="#instance">Generated instance methods</a> 
+<p style="font-size: 14px;"><em>Jump to: </em>
+<a href="#mappings">Specifying table and column names</a>
+&nbsp; <a href="#instance">Generated instance methods</a>
 &nbsp; <a href="#associations">Associations (<code>belongs_to</code>, <code>has</code>)</a>
 &nbsp; <a href="#hooks">Save hooks</a>
 </p>
@@ -15,7 +15,7 @@ BossRecords are <em>specially compiled parameterized modules</em> that follow th
     other parameters should be CamelCased attributes of your data model.</p></li>
 
     <li><p>All parameters will be available as lower-case, underscored functions,
-    e.g. <code>-module(foo, [Id, TheText])</code> will generate the getter functions 
+    e.g. <code>-module(foo, [Id, TheText])</code> will generate the getter functions
     <code>id()</code> and <code>the_text()</code>.</p></li>
 
     <li><p>Parameters can contain typespecs, e.g. <code>-module(foo, [Id, SomeString::string(), ...]).</code>. Valid types are:

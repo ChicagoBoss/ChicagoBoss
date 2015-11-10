@@ -1,13 +1,13 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
-%% @doc 
+%% @doc
 %%-------------------------------------------------------------------
 
 -module(boss_controller_compiler_test).
@@ -34,9 +34,9 @@ spec_test_() ->
 
                   ?_assert(proper:check_spec({?TMODULE, Funct, Arity},
                                             [{to_file, user}, 25]));
-                  
+
               F when is_function(F,0) ->
-                  ?_assert(proper:quickcheck(F(), 
+                  ?_assert(proper:quickcheck(F(),
                                              [{to_file, user}]))
           end||Test <-Tests]
      end.
@@ -58,7 +58,7 @@ prop_add_routes_to_forms_function() ->
     ?FORALL(FctTups,
             list(route_form()),
             ?IMPLIES(len_in_range(FctTups, 1,5),
-                     ?TIMEOUT(300, 
+                     ?TIMEOUT(300,
                               begin
                                   Result = boss_controller_compiler:add_routes_to_forms(FctTups,[],[]),
                                   is_list(Result)

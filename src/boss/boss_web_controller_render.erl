@@ -1,13 +1,13 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
-%% @doc 
+%% @doc
 %%-------------------------------------------------------------------
 
 -module(boss_web_controller_render).
@@ -90,8 +90,8 @@ apply_middle_filters(Adapter, AdapterInfo, RequestContext, ActionResult) ->
 process_location(Controller,  [{_, _}|_] = Where, AppInfo) ->
     {_, TheController, TheAction, CleanParams} = process_redirect(Controller, Where, AppInfo),
     ControllerModule    = list_to_atom(boss_files:web_controller(
-                     AppInfo#boss_app_info.application, 
-                     Controller, 
+                     AppInfo#boss_app_info.application,
+                     Controller,
                      AppInfo#boss_app_info.controller_modules)),
     ActionAtom        = to_atom(TheAction),
     {Tokens, []}    = boss_controller_lib:convert_params_to_tokens(CleanParams, ControllerModule, ActionAtom),
@@ -154,7 +154,7 @@ process_action_result({Location, RequestContext, _},
               {render, Data, Headers}, ExtraHeaders, AppInfo) ->
     render_view(Location, AppInfo, RequestContext, Data, boss_web_controller:merge_headers(Headers, ExtraHeaders));
 
-process_action_result({{Controller, _, _}, RequestContext, _}, 
+process_action_result({{Controller, _, _}, RequestContext, _},
               {render_other, OtherLocation, Data, Headers}, ExtraHeaders, AppInfo) ->
     TheApplication = proplists:get_value(application, OtherLocation, AppInfo#boss_app_info.application),
     TheAppInfo = boss_web:application_info(TheApplication),
@@ -202,7 +202,7 @@ process_action_result(_, Else, _, _) ->
 %% (seems to be called on parse error)
 render_errors(ErrorList, AppInfo, RequestContext) ->
     case boss_html_errors_template:render(RequestContext ++ [
-                {error, ErrorList}, 
+                {error, ErrorList},
                 {'_base_url', AppInfo#boss_app_info.base_url},
                 {'_static',   AppInfo#boss_app_info.static_prefix}]) of
         {ok, Payload} ->
@@ -222,7 +222,7 @@ render_view({Controller, Template, _}, AppInfo, RequestContext, Variables, Heade
     Req            = proplists:get_value(request, RequestContext),
     SessionID        = proplists:get_value(session_id, RequestContext),
     TryExtensions    = boss_files:template_extensions(),
- 
+
     LoadResult        = load_result(Controller, Template, AppInfo, TryExtensions),
     BossFlash        = boss_flash:get_and_clear(SessionID),
     SessionData        = boss_session:get_session_data(SessionID),
@@ -252,7 +252,7 @@ render_with_template(Controller, Template, AppInfo, RequestContext,
     TranslatorPid = AppInfo#boss_app_info.translator_pid,
     AcceptLanguage = Req:header(accept_language),
     ContentLanguage = extract_content_language(RequestContext, Headers),
-    
+
     {Lang, TranslationFun} = choose_translation_fun(TranslatorPid, TranslatableStrings,
                             AcceptLanguage, ContentLanguage),
 

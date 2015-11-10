@@ -1,13 +1,13 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
-%% @doc 
+%% @doc
 %%-------------------------------------------------------------------
 
 -module(boss_web_controller_test).
@@ -34,9 +34,9 @@ make_action_session_id_test() ->
     R = make_ref(),
     ?assertEqual(R,  boss_web_controller:make_action_session_id({},{}, {}, R, {})),
     ?assertEqual(undefined, boss_web_controller:make_action_session_id(false,
-                                       #boss_app_info{}, 
-                                       {}, 
-                                       undefined, 
+                                       #boss_app_info{},
+                                       {},
+                                       undefined,
                                        ?MODULE)).
 
 handle_call_application_info_test() ->

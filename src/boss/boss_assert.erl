@@ -1,38 +1,38 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
-%% @doc 
+%% @doc
 %%     Assertion helper functions
-%%     Four-tuples are an HTTP response {Status, Location, Headers, ParsedHtml}, 
+%%     Four-tuples are an HTTP response {Status, Location, Headers, ParsedHtml},
 %%     three-tuples are an Email {Headers, TextBody, ParsedHtml}
 %% @end
 %%-------------------------------------------------------------------
 
 -module(boss_assert).
 -export([
-        http_ok/1, 
+        http_ok/1,
         http_partial_content/1,
-        http_redirect/1, 
+        http_redirect/1,
         http_not_modified/1,
         http_bad_request/1,
         http_not_found/1,
-        link_with_text/2, 
-        tag_with_text/3, 
-        header/3, 
+        link_with_text/2,
+        tag_with_text/3,
+        header/3,
         location_header/2,
         content_language_header/2,
         content_type_header/2,
         from_header/2,
-        email_has_text/1, 
+        email_has_text/1,
         email_has_html/1,
-        email_is_text_only/1, 
-        email_is_html_only/1, 
+        email_is_text_only/1,
+        email_is_html_only/1,
         email_is_multipart/1,
         email_received/1,
         email_not_received/1]).
@@ -103,8 +103,8 @@ http_not_found({Status, _, _, _} = _Response) ->
     {Status =:= 404, "HTTP Status not 404 Not Found"}.
 
 %% @spec link_with_text(Text, Response) -> {Passed, ErrorMessage}
-%% @doc Looks in `Response' for a link with text equal to `Text'. 
-%% The text may be the inner text of an &amp;lt;a&amp;gt; tag, or the 
+%% @doc Looks in `Response' for a link with text equal to `Text'.
+%% The text may be the inner text of an &amp;lt;a&amp;gt; tag, or the
 %% "alt" attribute of a hyperlinked &amp;lt;img&amp;gt; tag.
 %% `Response' may be an HTTP response, or an email.
 link_with_text(Text, {_, _, _, ParseTree} = _Response) ->
