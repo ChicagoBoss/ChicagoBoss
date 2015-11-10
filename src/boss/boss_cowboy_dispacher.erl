@@ -28,6 +28,7 @@ create_cowboy_dispatches(Applications) ->
 
 -spec(create_dispatch(atom()) -> {[any(),...], cowboy_static, {'priv_dir',atom(),[97 | 99 | 105 | 115 | 116,...],[{_,_,_},...]}}).
 create_dispatch(AppName) ->
+    application:load(AppName),
     BaseURL             = boss_env:get_env(AppName, base_url, "/"),
     StaticPrefix        = boss_env:get_env(AppName, static_prefix, "/static"),
     Path                = case BaseURL of
