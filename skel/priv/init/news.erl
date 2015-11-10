@@ -38,7 +38,7 @@ stop(ListOfWatchIDs) ->
 %            (deleted, OldUser) ->
 %                ok
 %        end),
-%    
+%
 %    boss_news:watch("forum_replies",
 %        fun
 %            (created, Reply) ->
@@ -61,7 +61,7 @@ stop(ListOfWatchIDs) ->
 %                end;
 %            (_, _) -> ok
 %        end),
-%    
+%
 %    boss_news:watch("forum_categories",
 %        fun
 %            (created, NewCategory) ->
@@ -74,7 +74,7 @@ stop(ListOfWatchIDs) ->
 %        end),
 %
 %    boss_news:watch("forum_category-*.is_deleted",
-%        fun 
+%        fun
 %            (updated, {ForumCategory, 'is_deleted', false, true}) ->
 %                ;
 %            (updated, {ForumCategory, 'is_deleted', true, false}) ->

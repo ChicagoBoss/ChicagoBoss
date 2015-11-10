@@ -1,13 +1,13 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
-%% @doc 
+%% @doc
 %%-------------------------------------------------------------------
 
 -module(boss_load).
@@ -41,7 +41,7 @@
 -type reload_error_status_values() :: 'badfile' | 'native_code' | 'nofile' | 'not_purged' | 'on_load' | 'sticky_directory'.
 -type application() :: types:application().
 
-     
+
 -spec incoming_mail_controller_module(application()) -> atom().
 -spec load_all_modules(application(), atom() | pid() | {atom(),atom()}) -> {'ok',module_types()}.
 -spec load_all_modules(application(),atom() | pid() | {atom(),atom()},_) -> {'ok',module_types()}.
@@ -65,7 +65,7 @@ load_all_modules(Application, TranslatorSupPid) ->
 load_all_modules(Application, TranslatorSupPid, OutDir) ->
     _ = lager:debug("Loading application ~p", [Application]),
     [{_, TranslatorPid, _, _}]    = supervisor:which_children(TranslatorSupPid),
-    
+
     Ops = make_ops_list(TranslatorPid),
 
     AllModules = make_all_modules(Application, OutDir, Ops),
@@ -86,7 +86,7 @@ make_ops_list(TranslatorPid) ->
      {view_lib_helper_modules, fun load_view_lib_modules/2        },
      {view_lib_tags_modules,      load_view_lib(_, _, TranslatorPid)    },
      {view_modules,               load_views(_, _,    TranslatorPid)    }].
-    
+
 -spec make_all_modules(atom(), string(), [op()]) -> [{atom(),_}].
 
 make_all_modules(Application, OutDir, Ops) ->
@@ -126,14 +126,14 @@ make_computed_vsn({unknown, Val} ) ->Val;
 make_computed_vsn(Cmd ) ->
     VsnString = os:cmd(Cmd),
     string:strip(VsnString, right, $\n).
-        
+
 
 reload_all() ->
     _ = lager:notice("Reload All"),
     Modules = [M || {M, F} <- code:all_loaded(), is_list(F), not code:is_sticky(M)],
-    [begin 
-     code:purge(M), 
-     code:load_file(M) 
+    [begin
+     code:purge(M),
+     code:load_file(M)
      end || M <- Modules].
 
 load_libraries(Application) ->
@@ -182,10 +182,10 @@ load_model_dirs1([Dir|Rest], Application, OutDir, Compiler, ModuleAcc, ErrorAcc)
     end.
 
 load_model_dir(Dir, Application, OutDir, Compiler) when is_function(Compiler) ->
-    FullFiles = list_subfolder_files(Dir),    
+    FullFiles = list_subfolder_files(Dir),
     {ModuleList, ErrorList} = compile_and_accumulate_errors(
         FullFiles, Application, OutDir, Compiler, {[], []}),
-    
+
     case length(ErrorList) of
         0 ->
             {ok, ModuleList};
@@ -198,7 +198,7 @@ load_model_dir(Dir, Application, OutDir, Compiler) when is_function(Compiler) ->
 list_subfolder_files(Dir) ->
     lists:filter(fun(String) ->
                          string:right(String, 4) == ".erl"
-                 end, boss_files:find_file(Dir)).    
+                 end, boss_files:find_file(Dir)).
 
 
 load_dirs(Dirs, Application, OutDir, Compiler) ->
@@ -219,10 +219,10 @@ load_dirs1([Dir|Rest], Application, OutDir, Compiler, ModuleAcc, ErrorAcc) ->
 load_dir(Dir, Application, OutDir, Compiler) when is_function(Compiler) ->
     Files     = list_files(Dir),
     FullFiles = lists:map(fun(F) -> filename:join([Dir, F]) end, Files),
-    
+
     {ModuleList, ErrorList} = compile_and_accumulate_errors(
         FullFiles, Application, OutDir, Compiler, {[], []}),
-    
+
     case length(ErrorList) of
         0 ->
             {ok, ModuleList};
@@ -231,7 +231,7 @@ load_dir(Dir, Application, OutDir, Compiler) when is_function(Compiler) ->
     end.
 
 %% Only serve files that end in ".erl"
-       
+
 list_files(Dir) ->
     case file:list_dir(Dir) of
     {ok, FileList} ->
@@ -242,7 +242,7 @@ list_files(Dir) ->
         []
     end.
 
-compile_and_accumulate_errors([], _Application, _OutDir, _Compiler, Acc) -> 
+compile_and_accumulate_errors([], _Application, _OutDir, _Compiler, Acc) ->
     Acc;
 compile_and_accumulate_errors([Filename|Rest], Application, OutDir, Compiler, {Modules, Errors}) ->
     Result = case filename:basename(Filename) of
@@ -340,12 +340,12 @@ compile_view(Application, ViewPath, TemplateAdapter, OutDir, TranslatorPid) ->
             HelperDirModule    = view_custom_tags_dir_module(Application),
             Locales        = boss_files:language_list(Application),
             DocRoot        = view_doc_root(ViewPath),
-            TagHelpers        = lists:map(fun erlang:list_to_atom/1, 
+            TagHelpers        = lists:map(fun erlang:list_to_atom/1,
                         boss_files_util:view_tag_helper_list(Application)),
-            FilterHelpers    = lists:map(fun erlang:list_to_atom/1, 
+            FilterHelpers    = lists:map(fun erlang:list_to_atom/1,
                         boss_files_util:view_filter_helper_list(Application)),
             TemplateAdapter:compile_file(ViewPath, Module, [
-                    {out_dir, OutDir}, 
+                    {out_dir, OutDir},
                     {doc_root, DocRoot},
                     {translator_pid, TranslatorPid},
                     {helper_module, HelperDirModule},
@@ -374,7 +374,7 @@ compile(ModulePath, OutDir) ->
     CompilerAdapter:compile(ModulePath, Options).
 
 compiler_options() ->
-    lists:merge([{parse_transform, lager_transform}, return_errors], 
+    lists:merge([{parse_transform, lager_transform}, return_errors],
         boss_env:get_env(boss, compiler_options, [])).
 
 load_view_lib(Application, OutDir, TranslatorPid) ->
@@ -424,7 +424,7 @@ load_views_inner(Application, OutDir, TranslatorPid) ->
 
 load_view_if_old(Application, ViewPath, Module, TemplateAdapter, TranslatorPid) ->
     case load_view_lib_if_old(Application, TranslatorPid) of
-        {ok, _} -> 
+        {ok, _} ->
             NeedCompile = case module_is_loaded(Module) of
                 true ->
                     Dependencies = lists:map(fun
@@ -435,14 +435,14 @@ load_view_if_old(Application, ViewPath, Module, TemplateAdapter, TranslatorPid) 
                     FilterHelpers = lists:map(fun erlang:list_to_atom/1, boss_files_util:view_filter_helper_list(Application)),
                     ExtraTagHelpers = boss_env:get_env(template_tag_modules, []),
                     ExtraFilterHelpers = boss_env:get_env(template_filter_modules, []),
-                    module_older_than(Module, 
+                    module_older_than(Module,
                         Dependencies ++ TagHelpers ++ FilterHelpers ++ ExtraTagHelpers ++ ExtraFilterHelpers);
                 false ->
                     true
             end,
             case NeedCompile of
                 true ->
-                    compile_view(Application, ViewPath, TemplateAdapter, 
+                    compile_view(Application, ViewPath, TemplateAdapter,
                         undefined, TranslatorPid);
                 false ->
                     {ok, Module}
@@ -453,14 +453,14 @@ load_view_if_dev(Application, ViewPath, ViewModules, TranslatorPid) ->
     Module          = view_module(Application, ViewPath),
     TemplateAdapter = boss_files:template_adapter_for_extension(filename:extension(ViewPath)),
     case boss_env:is_developing_app(Application) of
-        true -> 
+        true ->
             case load_view_if_old(Application, ViewPath, Module, TemplateAdapter, TranslatorPid) of
                 {ok, Module} ->
                     {ok, Module, TemplateAdapter};
                 Other ->
                     Other
             end;
-        false -> 
+        false ->
             case lists:member(atom_to_list(Module), ViewModules) of
                 true ->
                     {ok, Module, TemplateAdapter};

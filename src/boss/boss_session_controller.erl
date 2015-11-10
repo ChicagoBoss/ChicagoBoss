@@ -1,13 +1,13 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
-%% @doc 
+%% @doc
 %%-------------------------------------------------------------------
 
 -module(boss_session_controller).
@@ -19,7 +19,7 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 -record(state, {
-        adapter, 
+        adapter,
         connection
     }).
 
@@ -94,7 +94,7 @@ generate_session_id() ->
 list_to_hex(L)->
     lists:map(fun(X) -> int_to_hex(X) end, L).
 
-int_to_hex(N) when N < 256 -> 
+int_to_hex(N) when N < 256 ->
        [hex(N div 16), hex(N rem 16)].
 
 hex(N) when N < 10 ->

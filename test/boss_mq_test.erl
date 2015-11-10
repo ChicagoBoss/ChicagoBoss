@@ -1,13 +1,13 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
-%% @doc 
+%% @doc
 %%-------------------------------------------------------------------
 
 -module(boss_mq_test).
@@ -40,7 +40,7 @@ prop_pull_recieve() ->
                  self() ! Msg,
                  {ok, NewTimeStamp, Messages}       = boss_mq:pull_recieve(100, {ok, PullTime}),
                  {refrence, NewTimeStamp, Messages} =:= Msg
-                     
+
              end).
 prop_pull_recieve_timeout() ->
     ?FORALL({ Pulltime},

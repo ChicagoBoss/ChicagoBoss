@@ -1,13 +1,13 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
-%% @doc 
+%% @doc
 %%-------------------------------------------------------------------
 
 -module(boss_session_test_app).
@@ -61,12 +61,12 @@ run_tests() ->
       [
            fun(_) ->
             {boss_session:get_session_data(SessionID, Key1) =:= Key1Value,
-             "Key1 value not stored correctly in session"}    
+             "Key1 value not stored correctly in session"}
         end,
            fun(_) ->
             {boss_session:get_session_data(SessionID, Key2) =:= Key2Value,
-             "Key2 value not stored correctly in session"}    
-        end        
+             "Key2 value not stored correctly in session"}
+        end
        ],
        [ "Get all data from session",
          fun(_) ->
@@ -90,7 +90,7 @@ run_tests() ->
                 end
                ], [])
          end,
-         
+
          "Get keys from session",
          fun(_) ->
             do(
@@ -110,7 +110,7 @@ run_tests() ->
                 end
                ], [])
          end,
-         
+
          "Removing keys",
          fun(_) ->
             do(
@@ -131,7 +131,7 @@ run_tests() ->
                 end
                ], [])
          end,
-         
+
          "Removing all session",
          fun(_) ->
             do(

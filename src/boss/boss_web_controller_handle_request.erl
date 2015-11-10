@@ -1,13 +1,13 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
-%% @doc 
+%% @doc
 %%-------------------------------------------------------------------
 
 -module(boss_web_controller_handle_request).
@@ -28,9 +28,9 @@ handle_request(Bridge, RouterAdapter) ->
     FullUrl = Bridge:path(),
 
     ApplicationForPath = RouterAdapter:find_application_for_path(Bridge,
-                                                                  FullUrl, 
+                                                                  FullUrl,
                                                                   LoadedApplications),
-    
+
     try
        handle_application(Bridge, FullUrl, ApplicationForPath, RouterAdapter)
     catch Class:Error ->
@@ -55,12 +55,12 @@ handle_application(Bridge, FullUrl,  App, RouterAdapter) ->
     SpecialFiles = boss_env:get_env(App,
                                    static_files,
                                    [
-                                    "/favicon.ico", 
-                                    "/apple-touch-icon.png", 
+                                    "/favicon.ico",
+                                    "/apple-touch-icon.png",
                                     "/robots.txt"
                                    ]),
     IsSpecialFile= lists:member(Url,SpecialFiles),
-   
+
     handle_result(Bridge, App, StaticPrefix, Url, IsSpecialFile, RouterAdapter).
 
 
@@ -82,7 +82,7 @@ build_static_response(App, StaticPrefix, Url, Bridge) ->
     Ops          = [
                     fun(Resp) -> dev_headers(Resp, IsDevelopment) end,
                     fun(Resp) ->  Resp:set_response_file([$/ |File])    end,
-                    fun(Resp) ->  case Sha1 of 
+                    fun(Resp) ->  case Sha1 of
                                       {error, _} -> Resp;
                                       _          -> Resp:set_header("Etag",Sha1)
                                   end end,
@@ -90,19 +90,19 @@ build_static_response(App, StaticPrefix, Url, Bridge) ->
                       ],
 
     lists:foldl(fun(Operation, Resp) ->
-                     Operation(Resp) 
-                end, 
-                Bridge, 
+                     Operation(Resp)
+                end,
+                Bridge,
                 Ops).
 
-    
+
 
 -spec(dev_headers(any(), production|development)-> any()).
 dev_headers(Response, development) ->
     Response:set_header("Cache-Control", "no-cache");
 dev_headers(Response, _) ->
     Response.
-    
+
 
 make_etag(App, StaticPrefix, File) ->
     Priv = case code:priv_dir(App) of
@@ -114,7 +114,7 @@ make_etag(App, StaticPrefix, File) ->
     end,
     FilePath      = Priv ++ "/" ++ StaticPrefix ++ "/" ++ File,
     case file:read_file(FilePath) of
-        {ok, Content} -> 
+        {ok, Content} ->
             binary_to_list(base64:encode(crypto:hash(sha, Content)));
         {error, enoent} ->
              _ = lager:warning("application ~s file ~s not found", [App, FilePath]),
@@ -122,7 +122,7 @@ make_etag(App, StaticPrefix, File) ->
         Err ->
             Err
     end.
-    
+
 
 %% TODO: Refactor
 build_dynamic_response(App, Bridge, Url, RouterAdapter) ->
@@ -132,10 +132,10 @@ build_dynamic_response(App, Bridge, Url, RouterAdapter) ->
     TranslatorPid    = boss_web:translator_pid(App),
     RouterPid        = boss_web:router_pid(App),
     ControllerList    = boss_files:web_controller_list(App),
-    TR              = set_timer(Bridge, 
-                                Url, 
+    TR              = set_timer(Bridge,
+                                Url,
                                 Mode,
-                                AppInfo, 
+                                AppInfo,
                                 TranslatorPid,
                                 RouterPid,
                                 ControllerList,
@@ -149,9 +149,9 @@ build_dynamic_response(App, Bridge, Url, RouterAdapter) ->
     log_status_code(StatusCode, ErrorFormat, ErrorArgs),
     Response1        = Bridge:set_status_code(StatusCode),
     Response2        = lists:foldl(fun({K, V}, Acc) ->
-                          Acc:set_header(K, V) 
-                      end, 
-                      Response1, 
+                          Acc:set_header(K, V)
+                      end,
+                      Response1,
                       Headers),
     handle_response(Response2, Payload, RequestMethod).
 
@@ -218,7 +218,7 @@ process_request(#boss_app_info{ doc_prefix = DocPrefix } = AppInfo, Req, develop
     end,
     process_result_and_add_session(AppInfo, [{request, Req}, {session_id, SessionID1}], Result);
 process_request(AppInfo, Req, development, Url, RouterAdapter) ->
-  
+
     DocPrefixPlusSlash = AppInfo#boss_app_info.doc_prefix ++ "/",
     {Result, SessionID1} = case string:substr(Url, 1, length(DocPrefixPlusSlash)) of
         DocPrefixPlusSlash ->
@@ -250,10 +250,10 @@ process_dynamic_request(#boss_app_info{ router_pid = RouterPid } = AppInfo, Req,
     {Result, SessionID1} = case RouterAdapter:route(RouterPid, Url) of
                                {ok, {Application, Controller, Action, Tokens}} when Application =:= AppInfo#boss_app_info.application ->
                                    Location = {Controller, Action, Tokens},
-                                   
-                                   RequestContext = [{request, Req}], 
+
+                                   RequestContext = [{request, Req}],
                                    ExecuteResults = load_and_execute(Mode, Location, AppInfo, RequestContext),
-                                   
+
                                    case  ExecuteResults of
                                        {'EXIT', Reason} ->
                                            {{error, Reason}, undefined};
@@ -307,7 +307,7 @@ process_error(Payload, AppInfo, RequestContext, development, RouterAdapter) ->
             "(Don't worry, this message will not appear in production.)"
     end,
     boss_web_controller_render:render_error(io_lib:print(Payload), ExtraMessage, AppInfo, RequestContext);
-    
+
 process_error(Payload, #boss_app_info{ router_pid = RouterPid } = AppInfo, RequestContext, Mode, RouterAdapter) ->
     _ = lager:error("~p", [Payload]),
     case RouterAdapter:handle(RouterPid, 500) of
@@ -337,8 +337,8 @@ process_result_and_add_session(AppInfo, RequestContext, Result) ->
 add_session_to_headers(Req, Headers, SessionID) ->
     SessionExpTime    = boss_session:get_session_exp_time(),
     CookieOptions    = [
-                        {domain, boss_env:get_env(session_domain, undefined)}, 
-                        {path, "/"}, 
+                        {domain, boss_env:get_env(session_domain, undefined)},
+                        {path, "/"},
                         {max_age, SessionExpTime},
                         {secure, boss_env:get_env(session_cookie_secure, false)},
                         {http_only, boss_env:get_env(session_cookie_http_only, true)}
@@ -416,7 +416,7 @@ process_result(_, _, {error, Payload, Headers}) ->
     {500, boss_web_controller:merge_headers(Headers, [{"Content-Type", "text/html"}]), Payload};
 process_result(_, _, {StatusCode, Payload, Headers}) when is_integer(StatusCode) ->
     {StatusCode, boss_web_controller:merge_headers(Headers, [{"Content-Type", "text/html"}]), Payload}.
-    
+
 load_and_execute(Mode, {Controller, _, _} = Location, AppInfo, RequestContext) when Mode =:= production; Mode =:= testing->
     case boss_files:is_controller_present(AppInfo#boss_app_info.application, Controller,
             AppInfo#boss_app_info.controller_modules) of
@@ -440,7 +440,7 @@ load_and_execute(development, {"doc", ModelName, _}, AppInfo, RequestContext) ->
                     {ok, Controllers} = boss_load:load_web_controllers(AppInfo#boss_app_info.application),
                     case lists:member(ModelName, lists:map(fun atom_to_list/1, Controllers)) of
                             true ->
-                                Controller = list_to_atom(ModelName),  
+                                Controller = list_to_atom(ModelName),
                                 {Controller, Edoc} = edoc:get_doc(boss_files_util:web_controller_path(ModelName ++ ".erl"), [{private, true}]),
                                 {ok, correct_edoc_html(Edoc, AppInfo), []};
                             false ->
@@ -466,14 +466,14 @@ load_and_execute(development, {"doc", ModelName, _}, AppInfo, RequestContext) ->
 
 load_and_execute(development,
          {Controller, _, _} = Location,
-         AppInfo = #boss_app_info{ application = Application}, 
+         AppInfo = #boss_app_info{ application = Application},
          RequestContext) ->
     SessionID = proplists:get_value(session_id, RequestContext),
-    
-    Ops   = [fun boss_load:load_mail_controllers/1, 
-             fun boss_load:load_libraries/1, 
+
+    Ops   = [fun boss_load:load_mail_controllers/1,
+             fun boss_load:load_libraries/1,
              fun boss_load:load_view_lib_modules/1,
-             fun boss_load:load_services_websockets/1, 
+             fun boss_load:load_services_websockets/1,
              fun boss_load:load_web_controllers/1],
     Res  = fold_operations(Application, Ops),
     run_controller(Controller, Location, AppInfo, Application,
@@ -481,12 +481,12 @@ load_and_execute(development,
 
 run_controller(Controller, Location, AppInfo, Application,
                RequestContext, SessionID, {ok,Controllers}) ->
-    
+
     ControllerNames   = make_controller_names(Controllers),
-    
+
     ControllerPresent = boss_files:is_controller_present(Application, Controller,
                                      ControllerNames),
-    
+
     run_controller_if_present(Location, AppInfo, Application,
                           RequestContext, SessionID, ControllerPresent);
 run_controller(_Controller, _Location, AppInfo, _Application,
@@ -503,7 +503,7 @@ run_controller_if_present(Location, AppInfo, Application,
         {ok, _} ->
             execute_action(Location, AppInfo, RequestContext);
         {error, ErrorList} ->
-            {boss_web_controller_render:render_errors(ErrorList, AppInfo, RequestContext), 
+            {boss_web_controller_render:render_errors(ErrorList, AppInfo, RequestContext),
              SessionID}
         end;
 run_controller_if_present(Location, AppInfo, _Application,
@@ -511,7 +511,7 @@ run_controller_if_present(Location, AppInfo, _Application,
         {boss_web_controller_render:render_view(Location, AppInfo, RequestContext), SessionID}.
 
 
--spec(fold_operations(types:application(), 
+-spec(fold_operations(types:application(),
               [fun((types:application()) ->
                  {ok, _}|{error,_})]) ->
                   {ok,_}| {error, _}).

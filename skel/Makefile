@@ -10,7 +10,7 @@ compile:
 
 compile-app:
 	$(REBAR) boss c=compile
-	
+
 test:
 	$(REBAR) boss c=test_functional
 

@@ -12,7 +12,7 @@
         The wiki is <a href="https://github.com/evanmiller/ChicagoBoss/wiki" target="_blank">here</a>.
         </p>
         <div class="alert alert-warning">This section is only available in development mode (i.e. the server was started with init-dev.sh) and isn't available in production.</div>
-        
+
         <h2>Models</h2>
         <ul>
         {% for model in models %}

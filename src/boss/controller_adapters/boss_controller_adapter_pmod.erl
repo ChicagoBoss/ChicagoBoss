@@ -1,13 +1,13 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
-%% @doc 
+%% @doc
 %%-------------------------------------------------------------------
 
 % Either a great idea or a horrible one
@@ -18,7 +18,7 @@
 -spec get_instance({atom() | tuple(),[any()]},[any()]) -> any().
 -spec accept(atom() | string() | number(),atom() | string() | number(),[any()]) -> boolean().
 -spec wants_session(_,_,_) -> boolean().
--spec init(types:application(),types:controller(),[types:controller()],_) -> 
+-spec init(types:application(),types:controller(),[types:controller()],_) ->
     {module(),[{_,_}]}.
 -spec filters(atom() | string() | number(),{atom() | tuple(),[any()]},[any()],_) -> any().
 -spec before_filter({atom() | tuple(),[any()]},[any()]) -> any().
@@ -54,7 +54,7 @@ filters(Type, {_, ExportStrings} = Info, RequestContext, GlobalFilters) ->
     ControllerInstance = get_instance(Info, RequestContext),
     FunctionString = lists:concat([Type, "_filters"]),
     case proplists:get_value(FunctionString, ExportStrings) of
-        3 -> 
+        3 ->
             FunctionAtom = list_to_atom(FunctionString),
             ControllerInstance:FunctionAtom(GlobalFilters, RequestContext);
         _ -> GlobalFilters

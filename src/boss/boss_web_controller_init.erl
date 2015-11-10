@@ -1,13 +1,13 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
-%% @doc 
+%% @doc
 %%-------------------------------------------------------------------
 
 -module(boss_web_controller_init).
@@ -53,7 +53,7 @@ init_cache() ->
                         MaxSize        = boss_env:get_env(ets_maxsize, 32 * 1024 * 1024),
                         Threshold    = boss_env:get_env(ets_threshold, 0.85),
                         Weight        = boss_env:get_env(ets_weight, 30),
-                        [{adapter, ets}, 
+                        [{adapter, ets},
              {ets_maxsize, MaxSize},
                          {ets_threshold, Threshold},
              {ets_weight, Weight}];

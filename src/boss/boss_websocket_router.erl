@@ -1,13 +1,13 @@
 %%%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
-%% @doc 
+%% @doc
 %%-------------------------------------------------------------------
 
 -module(boss_websocket_router).
@@ -19,7 +19,7 @@
 %% API
 -export([start_link/0]).
 
--export([register/2, 
+-export([register/2,
      unregister/2,
      join/4,
      close/5,
@@ -33,9 +33,9 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
      terminate/2, code_change/3]).
 
--define(SERVER, ?MODULE). 
--record(state, {consumers  ::dict:dict(), 
-        services   ::dict:dict(), 
+-define(SERVER, ?MODULE).
+-record(state, {consumers  ::dict:dict(),
+        services   ::dict:dict(),
         nb_consumer}).
 
 -spec start_link() -> 'ignore' | {'error',_} | {'ok',pid()}.
@@ -55,7 +55,7 @@
 -spec code_change(_,_,_) -> {'ok',_}.
 
 
-%% -record(boss_consumers, 
+%% -record(boss_consumers,
 %%     {
 %%       websocket_id,   % gateway to send message to consummer
 %%           session_id,     % the session id to link and user
@@ -63,15 +63,15 @@
 %%           created_on      % date of creation
 %%         }).
 
-%% -record(boss_services, 
+%% -record(boss_services,
 %%     {
 %%       service_name,   % service name
-%%           service_id,     % the session id 
+%%           service_id,     % the session id
 %%           created_on      % date of creation
 %%         }).
 
 
-          
+
 
 %%%===================================================================
 %%% API
@@ -149,7 +149,7 @@ init([]) ->
 %%--------------------------------------------------------------------
 
 handle_call({get_service, ServiceUrl}, _From, State) ->
-    #state{services=Services} = State,    
+    #state{services=Services} = State,
     Reply = case dict:find(ServiceUrl, Services) of
                 {ok, Val} ->
                     {ok, Val};
@@ -159,23 +159,23 @@ handle_call({get_service, ServiceUrl}, _From, State) ->
     {reply, Reply, State};
 
 handle_call({get_all_service}, _From, State) ->
-    #state{services=Services} = State,    
+    #state{services=Services} = State,
     Reply = dict:fetch_keys(Services),
     {reply, Reply, State};
 
 handle_call({get_consumers}, _From, State) ->
-    #state{consumers=Consumers} = State,    
+    #state{consumers=Consumers} = State,
     Reply = dict:fetch_keys(Consumers),
     {reply, Reply, State};
 
 handle_call({register_service, ServiceUrl, ServiceId}, _From, State) ->
-    #state{consumers=ConsumersStore, services=ServicesStore, nb_consumer=NbConsumer} = State,    
+    #state{consumers=ConsumersStore, services=ServicesStore, nb_consumer=NbConsumer} = State,
     NewServicesStore = dict:store(ServiceUrl, ServiceId, ServicesStore),
     NewState = #state{consumers=ConsumersStore, services=NewServicesStore,nb_consumer=NbConsumer},
     {reply, ok, NewState};
 
 handle_call({unregister_service, ServiceUrl}, _From, State) ->
-    #state{consumers=Consumers, services=ServicesStore, nb_consumer=NbConsumer} = State,    
+    #state{consumers=Consumers, services=ServicesStore, nb_consumer=NbConsumer} = State,
     NewServices = dict:erase(ServiceUrl, ServicesStore),
     {reply, ok, #state{consumers=Consumers, services=NewServices, nb_consumer=NbConsumer}};
 
@@ -195,7 +195,7 @@ handle_call(_Request, _From, State) ->
 %%--------------------------------------------------------------------
 
 handle_cast({join_service, ServiceUrl, WebSocketId, Req, SessionId}, State) ->
-    #state{consumers=Consumers, services=Services, nb_consumer=NbConsumer} = State,    
+    #state{consumers=Consumers, services=Services, nb_consumer=NbConsumer} = State,
     case dict:find(ServiceUrl, Services) of
         {ok, ServiceId} ->
             boss_service_worker:join(ServiceId, binary_to_list(ServiceUrl), WebSocketId, Req, SessionId),
@@ -207,7 +207,7 @@ handle_cast({join_service, ServiceUrl, WebSocketId, Req, SessionId}, State) ->
     end;
 
 handle_cast({incoming_msg, ServiceUrl, WebSocketId, Req, SessionId, Msg}, State) ->
-    #state{services=Services} = State,    
+    #state{services=Services} = State,
     case dict:find(ServiceUrl, Services) of
         {ok, ServiceId} ->
             boss_service_worker:incoming(ServiceId, binary_to_list(ServiceUrl), WebSocketId, Req, SessionId, Msg),
@@ -217,9 +217,9 @@ handle_cast({incoming_msg, ServiceUrl, WebSocketId, Req, SessionId, Msg}, State)
     end;
 
 handle_cast({terminate_service, Reason, ServiceUrl, WebSocketId, Req, SessionId}, State) ->
-    #state{consumers=Consumers, services=Services, nb_consumer=NbConsumer} = State,    
+    #state{consumers=Consumers, services=Services, nb_consumer=NbConsumer} = State,
     case dict:find(ServiceUrl, Services) of
-        {ok, ServiceId} ->                
+        {ok, ServiceId} ->
             boss_service_worker:close(Reason, ServiceId, binary_to_list(ServiceUrl), WebSocketId, Req, SessionId),
             NewConsumers = dict:erase(WebSocketId, Consumers),
             NewState = #state{consumers=NewConsumers, services=Services, nb_consumer=NbConsumer-1},

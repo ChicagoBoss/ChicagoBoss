@@ -1,13 +1,13 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
-%% @doc 
+%% @doc
 %%-------------------------------------------------------------------
 
 -module(boss_lang_filter).
@@ -21,8 +21,8 @@ before_filter(auto, RequestContext) ->
 before_filter(Language, RequestContext) ->
     {ok, proplists:delete(language, RequestContext) ++ [{language, Language}]}.
 
-after_filter({ok, Payload, Headers}, auto, _) -> 
+after_filter({ok, Payload, Headers}, auto, _) ->
     {ok, Payload, Headers};
-after_filter({ok, Payload, Headers}, Language, _) -> 
+after_filter({ok, Payload, Headers}, Language, _) ->
     {ok, Payload, boss_web_controller:merge_headers(Headers, [{"Content-Language", Language}])};
 after_filter(Other, _, _) -> Other.

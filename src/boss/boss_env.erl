@@ -1,13 +1,13 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
-%% @doc 
+%% @doc
 %%-------------------------------------------------------------------
 
 -module(boss_env).
@@ -24,11 +24,11 @@ boss_env() ->
     end.
 
 -spec setup_boss_env() -> types:execution_mode().
-setup_boss_env() ->    
+setup_boss_env() ->
     case boss_load:module_is_loaded(reloader) of
         true  -> put(boss_environment, development), development;
         false -> put(boss_environment, production), production
-    end.            
+    end.
 
 -spec get_env(atom(),atom(),any()) -> any().
 get_env(App, Key, Default) when is_atom(App), is_atom(Key) ->

@@ -16,7 +16,7 @@ defmodule Boss.Session do
   Retrieve the value for a given key associated with a given session ID
   """
   @spec get_session_data(:string, :term) :: any
-  def get_session_data(session_id, key) do 
+  def get_session_data(session_id, key) do
     :boss_session.get_session_data(:erlang.binary_to_list(session_id), key)
   end
 

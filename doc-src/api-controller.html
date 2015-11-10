@@ -1,16 +1,16 @@
 {% extends "api.html" %}
 {% block api_content %}
-<p style="font-size: 14px;"><em>Jump to:</em> 
-&nbsp; <a href="#routes">Routes</a> 
-&nbsp; <a href="#auth">Authorization</a> 
-&nbsp; <a href="#return_values">Return values</a> 
-&nbsp; <a href="#cache">Caching</a> 
-&nbsp; <a href="#lang">Content-Language</a> 
-&nbsp; <a href="#filter">Post-processing</a> 
+<p style="font-size: 14px;"><em>Jump to:</em>
+&nbsp; <a href="#routes">Routes</a>
+&nbsp; <a href="#auth">Authorization</a>
+&nbsp; <a href="#return_values">Return values</a>
+&nbsp; <a href="#cache">Caching</a>
+&nbsp; <a href="#lang">Content-Language</a>
+&nbsp; <a href="#filter">Post-processing</a>
 &nbsp; <a href="#simplebridge">SimpleBridge request object</a></p>
-<p>Chicago Boss associates each URL with a function of a controller. 
-The URL <nobr>/foo/bar</nobr> will call the function <code>foo_controller:bar</code>. 
-Each controller module should go into your project's src/controller/ directory and the file name should start with the application name and end with "_controller.erl", e.g. "appname_my_controller.erl". 
+<p>Chicago Boss associates each URL with a function of a controller.
+The URL <nobr>/foo/bar</nobr> will call the function <code>foo_controller:bar</code>.
+Each controller module should go into your project's src/controller/ directory and the file name should start with the application name and end with "_controller.erl", e.g. "appname_my_controller.erl".
 Helper functions should go into your project's src/lib/ directory.
 Controllers can take one parameter or two parameters: the <a href="#simplebridge">SimpleBridge request object</a>, and an optional session ID (if <a href="api-session.html">sessions</a> are enabled). Declare it like:</p>
 <div class="code">

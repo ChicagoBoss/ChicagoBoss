@@ -1,13 +1,13 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
-%% @doc 
+%% @doc
 %%-------------------------------------------------------------------
 
 -module(boss_web_controller_handle_request_test).
@@ -42,7 +42,7 @@ fold_operations_test() ->
           end,perms(OKList)).
 
 make_controlle_names_test() ->
-    ?assertEqual(["foo","bar","baz"], 
+    ?assertEqual(["foo","bar","baz"],
          boss_web_controller_handle_request:make_controller_names([foo,bar,baz])).
 
 

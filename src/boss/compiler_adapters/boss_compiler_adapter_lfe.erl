@@ -1,13 +1,13 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
-%% @doc 
+%% @doc
 %%-------------------------------------------------------------------
 
 -module(boss_compiler_adapter_lfe).
@@ -20,7 +20,7 @@ controller_module(AppName, Controller) -> lists:concat([AppName, "_", Controller
 module_name_for_file(_AppName, File) -> filename:basename(File, ".lfe").
 
 compile_controller(File, Options) ->
-    do_compile(File, Options). 
+    do_compile(File, Options).
 
 compile(File, Options) ->
     do_compile(File, Options).

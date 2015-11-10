@@ -4,7 +4,7 @@
 #
 # @author: Pius Uzamere <pius@alum.mit.edu>
 #
-# Allows the user to easily create a new Chicago Boss application from anywhere, 
+# Allows the user to easily create a new Chicago Boss application from anywhere,
 # as long as the Chicago Boss directory is in the user's path.
 #
 # Useful when installing Chicago Boss via Homebrew or similar methods.
@@ -35,7 +35,7 @@ case "${1:-''}" in
     else
       echo Please specify an app name to create a new Chicago Boss application.
       echo "Usage: boss new APP_NAME or boss start|start-dev|stop|reload|restart|attach"
-    fi 
+    fi
     ;;
 
   'start'|'start-dev'|'stop'|'reload'|'restart'|'attach')
@@ -44,7 +44,7 @@ case "${1:-''}" in
         sh $init_script $1
     else
         echo Sorry, \"boss $1\" may only be run from the root directory of a Chicago Boss application.
-    fi  
+    fi
     ;;
 
   *)
