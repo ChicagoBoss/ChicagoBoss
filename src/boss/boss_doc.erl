@@ -1,9 +1,9 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
@@ -28,7 +28,7 @@ run(InDir, OutDir) ->
                             {ok, Module} -> {[{File, Module}|ModAcc], ErrAcc};
                             Error -> {ModAcc, [Error|ErrAcc]}
                         end;
-                    false -> 
+                    false ->
                         case File of
                             "."++_File -> ok;
                             File ->
@@ -68,7 +68,7 @@ get_vars("api-record.html", InDir) ->
     %% NOTE: it is question if we really want to make edoc
     %% from trivial_boss_record by boss_model_manager or
     %% via boss_record_compiler...
-    {boss_record, EDoc} = boss_record_compiler:edoc_module(filename:join([InDir, "trivial_boss_record.erl"]), 
+    {boss_record, EDoc} = boss_record_compiler:edoc_module(filename:join([InDir, "trivial_boss_record.erl"]),
         [{private, true}, {hidden, true}]),
     [{functions, extract_function_docs(EDoc)}];
 get_vars("api-db.html", _InDir) ->
@@ -141,8 +141,8 @@ analyze_description_nodes([]) ->
     "".
 
 analyze_typespec(
-    [#xmlElement{ name = type, content = 
-            [#xmlElement{ name = 'fun', content = 
+    [#xmlElement{ name = type, content =
+            [#xmlElement{ name = 'fun', content =
                     [#xmlElement{ name = 'argtypes', content = ArgTypes },
                         #xmlElement{ name = 'type', content = Returns }]}]} | _Rest]) ->
     "(" ++ string:join(analyze_argtypes(ArgTypes), ", ") ++ ") -> " ++ analyze_argtypes_content(Returns);
@@ -172,10 +172,10 @@ analyze_argtypes_attrs([_|Rest]) ->
 analyze_argtypes_attrs([]) ->
     "".
 
-analyze_argtypes_content([#xmlElement{ name = 'typevar', attributes = 
+analyze_argtypes_content([#xmlElement{ name = 'typevar', attributes =
             [#xmlAttribute{ name = 'name', value = Name }]}]) ->
     Name;
-analyze_argtypes_content([#xmlElement{ name = 'list', content = 
+analyze_argtypes_content([#xmlElement{ name = 'list', content =
             [#xmlElement{ name = 'type', content = Content }]}]) ->
     "["++analyze_argtypes_content(Content)++"]";
 analyze_argtypes_content([#xmlElement{ name = 'tuple', content = Content}]) ->
@@ -184,8 +184,8 @@ analyze_argtypes_content([#xmlElement{ name = 'union', content = Content}]) ->
     string:join(analyze_argtypes(Content), " | ");
 analyze_argtypes_content([#xmlElement{ name = 'atom', attributes = Attrs }]) ->
     analyze_argtypes_attrs(Attrs);
-analyze_argtypes_content([#xmlElement{ name = 'abstype', content = 
-            [#xmlElement{ name = erlangName, attributes = 
+analyze_argtypes_content([#xmlElement{ name = 'abstype', content =
+            [#xmlElement{ name = erlangName, attributes =
                     [#xmlAttribute{ name = 'name', value = Type }]}]}]) ->
     "<span class=\"typevar\">::" ++ Type ++ "()</span>";
 analyze_argtypes_content([#xmlElement{ name = 'abstype', content =

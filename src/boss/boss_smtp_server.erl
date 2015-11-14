@@ -1,13 +1,13 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
-%% @doc 
+%% @doc
 %%-------------------------------------------------------------------
 
 -module(boss_smtp_server).
@@ -25,10 +25,10 @@
 
 init(Hostname, _SessionCount, Address, Options) ->
     Errors = case proplists:get_value(boss_env, Options, development) of
-        development -> 
+        development ->
             Application = boss_env:get_env(developing_app, undefined),
             case boss_load:load_mail_controllers(Application) of
-                {ok, _} -> 
+                {ok, _} ->
                     case boss_load:load_libraries(Application) of
                         {ok, _} ->
                             case boss_load:load_models(Application) of
@@ -41,8 +41,8 @@ init(Hostname, _SessionCount, Address, Options) ->
             end;
         _ -> []
     end,
-    {ok, [Hostname, " SMTP Chicago Boss: Tell me something I don't know"], 
-        #state{remote_ip = Address, errors = Errors}}. 
+    {ok, [Hostname, " SMTP Chicago Boss: Tell me something I don't know"],
+        #state{remote_ip = Address, errors = Errors}}.
 
 handle_HELO(_Hostname, State) ->
     {ok, 655360, State}.
@@ -142,7 +142,7 @@ reply_with_errors(_FromAddress, _ToAddressList, #state{ errors = [] } = State) -
     {ok, Reference, State};
 reply_with_errors(FromAddress, ToAddressList, #state{ errors = Errors } = State) ->
     FirstAddress = hd(ToAddressList),
-    boss_mail:send(binary_to_list(FirstAddress), binary_to_list(FromAddress), 
+    boss_mail:send(binary_to_list(FirstAddress), binary_to_list(FromAddress),
         "ERROR", "There were errors delivering your message: ~p~n", [Errors]),
     reply_with_errors(FromAddress, ToAddressList, State#state{ errors = [] }).
 

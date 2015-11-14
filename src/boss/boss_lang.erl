@@ -1,18 +1,18 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
-%% @doc 
+%% @doc
 %%-------------------------------------------------------------------
 
 -module(boss_lang).
--export([create_lang/2, 
-         delete_lang/2, 
+-export([create_lang/2,
+         delete_lang/2,
          extract_strings/1,
          extract_strings/2,
          extract_po_strings/2,
@@ -31,9 +31,9 @@
 -spec extract_po_strings(application(),lang())  -> [{[any()],[any()]}].
 -spec extract_strings(application())            -> [any()].
 -spec extract_strings(application(),lang())     -> {[any()],[{_,_}]}.
--spec lang_write_to_file(atom() | pid() | 
+-spec lang_write_to_file(atom() | pid() |
                              {'file_descriptor',atom() | tuple(),_},
-                         [any()],[any()])    
+                         [any()],[any()])
 -> 'ok' | {'error',atom()}.
 -spec update_po(application())                  -> ['ok' | {'error',atom()}].
 -spec update_po(application(),lang(),mode(),[any()])    -> 'ok' | {'error',atom()}.
@@ -66,12 +66,12 @@ update_po(App, Lang, all, []) ->
 %% @spec update_po( Lang::string(), Mode::atom(all|filled), Translation::TupleList([{"orig", "x"}, {"trans", "y"}]) ) -> ok | {error, Reason}
 update_po(App, Lang, Mode, Translations) ->
     LangFile = boss_files_util:lang_path(App, Lang),
-    {ok, IODevice} = file:open(LangFile, [write, append]),    
+    {ok, IODevice} = file:open(LangFile, [write, append]),
     lists:map(fun(Message) ->
                       Original = proplists:get_value("orig", Message),
                       Translation = proplists:get_value("trans", Message),
                       case Translation of
-                          "" -> 
+                          "" ->
                               case Mode of
                                   filled -> ok;
                                   all -> lang_write_to_file(IODevice, Original, Translation)
@@ -122,7 +122,7 @@ extract_strings(App) ->
 extract_strings(App, Lang) ->
     AllStrings = extract_strings(App),
     PoStrings = extract_po_strings(App, Lang),
-    UntranslatedStrings = lists:filter(fun(S) -> 
+    UntranslatedStrings = lists:filter(fun(S) ->
                                                case proplists:get_value(S, PoStrings) of
                                                    undefined -> true;
                                                    _ -> false
@@ -151,7 +151,7 @@ extract_model_strings(App) ->
                         case lists:member({validation_tests, 1}, Exports) of
                             true ->
                                 DummyRecord = boss_model_manager:dummy_instance(TypeAtom),
-                                Messages = lists:map(fun({_TestFun, TestMsg}) -> 
+                                Messages = lists:map(fun({_TestFun, TestMsg}) ->
                                                              case TestMsg of
                                                                  {_, CodeMsg} -> CodeMsg;
                                                                  _ -> TestMsg
@@ -182,24 +182,24 @@ extract_view_strings(App) ->
 
 extract_module_strings(App) when is_atom(App)->
     ModulesFiles = boss_files:lib_module_list(App),
-    lists:foldl(fun(File, Acc) ->                                 
+    lists:foldl(fun(File, Acc) ->
                         Module = list_to_atom(File),
-                        case lists:keysearch(translatable_strings, 
-                                             1, 
+                        case lists:keysearch(translatable_strings,
+                                             1,
                                              Module:module_info(exports)) of
                             {value, {translatable_strings, N}} ->
                                 case N of
                                     1 -> %%Pmode
                                         DummyModule = boss_model_manager:dummy_instance(Module),
-                                        DummyModule:translatable_strings();                         
-                                    0 -> 
+                                        DummyModule:translatable_strings();
+                                    0 ->
                                         Module:translatable_strings()
                                 end ++ Acc;
                             false ->
                                 Acc
                         end
                 end,
-                [], 
+                [],
                 ModulesFiles).
 
 process_view_file_blocks(ViewFile) ->
@@ -214,10 +214,10 @@ process_view_file(ViewFile) ->
 process_view_file_tokens([], Acc) ->
     Acc;
 process_view_file_tokens([{trans_keyword, _, _}, {string_literal, _, String}|Rest], Acc) ->
-    process_view_file_tokens(Rest, 
+    process_view_file_tokens(Rest,
                              [unescape_string_literal(string:strip(String, both, $"))|Acc]);
 process_view_file_tokens([{'_', _}, {'(', _}, {string_literal, _, String}, {')', _}|Rest], Acc) ->
-    process_view_file_tokens(Rest, 
+    process_view_file_tokens(Rest,
                              [unescape_string_literal(string:strip(String, both, $"))|Acc]);
 process_view_file_tokens([_|Rest], Acc) ->
     process_view_file_tokens(Rest, Acc).

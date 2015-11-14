@@ -1,13 +1,13 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
-%% @doc 
+%% @doc
 %%-------------------------------------------------------------------
 
 -module(boss_json).
@@ -55,7 +55,7 @@ json_data1([{VariableName, [First|_] = Variable}|Rest], ModelList, Acc) when is_
     end;
 
 json_data1([{VariableName, [[{_, _}|_]|_] = Variable}|Rest], ModelList, Acc) ->
-    json_data1(Rest, ModelList, [{VariableName, lists:map(fun(Item) -> 
+    json_data1(Rest, ModelList, [{VariableName, lists:map(fun(Item) ->
                             json_data1(Item, ModelList, [])
                     end, Variable)}|Acc]);
 
@@ -64,8 +64,8 @@ json_data1([{VariableName, {A, B, C} = Val}|Rest], ModelList, Acc) when is_integ
     json_data1(Rest, ModelList, [{VariableName, iso8601:format(Val)}|Acc]);
 json_data1([{VariableName, Variable}|Rest], ModelList, Acc) ->
     case boss_model_manager:is_model_instance (Variable, ModelList) of
-        true -> 
+        true ->
             json_data1(Rest, ModelList, [{VariableName, boss_model_manager:to_json(Variable)}|Acc]);
-        false -> 
+        false ->
             json_data1(Rest, ModelList, [{VariableName, Variable}|Acc])
     end.

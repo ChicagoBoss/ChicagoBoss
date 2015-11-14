@@ -1,13 +1,13 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
-%% @doc 
+%% @doc
 %%-------------------------------------------------------------------
 
 -module(boss_files).
@@ -63,7 +63,7 @@
 -spec find_file(input_string(),[]) -> [string()].
 -spec find_file([string()],input_string(),[string()],[]) -> [string()].
 
-root_priv_dir(App) -> 
+root_priv_dir(App) ->
     Default = filename:join([boss_files_util:root_dir(), "priv"]),
     case boss_env:is_developing_app(App) of
        true -> Default;
@@ -75,20 +75,20 @@ root_priv_dir(App) ->
    end.
 websocket_mapping(BaseURL, AppName, Modules) ->
     lists:foldl(fun([], Acc) -> Acc;
-           (M, Acc) -> 
+           (M, Acc) ->
             L1 = string:len(AppName) + 1,
                 L2 = string:len(M),
             L3 = string:len("_websocket"),
-            Service = string:substr(M, 
-                      L1 + 1, 
+            Service = string:substr(M,
+                      L1 + 1,
                       L2 - (L1+L3)),
             Url = case BaseURL of
                   "/" ->
                       string:join(["/websocket", Service],"/");
                   _ ->
                       string:join([BaseURL, "websocket", Service],"/")
-                  end,            
-            Acc ++ [{list_to_binary(Url), list_to_atom(M)}]            
+                  end,
+            Acc ++ [{list_to_binary(Url), list_to_atom(M)}]
         end, [], Modules).
 
 mail_controller_path() -> [filename:join([boss_files_util:root_src_dir(), "mail"])].
@@ -162,7 +162,7 @@ template_adapter_for_extension(("." ++ Extension)) ->
 
 adapter_for_extension(Extension, Adapters) ->
     lists:foldl(fun
-            (Adapter, undefined) -> 
+            (Adapter, undefined) ->
                 case lists:member(Extension, Adapter:file_extensions()) of
                     true -> Adapter;
                     false -> undefined
@@ -224,13 +224,13 @@ make_extentions() ->
     CompilerAdapters  = boss_files_util:compiler_adapters(),
     make_extentions(CompilerAdapters).
 
-    
+
 
 -spec(make_extentions([types:compiler_adapters()]) ->
          [{string(), types:compiler_adapters()}]).
 make_extentions(CompilerAdapters) ->
     lists:foldl(fun (Adapter, Acc) ->
-            lists:map(fun(Ext) -> {Ext, Adapter} end, 
+            lists:map(fun(Ext) -> {Ext, Adapter} end,
                   Adapter:file_extensions()) ++ Acc
         end, [], CompilerAdapters).
 
@@ -264,12 +264,12 @@ find_file(Dir, ModuleAcc) ->
     case file:list_dir(Dir) of
         {ok, Files} ->
             find_file(Files, Dir, [], ModuleAcc);
-        _ -> 
+        _ ->
             ModuleAcc
     end.
 
 find_file([], _, Acc, _ModuleAcc) -> Acc;
-find_file([H|T], Root, Acc, ModuleAcc) -> 
+find_file([H|T], Root, Acc, ModuleAcc) ->
     Path    = filename:join(Root, H),
     IsDir    = filelib:is_dir(Path),
     case IsDir of

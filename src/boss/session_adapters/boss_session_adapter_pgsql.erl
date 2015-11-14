@@ -1,13 +1,13 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
-%% @doc 
+%% @doc
 %%-------------------------------------------------------------------
 
 -module(boss_session_adapter_pgsql).
@@ -56,7 +56,7 @@ create_session(_, SessionID, []) ->
     ok.
 
 lookup_session(_, SessionID) ->
-    recover_data(SessionID).    
+    recover_data(SessionID).
 
 lookup_session_value(Conn, SessionID, Key) when is_atom(Key) ->
     lookup_session_value(Conn, SessionID, atom_to_list(Key));
@@ -101,7 +101,7 @@ delete_session_value(Conn, Sid, Key) when is_list(Key) ->
         {ok,_} = boss_db:execute("UPDATE boss_session SET data=delete(data,$1) where id=$2;",[Key,Sid]),
         ok
     end.
-    
+
 %%--------------------------------------------------------------------
 %%% Internal functions
 %%--------------------------------------------------------------------

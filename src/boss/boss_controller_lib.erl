@@ -1,20 +1,20 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
-%% @doc 
+%% @doc
 %%-------------------------------------------------------------------
 
 -module(boss_controller_lib).
 -export([convert_params_to_tokens/3]).
 
 convert_params_to_tokens(Variables, ControllerModule, Action) ->
-    DummyController = apply(ControllerModule, new, lists:seq(1, proplists:get_value(new, ControllerModule:module_info(exports)))), 
+    DummyController = apply(ControllerModule, new, lists:seq(1, proplists:get_value(new, ControllerModule:module_info(exports)))),
     Routes = case lists:member({'_routes', 1}, ControllerModule:module_info(exports)) of
         true -> DummyController:'_routes'();
         false -> []

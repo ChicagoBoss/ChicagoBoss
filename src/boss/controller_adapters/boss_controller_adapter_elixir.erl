@@ -1,13 +1,13 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
-%% @doc 
+%% @doc
 %%-------------------------------------------------------------------
 
 -module(boss_controller_adapter_elixir).
@@ -36,7 +36,7 @@ init(Application, Controller, ControllerList, _RequestContext) ->
 filters(Type, {Module, ExportStrings}, RequestContext, GlobalFilters) ->
     FunctionString = lists:concat([Type, "_filters"]),
     case proplists:get_value(FunctionString, ExportStrings) of
-        2 -> 
+        2 ->
             FunctionAtom = list_to_atom(FunctionString),
             Module:FunctionAtom(GlobalFilters, RequestContext);
         _ -> GlobalFilters
@@ -71,7 +71,7 @@ after_filter({Module, ExportStrings}, RequestContext, Result) ->
     SessionID = proplists:get_value(session_id, RequestContext),
     Action = proplists:get_value(action, RequestContext),
     AuthInfo = proplists:get_value('_before', RequestContext),
-    
+
     case proplists:get_value("after_", ExportStrings) of
         4 -> Module:after_(Req, SessionID, Action, Result);
         5 -> Module:after_(Req, SessionID, Action, Result, AuthInfo);
@@ -91,7 +91,7 @@ action({Module, ExportStrings}, RequestContext) ->
     put(<<"BOSS_INTERNAL_SESSION_ID">>, convert_session_id(SessionID)),
     Result = case proplists:get_value("handle_request", ExportStrings) of
         1 -> Module:handle_request(lists:keyreplace(tokens, 1, RequestContext, {tokens, BinTokens}));
-        _ -> 
+        _ ->
             case proplists:get_value(Action, ExportStrings) of
                 Arity when Arity >= 2, Arity =< 5 ->
                     ActionAtom = list_to_atom(Action),

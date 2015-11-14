@@ -1,9 +1,9 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
@@ -56,7 +56,7 @@ make_queue_options() ->
                 _ -> Acc
             end
                 end,
-        [], 
+        [],
         [mq_port, mq_host, mq_max_age]).
 
 
@@ -68,7 +68,7 @@ pull(Channel) ->
     pull(Channel, undefined).
 
 -spec pull(channel(),undefined|non_neg_integer()) -> mq_return().
-%% @doc Pull messages from the specified `Channel' after `Since' (a timestamp returned from a previous `pull'). 
+%% @doc Pull messages from the specified `Channel' after `Since' (a timestamp returned from a previous `pull').
 %% If no such messages are in the queue, blocks until a message is pushed to the queue.
 pull(Channel, Timestamp) ->
     pull(Channel, Timestamp, infinity).
@@ -111,7 +111,7 @@ poll(Channel) ->
 %% @doc Like `pull/2', but returns immediately if no matching messages are in the queue.
 poll(Channel, Timestamp) when is_list(Channel) ->
     gen_server:call({global, ?MODULE}, {poll, Channel, Timestamp}).
-    
+
 
 -spec push(channel(),_) -> {ok, non_neg_integer()}.
 %% @doc Pushes a message to the specified `Channel'.
@@ -122,4 +122,4 @@ push(Channel, Message) when is_list(Channel) ->
 %% @doc Retrieves the current time for the server managing `Channel'.
 now(Channel) when is_list(Channel) ->
     gen_server:call({global, ?MODULE}, {now, Channel}).
-    
+

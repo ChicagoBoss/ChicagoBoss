@@ -1,13 +1,13 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
-%% @doc 
+%% @doc
 %%-------------------------------------------------------------------
 
 -module(boss_cowboy_dispacher).
@@ -37,7 +37,7 @@ create_dispatch(AppName) ->
                           end,
     Handler             = cowboy_static,
     Etag                = [], %%[{etag, false}], %% [{etag, EtagModule, EtagFunction}]
-    MimeTypes           = [{mimetypes, cow_mimetypes, all}], %% [{mimetypes, mimetypes, path_to_mimes}]                          
+    MimeTypes           = [{mimetypes, cow_mimetypes, all}], %% [{mimetypes, mimetypes, path_to_mimes}]
     Extra               = Etag ++ MimeTypes,
     Opts                = create_cowboy_static_opts(AppName, Extra),
     {Path ++ "/[...]", Handler, Opts}.

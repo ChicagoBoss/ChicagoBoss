@@ -1,17 +1,17 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
-%% @doc 
+%% @doc
 %%-------------------------------------------------------------------
 
 -module(boss_mail).
--export([start/1, stop/0, send_template/3, send_template/4, 
+-export([start/1, stop/0, send_template/3, send_template/4,
         send/4, send/5, send/6]).
 
 -spec start(_) -> 'ignore' | {'error',_} | {'ok',pid()}.
@@ -51,9 +51,9 @@ send_template(Application, Action, Args, Callback) ->
     case apply(Controller, Action, Args) of
         {ok, FromAddress, ToAddress, HeaderFields} ->
             send_message(Application, FromAddress, ToAddress, Action, HeaderFields, [], [], Callback);
-        {ok, FromAddress, ToAddress, HeaderFields, Variables} -> 
+        {ok, FromAddress, ToAddress, HeaderFields, Variables} ->
             send_message(Application, FromAddress, ToAddress, Action, HeaderFields, Variables, [], Callback);
-        {ok, FromAddress, ToAddress, HeaderFields, Variables, Options} -> 
+        {ok, FromAddress, ToAddress, HeaderFields, Variables, Options} ->
             send_message(Application, FromAddress, ToAddress, Action, HeaderFields, Variables, Options, Callback);
         {nevermind, Reason} ->
             _ = lager:info("Mail Not sent because of ~p", [Reason]),
@@ -79,7 +79,7 @@ do_send(FromAddress, ToAddress, Subject, Body, Callback) ->
                                           {"From", FromAddress}],
                                          "text/plain",
                                          undefined),
-    gen_server:call(boss_mail, {deliver, FromAddress, ToAddress, 
+    gen_server:call(boss_mail, {deliver, FromAddress, ToAddress,
             fun() -> [MessageHeader, "\r\n", convert_unix_newlines_to_dos(Body)] end,
             Callback}).
 
@@ -166,7 +166,7 @@ build_message_body(App, Action, Variables, ContentLanguage, CharSet) ->
                     Boundary = smtp_util:generate_message_boundary(),
                     {"multipart/alternative; boundary=\""++Boundary++"\"",
                         render_multipart_view(
-                            [{"text/plain", TextView}, 
+                            [{"text/plain", TextView},
                                 {"text/html", HtmlView}], Boundary, CharSet)}
             end
     end.
@@ -179,8 +179,8 @@ render_view(App, {Action, Extension}, Variables, ContentLanguage) ->
     case boss_load:load_view_if_dev(App, ViewPath, ViewModules, TranslatorPid) of
         {ok, ViewModule, _ViewAdapter} ->
             TranslationFun = boss_translator:fun_for(TranslatorPid, ContentLanguage),
-            ViewModule:render([{"_lang", ContentLanguage}|Variables], 
-                [{translation_fun, TranslationFun}, {locale, ContentLanguage}, 
+            ViewModule:render([{"_lang", ContentLanguage}|Variables],
+                [{translation_fun, TranslationFun}, {locale, ContentLanguage},
                     {application, App}, {router_pid, RouterPid}]);
         _ ->
             undefined
@@ -193,9 +193,9 @@ render_multipart_view(Parts, Boundary, CharSet) ->
 render_multipart_view1([], Boundary, _) ->
     ["--", Boundary, "--"];
 render_multipart_view1([{FileName, MimeType, Body}|Rest], Boundary, CharSet) ->
-    ["--", Boundary, 
-        "\r\n", "Content-Type: ", build_content_type(MimeType, CharSet), 
-        "\r\n", "Content-Disposition: attachment; filename=", FileName, 
+    ["--", Boundary,
+        "\r\n", "Content-Type: ", build_content_type(MimeType, CharSet),
+        "\r\n", "Content-Disposition: attachment; filename=", FileName,
         "\r\n", "Content-Transfer-Encoding: base64",
         "\r\n\r\n",
         wrap_to_76(base64:encode(erlang:iolist_to_binary(Body))), "\r\n", render_multipart_view1(Rest, Boundary, CharSet)];

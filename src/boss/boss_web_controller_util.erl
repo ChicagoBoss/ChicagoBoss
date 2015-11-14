@@ -1,13 +1,13 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
-%% @doc 
+%% @doc
 %%-------------------------------------------------------------------
 
 -module(boss_web_controller_util).
@@ -33,10 +33,10 @@ start_boss_applications( Applications, ServicesSupPid, #state{router_adapter=Rou
             ControllerList         = case boss_files:web_controller_list(AppName) of
                                         [] -> case boss_env:is_developing_app(AppName) of
                                                 true  -> [];
-                                                false -> 
+                                                false ->
                                                     _ = lager:warning("App ~p doesn't seem to have controllers defined,~n"
                                                                   "check your config file at section <~p:controller_modules>,~n"
-                                                                  "have you compiled your CB application?",[AppName, AppName]), 
+                                                                  "have you compiled your CB application?",[AppName, AppName]),
                                                     []
                                               end;
                                         List -> List
@@ -47,11 +47,11 @@ start_boss_applications( Applications, ServicesSupPid, #state{router_adapter=Rou
             {ok, TranslatorSupPid} = boss_translator:start([{application, AppName}]),
             init_app_load_on_dev(AppName, TranslatorSupPid),
 
-            enable_master_apps(ServicesSupPid, 
-                               AppName, 
+            enable_master_apps(ServicesSupPid,
+                               AppName,
                                BaseURL,
                                IsMasterNode),
-            
+
             InitData = boss_web_controller:run_init_scripts(AppName),
 
             #boss_app_info
@@ -72,7 +72,7 @@ start_boss_applications( Applications, ServicesSupPid, #state{router_adapter=Rou
 
 init_app_load_on_dev(AppName, TranslatorSupPid) ->
     case boss_env:is_developing_app(AppName) of
-    true  -> 
+    true  ->
             Result = boss_load:load_all_modules(AppName, TranslatorSupPid),
             Result;
     false -> ok

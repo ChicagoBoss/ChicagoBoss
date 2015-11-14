@@ -38,7 +38,7 @@
 <ul>
     <li><p><code>FromAddress</code> is the sender's email address. The address should <em>not</em> be in "friendly" form, i.e. "foo@example.com" is OK, but "Kai Foo &lt;foo@example.com&gt;" is not.</p></li>
     <li><p><code>ToAddress</code> is recipient's email address.</p></li>
-    <li><p><code>HeaderFields</code> is a proplist of email header fields, e.g. <code>[{"From", "SECRETARY TO CHARLES TAYLOR &lt;mo@hotmail.com&gt;"}, {"Subject", "Unclaimed Lottery Winnings"}]</code>. 
+    <li><p><code>HeaderFields</code> is a proplist of email header fields, e.g. <code>[{"From", "SECRETARY TO CHARLES TAYLOR &lt;mo@hotmail.com&gt;"}, {"Subject", "Unclaimed Lottery Winnings"}]</code>.
     If you want the From: and To: fields to appear in the message, you need to provide values here; they will not be taken from <code>FromAddress</code> and <code>ToAddress</code>.
     However, the header fields for Message-ID: and Date: will be populated automatically if not provided.
     </p></li>

@@ -1,13 +1,13 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
-%% @doc 
+%% @doc
 %%-------------------------------------------------------------------
 
 -module(boss_session_adapter_mnesia).
@@ -36,7 +36,7 @@ init(_) ->
     mnesia:start(),
     %%Checks for table, after some time tries to recreate it
     case mnesia:wait_for_tables([?TABLE], ?TIMEOUT) of
-        ok -> 
+        ok ->
             _ = lager:debug("mnesia session table ok"),
             noop;
         {timeout,[?TABLE]} ->
@@ -55,14 +55,14 @@ create_session(_, SessionID, Data) ->
     ok.
 
 lookup_session(_, SessionID) ->
-    recover_data(SessionID).    
+    recover_data(SessionID).
 
 lookup_session_value(_, SessionID, Key) ->
     Data = recover_data(SessionID),
     proplists:get_value(Key, Data).
 
 set_session_value(_, Sid, Key, Value) ->
-    Data = recover_data(Sid), 
+    Data = recover_data(Sid),
     Data1 = case proplists:is_defined(Key,Data) of
         true ->
             Rest = proplists:delete(Key,Data),
@@ -72,7 +72,7 @@ set_session_value(_, Sid, Key, Value) ->
     end,
 
     Update = fun() -> NewSession = #boss_session{sid=Sid,data=Data1,ttl=0}, mnesia:write(NewSession) end,
-    {atomic,ok} = mnesia:transaction(Update),    
+    {atomic,ok} = mnesia:transaction(Update),
     ok.
 
 delete_session(_, Sid) ->
@@ -90,7 +90,7 @@ delete_session_value(_, Sid, Key) ->
         false ->
             ok
     end.
-    
+
 %%--------------------------------------------------------------------
 %%% Internal functions
 %%--------------------------------------------------------------------
@@ -111,7 +111,7 @@ create_session_storage()->
     end.
 
 recover_data(Sid)->
-    Recover = fun() -> mnesia:read({?TABLE, Sid}) end, 
+    Recover = fun() -> mnesia:read({?TABLE, Sid}) end,
     case mnesia:transaction(Recover) of
         {atomic, [S]} -> S#boss_session.data;
         {atomic, []} -> []

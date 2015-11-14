@@ -1,6 +1,6 @@
 {% extends "api.html" %}
 {% block api_content %}
-<p style="font-size: 14px;"><em>Jump to: </em> <a href="#boss_web_test"><code>boss_web_test</code></a>  
+<p style="font-size: 14px;"><em>Jump to: </em> <a href="#boss_web_test"><code>boss_web_test</code></a>
 &nbsp; <a href="#boss_assert">boss_assert</a></p>
 <p>Chicago Boss ships with a unique functional test framework, where tests are structured as trees of continuations. All assertions are performed in callbacks, and additional tests are also performed in callbacks. For more information on the design of Boss's functional tests, see <a href="http://www.evanmiller.org/functional-tests-as-a-tree-of-continuations.html">&#8220;Functional Tests As A Tree Of Continuations&#8221;</a>.</p>
 
@@ -38,7 +38,7 @@ start() -&gt;
 <pre class="code">
 boss_web_test:get_request("/", [], [],
    [ "Click the register link", fun(Res) -&gt; ... end,
-     "Click the copyright link", fun(Res) -&gt; ... end, 
+     "Click the copyright link", fun(Res) -&gt; ... end,
       ... ]).
 </pre>
 <p>The key thing to understand about <code>Continuations</code> is that they are <em>performed in parallel</em>. Any database manipulations that occur in one continuation cannot affect sibling continuations.</p>

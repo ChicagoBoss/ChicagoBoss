@@ -1,13 +1,13 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
-%% @doc 
+%% @doc
 %%-------------------------------------------------------------------
 
 -module(boss_csrf_filter).
@@ -27,17 +27,17 @@ before_filter(Config, RequestContext) ->
                    false ->
                        Config
                end,
-    
+
     [CSRF_Token, NewToken] = get_csrf_token(Request),
     case lists:member(proplists:get_value(method, RequestContext),
                       ['GET', 'HEAD', 'OPTIONS', 'TRACE']) of
         true -> accept_(RequestContext, NewToken);
         false ->
             case proplists:is_defined(do_not_enforce_csrf_checks, ReConfig) of
-                true -> 
+                true ->
                     case proplists:get_bool(do_not_enforce_csrf_checks, ReConfig) of
                         true -> accept_(RequestContext, NewToken);
-                        false -> 
+                        false ->
                             case check_referer(Request) of
                                 false -> reject_(incorrect_referer);
                                 true ->
@@ -66,8 +66,8 @@ after_filter({Whatever, Content, Headers}, _, RequestContext) ->
 
 %% Set ?CSRFTOKEN_NAME cookie
     CookieOptions    = [
-                        {domain, boss_env:get_env(session_domain, undefined)}, 
-                        {path, "/"}, 
+                        {domain, boss_env:get_env(session_domain, undefined)},
+                        {path, "/"},
                         {max_age, boss_session:get_session_exp_time()},
                         {secure, boss_env:get_env(session_cookie_secure, false)},
                         {http_only, boss_env:get_env(session_cookie_http_only, true)}

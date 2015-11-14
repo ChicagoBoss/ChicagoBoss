@@ -41,16 +41,16 @@ end_per_testcase(_TestCase, _Config) ->
 groups() ->
     [].
 
-all() -> 
+all() ->
 
     [test_poll].
 
 
-my_test_case() -> 
+my_test_case() ->
     [].
 
 
-my_test_case(_Config) -> 
+my_test_case(_Config) ->
     ok.
 test_poll() ->
     [].

@@ -1,9 +1,9 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
@@ -33,7 +33,7 @@ start(Options) ->
 stop() ->
     ok.
 
-reload(Pid) ->    
+reload(Pid) ->
     gen_server:call(Pid, reload).
 
 route(Pid, Url) ->

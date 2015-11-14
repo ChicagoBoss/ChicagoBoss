@@ -1,13 +1,13 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
-%% @doc 
+%% @doc
 %%-------------------------------------------------------------------
 
 -module(boss_controller_compiler).
@@ -31,12 +31,12 @@
 -type token_ast_var()    :: {var, name(), string()}.
 -type token_ast_match()  :: {match, _, _, token_ast_var()}.
 -type token_ast_string() :: {string,_, [char(),...]}.
--type token_ast_cons()   :: nil|{cons,_, 
+-type token_ast_cons()   :: nil|{cons,_,
                                  token_ast_var() | token_ast_match() | token_ast_string(),
                                  token_ast_cons()}.
 
--type route_form()       :: {function, _ , 
-                             atom, 2|3, 
+-type route_form()       :: {function, _ ,
+                             atom, 2|3,
                              [syntaxTree(),...]}.
 -type export_attr1()     :: {attribute, _, module, _}.
 -type export_attr2()     :: {attribute, {non_neg_integer(), non_neg_integer()}, export, [{'_routes',0},...]} .
@@ -68,7 +68,7 @@ compile(File) ->
     compile(File, []).
 
 compile(File, Options) ->
-    _ = lager:info("Compile controller ~s", [File]), 
+    _ = lager:info("Compile controller ~s", [File]),
     boss_compiler:compile(File,
                           [debug_info,{pre_revert_transform, fun ?MODULE:add_routes_to_forms/1}|Options]).
 
@@ -80,7 +80,7 @@ add_routes_to_forms(Forms) ->
 add_routes_to_forms([], FormAcc, RouteAcc) ->
     RoutesFunction = function_for_routes(lists:reverse(RouteAcc)),
     lists:reverse(FormAcc, RoutesFunction);
-add_routes_to_forms([{function, _, Name, Arity, Clauses} = Fxn|Rest], FormAcc, RouteAcc) 
+add_routes_to_forms([{function, _, Name, Arity, Clauses} = Fxn|Rest], FormAcc, RouteAcc)
   when Arity =:= 2; Arity =:= 3 ->
     NewRoutes = extract_routes_from_clauses(Name, Clauses),
     add_routes_to_forms(Rest, [Fxn|FormAcc], lists:reverse(NewRoutes, RouteAcc));
@@ -100,7 +100,7 @@ extract_routes_from_clauses(Name, Clauses) ->
 
 extract_routes_from_clauses(_, [], Acc) ->
     lists:reverse(Acc);
-extract_routes_from_clauses(Name, [{clause, _, 
+extract_routes_from_clauses(Name, [{clause, _,
             [_, URLTokens|_], _, _}|Rest], Acc) ->
     Route = route_from_token_ast(URLTokens),
     extract_routes_from_clauses(Name, Rest, [{Name, Route}|Acc]);
@@ -123,7 +123,7 @@ route_from_token_ast(_, Acc) ->
 
 function_for_routes(Routes) ->
     [erl_syntax:function(erl_syntax:atom('_routes'),
-                         [erl_syntax:clause([], 
+                         [erl_syntax:clause([],
                                             none,
                                             [erl_syntax:list(map_syntax_tuples(Routes))])])].
 
@@ -148,7 +148,7 @@ map_tokens(Tokens) ->
 %%     ?FORALL(FctTups,
 %%             list(route_form()),
 %%             ?IMPLIES(len_in_range(FctTups, 1,5),
-%%                      ?TIMEOUT(300, 
+%%                      ?TIMEOUT(300,
 %%                               begin
 %%                                   %Result = boss_controller_compiler:add_routes_to_forms(FctTups,[],[]),
 %%                                   %is_list(Result)

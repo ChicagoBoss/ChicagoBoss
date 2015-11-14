@@ -1,13 +1,13 @@
 %%-------------------------------------------------------------------
-%% @author 
+%% @author
 %%     ChicagoBoss Team and contributors, see AUTHORS file in root directory
 %% @end
-%% @copyright 
-%%     This file is part of ChicagoBoss project. 
+%% @copyright
+%%     This file is part of ChicagoBoss project.
 %%     See AUTHORS file in root directory
 %%     for license information, see LICENSE file in root directory
 %% @end
-%% @doc 
+%% @doc
 %%-------------------------------------------------------------------
 
 -module(boss_cache_vars_filter).
@@ -39,10 +39,10 @@ before_filter({vars, _}, RequestContext) ->
             CacheKey = {ControllerModule, Action, Tokens, Language, Query},
 
             case boss_cache:get(?VARIABLES_CACHE_PREFIX, CacheKey) of
-                undefined -> 
+                undefined ->
                     _ = lager:debug("cache: vars not in cache"),
                     {ok, RequestContext ++ [{cache_vars, true}, {cache_key, CacheKey}]};
-                CachedActionResult -> 
+                CachedActionResult ->
                     _ = lager:debug("cache: hit!"),
                     CachedActionResult
             end;
