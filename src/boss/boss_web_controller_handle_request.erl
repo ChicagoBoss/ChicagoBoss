@@ -65,7 +65,8 @@ handle_application(Bridge, FullUrl,  App, RouterAdapter) ->
 
 
 handle_result(Bridge, _App, _StaticPrefix, Url, _IsSpecialFile = true, _) ->
-    Bridge:set_response_file(Url);
+    %lager:debug("sending static file ~p",[_StaticPrefix ++ Url]),
+    Bridge:set_response_file(_StaticPrefix ++ Url);
 handle_result(Bridge, App, StaticPrefix, Url, _IsSpecialFile = false, RouterAdapter) ->
     TestStaticPrefix = string:substr(Url, 1, length(StaticPrefix)),
     case TestStaticPrefix of
