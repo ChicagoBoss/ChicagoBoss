@@ -77,15 +77,16 @@ load_all_modules(Application, TranslatorSupPid, OutDir) ->
 -type op()       :: {op_key(), fun((atom(), string()) -> error(_))}.
 -spec(make_ops_list(pid()) -> [op()]).
 make_ops_list(TranslatorPid) ->
-    [{test_modules,           fun load_test_modules/2         },
-     {lib_modules,           fun load_libraries/2            },
-     {websocket_modules,       fun load_services_websockets/2        },
-     {mail_modules,           fun load_mail_controllers/2        },
+    [{test_modules,            fun load_test_modules/2           },
+     {lib_modules,             fun load_libraries/2              },
+     {websocket_modules,       fun load_services_websockets/2    },
+     {mail_modules,            fun load_mail_controllers/2       },
      {controller_modules,      fun load_web_controllers/2        },
-     {model_modules,           fun load_models/2            },
-     {view_lib_helper_modules, fun load_view_lib_modules/2        },
-     {view_lib_tags_modules,      load_view_lib(_, _, TranslatorPid)    },
-     {view_modules,               load_views(_, _,    TranslatorPid)    }].
+     {model_modules,           fun load_models/2                 },
+     {view_lib_helper_modules, fun load_view_lib_modules/2       },
+     {view_lib_tags_modules,   load_view_lib(_, _, TranslatorPid)},
+     {view_modules,            load_views(_, _, TranslatorPid)   }
+	].
 
 -spec make_all_modules(atom(), string(), [op()]) -> [{atom(),_}].
 
@@ -109,12 +110,12 @@ load_test_modules(Application, OutDir) ->
 
 load_all_modules_and_emit_app_file(AppName, OutDir) ->
     application:start(elixir),
-    {ok, TranslatorSupPid}            = boss_translator:start([{application, AppName}]),
-    {ok, ModulePropList}            = load_all_modules(AppName, TranslatorSupPid, OutDir),
-    AllModules                    = lists:foldr(fun({_, Mods}, Acc) -> Mods ++ Acc end, [], ModulePropList),
-    DotAppSrc                    = boss_files:dot_app_src(AppName),
+    {ok, TranslatorSupPid}                  = boss_translator:start([{application, AppName}]),
+    {ok, ModulePropList}                    = load_all_modules(AppName, TranslatorSupPid, OutDir),
+    AllModules                              = lists:foldr(fun({_, Mods}, Acc) -> Mods ++ Acc end, [], ModulePropList),
+    DotAppSrc                               = boss_files:dot_app_src(AppName),
     {ok, [{application, AppName, AppData}]} = file:consult(DotAppSrc),
-    AppData1                    = lists:keyreplace(modules, 1, AppData, {modules, AllModules}),
+    AppData1                                = lists:keyreplace(modules, 1, AppData, {modules, AllModules}),
     DefaultEnv                              = proplists:get_value(env, AppData1, []),
     AppData2                                = lists:keyreplace(env, 1, AppData1, {env, ModulePropList ++ DefaultEnv}),
     IOList                                  = io_lib:format("~p.~n", [{application, AppName, AppData2}]),
@@ -310,10 +311,10 @@ view_doc_root(ViewPath) ->
         [boss_files_util:web_view_path(), boss_files_util:mail_view_path()]).
 
 compile_view_dir_erlydtl(Application, LibPath, Module, OutDir, TranslatorPid) ->
-    TagHelpers                = lists:map(fun erlang:list_to_atom/1, boss_files_util:view_tag_helper_list(Application)),
+    TagHelpers           = lists:map(fun erlang:list_to_atom/1, boss_files_util:view_tag_helper_list(Application)),
     FilterHelpers        = lists:map(fun erlang:list_to_atom/1, boss_files_util:view_filter_helper_list(Application)),
-    ExtraTagHelpers    = boss_env:get_env(template_tag_modules, []),
-    ExtraFilterHelpers    = boss_env:get_env(template_filter_modules, []),
+    ExtraTagHelpers      = boss_env:get_env(template_tag_modules, []),
+    ExtraFilterHelpers   = boss_env:get_env(template_filter_modules, []),
 
     _ = lager:debug("Compile Modules ~p  ~p", [LibPath, Module]),
     Res = erlydtl:compile_dir(LibPath, Module,
