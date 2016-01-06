@@ -14,8 +14,16 @@
 -export([start/0, stop/1, deliver/5]).
 
 start() ->
-    OptionsBase = [{ssl, false}, {hostname, smtp_util:guess_FQDN()}, {retries, 1}],
-    {ok, OptionsBase ++ get_tls() ++ get_host() ++ get_port() ++ get_credentials()}.
+    OptionsBase = [{hostname, smtp_util:guess_FQDN()}, {retries, 1}],
+    {ok, OptionsBase ++ get_ssl() ++ get_tls() ++ get_host() ++ get_port() ++ get_credentials()}.
+
+get_ssl() ->
+    case application:get_env(mail_relay_use_ssl) of
+        {ok, Setting} ->
+            [{ssl, Setting}];
+        undefined ->
+            [{ssl, false}]
+    end.
 
 get_tls() ->
     case application:get_env(mail_relay_use_tls) of

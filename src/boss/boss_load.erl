@@ -230,13 +230,14 @@ load_dir(Dir, Application, OutDir, Compiler) when is_function(Compiler) ->
             {error, ErrorList}
     end.
 
-%% Only serve files that end in ".erl"
+%% Only serve files that end in ".erl" or ".ex"
 
 list_files(Dir) ->
     case file:list_dir(Dir) of
     {ok, FileList} ->
        lists:filter(fun(String) ->
-                string:right(String, 4) == ".erl"
+                Ext = filename:extension(String),
+                lists:member(Ext, [".erl", ".ex"])
             end, FileList);
     _ ->
         []
