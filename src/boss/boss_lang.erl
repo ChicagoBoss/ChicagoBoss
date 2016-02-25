@@ -155,7 +155,7 @@ extract_view_strings(App) ->
     case boss_env:is_developing_app(App) of
         true ->
             ViewFiles = boss_files:view_file_list(),
-            lists:foldl(fun(File, Acc) -> Acc ++ process_view_file(File) ++ process_view_file_blocks(File) end,
+            lists:foldl(fun(File, Acc) -> Acc ++ process_view_file(File) end,
                 [], ViewFiles);
         false ->
             lists:foldl(
@@ -190,37 +190,8 @@ extract_module_strings(App) when is_atom(App)->
                 [], 
                 ModulesFiles).
 
-process_view_file_blocks(ViewFile) ->
-    {ok, BlockStrings} = blocktrans_extractor:extract(ViewFile),
-    BlockStrings.
-
 process_view_file(ViewFile) ->
-    {ok, Contents} = file:read_file(ViewFile),
-    {ok, Tokens} = erlydtl_scanner:scan(binary_to_list(Contents)),
-    process_view_file_tokens(Tokens, []).
-
-process_view_file_tokens([], Acc) ->
-    Acc;
-process_view_file_tokens([{trans_keyword, _, _}, {string_literal, _, String}|Rest], Acc) ->
-    process_view_file_tokens(Rest, 
-        [unescape_string_literal(string:strip(String, both, $"))|Acc]);
-process_view_file_tokens([{'_', _}, {'(', _}, {string_literal, _, String}, {')', _}|Rest], Acc) ->
-    process_view_file_tokens(Rest, 
-        [unescape_string_literal(string:strip(String, both, $"))|Acc]);
-process_view_file_tokens([_|Rest], Acc) ->
-    process_view_file_tokens(Rest, Acc).
-
-unescape_string_literal(String) ->
-    unescape_string_literal(string:strip(String, both, 34), [], noslash).
-
-unescape_string_literal([], Acc, noslash) ->
-    lists:reverse(Acc);
-unescape_string_literal([$\\ | Rest], Acc, noslash) ->
-    unescape_string_literal(Rest, Acc, slash);
-unescape_string_literal([C | Rest], Acc, noslash) ->
-    unescape_string_literal(Rest, [C | Acc], noslash);
-unescape_string_literal([C | Rest], Acc, slash) ->
-    unescape_string_literal(Rest, [C | Acc], noslash).
+  [erlang:element(2,Phrase) || Phrase <- sources_parser:parse_file(ViewFile)].
 
 escape_quotes(String) ->
     escape_quotes(String, []).
