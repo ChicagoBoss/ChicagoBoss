@@ -27,7 +27,6 @@
         reload_all/0
     ]).
 -include("boss_web.hrl").
-
 -ifdef(TEST).
 -compile(export_all).
 -endif.
@@ -64,10 +63,9 @@ load_all_modules(Application, TranslatorSupPid) ->
 
 load_all_modules(Application, TranslatorSupPid, OutDir) ->
     _ = lager:debug("Loading application ~p", [Application]),
+    _ = boss_modtime_srv:start(),
     [{_, TranslatorPid, _, _}]    = supervisor:which_children(TranslatorSupPid),
-
     Ops = make_ops_list(TranslatorPid),
-
     AllModules = make_all_modules(Application, OutDir, Ops),
     {ok, AllModules}.
 
@@ -112,8 +110,20 @@ load_test_modules(Application, OutDir) ->
 load_all_modules_and_emit_app_file(AppName, OutDir) ->
     application:start(elixir),
     {ok, TranslatorSupPid}                  = boss_translator:start([{application, AppName}]),
-    {ok, ModulePropList}                    = load_all_modules(AppName, TranslatorSupPid, OutDir),
-    AllModules                              = lists:foldr(fun({_, Mods}, Acc) -> Mods ++ Acc end, [], ModulePropList),
+    {ok, TimedModulePropList}                    = load_all_modules(AppName, TranslatorSupPid, OutDir),
+
+    TimedFlatModules = lists:flatmap(fun({_, TimedL}) -> TimedL end, TimedModulePropList),
+
+    ModulePropList = lists:map(
+        fun({Group, L}) ->
+            {Group, [M || {M, _} <-  L]}
+        end,
+        TimedModulePropList
+    ),
+
+    AllModules = [M || {M, _} <- TimedFlatModules],
+%%    AllModules                              = lists:foldr(fun({_, Mods}, Acc) -> Mods ++ Acc end, [], ModulePropList),
+    dump_compile_times(TimedFlatModules),
     DotAppSrc                               = boss_files:dot_app_src(AppName),
     {ok, [{application, AppName, AppData}]} = file:consult(DotAppSrc),
     AppData1                                = lists:keyreplace(modules, 1, AppData, {modules, AllModules}),
@@ -122,6 +132,12 @@ load_all_modules_and_emit_app_file(AppName, OutDir) ->
     IOList                                  = io_lib:format("~p.~n", [{application, AppName, AppData2}]),
     AppFile                                 = filename:join([OutDir, lists:concat([AppName, ".app"])]),
     file:write_file(AppFile, IOList).
+
+
+dump_compile_times(TimedModules) ->
+    ok = filelib:ensure_dir(".cb/"),
+    FileName = filename:join(".cb", "modules"),
+    ok = file:write_file(FileName, io_lib:format("~tp.~n", [TimedModules])).
 
 
 make_computed_vsn({unknown, Val} ) ->Val;
@@ -189,12 +205,14 @@ load_dirs([Dir | Dirs], Mask, Application, OutDir, Compiler, ModuleAcc, ErrorAcc
     load_dirs(Dirs, Mask, Application, OutDir, Compiler, ModuleAcc2, ErrorAcc2).
 
 load_file(Filename, Application, OutDir, Compiler, Modules, Errors) ->
+    Now = calendar:local_time(),
     CompileResult = maybe_compile(Filename, Application, OutDir, Compiler),
     case CompileResult of
         ok ->
             {Modules, Errors};
         {ok, Module} ->
-            {[Module | Modules], Errors};
+            boss_modtime_srv:set({Module, Now}),
+            {[{Module, Now} | Modules], Errors};
         {error, Error} ->
             _ = lager:error("Compile Error, ~p -> ~p", [Filename, Error]),
             {Modules, [Error | Errors]};
@@ -306,10 +324,12 @@ compiler_options() ->
         boss_env:get_env(boss, compiler_options, [])).
 
 load_view_lib(Application, OutDir, TranslatorPid) ->
+    Now = calendar:local_time(),
     {ok, HelperDirModule} = compile_view_dir_erlydtl(Application,
         boss_files_util:view_html_tags_path(), view_custom_tags_dir_module(Application),
         OutDir, TranslatorPid),
-    {ok, [HelperDirModule]}.
+    boss_modtime_srv:set({HelperDirModule, Now}),
+    {ok, [{HelperDirModule, Now}]}.
 
 load_view_lib_if_old(Application, TranslatorPid) ->
     HelperDirModule = view_custom_tags_dir_module(Application),
@@ -331,22 +351,23 @@ load_view_lib_if_old(Application, TranslatorPid) ->
 
 load_views(Application, OutDir, TranslatorPid) ->
     ModuleList = lists:foldr(load_views_inner(Application, OutDir,
-                              TranslatorPid),
-                 [], boss_files:view_file_list()),
+        TranslatorPid),
+        [], boss_files:view_file_list()),
     {ok, ModuleList}.
 
 load_views_inner(Application, OutDir, TranslatorPid) ->
     fun(File, Acc) ->
         TemplateAdapter = boss_files:template_adapter_for_extension(
-                filename:extension(File)),
+            filename:extension(File)),
+        Now = calendar:local_time(),
         ViewR = compile_view(Application, File, TemplateAdapter, OutDir, TranslatorPid),
         case ViewR of
-        {ok, Module} ->
-            [Module|Acc];
-        {error, Reason} ->
-            _ = lager:error("Unable to compile ~p because of ~p",
-                [File, Reason]),
-            Acc
+            {ok, Module} ->
+                [{Module, Now} | Acc];
+            {error, Reason} ->
+                _ = lager:error("Unable to compile ~p because of ~p",
+                    [File, Reason]),
+                Acc
         end
     end.
 
@@ -382,8 +403,10 @@ load_view_if_dev(Application, ViewPath, ViewModules, TranslatorPid) ->
     TemplateAdapter = boss_files:template_adapter_for_extension(filename:extension(ViewPath)),
     case boss_env:is_developing_app(Application) of
         true ->
+            Now = calendar:local_time(),
             case load_view_if_old(Application, ViewPath, Module, TemplateAdapter, TranslatorPid) of
                 {ok, Module} ->
+                    boss_modtime_srv:set({Module, Now}),
                     {ok, Module, TemplateAdapter};
                 Other ->
                     Other
@@ -435,15 +458,7 @@ module_older_than(CompileDate, [CompareDate|Rest]) ->
     (CompareDate > CompileDate) orelse module_older_than(CompileDate, Rest).
 
 module_compiled_date(Module) when is_atom(Module) ->
-    try proplists:get_value(time, Module:module_info(compile)) of
-        {Y,M,D,H,I,S} ->
-            %% module compile times are in universal time, while
-            %% file modification times are in localtime
-            calendar:universal_time_to_local_time({{Y,M,D}, {H,I,S}});
-        _ -> 0 %% 0 always less than any tuple
-    catch
-        _ -> 0
-    end.
+    boss_modtime_srv:time(Module).
 
 view_module(Application, RelativePath) ->
     Components   = tl(filename:split(RelativePath)),
