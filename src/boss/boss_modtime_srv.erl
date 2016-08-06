@@ -40,7 +40,6 @@ set({Module, Time}) ->
 
 
 init([]) ->
-	erlang:display(boss_modtime_srv),
 	Tab = ets:new(?MODULE, [named_table, protected, {keypos, 1}, {read_concurrency, true}]),
 	case catch file:consult(".cb/modules") of
 		{ok, [L]} when is_list(L) -> ets:insert(Tab, L);
