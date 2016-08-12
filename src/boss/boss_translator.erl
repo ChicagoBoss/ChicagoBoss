@@ -50,6 +50,12 @@ reload_all(Pid) ->
 %% @spec fun_for(Locale::string()) -> TranslationFun::function() | none
 fun_for(Pid, Locale) ->
     case is_loaded(Pid, Locale) of
-        true -> fun(String) -> ?MODULE:lookup(Pid, String, Locale) end;
+        true ->
+            fun(String) ->
+                case ?MODULE:lookup(Pid, String, Locale) of
+                    undefined -> String;
+                    Else -> Else
+                end
+            end;
         false -> none
     end.
