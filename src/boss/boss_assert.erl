@@ -143,8 +143,8 @@ email_has_text({_, TextBody, _} = _Email) ->
 
 %% @spec email_has_html(Email) -> {Passed, ErrorMessage}
 %% @doc Checks whether `Email' contains an HTML body.
-email_has_html({_, TextBody, _} = _Email) ->
-    {TextBody =/= "", "Email does not contain an HTML body"}.
+email_has_html({_, _, HtmlBody} = _Email) ->
+    {HtmlBody =/= "", "Email does not contain an HTML body"}.
 
 %% @spec email_is_text_only(Email) -> {Passed, ErrorMessage}
 %% @doc Checks whether `Email' contains a plain-text body and not an HTML body.
