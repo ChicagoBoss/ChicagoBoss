@@ -22,9 +22,10 @@
         http_not_modified/1,
         http_bad_request/1,
         http_not_found/1,
-        link_with_text/2,
-        tag_with_text/3,
-        header/3,
+        link_with_text/2, 
+        link_with_text_has_parameter_with_value/4,
+        tag_with_text/3, 
+        header/3, 
         location_header/2,
         content_language_header/2,
         content_type_header/2,
@@ -112,6 +113,16 @@ link_with_text(Text, {_, _, _, ParseTree} = _Response) ->
 link_with_text(Text, {_, _, ParseTree} = _Response) ->
     link_with_text1(Text, ParseTree).
 
+%% @spec link_with_text_has_parameter_with_value(Text, Key, Value, Response) -> {Passed, ErrorMessage}
+%% @doc Looks in `Response' for a link with text equal to `Text'
+%% and searches after that for a specific url parameter `Key' with
+%% the value `Value'.
+%% `Response' may be an HTTP response, or an email.
+link_with_text_has_parameter_with_value(Text, Key, Value, {_, _, _, ParseTree} = _Response) ->
+    link_with_text_has_parameter_with_value_helper(Text, Key, Value, ParseTree);
+link_with_text_has_parameter_with_value(Text, Key, Value, {_, _, ParseTree} = _Response) ->
+    link_with_text_has_parameter_with_value_helper(Text, Key, Value, ParseTree).
+
 %% @spec tag_with_text(Tag, Text, Response) -> {Passed, ErrorMessage}
 %% @doc Looks in `Response' for an HTML tag of type `Tag' with inner
 %% text equal to `Text'. `Response' may be an HTTP response, or an email.
@@ -189,6 +200,11 @@ email_not_received(Email) ->
 
 
 % internal
+
+link_with_text_has_parameter_with_value_helper(Text, Key, Value, ParseTree) ->
+    Link = boss_web_test:find_link_with_text(Text, ParseTree),
+    {{match, []} =:= re:run(Link, Key ++ "=" ++ Value, [{capture, all_but_first, list}]),
+     "No '" ++ Key ++ "' parameter found in link with value '" ++ Value ++ "'"}.
 
 tag_with_text1(Tag, Text, ParseTree) ->
     {has_tag_with_text(Tag, Text, ParseTree), "No <"++Tag++"> tag containing \""++Text++"\""}.
