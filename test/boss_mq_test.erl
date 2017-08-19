@@ -19,15 +19,15 @@ convert_to_ms_test() ->
     ?assertEqual(1000, boss_mq:convert_to_ms(1)).
 
 
-spec_test_() ->
-    gen([
-         fun prop_pull_recieve/0,
-         fun prop_pull_recieve_timeout/0,
-         fun prop_pull_recieve_error/0,
-         {stop, 0},
-         {convert_to_ms, 1},
-         {make_queue_options, 0}
-        ], boss_mq).
+% spec_test_() ->
+%     gen([
+%          fun prop_pull_recieve/0,
+%          fun prop_pull_recieve_timeout/0,
+%          fun prop_pull_recieve_error/0,
+%          {stop, 0},
+%          {convert_to_ms, 1},
+%          {make_queue_options, 0}
+%         ], boss_mq).
 
 -type date()     :: {1970..2030, 1..12, 1..31}.
 -type time()     :: {0..23, 0..59, 0..60}.
