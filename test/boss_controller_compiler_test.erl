@@ -25,9 +25,9 @@ spec_test_() ->
                   {add_export_to_forms,         1},
                   {extract_routes_from_clauses, 2},
                   {function_for_routes,         1},
-                  {route_from_token_ast,        1},
-                  {map_syntax_tuples,           1},
-                  {map_tokens,                  1}
+                  {route_from_token_ast,        1}
+                  % {map_syntax_tuples,           1},
+                  % {map_tokens,                  1}
                  ],
          [case Test of
              {Funct, Arity} ->
