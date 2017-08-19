@@ -33,7 +33,22 @@
 -spec process_action_result({_,_,nonempty_maybe_improper_list()},_,[],_) -> any().
 -spec process_location(_,nonempty_maybe_improper_list(),#boss_app_info{}) -> {_,string(),_}.
 -spec process_redirect(_,_,_) -> any().
--spec render_error(_,_,#boss_app_info{application::atom(),base_url::'undefined' | string(),static_prefix::'undefined' | string(),doc_prefix::'undefined' | string(),domains::'all' | 'undefined' | [string()],init_data::'undefined' | [{atom(),_}],router_sup_pid::'undefined' | pid(),router_pid::'undefined' | pid(),translator_sup_pid::'undefined' | pid(),translator_pid::'undefined' | pid(),model_modules::[atom()],view_modules::[atom()],controller_modules::[atom()]},[any()]) -> {'error',_} | {'error',[any()],[]}.
+-spec render_error(_, _,
+    #boss_app_info{
+        application :: atom(),
+        base_url :: 'undefined' | string(),
+        static_prefix :: 'undefined' | string(),
+        doc_prefix :: 'undefined' | string(),
+        domains :: 'all' | 'undefined' | [string()],
+        init_data :: 'undefined' | [{atom(),_}],
+        router_sup_pid :: 'undefined' | pid(),
+        router_pid :: 'undefined' | pid(),
+        translator_sup_pid :: 'undefined' | pid(),
+        translator_pid :: 'undefined' | pid(),
+        model_modules :: [atom()],
+        view_modules :: [atom()],
+        controller_modules :: [atom()]
+    },[any()]) -> {'error',_} | {'error',[any()],[]}.
 -spec render_errors(_,#boss_app_info{},[any()]) -> any().
 -spec render_result(_,_,_,_,_,_,_,_) -> any().
 -spec render_view({_,_,_},_,[any()]) -> any().
@@ -46,7 +61,9 @@
 %% (seems to be called on runtime error)
 render_error(Error, ExtraMessage, AppInfo, RequestContext) ->
     case boss_html_error_template:render(RequestContext ++ [
-                {error, Error}, {extra_message, ExtraMessage}, {appinfo, AppInfo},
+                {error, Error},
+                {extra_message, ExtraMessage},
+                {appinfo, AppInfo},
                 {'_base_url', AppInfo#boss_app_info.base_url},
                 {'_static', AppInfo#boss_app_info.static_prefix}]) of
         {ok, Payload} ->
