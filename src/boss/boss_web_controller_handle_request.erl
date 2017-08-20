@@ -495,7 +495,7 @@ run_controller(_Controller, _Location, AppInfo, _Application,
      {boss_web_controller_render:render_errors(ErrorList, AppInfo, RequestContext), SessionID}.
 
 make_controller_names(Controllers) ->
-    lists:map(fun atom_to_list/1, Controllers).
+    [atom_to_list(C) || {C, _} <- Controllers].
 
 
 run_controller_if_present(Location, AppInfo, Application,
