@@ -60,7 +60,7 @@
 -define(CUSTOM_TAGS_DIR_MODULE, '_view_lib_tags').
 
 load_all_modules(Application, TranslatorSupPid) ->
-    load_all_modules(Application, TranslatorSupPid, undefined).
+    load_all_modules(Application, TranslatorSupPid, boss_files_util:ebin_dir()).
 
 load_all_modules(Application, TranslatorSupPid, OutDir) ->
     _ = lager:debug("Loading application ~p", [Application]),
@@ -138,7 +138,7 @@ reload_all() ->
      end || M <- Modules].
 
 load_libraries(Application) ->
-    load_libraries(Application, undefined).
+    load_libraries(Application, boss_files_util:ebin_dir()).
 load_libraries(Application, OutDir) ->
     load_dirs(boss_files_util:lib_path(), Application, OutDir, fun compile/2).
 
@@ -148,22 +148,22 @@ load_services_websockets(Application, OutDir) ->
     load_dirs(boss_files_util:websocket_path(), Application, OutDir, fun compile/2).
 
 load_mail_controllers(Application) ->
-    load_mail_controllers(Application, undefined).
+    load_mail_controllers(Application, boss_files_util:ebin_dir()).
 load_mail_controllers(Application, OutDir) ->
     load_dirs(boss_files:mail_controller_path(), Application, OutDir, fun compile/2).
 
 load_web_controllers(Application) ->
-    load_web_controllers(Application, undefined).
+    load_web_controllers(Application, boss_files_util:ebin_dir()).
 load_web_controllers(Application, OutDir) ->
     load_dirs(boss_files_util:web_controller_path(), Application, OutDir, fun compile_controller/2).
 
 load_view_lib_modules(Application) ->
-    load_view_lib_modules(Application, undefined).
+    load_view_lib_modules(Application, boss_files_util:ebin_dir()).
 load_view_lib_modules(Application, OutDir) ->
     load_dirs(boss_files_util:view_helpers_path(), Application, OutDir, fun compile/2).
 
 load_models(Application) ->
-    load_models(Application, undefined).
+    load_models(Application, boss_files_util:ebin_dir()).
 load_models(Application, OutDir) ->
     load_model_dirs(boss_files_util:model_path(), Application, OutDir, fun compile_model/2).
 
@@ -285,8 +285,8 @@ maybe_compile(_File, _Application, _OutDir, _Compiler, undefined) -> ok;
 maybe_compile(File, Application, OutDir, Compiler, CompilerAdapter) ->
     Module  = list_to_atom(CompilerAdapter:module_name_for_file(Application, File)),
     AbsPath = filename:absname(File),
-    case OutDir of
-    undefined ->
+    case boss_env:is_developing_app(Application) of
+    true ->
         case module_older_than(Module, [AbsPath]) of
         true ->
             Compiler(AbsPath, OutDir);
@@ -385,20 +385,15 @@ load_view_lib(Application, OutDir, TranslatorPid) ->
         OutDir, TranslatorPid),
     {ok, [HelperDirModule]}.
 
-load_view_lib_if_old(Application, TranslatorPid) ->
+load_view_lib_if_old(Application, OutDir, TranslatorPid) ->
     HelperDirModule = view_custom_tags_dir_module(Application),
-    DirNeedsCompile = case module_is_loaded(HelperDirModule) of
-        true ->
-            module_older_than(HelperDirModule, lists:map(fun
+    DirNeedsCompile = module_older_than(HelperDirModule, lists:map(fun
                         ({File, _CheckSum}) -> File;
                         (File) -> File
-                    end, [HelperDirModule:source_dir() | HelperDirModule:dependencies()]));
-        false ->
-            true
-    end,
+                      end, [HelperDirModule:source_dir() | HelperDirModule:dependencies()])),
     case DirNeedsCompile of
         true ->
-            load_view_lib(Application, undefined, TranslatorPid);
+            load_view_lib(Application, OutDir, TranslatorPid);
         false ->
             {ok, [HelperDirModule]}
     end.
@@ -424,8 +419,8 @@ load_views_inner(Application, OutDir, TranslatorPid) ->
         end
     end.
 
-load_view_if_old(Application, ViewPath, Module, TemplateAdapter, TranslatorPid) ->
-    case load_view_lib_if_old(Application, TranslatorPid) of
+load_view_if_old(Application, ViewPath, Module, OutDir, TemplateAdapter, TranslatorPid) ->
+    case load_view_lib_if_old(Application, OutDir, TranslatorPid) of
         {ok, _} ->
             NeedCompile = case module_is_loaded(Module) of
                 true ->
@@ -456,7 +451,8 @@ load_view_if_dev(Application, ViewPath, ViewModules, TranslatorPid) ->
     TemplateAdapter = boss_files:template_adapter_for_extension(filename:extension(ViewPath)),
     case boss_env:is_developing_app(Application) of
         true ->
-            case load_view_if_old(Application, ViewPath, Module, TemplateAdapter, TranslatorPid) of
+            OutDir = boss_files_util:ebin_dir(),
+            case load_view_if_old(Application, ViewPath, Module, OutDir, TemplateAdapter, TranslatorPid) of
                 {ok, Module} ->
                     {ok, Module, TemplateAdapter};
                 Other ->
@@ -478,24 +474,16 @@ module_is_loaded(Module) ->
         _ ->
             false
     end.
+
 -type maybe_list(X) :: X|list(X).
 -spec(module_older_than(maybe_list(module()), maybe_list(string())) ->
               boolean()).
+
+
 module_older_than(Module, Files) when is_atom(Module) ->
-    case code:is_loaded(Module) of
-        {file, _} ->
-            module_older_than(module_compiled_date(Module), Files);
-        _ ->
-            case code:load_file(Module) of
-                {module, _} ->
-                    case code:is_loaded(Module) of
-                        {file, _} ->
-                            module_older_than(module_compiled_date(Module), Files)
-                    end;
-                {error, _} ->
-                    true
-            end
-    end;
+    OutDir = boss_files_util:ebin_dir(),
+    BeamFile  = filename:join([OutDir, atom_to_list(Module) ++ ".beam"]),
+    module_older_than(BeamFile, Files);
 module_older_than(Module, Files) when is_list(Module) ->
     module_older_than(filelib:last_modified(Module), Files);
 module_older_than(_Date, []) ->
@@ -508,17 +496,6 @@ module_older_than(CompileDate, [Module|Rest]) when is_atom(Module) ->
 module_older_than(CompileDate, [CompareDate|Rest]) ->
     (CompareDate > CompileDate) orelse module_older_than(CompileDate, Rest).
 
-module_compiled_date(Module) when is_atom(Module) ->
-    try proplists:get_value(time, Module:module_info(compile)) of
-        {Y,M,D,H,I,S} ->
-            %% module compile times are in universal time, while
-            %% file modification times are in localtime
-            calendar:universal_time_to_local_time({{Y,M,D}, {H,I,S}});
-        _ -> 0 %% 0 always less than any tuple
-    catch
-        _ -> 0
-    end.
-
 view_module(Application, RelativePath) ->
     Components   = tl(filename:split(RelativePath)),
     Lc           = string:to_lower(lists:concat([Application, "_", string:join(Components, "_")])),
@@ -530,4 +507,3 @@ view_custom_tags_dir_module(Application) ->
 
 incoming_mail_controller_module(Application) ->
     list_to_atom(lists:concat([Application, "_incoming_mail_controller"])).
-
