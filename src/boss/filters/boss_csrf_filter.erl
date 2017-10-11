@@ -93,7 +93,7 @@ csrftoken_name() ->
 %%%%%%%%%%%%%%%%%
 
 new_token() ->
-    <<Int1:32, Int2:32, Int3:32>> = crypto:rand_bytes(12),
+    <<Int1:32, Int2:32, Int3:32>> = crypto:strong_rand_bytes(12),
     Hex1 = integer_to_list(Int1, 16),
     Hex2 = integer_to_list(Int2, 16),
     Hex3 = integer_to_list(Int3, 16),
