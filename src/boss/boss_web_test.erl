@@ -101,6 +101,34 @@ post_request(Url, Headers, Contents, Assertions, Continuations) ->
             receive_response(RequesterPid, Assertions, Continuations)
     end.
 
+%% @spec put_request(Url, Headers, Contents, Assertions, Continuations) -> [{NumPassed, ErrorMessages}]
+%% @doc This test issues an HTTP PUT request to `Url' (a path such as "/"
+%% -- no "http://" or domain name), passing in `RequestHeaders' to the
+%% server, and `Contents' as the request body.
+put_request(Url, Headers, Contents, Assertions, Continuations) ->
+    app_info ! {self(), get_info},
+    receive
+        {_From, AppInfo} ->
+            RequesterPid = spawn(fun() -> put_request_loop(AppInfo) end),
+            link(RequesterPid),
+            RequesterPid ! {self(), Url, Headers, Contents},
+            receive_response(RequesterPid, Assertions, Continuations)
+    end.
+
+%% @spec delete_request(Url, Headers, Contents, Assertions, Continuations) -> [{NumPassed, ErrorMessages}]
+%% @doc This test issues an HTTP DELETE request to `Url' (a path such as "/"
+%% -- no "http://" or domain name), passing in `RequestHeaders' to the
+%% server, and `Contents' as the request body.
+delete_request(Url, Headers, Contents, Assertions, Continuations) ->
+    app_info ! {self(), get_info},
+    receive
+        {_From, AppInfo} ->
+            RequesterPid = spawn(fun() -> delete_request_loop(AppInfo) end),
+            link(RequesterPid),
+            RequesterPid ! {self(), Url, Headers, Contents},
+            receive_response(RequesterPid, Assertions, Continuations)
+    end.
+
 %% @spec follow_link(LinkName, Response, Assertions, Continuations) -> [{NumPassed, ErrorMessages}]
 %% @doc This test looks for a link labeled `LinkName' in `Response' and issues
 %% an HTTP GET request to the associated URL. The label may be an "alt" attribute of a
@@ -380,6 +408,58 @@ post_request_loop(AppInfo) ->
             From ! {self(), FullUrl, Result};
         Other ->
             error_logger:error_msg("Unexpected message in post_request_loop: ~p~n", [Other])
+    end.
+
+put_request_loop(AppInfo) ->
+    put(boss_environment, testing),
+    receive
+        {From, Uri, Headers, Body} ->
+            erlang:put(mochiweb_request_body, Body),
+            erlang:put(mochiweb_request_body_length, length(Body)),
+            erlang:put(mochiweb_request_post, mochiweb_util:parse_qs(Body)),
+            [{_, RouterPid, _, _}]    = supervisor:which_children(AppInfo#boss_app_info.router_sup_pid),
+            [{_, TranslatorPid, _, _}]    = supervisor:which_children(AppInfo#boss_app_info.translator_sup_pid),
+            RouterAdapter = boss_env:router_adapter(),
+            Req = make_request('PUT', Uri, 
+                   [{"Content-Encoding", "application/x-www-form-urlencoded"} | Headers]),
+            FullUrl = Req:path(),
+            Result = boss_web_controller_handle_request:process_request(AppInfo#boss_app_info{
+                               router_pid     = RouterPid, 
+                               translator_pid = TranslatorPid }, 
+                             Req, 
+                             testing, 
+                             FullUrl,
+                             RouterAdapter),
+
+            From ! {self(), FullUrl, Result};
+        Other ->
+            error_logger:error_msg("Unexpected message in put_request_loop: ~p~n", [Other])
+    end.
+
+delete_request_loop(AppInfo) ->
+    put(boss_environment, testing),
+    receive
+        {From, Uri, Headers, Body} ->
+            erlang:put(mochiweb_request_body, Body),
+            erlang:put(mochiweb_request_body_length, length(Body)),
+            erlang:put(mochiweb_request_post, mochiweb_util:parse_qs(Body)),
+            [{_, RouterPid, _, _}]    = supervisor:which_children(AppInfo#boss_app_info.router_sup_pid),
+            [{_, TranslatorPid, _, _}]    = supervisor:which_children(AppInfo#boss_app_info.translator_sup_pid),
+            RouterAdapter = boss_env:router_adapter(),
+            Req = make_request('DELETE', Uri, 
+                   [{"Content-Encoding", "application/x-www-form-urlencoded"} | Headers]),
+            FullUrl = Req:path(),
+            Result = boss_web_controller_handle_request:process_request(AppInfo#boss_app_info{
+                               router_pid     = RouterPid, 
+                               translator_pid = TranslatorPid }, 
+                             Req, 
+                             testing, 
+                             FullUrl,
+                             RouterAdapter),
+
+            From ! {self(), FullUrl, Result};
+        Other ->
+            error_logger:error_msg("Unexpected message in put_request_loop: ~p~n", [Other])
     end.
 
 make_request(Method, Uri, Headers) ->
