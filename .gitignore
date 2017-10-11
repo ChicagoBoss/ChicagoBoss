@@ -11,6 +11,7 @@ erl_crash.dump
 src/boss/*.dtl.erl
 *.sw?
 .rebar
+rebar.lock
 plt/
 /.project
 /.settings/

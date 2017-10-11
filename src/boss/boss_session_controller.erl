@@ -87,7 +87,7 @@ handle_info(_Info, State) ->
     {noreply, State}.
 
 generate_session_id() ->
-    Data = crypto:rand_bytes(2048),
+    Data = crypto:strong_rand_bytes(2048),
     Sha_list = binary_to_list(crypto:hash(sha, Data)),
     lists:flatten(list_to_hex(Sha_list)).
 %% Convert Integer from the SHA to Hex
