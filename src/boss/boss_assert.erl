@@ -21,6 +21,7 @@
         http_redirect/1,
         http_not_modified/1,
         http_bad_request/1,
+        http_not_authorized/1,
         http_not_found/1,
         link_with_text/2,
         tag_with_text/3,
@@ -54,6 +55,7 @@
 -spec http_redirect({http_status_code(),_,_,_})        -> http_status_result().
 -spec http_not_modified({http_status_code(),_,_,_})    -> http_status_result().
 -spec http_bad_request({http_status_code(),_,_,_})     -> http_status_result().
+-spec http_not_authorized({http_status_code(),_,_,_})  -> http_status_result().
 -spec http_not_found({http_status_code(),_,_,_})       -> http_status_result().
 -spec link_with_text([any()],{_,_,maybe_improper_list() | tuple()} | {_,_,_,maybe_improper_list() | tuple()}) -> {'false',[any(),...]} | {'true',[any(),...]}.
 -spec tag_with_text([any()],[any()],{_,_,maybe_improper_list() | tuple()} | {_,_,_,maybe_improper_list() | tuple()}) -> {'false',[any(),...]} | {'true',[any(),...]}.
@@ -96,6 +98,11 @@ http_not_modified({Status, _, _, _} = _Response) ->
 %% @doc Compares the HTTP status code in `Response' to 400 (HTTP Bad Request).
 http_bad_request({Status, _, _, _} = _Response) ->
     {Status =:= 400, "HTTP Status not 400 Bad Request"}.
+
+%% @spec http_not_authorized(Response) -> {Passed, ErrorMessage}
+%% @doc Compares the HTTP status code in `Response' to 401 (HTTP Not Authorized).
+http_not_authorized({Status, _, _, _} = _Response) ->
+    {Status =:= 401, "HTTP Status not 401 Not Authorized"}.
 
 %% @spec http_not_found(Response) -> {Passed, ErrorMessage}
 %% @doc Compares the HTTP status code in `Response' to 404 (HTTP Not Found).
