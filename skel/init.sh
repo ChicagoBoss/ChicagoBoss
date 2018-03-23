@@ -23,6 +23,13 @@ do_start () {
 cd `dirname $0`
 
 case "${1:-''}" in
+  'start-fg')
+        # start Boss in production mode and go background
+        echo "starting boss in production mode and attach console mode..."
+        START=$(./rebar boss c=start_fg_cmd|grep -v "==>")
+        do_start "$START"
+        ;;
+
   'start')
         # Start Boss in production mode
         echo "starting boss in production mode..."
@@ -68,7 +75,7 @@ case "${1:-''}" in
 
   *)
         echo "Chicago Boss Boot System"
-        echo "Usage: $SELF start|start-dev|stop|reload|restart|attach"
+        echo "Usage: $SELF start|start-dev|stop|reload|restart|attach|start-fg"
         exit 1
         ;;
 esac
