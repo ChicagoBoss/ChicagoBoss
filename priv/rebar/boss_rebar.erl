@@ -23,6 +23,7 @@
          compile/4,
          test_eunit/3,
          test_functional/3,
+         start_fg_cmd/3,
          start_cmd/3,
          start_dev_cmd/3,
          stop_cmd/3,
@@ -41,6 +42,7 @@
          {compile, "Compile (boss way)"},
          {test_eunit, "Run src/test/eunit tests"},
          {test_functional, "Run src/test/functional tests"},
+         {start_fg_cmd, "Generates the start shell command attached"},
          {start_cmd, "Generates the start shell command"},
          {start_dev_cmd, "Generates the start-dev shell command"},
          {stop_cmd, "Generates the stop shell command"},
@@ -146,6 +148,27 @@ test_functional(RebarConf, BossConf, AppFile) ->
     % boss_rebar:boss_start(BossConf),
     AppName = app_name(AppFile),
     boss_web_test:start([atom_to_list(AppName)]).
+
+%%--------------------------------------------------------------------
+%% @doc start_fg_cmd
+%% @spec start_fg_cmd(RebarConf, BossConf, AppFile) ->
+%%                                                ok | {error, Reason}
+%%       Generate start shell command (production)
+%% @end
+%%--------------------------------------------------------------------
+start_fg_cmd(_RebarConf, BossConf, AppFile) ->
+  rebar_log:log(info, "Generating dynamic start foreground command~n", []),
+
+  EbinDirs = all_ebin_dirs(BossConf, AppFile),
+  MaxProcesses = max_processes(BossConf),
+  NameArg = vm_name_arg(BossConf, AppFile),
+  CookieOpt = cookie_option(BossConf),
+
+  ErlCmd = erl_command(),
+  VmArgs = vm_args(BossConf),
+  io:format("~s +K true +P ~B -pa ~s -boot start_sasl -config boss -s boss ~s -attached ~s~s~n",
+    [ErlCmd, MaxProcesses, string:join(EbinDirs, " -pa "), CookieOpt, NameArg, VmArgs]),
+  ok.
 
 %%--------------------------------------------------------------------
 %% @doc start_cmd
