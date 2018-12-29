@@ -4,6 +4,8 @@
 
 ### Version 0.9.0 (in development)
 * Fixed bug with version in the .app file generation (@davidw)
+* Supporting Erlang 21, minimal version now is Erlang 19.0 (due to cowboy minimal version)
+* 
 
 ### Version 0.8.13 - Mostly SQL Stuff... Mostly.
 

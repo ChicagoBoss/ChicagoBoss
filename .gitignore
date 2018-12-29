@@ -16,3 +16,4 @@ plt/
 /.project
 /.settings/
 /ebin/
+_build

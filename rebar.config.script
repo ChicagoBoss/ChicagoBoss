@@ -1,0 +1,69 @@
+case erlang:function_exported(rebar3, main, 1) of
+    true -> % rebar3
+        CONFIG;
+    false -> % rebar 2.x or older
+        %% Rebuild deps, possibly including those that have been moved to
+        %% profiles
+        [
+        {deps, [
+        %% maintained by CB team
+        {boss_db,               ".*",   {git, "https://github.com/ErlyORM/boss_db.git",              {tag, "0.9.0"}}},
+        {tinymq,                ".*",   {git, "https://github.com/ChicagoBoss/tinymq.git",          {tag, "v0.9.0"}}},
+        %% WARNING: Do not add cb_admin dependency here, otherwise you'll
+        %% encounter a dependency loop with rebar.  cb_admin should be added to
+        %% YOUR APPS's rebar.config
+
+        %% maintained by others
+        {erlydtl,               ".*",   {git, "https://github.com/erlydtl/erlydtl.git",             {tag, "118c176"}}},
+        {jaderl,                ".*",   {git, "https://github.com/erlydtl/jaderl.git",              {tag, "14a80dafd"}}},
+        {gen_smtp,              ".*",   {git, "https://github.com/Vagabond/gen_smtp.git",           {tag, "0.11.0"}}},
+        {iso8601,               ".*",   {git, "https://github.com/danikp/erlang_iso8601.git",       {tag, "ae6a052017"}}},
+        {mimetypes,             ".*",   {git, "https://github.com/spawngrid/mimetypes.git",         {branch, master}}},
+
+        %% webservers of choice, mochiweb and cowboy installed by default
+        {mochiweb,              ".*",   {git, "https://github.com/mochi/mochiweb.git",              {tag, "53a9607"}}},
+        {cowboy,                ".*",   {git, "https://github.com/ninenines/cowboy.git",            {tag, "2.6.1"}}},
+        %% webmachine still requires dispacher to be written for it
+        %{webmachine,            ".*",   {git, "https://github.com/webmachine/webmachine.git",      {tag, "086bd10920"}}},
+        %% yaws requires libpam0g-dev, for ubuntu install it with 'sudo apt-get install libpam0g-dev'
+        %{yaws,                  ".*",   {git, "https://github.com/klacke/yaws.git",                {tag, "yaws-2.0"}}},
+        {simple_bridge,         ".*",   {git, "https://github.com/nitrogen/simple_bridge.git",      {tag, "1938ec7"}}}
+
+        %%% EXPERIMENTAL %%%
+        %% Uncomment the following line if you want LFE support
+        %% See README_LFE for more details.
+        %{lfe,                   ".*",   {git, "https://github.com/rvirding/lfe.git",               {tag, "fb7c96eb17"}}},
+
+        %% Uncomment the following line if you want Elixir support
+        %% Then copy priv/elixir to src/ in this directory, run "mix deps.get", and recompile
+        %% See README_ELIXIR for more details.
+        %{elixir,               ".*",   {git, "https://github.com/elixir-lang/elixir.git",          {tag, "v1.1.1"}}},
+
+        %% The following apps are dependencies that are already brought in by
+        %% boss_db being a dependency, but are still used by ChicagoBoss directly.
+        %%  Listed here just for just as an FYI:
+        %{tiny_pq,               ".*",   {git, "https://github.com/ChicagoBoss/tiny_pq.git",        {tag, "v0.8.15"}}},
+        %{poolboy,               ".*",   {git, "https://github.com/devinus/poolboy.git",            {tag, "64e1eaef0b"}}},
+        %{proper,                ".*",   {git, "https://github.com/manopapad/proper.git",           {tag, "d90fc40579"}}},
+        %{lager,                 ".*",   {git, "https://github.com/basho/lager.git",                {tag, "2.0.3"}}},
+        %{erlando,               ".*",   {git, "https://github.com/travelping/erlando.git",         {tag, "23d678c97"}}},
+
+        ]}
+        ,{plugins, [rebar_ct]}
+        , {erlydtl_opts, [
+                {doc_root,   "src/boss"},
+                {out_dir,    "ebin"},
+                {source_ext, ".dtl"},
+                {module_ext, ""},
+                {compiler_options, [debug_info]},
+                report, return
+        ]}
+        , {lib_dirs, ["deps/elixir/lib", "deps"]}
+        ,{erl_opts, [
+            debug_info,
+            {parse_transform, lager_transform},
+            {parse_transform, cut},
+            {parse_transform, do},
+            {parse_transform, import_as}
+        ]} | [Config || {Key, _Value}=Config <- CONFIG, Key =/= deps andalso Key =/= plugins andalso Key =/= erl_opts]]
+end.

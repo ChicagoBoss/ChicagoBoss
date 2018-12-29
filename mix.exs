@@ -3,10 +3,10 @@ defmodule Boss.Mixfile do
 
   def project do
     [ app: :boss,
-      version: "0.8.7",
+      version: "0.9.0-beta2",
       deps: deps(Mix.env),
       name: "Chicago Boss",
-      source_url: "https://github.com/evanmiller/ChicagoBoss",
+      source_url: "https://github.com/ChicagoBoss/ChicagoBoss",
       elixir: "~> 0.10.3" ]
   end
 
