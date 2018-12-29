@@ -44,7 +44,7 @@ letter and contain only letters, digits, and underscores (for easy compatibility
 Dependencies
 ------------
 
-* Erlang R16B or later -
+* Erlang 19.0 or later -
 
     <http://www.erlang.org/download.html>
 
