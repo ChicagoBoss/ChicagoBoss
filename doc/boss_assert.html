@@ -1,0 +1,168 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module boss_assert</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module boss_assert</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+      Assertion helper functions
+      Four-tuples are an HTTP response {Status, Location, Headers, ParsedHtml},
+      three-tuples are an Email {Headers, TextBody, ParsedHtml}.
+<p>Copyright © 
+      This file is part of ChicagoBoss project.
+      See AUTHORS file in root directory
+      for license information, see LICENSE file in root directory</p>
+
+<p><b>Authors:</b> ChicagoBoss Team and contributors, see AUTHORS file in root directory.</p>
+
+<h2><a name="description">Description</a></h2>
+      Assertion helper functions
+      Four-tuples are an HTTP response {Status, Location, Headers, ParsedHtml},
+      three-tuples are an Email {Headers, TextBody, ParsedHtml}
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#content_language_header-2">content_language_header/2</a></td><td>Compares <code>ContentLanguage</code> to the Content-Language: header of <code>Response</code></td></tr>
+<tr><td valign="top"><a href="#content_type_header-2">content_type_header/2</a></td><td>Compares <code>ContentType</code> to the Content-Type: header of <code>Response</code></td></tr>
+<tr><td valign="top"><a href="#email_has_html-1">email_has_html/1</a></td><td>Checks whether <code>Email</code> contains an HTML body.</td></tr>
+<tr><td valign="top"><a href="#email_has_text-1">email_has_text/1</a></td><td>Checks whether <code>Email</code> contains a plain-text body.</td></tr>
+<tr><td valign="top"><a href="#email_is_html_only-1">email_is_html_only/1</a></td><td>Checks whether <code>Email</code> contains an HTML body and not a plain-text body.</td></tr>
+<tr><td valign="top"><a href="#email_is_multipart-1">email_is_multipart/1</a></td><td>Checks whether <code>Email</code> contains alternative text and HTML representations.</td></tr>
+<tr><td valign="top"><a href="#email_is_text_only-1">email_is_text_only/1</a></td><td>Checks whether <code>Email</code> contains a plain-text body and not an HTML body.</td></tr>
+<tr><td valign="top"><a href="#email_not_received-1">email_not_received/1</a></td><td>Checks whether <code>Email</code> is undefined.</td></tr>
+<tr><td valign="top"><a href="#email_received-1">email_received/1</a></td><td>Checks whether <code>Email</code> exists.</td></tr>
+<tr><td valign="top"><a href="#from_header-2">from_header/2</a></td><td>Compares <code>FromAddress</code> to the From: header field in <code>Email</code></td></tr>
+<tr><td valign="top"><a href="#header-3">header/3</a></td><td>Compares the <code>Key</code> header in <code>Response</code> (HTTP or email) to <code>Value</code>.</td></tr>
+<tr><td valign="top"><a href="#http_bad_request-1">http_bad_request/1</a></td><td>Compares the HTTP status code in <code>Response</code> to 400 (HTTP Bad Request).</td></tr>
+<tr><td valign="top"><a href="#http_not_authorized-1">http_not_authorized/1</a></td><td>Compares the HTTP status code in <code>Response</code> to 401 (HTTP Not Authorized).</td></tr>
+<tr><td valign="top"><a href="#http_not_found-1">http_not_found/1</a></td><td>Compares the HTTP status code in <code>Response</code> to 404 (HTTP Not Found).</td></tr>
+<tr><td valign="top"><a href="#http_not_modified-1">http_not_modified/1</a></td><td>Compares the HTTP status code in <code>Response</code> to 304 (HTTP Not Modified).</td></tr>
+<tr><td valign="top"><a href="#http_ok-1">http_ok/1</a></td><td>Compares the HTTP status code in <code>Response</code> to 200 (HTTP OK).</td></tr>
+<tr><td valign="top"><a href="#http_partial_content-1">http_partial_content/1</a></td><td>Compares the HTTP status code in <code>Response</code> to 206 (HTTP Partial Content).</td></tr>
+<tr><td valign="top"><a href="#http_redirect-1">http_redirect/1</a></td><td>Compares the HTTP status code in <code>Response</code> to 302 (HTTP Found).</td></tr>
+<tr><td valign="top"><a href="#link_with_text-2">link_with_text/2</a></td><td>Looks in <code>Response</code> for a link with text equal to <code>Text</code>.</td></tr>
+<tr><td valign="top"><a href="#location_header-2">location_header/2</a></td><td>Compares <code>Url</code> to the Location: header of <code>Response</code>.</td></tr>
+<tr><td valign="top"><a href="#tag_with_text-3">tag_with_text/3</a></td><td>Looks in <code>Response</code> for an HTML tag of type <code>Tag</code> with inner
+  text equal to <code>Text</code>.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="content_language_header-2">content_language_header/2</a></h3>
+<div class="spec">
+<p><tt>content_language_header(ContentLanguage, Response) -&gt; {Passed, ErrorMessage}</tt><br></p>
+</div><p>Compares <code>ContentLanguage</code> to the Content-Language: header of <code>Response</code></p>
+
+<h3 class="function"><a name="content_type_header-2">content_type_header/2</a></h3>
+<div class="spec">
+<p><tt>content_type_header(ContentType, Response) -&gt; {Passed, ErrorMessage}</tt><br></p>
+</div><p>Compares <code>ContentType</code> to the Content-Type: header of <code>Response</code></p>
+
+<h3 class="function"><a name="email_has_html-1">email_has_html/1</a></h3>
+<div class="spec">
+<p><tt>email_has_html(Email) -&gt; {Passed, ErrorMessage}</tt><br></p>
+</div><p>Checks whether <code>Email</code> contains an HTML body.</p>
+
+<h3 class="function"><a name="email_has_text-1">email_has_text/1</a></h3>
+<div class="spec">
+<p><tt>email_has_text(Email) -&gt; {Passed, ErrorMessage}</tt><br></p>
+</div><p>Checks whether <code>Email</code> contains a plain-text body.</p>
+
+<h3 class="function"><a name="email_is_html_only-1">email_is_html_only/1</a></h3>
+<div class="spec">
+<p><tt>email_is_html_only(Email) -&gt; {Passed, ErrorMessage}</tt><br></p>
+</div><p>Checks whether <code>Email</code> contains an HTML body and not a plain-text body.</p>
+
+<h3 class="function"><a name="email_is_multipart-1">email_is_multipart/1</a></h3>
+<div class="spec">
+<p><tt>email_is_multipart(Email) -&gt; {Passed, ErrorMessage}</tt><br></p>
+</div><p>Checks whether <code>Email</code> contains alternative text and HTML representations.</p>
+
+<h3 class="function"><a name="email_is_text_only-1">email_is_text_only/1</a></h3>
+<div class="spec">
+<p><tt>email_is_text_only(Email) -&gt; {Passed, ErrorMessage}</tt><br></p>
+</div><p>Checks whether <code>Email</code> contains a plain-text body and not an HTML body.</p>
+
+<h3 class="function"><a name="email_not_received-1">email_not_received/1</a></h3>
+<div class="spec">
+<p><tt>email_not_received(Email) -&gt; {Passed, ErrorMessage}</tt><br></p>
+</div><p>Checks whether <code>Email</code> is undefined</p>
+
+<h3 class="function"><a name="email_received-1">email_received/1</a></h3>
+<div class="spec">
+<p><tt>email_received(Email) -&gt; {Passed, ErrorMessage}</tt><br></p>
+</div><p>Checks whether <code>Email</code> exists</p>
+
+<h3 class="function"><a name="from_header-2">from_header/2</a></h3>
+<div class="spec">
+<p><tt>from_header(FromAddress, Email) -&gt; {Passed, ErrorMessage}</tt><br></p>
+</div><p>Compares <code>FromAddress</code> to the From: header field in <code>Email</code></p>
+
+<h3 class="function"><a name="header-3">header/3</a></h3>
+<div class="spec">
+<p><tt>header(Key, Value, Response) -&gt; {Passed, ErrorMessage}</tt><br></p>
+</div><p>Compares the <code>Key</code> header in <code>Response</code> (HTTP or email) to <code>Value</code>.</p>
+
+<h3 class="function"><a name="http_bad_request-1">http_bad_request/1</a></h3>
+<div class="spec">
+<p><tt>http_bad_request(Response) -&gt; {Passed, ErrorMessage}</tt><br></p>
+</div><p>Compares the HTTP status code in <code>Response</code> to 400 (HTTP Bad Request).</p>
+
+<h3 class="function"><a name="http_not_authorized-1">http_not_authorized/1</a></h3>
+<div class="spec">
+<p><tt>http_not_authorized(Response) -&gt; {Passed, ErrorMessage}</tt><br></p>
+</div><p>Compares the HTTP status code in <code>Response</code> to 401 (HTTP Not Authorized).</p>
+
+<h3 class="function"><a name="http_not_found-1">http_not_found/1</a></h3>
+<div class="spec">
+<p><tt>http_not_found(Response) -&gt; {Passed, ErrorMessage}</tt><br></p>
+</div><p>Compares the HTTP status code in <code>Response</code> to 404 (HTTP Not Found).</p>
+
+<h3 class="function"><a name="http_not_modified-1">http_not_modified/1</a></h3>
+<div class="spec">
+<p><tt>http_not_modified(Response) -&gt; {Passed, ErrorMessage}</tt><br></p>
+</div><p>Compares the HTTP status code in <code>Response</code> to 304 (HTTP Not Modified).</p>
+
+<h3 class="function"><a name="http_ok-1">http_ok/1</a></h3>
+<div class="spec">
+<p><tt>http_ok(Response) -&gt; {Passed, ErrorMessage}</tt><br></p>
+</div><p>Compares the HTTP status code in <code>Response</code> to 200 (HTTP OK).</p>
+
+<h3 class="function"><a name="http_partial_content-1">http_partial_content/1</a></h3>
+<div class="spec">
+<p><tt>http_partial_content(Response) -&gt; {Passed, ErrorMessage}</tt><br></p>
+</div><p>Compares the HTTP status code in <code>Response</code> to 206 (HTTP Partial Content)</p>
+
+<h3 class="function"><a name="http_redirect-1">http_redirect/1</a></h3>
+<div class="spec">
+<p><tt>http_redirect(Response) -&gt; {Passed, ErrorMessage}</tt><br></p>
+</div><p>Compares the HTTP status code in <code>Response</code> to 302 (HTTP Found).</p>
+
+<h3 class="function"><a name="link_with_text-2">link_with_text/2</a></h3>
+<div class="spec">
+<p><tt>link_with_text(Text, Response) -&gt; {Passed, ErrorMessage}</tt><br></p>
+</div><p>Looks in <code>Response</code> for a link with text equal to <code>Text</code>.
+  The text may be the inner text of an &amp;lt;a&amp;gt; tag, or the
+  "alt" attribute of a hyperlinked &amp;lt;img&amp;gt; tag.
+  <code>Response</code> may be an HTTP response, or an email.</p>
+
+<h3 class="function"><a name="location_header-2">location_header/2</a></h3>
+<div class="spec">
+<p><tt>location_header(Url, Response) -&gt; {Passed, ErrorMessage}</tt><br></p>
+</div><p>Compares <code>Url</code> to the Location: header of <code>Response</code>.</p>
+
+<h3 class="function"><a name="tag_with_text-3">tag_with_text/3</a></h3>
+<div class="spec">
+<p><tt>tag_with_text(Tag, Text, Response) -&gt; {Passed, ErrorMessage}</tt><br></p>
+</div><p>Looks in <code>Response</code> for an HTML tag of type <code>Tag</code> with inner
+  text equal to <code>Text</code>. <code>Response</code> may be an HTTP response, or an email.</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc</i></p>
+</body>
+</html>

@@ -1,0 +1,53 @@
+2019-03-17 00:31:29 =CRASH REPORT====
+  crasher:
+    initial call: application_master:init/4
+    pid: <0.494.0>
+    registered_name: []
+    exception exit: {{bad_return,{{simple_bridge_app,start,[normal,[]]},'no backend defined'}},[{application_master,init,4,[{file,"application_master.erl"},{line,138}]},{proc_lib,init_p_do_apply,3,[{file,"proc_lib.erl"},{line,249}]}]}
+    ancestors: [<0.493.0>]
+    message_queue_len: 1
+    messages: [{'EXIT',<0.495.0>,normal}]
+    links: [<0.493.0>,<0.43.0>]
+    dictionary: []
+    trap_exit: true
+    status: running
+    heap_size: 376
+    stack_size: 27
+    reductions: 209
+  neighbours:
+2019-03-17 00:35:08 =CRASH REPORT====
+  crasher:
+    initial call: application_master:init/4
+    pid: <0.497.0>
+    registered_name: []
+    exception exit: {{bad_return,{{simple_bridge_app,start,[normal,[]]},'no backend defined'}},[{application_master,init,4,[{file,"application_master.erl"},{line,138}]},{proc_lib,init_p_do_apply,3,[{file,"proc_lib.erl"},{line,249}]}]}
+    ancestors: [<0.496.0>]
+    message_queue_len: 1
+    messages: [{'EXIT',<0.498.0>,normal}]
+    links: [<0.496.0>,<0.43.0>]
+    dictionary: []
+    trap_exit: true
+    status: running
+    heap_size: 376
+    stack_size: 27
+    reductions: 209
+  neighbours:
+2019-03-17 00:46:25 =CRASH REPORT====
+  crasher:
+    initial call: cowboy_stream_h:request_process/3
+    pid: <0.527.0>
+    registered_name: []
+    exception exit: {{"Error building response",[{boss_simple_bridge_handler,run,1,[{file,"/home/ne/Projects/ChicagoBoss/src/boss_simple_bridge_handler.erl"},{line,30}]},{cowboy_simple_bridge_anchor,init,2,[{file,"/home/ne/Projects/ChicagoBoss/_build/default/lib/simple_bridge/src/cowboy_bridge_modules/cowboy_simple_bridge_anchor.erl"},{line,36}]},{cowboy_handler,execute,2,[{file,"/home/ne/Projects/ChicagoBoss/_build/default/lib/cowboy/src/cowboy_handler.erl"},{line,41}]},{cowboy_stream_h,execute,3,[{file,"/home/ne/Projects/ChicagoBoss/_build/default/lib/cowboy/src/cowboy_stream_h.erl"},{line,296}]},{cowboy_stream_h,request_process,3,[{file,"/home/ne/Projects/ChicagoBoss/_build/default/lib/cowboy/src/cowboy_stream_h.erl"},{line,274}]},{proc_lib,init_p_do_apply,3,[{file,"proc_lib.erl"},{line,249}]}]},[{boss_simple_bridge_handler,run,1,[{file,"/home/ne/Projects/ChicagoBoss/src/boss_simple_bridge_handler.erl"},{line,30}]},{cowboy_simple_bridge_anchor,init,2,[{file,"/home/ne/Projects/ChicagoBoss/_build/default/lib/simple_bridge/src/cowboy_bridge_modules/cowboy_simple_bridge_anchor.erl"},{line,36}]},{cowboy_handler,execute,2,[{file,"/home/ne/Projects/ChicagoBoss/_build/default/lib/cowboy/src/cowboy_handler.erl"},{line,41}]},{cowboy_stream_h,execute,3,[{file,"/home/ne/Projects/ChicagoBoss/_build/default/lib/cowboy/src/cowboy_stream_h.erl"},{line,296}]},{cowboy_stream_h,request_process,3,[{file,"/home/ne/Projects/ChicagoBoss/_build/default/lib/cowboy/src/cowboy_stream_h.erl"},{line,274}]},{proc_lib,init_p_do_apply,3,[{file,"proc_lib.erl"},{line,249}]}]}
+    ancestors: [<0.526.0>,<0.512.0>,<0.511.0>,ranch_sup,<0.503.0>]
+    message_queue_len: 0
+    messages: []
+    links: [<0.526.0>]
+    dictionary: [{{cowboy_bridge,#Ref<0.758589818.2534146049.249706>},{request_cache,#{bindings => #{},body_length => 0,cert => undefined,has_body => false,headers => #{<<"accept">> => <<"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8">>,<<"accept-encoding">> => <<"gzip, deflate, br">>,<<"accept-language">> => <<"ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7">>,<<"cache-control">> => <<"max-age=0">>,<<"connection">> => <<"keep-alive">>,<<"host">> => <<"localhost:8001">>,<<"upgrade-insecure-requests">> => <<"1">>,<<"user-agent">> => <<"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.96 Safari/537.36">>},host => <<"localhost">>,host_info => undefined,method => <<"GET">>,path => <<"/">>,path_info => undefined,peer => {{127,0,0,1},33232},pid => <0.526.0>,port => 8001,qs => <<>>,ref => http,scheme => <<"http">>,sock => {{127,0,0,1},8001},streamid => 1,version => 'HTTP/1.1'},"./priv/static",<<>>}}]
+    trap_exit: false
+    status: running
+    heap_size: 6772
+    stack_size: 27
+    reductions: 11375
+  neighbours:
+2019-03-17 00:46:25 =ERROR REPORT====
+Ranch listener http, connection process <0.526.0>, stream 1 had its request process <0.527.0> exit with reason "Error building response" and stacktrace [{boss_simple_bridge_handler,run,1,[{file,"/home/ne/Projects/ChicagoBoss/src/boss_simple_bridge_handler.erl"},{line,30}]},{cowboy_simple_bridge_anchor,init,2,[{file,"/home/ne/Projects/ChicagoBoss/_build/default/lib/simple_bridge/src/cowboy_bridge_modules/cowboy_simple_bridge_anchor.erl"},{line,36}]},{cowboy_handler,execute,2,[{file,"/home/ne/Projects/ChicagoBoss/_build/default/lib/cowboy/src/cowboy_handler.erl"},{line,41}]},{cowboy_stream_h,execute,3,[{file,"/home/ne/Projects/ChicagoBoss/_build/default/lib/cowboy/src/cowboy_stream_h.erl"},{line,296}]},{cowboy_stream_h,request_process,3,[{file,"/home/ne/Projects/ChicagoBoss/_build/default/lib/cowboy/src/cowboy_stream_h.erl"},{line,274}]},{proc_lib,init_p_do_apply,3,[{file,"proc_lib.erl"},{line,249}]}]

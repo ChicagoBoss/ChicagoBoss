@@ -1,0 +1,112 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module boss_smtp_server</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module boss_smtp_server</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+ -------------------------------------------------------------------.
+<p>Copyright © 
+      This file is part of ChicagoBoss project.
+      See AUTHORS file in root directory
+      for license information, see LICENSE file in root directory</p>
+
+<p><b>Behaviours:</b> <a href="gen_smtp_server_session.html"><tt>gen_smtp_server_session</tt></a>.</p>
+<p><b>Authors:</b> ChicagoBoss Team and contributors, see AUTHORS file in root directory.</p>
+
+<h2><a name="description">Description</a></h2>
+ -------------------------------------------------------------------
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#code_change-3">code_change/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#handle_DATA-4">handle_DATA/4</a></td><td></td></tr>
+<tr><td valign="top"><a href="#handle_EHLO-3">handle_EHLO/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#handle_HELO-2">handle_HELO/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#handle_MAIL-2">handle_MAIL/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#handle_MAIL_extension-2">handle_MAIL_extension/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#handle_RCPT-2">handle_RCPT/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#handle_RCPT_extension-2">handle_RCPT_extension/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#handle_RSET-1">handle_RSET/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#handle_VRFY-2">handle_VRFY/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#handle_other-3">handle_other/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#init-4">init/4</a></td><td></td></tr>
+<tr><td valign="top"><a href="#terminate-2">terminate/2</a></td><td></td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="code_change-3">code_change/3</a></h3>
+<div class="spec">
+<p><tt>code_change(OldVsn, State, Extra) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="handle_DATA-4">handle_DATA/4</a></h3>
+<div class="spec">
+<p><tt>handle_DATA(FromAddress, ToAddressList, Data, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="handle_EHLO-3">handle_EHLO/3</a></h3>
+<div class="spec">
+<p><tt>handle_EHLO(Hostname, Extensions, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="handle_HELO-2">handle_HELO/2</a></h3>
+<div class="spec">
+<p><tt>handle_HELO(Hostname, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="handle_MAIL-2">handle_MAIL/2</a></h3>
+<div class="spec">
+<p><tt>handle_MAIL(FromAddress, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="handle_MAIL_extension-2">handle_MAIL_extension/2</a></h3>
+<div class="spec">
+<p><tt>handle_MAIL_extension(Extension, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="handle_RCPT-2">handle_RCPT/2</a></h3>
+<div class="spec">
+<p><tt>handle_RCPT(ToAddress, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="handle_RCPT_extension-2">handle_RCPT_extension/2</a></h3>
+<div class="spec">
+<p><tt>handle_RCPT_extension(Extension, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="handle_RSET-1">handle_RSET/1</a></h3>
+<div class="spec">
+<p><tt>handle_RSET(State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="handle_VRFY-2">handle_VRFY/2</a></h3>
+<div class="spec">
+<p><tt>handle_VRFY(Address, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="handle_other-3">handle_other/3</a></h3>
+<div class="spec">
+<p><tt>handle_other(Verb, Args, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="init-4">init/4</a></h3>
+<div class="spec">
+<p><tt>init(Hostname, SessionCount, Address, Options) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="terminate-2">terminate/2</a></h3>
+<div class="spec">
+<p><tt>terminate(Reason, State) -&gt; any()</tt></p>
+</div>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc</i></p>
+</body>
+</html>

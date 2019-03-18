@@ -1,0 +1,23 @@
+%% encoding: UTF-8
+{application,boss}.
+{modules,[boss,boss_app,boss_assert,boss_cache_page_filter,
+          boss_cache_vars_filter,boss_compiler_adapter_elixir,
+          boss_compiler_adapter_erlang,boss_compiler_adapter_lfe,
+          boss_controller_adapter_elixir,boss_controller_lib,
+          boss_cowboy_dispacher,boss_csrf_filter,boss_env,boss_erlydtl_tags,
+          boss_flash,boss_lang_filter,boss_log_util,boss_mail_controller,
+          boss_mail_driver_mock,boss_mail_driver_smtp,boss_mail_sup,
+          boss_migrate,boss_model_manager,boss_model_manager_adapter,
+          boss_model_manager_boss_db,boss_model_manager_ecto,boss_mq,
+          boss_mq_adapter_tinymq,boss_mq_controller,boss_mq_sup,boss_router,
+          boss_router_adapter,boss_router_sup,boss_service_handler,
+          boss_session,boss_session_adapter,boss_session_adapter_cache,
+          boss_session_adapter_mnesia,boss_session_adapter_mock,
+          boss_session_adapter_pgsql,boss_session_controller,
+          boss_session_mock_controller,boss_session_mock_sup,boss_session_sup,
+          boss_session_test,boss_session_test_app,boss_simple_bridge_handler,
+          boss_smtp_server,boss_sup,boss_template_adapter_eex,
+          boss_template_adapter_jade,boss_translator_controller,
+          boss_translator_sup,boss_util,boss_web,boss_web_controller,
+          boss_web_controller_handle_request,boss_web_test,
+          boss_websocket_router,types]}.

@@ -13,7 +13,7 @@
 -module(boss_files_test).
 
 -include_lib("eunit/include/eunit.hrl").
--include("../src/boss/boss_web.hrl").
+-include("boss_web.hrl").
 
 make_extentions_test() ->
     Extentions        = boss_files:make_extentions(),
@@ -50,5 +50,3 @@ make_modules_itterator_test()->
     ?assertEqual(["Elixir.Test.Test"],    Itter("test.ex",  [])),
     ?assertEqual(["test"],        Itter("test.lfe", [])),
     ?assertEqual([],            Itter("test",     [])).
-
-

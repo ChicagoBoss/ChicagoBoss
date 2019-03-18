@@ -13,7 +13,7 @@
 -module(boss_log_util_test).
 
 -include_lib("eunit/include/eunit.hrl").
--include("../src/boss/boss_web.hrl").
+-include("boss_web.hrl").
 
 gen_trace_without_location(Arg1, Arg2) ->
     [

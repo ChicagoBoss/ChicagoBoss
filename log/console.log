@@ -1,0 +1,56 @@
+2019-03-17 00:31:24.781 [info] <0.407.0>@boss_web_controller_init:init_services:132 Starting Boss in production mode...
+2019-03-17 00:31:24.790 [info] <0.407.0>@boss_db:start:77 Start Database Adapter boss_db_adapter_mock options [{adapter,mock},{cache_enable,false},{cache_prefix,db},{shards,[]},{is_master_node,true}]
+2019-03-17 00:31:29.909 [warning] <0.495.0> *** Warning: No handler module defined for simple_bridge. If this intentional,
+*** (like if you are using a custom dispatch table, for example), then this message
+*** can be safely ignored.
+2019-03-17 00:31:29.909 [error] <0.494.0>@simple_bridge_app:start CRASH REPORT Process <0.494.0> with 0 neighbours exited with reason: bad return value 'no backend defined' from simple_bridge_app:start(normal, []) in application_master:init/4 line 138
+2019-03-17 00:31:29.910 [info] <0.43.0>@simple_bridge_app:start Application simple_bridge exited with reason: bad return value 'no backend defined' from simple_bridge_app:start(normal, [])
+2019-03-17 00:35:08.030 [info] <0.43.0> Application lager started on node nonode@nohost
+2019-03-17 00:35:08.061 [info] <0.409.0>@boss_web_controller_init:init_services:132 Starting Boss in production mode...
+2019-03-17 00:35:08.067 [info] <0.409.0>@boss_db:start:77 Start Database Adapter boss_db_adapter_mock options [{adapter,mock},{cache_enable,false},{cache_prefix,db},{shards,[]},{is_master_node,true},{db_host,"localhost"},{db_port,1978}]
+2019-03-17 00:35:08.103 [info] <0.43.0> Application tinymq started on node nonode@nohost
+2019-03-17 00:35:08.123 [notice] <0.421.0>@lager_app:271 Deprecated lager_file_backend config detected, please consider updating it
+2019-03-17 00:35:08.129 [warning] <0.498.0> *** Warning: No handler module defined for simple_bridge. If this intentional,
+*** (like if you are using a custom dispatch table, for example), then this message
+*** can be safely ignored.
+2019-03-17 00:35:08.159 [error] <0.497.0>@simple_bridge_app:start CRASH REPORT Process <0.497.0> with 0 neighbours exited with reason: bad return value 'no backend defined' from simple_bridge_app:start(normal, []) in application_master:init/4 line 138
+2019-03-17 00:35:08.175 [info] <0.43.0>@simple_bridge_app:start Application simple_bridge exited with reason: bad return value 'no backend defined' from simple_bridge_app:start(normal, [])
+2019-03-17 00:35:08.177 [info] <0.43.0> Application boss started on node nonode@nohost
+2019-03-17 00:35:08.201 [warning] <0.409.0>@boss_web_controller_util:start_boss_applications:37 App boss_session_test doesn't seem to have controllers defined,
+check your config file at section <boss_session_test:controller_modules>,
+have you compiled your CB application?
+2019-03-17 00:35:08.206 [error] <0.502.0>@boss_router_controller:load:149 Missing or invalid boss.routes file in "/home/ne/Projects/ChicagoBoss/priv/boss_session_test.routes"; Error reason: {error,enoent}
+2019-03-17 00:46:06.266 [notice] <0.421.0>@lager_app:271 Deprecated lager_file_backend config detected, please consider updating it
+2019-03-17 00:46:06.405 [info] <0.43.0> Application lager started on node nonode@nohost
+2019-03-17 00:46:06.441 [info] <0.409.0>@boss_web_controller_init:init_services:132 Starting Boss in production mode...
+2019-03-17 00:46:06.444 [info] <0.409.0>@boss_db:start:77 Start Database Adapter boss_db_adapter_mock options [{adapter,mock},{cache_enable,false},{cache_prefix,db},{shards,[]},{is_master_node,true},{db_host,"localhost"},{db_port,1978}]
+2019-03-17 00:46:06.492 [info] <0.43.0> Application tinymq started on node nonode@nohost
+2019-03-17 00:46:06.546 [info] <0.43.0> Application cowlib started on node nonode@nohost
+2019-03-17 00:46:06.573 [info] <0.43.0> Application ranch started on node nonode@nohost
+2019-03-17 00:46:06.577 [info] <0.43.0> Application cowboy started on node nonode@nohost
+2019-03-17 00:46:06.624 [info] <0.43.0> Application simple_bridge started on node nonode@nohost
+2019-03-17 00:46:06.630 [info] <0.43.0> Application boss started on node nonode@nohost
+2019-03-17 00:46:25.710 [error] <0.527.0>@boss_simple_bridge_handler:run:29 error:badarg: [{erlang,apply,[{sbw,cowboy_simple_bridge,{cowboy_bridge,#Ref<0.758589818.2534146049.249706>},false,[],[],[],none,#{<<"accept">> => <<"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8">>,<<"accept-encoding">> => <<"gzip, deflate, br">>,<<"accept-language">> => <<"ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7">>,<<"cache-control">> => <<"max-age=0">>,<<"connection">> => <<"keep-alive">>,<<"host">> => <<"localhost:8001">>,<<"upgrade-insecure-requests">> => <<"1">>,<<"user-agent">> => <<"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.96 Safari/537.36">>},[],{response,200,[],[],[]}},path,[]],[]},{boss_web_controller_handle_request,handle_request,2,[{file,"/home/ne/Projects/ChicagoBoss/src/boss_web_controller_handle_request.erl"},{line,28}]},{boss_simple_bridge_handler,run,1,[{file,"/home/ne/Projects/ChicagoBoss/src/boss_simple_bridge_handler.erl"},{line,26}]},{cowboy_simple_bridge_anchor,init,2,[{file,"/home/ne/Projects/ChicagoBoss/_build/default/lib/simple_bridge/src/cowboy_bridge_modules/cowboy_simple_bridge_anchor.erl"},{line,36}]},{cowboy_handler,execute,2,[{file,"/home/ne/Projects/ChicagoBoss/_build/default/lib/cowboy/src/cowboy_handler.erl"},{line,41}]},{cowboy_stream_h,execute,3,[{file,"/home/ne/Projects/ChicagoBoss/_build/default/lib/cowboy/src/cowboy_stream_h.erl"},{line,296}]},{cowboy_stream_h,request_process,3,[{file,"/home/ne/Projects/ChicagoBoss/_build/default/lib/cowboy/src/cowboy_stream_h.erl"},{line,274}]},{proc_lib,init_p_do_apply,3,[{file,"proc_lib.erl"},{line,249}]}]
+2019-03-17 00:46:25.711 [error] <0.527.0> CRASH REPORT Process <0.527.0> with 0 neighbours exited with reason: "Error building response" in boss_simple_bridge_handler:run/1 line 30 in boss_simple_bridge_handler:run/1 line 30
+2019-03-17 00:46:25.771 [error] <0.439.0> Lager event handler error_logger_lager_h exited with reason {'EXIT',{{case_clause,[http,<0.526.0>,1,<0.527.0>,"Error building response",[{boss_simple_bridge_handler,run,1,[{file,"/home/ne/Projects/ChicagoBoss/src/boss_simple_bridge_handler.erl"},{line,30}]},{cowboy_simple_bridge_anchor,init,2,[{file,"/home/ne/Projects/ChicagoBoss/_build/default/lib/simple_bridge/src/cowboy_bridge_modules/cowboy_simple_bridge_anchor.erl"},{line,36}]},{cowboy_handler,execute,2,[{file,"/home/ne/Projects/ChicagoBoss/_build/default/lib/cowboy/src/cowboy_handler.erl"},{line,...}]},...]]},...}}
+2019-03-17 00:49:00.768 [info] <0.33.0> Application lager started on node nonode@nohost
+2019-03-17 00:49:00.812 [info] <0.5809.0>@boss_web_controller_init:init_services:132 Starting Boss in production mode...
+2019-03-17 00:49:00.821 [info] <0.5809.0>@boss_db:start:77 Start Database Adapter boss_db_adapter_mock options [{adapter,mock},{cache_enable,false},{cache_prefix,db},{shards,[]},{is_master_node,true},{db_host,"localhost"},{db_port,1978}]
+2019-03-17 00:49:00.882 [info] <0.33.0> Application tinymq started on node nonode@nohost
+2019-03-17 00:49:01.164 [notice] <0.5821.0>@lager_app:271 Deprecated lager_file_backend config detected, please consider updating it
+2019-03-17 00:49:01.533 [info] <0.33.0> Application cowlib started on node nonode@nohost
+2019-03-17 00:49:01.558 [info] <0.33.0> Application ranch started on node nonode@nohost
+2019-03-17 00:49:01.568 [info] <0.33.0> Application cowboy started on node nonode@nohost
+2019-03-17 00:49:01.617 [info] <0.33.0> Application simple_bridge started on node nonode@nohost
+2019-03-17 00:49:01.618 [info] <0.33.0> Application boss started on node nonode@nohost
+2019-03-17 18:46:53.984 [info] <0.33.0> Application lager started on node nonode@nohost
+2019-03-17 18:46:54.033 [info] <0.978.0>@boss_web_controller_init:init_services:132 Starting Boss in production mode...
+2019-03-17 18:46:54.040 [info] <0.978.0>@boss_db:start:77 Start Database Adapter boss_db_adapter_mock options [{adapter,mock},{cache_enable,false},{cache_prefix,db},{shards,[]},{is_master_node,true},{db_host,"localhost"},{db_port,1978}]
+2019-03-17 18:46:54.087 [info] <0.33.0> Application tinymq started on node nonode@nohost
+2019-03-17 18:46:54.130 [info] <0.33.0> Application cowlib started on node nonode@nohost
+2019-03-17 18:46:54.154 [info] <0.33.0> Application ranch started on node nonode@nohost
+2019-03-17 18:46:54.164 [info] <0.33.0> Application cowboy started on node nonode@nohost
+2019-03-17 18:46:54.234 [info] <0.33.0> Application simple_bridge started on node nonode@nohost
+2019-03-17 18:46:54.235 [info] <0.33.0> Application boss started on node nonode@nohost
+2019-03-17 18:46:54.365 [notice] <0.990.0>@lager_app:271 Deprecated lager_file_backend config detected, please consider updating it
+2019-03-17 18:47:09.065 [info] <0.33.0> Application boss exited with reason: stopped

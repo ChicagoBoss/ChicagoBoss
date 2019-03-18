@@ -1,9 +1,8 @@
 PREFIX:=../
 DEST:=$(PREFIX)$(PROJECT)
 ERL=erl
-REBAR=./rebar
+REBAR=./rebar3
 GIT = git
-REBAR_VER = 2.6.1
 SESSION_CONFIG_DIR=priv/test_session_config
 
 .PHONY: deps get-deps test
@@ -25,19 +24,17 @@ compile:
 	@echo "*********************************************************************************"
 	@echo ""
 
-boss:
-	@$(REBAR) compile skip_deps=true
-
 edoc:
-	$(ERL) -pa ebin -pa deps/*/ebin -run boss_doc run -noshell -s init stop
+	$(ERL) -pa ebin -pa ./_build/default/lib/*/ebin -run boss_doc run -noshell -s init stop
 #$(ERL) -pa ebin -noshell -eval "boss_doc:run()" -s init stop
 
 app:
 	@(if ! echo "$(PROJECT)" | grep -qE '^[a-z]+[a-zA-Z0-9_@]*$$'; then echo "Project name should be a valid Erlang atom."; exit 1; fi)
-	@$(REBAR) create template=skel dest=$(DEST) appid=$(PROJECT) skip_deps=true
-	@mkdir -p $(DEST)/deps
-	@cp -Rn $(PWD) $(DEST)/deps/boss
-	@mv -n $(DEST)/deps/boss/deps/* $(DEST)/deps/
+	@mkdir -p $(DEST)
+	@cd $(DEST) && echo "PWD: $(CWD)"
+	@$(REBAR) new app $(PROJECT)
+	@mkdir -p $(DEST)/_build/default/
+	@cp -Rn $(PWD)/_build/default/lib $(DEST)/_build/default/lib
 	@echo ""
 	@echo "***********************************************************************"
 	@echo ""
@@ -47,15 +44,6 @@ app:
 	@echo ""
 	@echo "***********************************************************************"
 	@echo ""
-
-rebar_src:
-	@rm -rf $(PWD)/rebar_src
-	@$(GIT) clone git://github.com/rebar/rebar.git rebar_src
-	@$(GIT) -C rebar_src checkout tags/$(REBAR_VER)
-	@cd $(PWD)/rebar_src/; ./bootstrap
-	@cp $(PWD)/rebar_src/rebar $(PWD)
-	@cp $(PWD)/rebar_src/rebar $(PWD)/skel
-	@rm -rf $(PWD)/rebar_src
 
 get-deps:
 	@$(REBAR) get-deps
@@ -90,16 +78,16 @@ clean:
 	rm -f $(PLT_FILE)
 
 test:
-	@$(REBAR) skip_deps=true eunit
+	@$(REBAR) do eunit -c, ct -c, proper -c, cover -v
 
 test_session_cache:
-	$(ERL) -pa ebin -run boss_session_test start -config $(SESSION_CONFIG_DIR)/cache -noshell
+	$(ERL) -pa _build/default/lib/boss/ebin/ -run boss_session_test start -config $(SESSION_CONFIG_DIR)/cache -noshell
 
 test_session_mnesia:
-	$(ERL) -pa ebin -run boss_session_test start -config $(SESSION_CONFIG_DIR)/mnesia -noshell
+	$(ERL) -pa _build/default/lib/boss/ebin/ -run boss_session_test start -config $(SESSION_CONFIG_DIR)/mnesia -noshell
 
 test_session_mock:
-	$(ERL) -pa ebin -run boss_session_test start -config $(SESSION_CONFIG_DIR)/mock -noshell
+	$(ERL) -pa _build/default/lib/boss/ebin/ -run boss_session_test start -config $(SESSION_CONFIG_DIR)/mock -noshell
 
 rebarize:
 	@mv $(APPDIR)/*.app.src $(APPDIR)/src
@@ -128,4 +116,3 @@ rebarize:
 	@echo cd $(APPDIR)
 	@echo ./rebar boss \# Shows all boss-rebar commands
 	@echo ./init.sh    \# Shows the new boot system commands
-
