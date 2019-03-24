@@ -17,3 +17,7 @@ plt/
 /.settings/
 /ebin/
 _build
+rebar3.crashdump
+doc/
+-doc/src
+log/
