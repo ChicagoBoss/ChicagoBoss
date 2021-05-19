@@ -13,7 +13,7 @@
 -module(boss_controller_compiler_test).
 -include_lib("proper/include/proper.hrl").
 -include_lib("eunit/include/eunit.hrl").
--include("../src/boss/boss_web.hrl").
+-include("boss_web.hrl").
 -define(TMODULE, boss_controller_compiler).
 -compile(export_all).
 

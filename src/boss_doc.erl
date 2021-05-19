@@ -15,9 +15,11 @@
 -include("xmerl.hrl").
 
 run() ->
-    run("doc-src", "doc").
+    run("doc/src", "doc").
 
-run(InDir, OutDir) ->
+run(InDir0, OutDir0) ->
+    InDir = filename:absname(InDir0),
+    OutDir = filename:absname(OutDir0),
     file:make_dir(OutDir),
     {ok, Filenames} = file:list_dir(InDir),
     {TemplateModules, CompileErrors} = lists:foldl(fun(File, {ModAcc, ErrAcc}) ->

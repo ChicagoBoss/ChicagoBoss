@@ -18,10 +18,12 @@ suite() ->
 
 
 init_per_suite(Config) ->
+    {ok,[boss]} = application:ensure_all_started(boss),
     Config.
 
 
 end_per_suite(_Config) ->
+    application:stop(boss),
     ok.
 
 init_per_group(_GroupName, Config) ->
@@ -56,5 +58,5 @@ test_poll() ->
     [].
 test_poll(_Config) ->
     boss_mq:push("test", "Test Message"),
-    {ok, _T, "Test Message"} = boss_mq:poll("test", last),
+    {ok, _T, ["Test Message"]} = boss_mq:poll("test", last),
     ok.

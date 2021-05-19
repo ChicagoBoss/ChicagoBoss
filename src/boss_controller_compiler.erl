@@ -12,11 +12,11 @@
 
 -module(boss_controller_compiler).
 -export([compile/1, compile/2, add_routes_to_forms/1]).
--include_lib("proper/include/proper.hrl").
--include_lib("eunit/include/eunit.hrl").
 
 -ifdef(TEST).
 -compile(export_all).
+-include_lib("proper/include/proper.hrl").
+-include_lib("eunit/include/eunit.hrl").
 -endif.
 -compile(export_all).
 

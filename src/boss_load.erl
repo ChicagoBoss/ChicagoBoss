@@ -86,7 +86,7 @@ make_ops_list(TranslatorPid) ->
      {view_lib_helper_modules, fun load_view_lib_modules/2       },
      {view_lib_tags_modules,   load_view_lib(_, _, TranslatorPid)},
      {view_modules,            load_views(_, _, TranslatorPid)   }
-	].
+        ].
 
 -spec make_all_modules(atom(), string(), [op()]) -> [{atom(),_}].
 

@@ -13,7 +13,7 @@
 -module(boss_web_controller_test).
 -include_lib("proper/include/proper.hrl").
 -include_lib("eunit/include/eunit.hrl").
--include("../src/boss/boss_web.hrl").
+-include("boss_web.hrl").
 -export([action/2, wants_session/3]).
 
 action(exit,_) ->
