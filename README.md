@@ -150,8 +150,7 @@ of URL tokens, and just need to return a tuple telling Boss what to do, for exam
 * `{output, Data}` - send Data to the client
 
 If you come from Rails, you'll instantly notice the benefit of Erlang's
-language design: you don't need an ugly `case request.method` statement inside
-every action, you never have atrocities like `render and return`, and you can
+language design: you never have atrocities like `render and return`, and you can
 always see every variable that is in scope. In CB apps, controller logic is
 always concise and usually a pleasure to read.
 
