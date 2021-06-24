@@ -1,4 +1,7 @@
-REBAR := ./rebar
+REBAR:=$(shell command -v rebar 2> /dev/null | head -1)
+ifndef REBAR
+	REBAR=./rebar
+endif
 
 all: get-deps compile compile-app
 

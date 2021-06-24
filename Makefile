@@ -1,9 +1,12 @@
 PREFIX:=../
 DEST:=$(PREFIX)$(PROJECT)
 ERL=erl
-REBAR=./rebar
+REBAR:=$(shell command -v rebar 2> /dev/null | head -1)
+ifndef REBAR
+	REBAR=./rebar
+endif
 GIT = git
-REBAR_VER = 2.6.1
+REBAR_VER=$(shell $(REBAR) --version | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1)
 SESSION_CONFIG_DIR=priv/test_session_config
 
 .PHONY: deps get-deps test
