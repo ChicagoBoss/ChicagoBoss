@@ -53,7 +53,7 @@ init(RebarConf, AppFile, Command) ->
     %% Compile and load the boss_rebar code, this can't be compiled
   %% as a normal boss lib without the rebar source dep
   %% The load of ./rebar boss:
-  %% - Rebar itself searchs in rebar.config for {plugin_dir, ["priv/rebar"]}.
+  %% - Rebar itself searches in rebar.config for {plugin_dir, ["priv/rebar"]}.
   %% - Rebar itself compile this plugin and adds it to the execution chain
   %% - This plugin compiles and loads the boss_rebar code in ["cb/priv/rebar"],
   %%   so we can extend/bugfix/tweak the framework without the need of manually
@@ -174,7 +174,7 @@ validate_config_data(BossConfFile, {ok, [BossConfig]}) ->
 %%--------------------------------------------------------------------
 %% @doc Get Boss config value app, key
 %% @spec boss_config_value(App, Key) -> Value | {error, Reason}
-%%       Searchs in boss config for a given App and Key
+%%       Searches in boss config for a given App and Key
 %% @end
 %%--------------------------------------------------------------------
 boss_config_value(App, Key, BossConfig) ->

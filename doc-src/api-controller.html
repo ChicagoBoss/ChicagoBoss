@@ -85,7 +85,7 @@ profile('GET', [UserId]) -&gt;
 
 <p>Then the location <code>[{controller, "user"}, {action, "profile"}, {user_id, "123"}]</code> will invoke the "profile" action of <code>user_controller</code> and pass in "123" as the only token (that is, <code>UserId</code>). If a location parameter does not match any variables in the token list, it will be passed in as a query parameter (e.g. <code>?user_id=123</code>).</p>
 
-<p>Routing URLs may contain regular expresssions. For example, the following route will match all URLs that start with a digit:</p>
+<p>Routing URLs may contain regular expressions. For example, the following route will match all URLs that start with a digit:</p>
 
 <div class="code">
     {"/[0-9].*", [...]}.
@@ -250,7 +250,7 @@ before_(_, _, _) -&gt;
     <div class="code spec">
         {stream, Generator<span class="typevar">::function()</span>, Acc0}
     </div>
-    <p>Stream a response to the client using HTTP chunked encoding. For each chunk, the <code>Generator</code> function is passed an accumulator (initally <code>Acc0</code>) and should return either <code>{output, Data, Acc1}</code> or <code>done</code>.</p>
+    <p>Stream a response to the client using HTTP chunked encoding. For each chunk, the <code>Generator</code> function is passed an accumulator (initially <code>Acc0</code>) and should return either <code>{output, Data, Acc1}</code> or <code>done</code>.</p>
 </div>
 <div class="example row2">
     <div class="code spec">
@@ -292,7 +292,7 @@ before_(_, _, _) -&gt;
     <div class="code spec">
         {StatusCode<span class="typevar">::integer()</span>, Body<span class="typevar">::iolist()</span>, Headers<span class="typevar">::proplist()</span>}
     </div>
-    <p>Return an arbitary HTTP integer <code>StatusCode</code> along with a <code>Body</code> and additional HTTP <code>Headers</code>.</p>
+    <p>Return an arbitrary HTTP integer <code>StatusCode</code> along with a <code>Body</code> and additional HTTP <code>Headers</code>.</p>
 </div>
 
 

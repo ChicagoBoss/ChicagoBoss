@@ -167,7 +167,7 @@ ebin_dir() ->
 
 perform_eunit(Config, Modules) ->
     %% suite defined, so only specify the module that relates to the
-    %% suite (if any). Suite can be a comma seperated list of modules to run.
+    %% suite (if any). Suite can be a comma separated list of modules to run.
     Suite = rebar_config:get_global(Config, suite, undefined),
     EunitOpts = get_eunit_opts(Config),
 
@@ -212,7 +212,7 @@ perform_cover(true, Config, BeamFiles, SrcModules) ->
 cover_analyze(_Config, [], _SrcModules) ->
     ok;
 cover_analyze(Config, Modules, SrcModules) ->
-    %% suite can be a comma seperated list of modules to test
+    %% suite can be a comma separated list of modules to test
     Suite = [list_to_atom(S) ||
                 S <- string:tokens(rebar_config:get_global(Config, suite, ""), ",")],
     FilteredModules = case Suite of
