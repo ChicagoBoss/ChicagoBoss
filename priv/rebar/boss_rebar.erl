@@ -300,7 +300,7 @@ boss c=help                          Show this help
 %% @doc Get Boss config value app, key, default
 %% @spec boss_config_value(BossConfig, App, Key, Default) ->
 %%                                         Value | Default
-%%       Searchs in boss config for a given App and Key,
+%%       Searches in boss config for a given App and Key,
 %%       Don't return an error, return Default
 %% @end
 %%--------------------------------------------------------------------
@@ -314,7 +314,7 @@ boss_config_value(BossConf, App, Key, Default) ->
 %% @doc Get Boss config value app, key
 %% @spec boss_config_value(BossConfig, App, Key) ->
 %%                                         Value | {error, Reason}
-%%       Searchs in boss config for a given App and Key
+%%       Searches in boss config for a given App and Key
 %% @end
 %%--------------------------------------------------------------------
 boss_config_value(BossConf, App, Key) ->
@@ -337,7 +337,7 @@ boss_config_value(BossConf, App, Key) ->
 %%--------------------------------------------------------------------
 boss_load(BossConf, AppFile) ->
     %% Get all path-defined apps from boss config
-    %% Exclude current boss app if allready loaded
+    %% Exclude current boss app if already loaded
     AppCurrent = app_name(AppFile),
 
     AllDirs = lists:foldl(fun({App, Config}, Dirs) ->

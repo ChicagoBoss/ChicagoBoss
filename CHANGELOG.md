@@ -52,7 +52,7 @@
 * Modify module compile-time comparison to remove unnecessary conversions to
   gregorian time.
 * boss_db handle 'undefined' as a value with select queries. (@davidw)
-* Consolodate ebin finding and remove duplicates (@davidw)
+* Consolidate ebin finding and remove duplicates (@davidw)
 * Clean up inconsistent dependency versions so that `rebar update-deps` works.
 
 *(All updates by @choptastic unless specified)*
@@ -72,7 +72,7 @@ Other changes:
 
 ### Version 0.8.10 - Bugfix Release
 
-* ErlyDTL updated, put attention to auto_escape =true by default, fro more info
+* ErlyDTL updated, put attention to auto_escape =true by default, for more info
   see separate release notes for ErlyDTL 0.9.0 here
   https://github.com/erlydtl/erlydtl/releases/tag/0.9.0
 * A lot of improvements to testing suite (by @zkessin)
@@ -107,7 +107,7 @@ Most notable:
 * Default to Cowboy. RIP misultin (@evanmiller)
 * Supporting boss apps (such as cb_admin) can be included as rebar
   dependencies. (@cstar)
-* websocket improvments (@mihawk)
+* websocket improvements (@mihawk)
 * support for static files in root directory. no more problems with robots.txt
   and friends, see static_files configuration option (@danikp)
 * Edoc (/doc) and error pages are now have style and more helpful information

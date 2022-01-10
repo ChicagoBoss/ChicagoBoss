@@ -127,7 +127,7 @@ so in your template you can write things like
 
 Speaking of which...
 
-*Templates*. Chicago Boss uses ErlyDTL, an Erlang implentation of Django template
+*Templates*. Chicago Boss uses ErlyDTL, an Erlang implementation of Django template
 language. In fact, Chicago Boss originated with a rewrite of ErlyDTL, and the same
 person maintains both projects so you always get the latest ErlyDTL features. Templates
 can access and loop over values stored in proplists, dictionaries, and BossRecords,
@@ -186,7 +186,7 @@ integrated.
 
 *Comet*. It's simple to write a Comet endpoint in Chicago Boss. Unlike any
 other language, Erlang gives you the benefits of asynchronous network
-communcation without using callbacks. Here is a trivial example of a long-poll
+communication without using callbacks. Here is a trivial example of a long-poll
 controller:
 
 ```erlang
